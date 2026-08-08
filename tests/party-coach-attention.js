@@ -23,6 +23,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       ring: visible(".call-ring"),
       hold: window.__messageNotificationsHeld ? window.__messageNotificationsHeld() : null,
       heldCalls: window.__heldPartyCoachCalls ? window.__heldPartyCoachCalls() : [],
+      dungeon: document.querySelector(".hunt-viewport").classList.contains("prince-basement-open"),
       navBlocked: getComputedStyle(document.getElementById("hunt-next")).pointerEvents === "none",
       scrim: getComputedStyle(overlay.querySelector(".party-switch-scrim-top")).display
     };
@@ -43,7 +44,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     await sleep(40);
     snap("popupOnReentry");
     window.__hideMessageThumb();
-    await sleep(260);
+    await sleep(820);
     snap("popupCleared");
     var switchBox = document.getElementById("garden-lightswitch").getBoundingClientRect();
     var switchHit = document.elementFromPoint(switchBox.left + switchBox.width / 2,
@@ -61,7 +62,17 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       key: "ArrowLeft", code: "ArrowLeft", bubbles: true, cancelable: true
     }));
     await sleep(40);
+    snap("coachDuringReturnPan");
+    await sleep(760);
     snap("coachOnReturn");
+    window.__openGardenPrince();
+    await sleep(80);
+    snap("coachInDungeon");
+    window.__closeMonitorPrince();
+    await sleep(40);
+    snap("coachDuringDungeonReturn");
+    await sleep(760);
+    snap("coachAfterDungeon");
     window.__deliverPhoneMessage("cue_calendar");
     await sleep(30);
     snap("messageDuringCoach");
@@ -137,11 +148,24 @@ check(popupReentry && popupReentry.room === "garden" && popupReentry.thumb && !p
 check(popupCleared && !popupCleared.thumb && popupCleared.coach && !popupCleared.navBlocked &&
   popupCleared.switchHole && popupCleared.scrim === "none",
   "the quiet channel reveals a non-modal coach while leaving the switch and navigation live", popupCleared);
-var navigationAway = step("navigationAway"), coachOnReturn = step("coachOnReturn");
+var navigationAway = step("navigationAway"), coachDuringReturnPan = step("coachDuringReturnPan"),
+  coachOnReturn = step("coachOnReturn");
 check(navigationAway && navigationAway.room === "cuddly" && !navigationAway.coach && navigationAway.coachDue,
   "keyboard navigation leaves Garden and hides the still-pending switch coach", navigationAway);
+check(coachDuringReturnPan && coachDuringReturnPan.room === "garden" && !coachDuringReturnPan.coach &&
+  coachDuringReturnPan.coachDue,
+  "the pending coach stays hidden while Garden is still panning into view", coachDuringReturnPan);
 check(coachOnReturn && coachOnReturn.room === "garden" && coachOnReturn.coach && coachOnReturn.coachDue,
-  "returning to Garden repaints the pending switch coach", coachOnReturn);
+  "the settled Garden repaints the pending switch coach", coachOnReturn);
+var coachInDungeon = step("coachInDungeon"), coachDuringDungeonReturn = step("coachDuringDungeonReturn"),
+  coachAfterDungeon = step("coachAfterDungeon");
+check(coachInDungeon && coachInDungeon.room === "garden" && coachInDungeon.dungeon &&
+  !coachInDungeon.coach && coachInDungeon.coachDue,
+  "opening Dungeon hides the Garden-owned coach without retiring it", coachInDungeon);
+check(coachDuringDungeonReturn && !coachDuringDungeonReturn.dungeon && !coachDuringDungeonReturn.coach,
+  "the coach stays hidden while Dungeon slides away", coachDuringDungeonReturn);
+check(coachAfterDungeon && !coachAfterDungeon.dungeon && coachAfterDungeon.coach && coachAfterDungeon.coachDue,
+  "the settled Garden restores its pending coach after Dungeon", coachAfterDungeon);
 var duringMessage = step("messageDuringCoach"), releasedMessage = step("messageReleased");
 check(duringMessage && duringMessage.coach && !duringMessage.thumb && duringMessage.hold &&
   duringMessage.hold.messages.join(",") === "cue_calendar",

@@ -154,7 +154,7 @@ var harness = String.raw`<script>
       JSON.stringify(opened.rooms));
     check("locked cells retain their real names and blur both name and thumbnail",
       roomButton("garden").classList.contains("locked") &&
-      roomButton("garden").querySelector("span").textContent === "Garden" &&
+      roomButton("garden").querySelector("span").textContent === "Garden / Party" &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1 &&
       getComputedStyle(roomButton("garden").querySelector("svg")).filter.indexOf("blur") !== -1);
     check("all lower previews are SVG uses of their real art or the Dungeon portrait",
@@ -173,7 +173,8 @@ var harness = String.raw`<script>
     setLang("cs");
     check("the open overview follows Czech live",
       document.getElementById("loft-dollhouse-title").textContent === "Loft 🗺️" &&
-      roomButton("kitchen").textContent.indexOf("Kuchyň") !== -1,
+      roomButton("kitchen").textContent.indexOf("Kuchyň") !== -1 &&
+      roomButton("garden").textContent.indexOf("Zahrada / Párty") !== -1,
       document.getElementById("loft-dollhouse-title").textContent);
     setLang("en");
 

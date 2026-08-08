@@ -41131,6 +41131,7 @@ window.__entranceRoomOpen = false;
   var campStargazingWasEligible = false;
   var campStargazingInviteTimer = null;
   var campStargazingSunsetTimer = null;
+  var campStargazingTraceDrag = null;
   var campStargazingLiveDrag = null;
   var campEnterBlockedUntil = 0;
   var campStewFrame = null;
@@ -41760,6 +41761,7 @@ window.__entranceRoomOpen = false;
     return eligible;
   }
   function resetCampStargazing() {
+    finishCampStargazingTraceDrag();
     clearTimeout(campStargazingInviteTimer);
     campStargazingInviteTimer = null;
     clearTimeout(campStargazingSunsetTimer);
@@ -41879,6 +41881,7 @@ window.__entranceRoomOpen = false;
   }
   function closeCampStargazing() {
     if (!campStargazingState.open) return false;
+    finishCampStargazingTraceDrag();
     campStargazingState.open = false;
     paintCampStargazing();
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
@@ -41902,6 +41905,55 @@ window.__entranceRoomOpen = false;
     if (!wasComplete && campStargazingComplete()) syncRoadtripCampFireCaption(false);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return campStargazingSnapshot();
+  }
+  function campStargazingTracePoint(event) {
+    if (!campStargazingGame || !event) return null;
+    var svg = campStargazingGame.ownerSVGElement;
+    try {
+      var matrix = campStargazingGame.getScreenCTM();
+      if (!svg || !matrix) return null;
+      var point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(matrix.inverse());
+    } catch (_error) { return null; }
+  }
+  function campStargazingDistanceToSegment(point, from, to) {
+    var dx = to.x - from.x, dy = to.y - from.y;
+    var lengthSquared = dx * dx + dy * dy;
+    var amount = lengthSquared ? ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared : 0;
+    amount = Math.max(0, Math.min(1, amount));
+    var x = from.x + dx * amount, y = from.y + dy * amount;
+    return Math.hypot(point.x - x, point.y - y);
+  }
+  function traceCampStargazingSegment(drag, point) {
+    if (!drag || !point || !drag.figure) return false;
+    var changed = false;
+    for (var guard = 0; guard < CAMP_STARGAZING_LENGTHS[drag.name]; guard++) {
+      var next = drag.figure.querySelector(".entrance-roadtrip-stargazing-star.next");
+      var hit = next && next.querySelector(".entrance-roadtrip-stargazing-star-hit");
+      if (!next || !hit) break;
+      var target = { x: Number(hit.getAttribute("cx")), y: Number(hit.getAttribute("cy")) };
+      if (campStargazingDistanceToSegment(target, drag.lastPoint, point) > Number(hit.getAttribute("r"))) break;
+      var before = campStargazingState.progress[drag.name];
+      traceCampStargazingStar(drag.name, next.getAttribute("data-stargazing-star"));
+      if (campStargazingState.progress[drag.name] === before) break;
+      changed = true;
+      if (campStargazingComplete()) break;
+    }
+    drag.lastPoint = point;
+    return changed;
+  }
+  function finishCampStargazingTraceDrag(event) {
+    if (!campStargazingTraceDrag || event && event.pointerId !== campStargazingTraceDrag.pointerId) return false;
+    var drag = campStargazingTraceDrag;
+    campStargazingTraceDrag = null;
+    try { drag.star.releasePointerCapture(drag.pointerId); } catch (_error) {}
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    return true;
   }
   function traceNextCampStargazingStar(allowClosed) {
     if (!campStargazingState.open && !allowClosed) return false;
@@ -42254,6 +42306,43 @@ window.__entranceRoomOpen = false;
     if (campMamaBear) campMamaBear.classList.remove("camp-fin-look-paused");
   });
   if (campStargazingGame) {
+    campStargazingGame.addEventListener("touchmove", function (event) {
+      event.preventDefault();
+    }, { passive: false });
+    campStargazingGame.addEventListener("pointerdown", function (event) {
+      var star = event.target && event.target.closest ? event.target.closest("[data-stargazing-star]") : null;
+      var figure = star && star.closest("[data-stargazing-constellation]");
+      if (!star || !figure || !campStargazingState.open || campStargazingTraceDrag ||
+          event.pointerType !== "touch" && event.button !== 0) return;
+      var name = figure.getAttribute("data-stargazing-constellation");
+      var before = campStargazingState.progress[name];
+      var point = campStargazingTracePoint(event);
+      if (!point) return;
+      traceCampStargazingStar(name, star.getAttribute("data-stargazing-star"));
+      if (campStargazingState.progress[name] === before) return;
+      campStargazingTraceDrag = {
+        name: name, figure: figure, star: star, pointerId: event.pointerId, lastPoint: point
+      };
+      try { star.setPointerCapture(event.pointerId); } catch (_error) {}
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    campStargazingGame.addEventListener("pointermove", function (event) {
+      var drag = campStargazingTraceDrag;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      var samples = event.getCoalescedEvents ? event.getCoalescedEvents() : null;
+      if (!samples || !samples.length) samples = [event];
+      Array.prototype.forEach.call(samples, function (sample) {
+        var point = campStargazingTracePoint(sample);
+        if (point) traceCampStargazingSegment(drag, point);
+      });
+      event.preventDefault();
+      event.stopPropagation();
+      if (campStargazingComplete()) finishCampStargazingTraceDrag(event);
+    });
+    campStargazingGame.addEventListener("pointerup", finishCampStargazingTraceDrag);
+    campStargazingGame.addEventListener("pointercancel", finishCampStargazingTraceDrag);
+    campStargazingGame.addEventListener("lostpointercapture", finishCampStargazingTraceDrag);
     Array.prototype.forEach.call(campStargazingGame.querySelectorAll("[data-stargazing-star]"), function (star) {
       star.addEventListener("click", function (event) {
         var figure = star.closest("[data-stargazing-constellation]");

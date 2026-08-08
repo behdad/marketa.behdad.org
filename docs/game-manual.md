@@ -248,7 +248,8 @@ and every fixed pantry item, then cook it in the camp pot. The lid lets you peek
 and opens when dinner is ready. Serve then, or reset a comically
 overcooked pot. After serving, click the sky to carry the interactive trace through sunset into a
 clear night, or press `Enter` to finish that trace directly. Trace Cassiopeia, Ursa Major, and Ursa
-Minor by selecting each glowing star. Their loose stars are already seeded in the ordinary camp sky;
+Minor by selecting each glowing star or dragging through them in order. Their loose stars are
+already seeded in the ordinary camp sky;
 finishing the trace joins them with faint lines. The completed constellations and closing campfire
 exchange remain in the live campsite beneath a broad, rippling northern-lights display, and their
 individual stars can be dragged around the night sky. After all four remarks appear, the caption

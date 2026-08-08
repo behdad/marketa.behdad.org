@@ -163,20 +163,33 @@ the hard 10/10 launch/restore boundary.
 
 The `party-roadtrip-bridge` checkpoint adapter owns the one-time Garden switch coach, teardown room
 progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge records
-the handoff durably. Below ten distinct `seenRooms`, the dismissible map coach holds notification
-popups and incoming calls through the shared action-attention owner; Phase 2's one-action dollhouse
+the handoff durably. A due switch coach waits until the phone preview/call channel is quiet on every
+paint, including Garden re-entry, then becomes a light modal: four scrim quadrants preserve the live
+SVG wall switch as the only scene hit target, while the popup × and global Enter retire the coach.
+The modal’s actual visible state—not merely its durable due flag—owns the shared phone hold, so an
+existing popup is never stolen and newly arriving popups/calls release once after dismissal. Below
+ten distinct `seenRooms`, the dismissible map coach uses the same quiet-channel/attention owner;
+Phase 2's one-action dollhouse
 entry is the exploration path. First lower-room visits use room-specific, language-live copy whose
 remaining count is derived from `seenRooms`, never unlock order. At 10/10 the adapter delivers
 `downstairs_entrance` → `downstairs_roadtrip_where` → `downstairs_roadtrip_journey` →
 `downstairs_roadtrip_go` with checkpointed inter-message timing. Reload resumes the next missing beat;
-the first three rows carry no action and only the final row owns `lower:entrance`. Unrelated autonomous
-texts, notification popups, and calls stay held until the exchange completes.
+the first three rows carry no action and only the final row owns `lower:entrance`. The exchange may
+run while the party is active; the final action uses the canonical party-stop queue and opens
+Entrance only after teardown, with the HUD closed. Unrelated autonomous texts, notification popups,
+and calls stay held until the exchange completes.
 
-Ten `seenRooms` are also the sole Road Trip unlock owner. `roadtripExplorationComplete()` gates every
-invite, chooser, launch, re-entry, and restore path; saved `unlocked` flags and paused runs cannot
-bypass it. A street lap is optional free-play telemetry and has no progression effect. Reaching 10/10
-makes the dashboard invitation immediately available, while **Let’s go!** opens Entrance with the HUD
-still closed so the player explicitly selects the road. Deterministic driving tests use the visibly
+The Phase 2 latch plus ten `seenRooms` are the exploration qualifier; authorization additionally
+requires the party to be off. `roadtripAuthorized()` gates every invite, chooser, launch, re-entry,
+and restore path;
+Phase 1 skip-navigation, saved `unlocked` flags, and paused runs cannot bypass it. A street lap is
+optional free-play telemetry and has no progression effect. Reaching 10/10 readies the dashboard
+invitation after teardown. **Let’s go!** awaits the canonical shutdown before opening Entrance with
+the HUD still closed. An intentional road click or global Enter at qualified Entrance is the lenient
+ignored-phone fallback: it uses that same shutdown queue, then opens the HUD. On a fresh HUD the
+driving coach owns attention first; completion or its explicit
+× dismissal repaints the queued Road Trip invitation, and that coach state is checkpointed.
+Deterministic driving tests use the visibly
 named `__entranceRoadtripDevStart()` bypass; production and restore paths never do.
 At 120 attended seconds the lifecycle offers the existing optional finale cue but never flips the
 party switch itself.
@@ -428,7 +441,7 @@ Demerits live separately in `entranceRoadtripDemerits:v1`; alcohol is owned by t
 `balconyDrinkState:v1`. Road Trip reads those owners for its HUD and impairment. Checkpoint reset
 must not rewind either record; full reset clears them through their existing owners.
 
-All ten room visits unlock Road Trip. Before first acceptance, invitation-ready, dismissed/re-entry,
+All ten Phase 2 room visits qualify Road Trip; party-off authorizes it. Before first acceptance, invitation-ready, dismissed/re-entry,
 and open-chooser state survive HUD/Entrance closure and checkpoint recovery. Optional forward street
 wraps are still recorded for deterministic driving coverage but do not own progression. Unlock and
 best score survive sessions, while route acceptance and active presentation do not. Checkpoint restore may retain a paused run,

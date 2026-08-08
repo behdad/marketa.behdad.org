@@ -74,8 +74,8 @@ var harness = String.raw`<script>
   check("the room-map coach queues an incoming call instead of letting it cover the coach",
     !document.querySelector(".call-ring.show") && window.__heldPartyCoachCalls &&
       window.__heldPartyCoachCalls().length === 1, window.__heldPartyCoachCalls && window.__heldPartyCoachCalls());
-  roomCoachPopup.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  check("clicking the room-map coach dismisses it without opening the map or releasing Road Trip early",
+  roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  check("the room-map coach’s explicit dismiss control closes it without opening the map or releasing Road Trip early",
     !window.__partyLifecycleState().roomMapCoachActive &&
       !roomCoach.classList.contains("show") && !window.__partyLifecycleState().roadtripInviteDelivered &&
       !window.__phoneMessageReceived("downstairs_entrance") && document.getElementById("loft-dollhouse").hidden);
@@ -113,8 +113,8 @@ var harness = String.raw`<script>
       getComputedStyle(switchCoachArrow).animationName === "kitchen-arrow-bounce",
     JSON.stringify({ switchPopup: popupStyleSignature(switchCoachPopup), roomPopup: roomPopupSignature,
       switchArrow: arrowShapeSignature(switchCoachArrow), roomArrow: roomArrowSignature }));
-  switchCoachPopup.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  check("clicking the switch coach dismisses it without toggling the wall switch",
+  switchCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  check("the switch coach’s explicit dismiss control closes it without toggling the wall switch",
     !switchCoach.classList.contains("show") && window.__gardenPartyOn && window.__partyLifecycleState().switchCoachRetired);
 
   focused = false;

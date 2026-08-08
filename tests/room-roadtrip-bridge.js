@@ -47,9 +47,30 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   async function fresh() {
     window.__endAttract();
     window.__unlockAllRooms();
+    window.__setSecondRound(false, { releaseHeld: false });
+    window.__setSeenRooms([]);
+    ["kitchen", "garden", "cuddly", "office", "balcony", "bathroom", "dungeon",
+      "cinema", "bedroom", "entrance"].forEach(function (room) {
+      window.__openDollhouse();
+      document.querySelector('.loft-dollhouse-room[data-dollhouse-room="' + room + '"]').dispatchEvent(
+        new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    });
+    window.goToStage("balcony");
+    window.__openEntranceRoom();
+    window.__openEntrancePorscheDriveHud();
+    report.steps.push({ label: "phase-one-ten",
+      start: window.__entranceRoadtripStart(), chooser: window.__entranceRoadtripOpenChooser(),
+      roadtrip: copy(window.__entranceRoomState().drive.roadtrip) });
+    window.__hideEntrancePorscheDriveHud();
+    window.__closeEntranceRoom();
     window.__setSecondRound(true, { releaseHeld: false });
+    report.steps.push({ label: "phase-two-latched-ten",
+      roadtrip: copy(window.__entranceRoomState().drive.roadtrip) });
+    window.__setSecondRound(false, { releaseHeld: false });
+    window.__resetPartyExitHint();
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "dungeon", "cinema", "bedroom", "entrance"]);
+    window.__setSecondRound(true, { releaseHeld: false });
     window.goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
@@ -71,9 +92,33 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__setPartyMode(false, true);
     await sleep(80);
     snapshot("party-off-nine");
+    window.__setPartyMode(true);
     window.__markRoomSeen("bathroom");
     await sleep(80);
-    snapshot("ten-first-beat");
+    snapshot("party-on-ten-first-beat");
+    window.goToStage("balcony");
+    window.__openEntranceRoom();
+    document.querySelector(".entrance-road-cursor").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+    report.steps.push({ label: "ignored-phone-click",
+      entrance: copy(window.__entranceRoomState()), party: !!window.__gardenPartyOn });
+    window.__hideEntrancePorscheDriveHud();
+    window.__closeEntranceRoom();
+    window.__setPartyMode(true);
+    window.goToStage("balcony");
+    window.__openEntranceRoom();
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Enter", code: "Enter", bubbles: true, cancelable: true
+    }));
+    report.steps.push({ label: "ignored-phone-enter",
+      entrance: copy(window.__entranceRoomState()), party: !!window.__gardenPartyOn });
+    window.__hideEntrancePorscheDriveHud();
+    window.__closeEntranceRoom();
+    window.__setPartyMode(true);
+    window.__consumePartyExitHint();
+    report.steps.push({ label: "party-on-ten-auth",
+      start: window.__entranceRoadtripStart(), chooser: window.__entranceRoadtripOpenChooser(),
+      roadtrip: copy(window.__entranceRoomState().drive.roadtrip), party: !!window.__gardenPartyOn });
     saveAndReload("where");
   }
   async function resumed(step) {
@@ -99,13 +144,21 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     await sleep(2850);
     snapshot("go-restored-after");
     window.__runMsgAction("downstairs_roadtrip_go");
-    await sleep(900);
+    await sleep(3900);
     var entrance = window.__entranceRoomState();
     report.steps.push({ label: "go-action", room: window.currentStageName,
-      entranceOpen: !!window.__entranceRoomOpen, hud: entrance.drive.hudOpen,
+      entranceOpen: !!window.__entranceRoomOpen, hud: entrance.drive.hud,
+      party: !!window.__gardenPartyOn,
+      act: window.__actTwoState ? copy(window.__actTwoState()) : null,
       roadtrip: copy(entrance.drive.roadtrip) });
     window.__openEntrancePorscheDriveHud();
-    report.steps.push({ label: "hud", roadtrip: copy(window.__entranceRoomState().drive.roadtrip),
+    report.steps.push({ label: "hud-coach", roadtrip: copy(window.__entranceRoomState().drive.roadtrip),
+      coach: copy(window.__captureCheckpointSystems().entrance.drive.coach),
+      chooserOpened: window.__entranceRoadtripOpenChooser() });
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.steps.push({ label: "hud-invite", roadtrip: copy(window.__entranceRoomState().drive.roadtrip),
+      coach: copy(window.__captureCheckpointSystems().entrance.drive.coach),
       chooserOpened: window.__entranceRoadtripOpenChooser() });
     sessionStorage.removeItem("room-roadtrip-bridge-step");
     sessionStorage.removeItem("room-roadtrip-bridge-report");
@@ -141,7 +194,17 @@ function step(label) {
 
 console.log("rsvp.html room exploration → Road Trip bridge:");
 check(result && result.errors.length === 0, "the multi-reload probe has no page errors", result && result.errors);
-var nine = step("nine"), partyOff = step("party-off-nine"), first = step("ten-first-beat");
+var nine = step("nine"), partyOff = step("party-off-nine"), first = step("party-on-ten-first-beat");
+var phaseOneTen = step("phase-one-ten");
+check(phaseOneTen && !phaseOneTen.start && !phaseOneTen.chooser &&
+  !phaseOneTen.roadtrip.explorationComplete && !phaseOneTen.roadtrip.unlocked &&
+  !phaseOneTen.roadtrip.invitationReady,
+  "ten Phase 1 room visits cannot bypass the party into Road Trip", phaseOneTen);
+var phaseTwoLatchedTen = step("phase-two-latched-ten");
+check(phaseTwoLatchedTen && phaseTwoLatchedTen.roadtrip.explorationComplete &&
+  phaseTwoLatchedTen.roadtrip.unlocked && phaseTwoLatchedTen.roadtrip.invitationReady,
+  "latching Phase 2 honors ten already-seen rooms without requiring repeat visits",
+  phaseTwoLatchedTen);
 check(nine && !nine.earlyStart && !nine.earlyChooser && !nine.roadtrip.unlocked &&
   !nine.roadtrip.invitationReady && !nine.roadtrip.routeChooserOpen,
   "nine seen rooms cannot start, offer, or select Road Trip", nine);
@@ -153,8 +216,23 @@ check(partyOff && partyOff.ids.length === 0 && partyOff.bridge.roomMapCoachActiv
   !partyOff.bridge.roadtripInviteDelivered,
   "party teardown at 9/10 points back to loft exploration and sends no invitation", partyOff);
 check(first && first.ids.join(",") === "downstairs_entrance" && first.roadtrip.explorationComplete &&
-  first.roadtrip.unlocked && first.roadtrip.invitationReady && !first.bridge.roadtripInviteDelivered,
-  "the tenth room is the sole unlock and starts only the first exchange beat", first);
+  !first.roadtrip.authorized && !first.roadtrip.unlocked && !first.roadtrip.invitationReady &&
+  !first.bridge.roadtripInviteDelivered,
+  "the tenth room can start the exchange during the party without authorizing Road Trip", first);
+var partyOnAuth = step("party-on-ten-auth");
+check(partyOnAuth && partyOnAuth.party && !partyOnAuth.start && !partyOnAuth.chooser &&
+  !partyOnAuth.roadtrip.authorized && !partyOnAuth.roadtrip.unlocked,
+  "Phase 2 plus 10/10 cannot launch or choose Road Trip while the party is active", partyOnAuth);
+var ignoredClick = step("ignored-phone-click"), ignoredEnter = step("ignored-phone-enter");
+check(ignoredClick && !ignoredClick.party && ignoredClick.entrance.drive.hud &&
+  ignoredClick.entrance.drive.roadtrip.authorized && ignoredClick.entrance.drive.roadtrip.unlocked &&
+  !ignoredClick.entrance.drive.roadtrip.invitationVisible,
+  "clicking the road at 10/10 canonically ends an ignored party before opening the driving coach",
+  ignoredClick);
+check(ignoredEnter && !ignoredEnter.party && ignoredEnter.entrance.drive.hud &&
+  ignoredEnter.entrance.drive.roadtrip.authorized && ignoredEnter.entrance.drive.roadtrip.unlocked &&
+  !ignoredEnter.entrance.drive.roadtrip.invitationVisible,
+  "global Enter at the road uses the same party-stop → driving-coach fallback", ignoredEnter);
 
 var whereBefore = step("where-restored-before"), whereAfter = step("where-restored-after");
 var journeyBefore = step("journey-restored-before"), journeyAfter = step("journey-restored-after");
@@ -173,12 +251,18 @@ check(goBefore && goBefore.ids.length === 3 && goAfter &&
 check(goAfter && goAfter.actions.length === 4 && goAfter.actions.slice(0, 3).every(function (row) { return !row[1]; }) &&
   goAfter.actions[3][1] === "lower:entrance",
   "only ‘Let’s go!’ carries an action", goAfter && goAfter.actions);
-var action = step("go-action"), hud = step("hud");
-check(action && action.room === "balcony" && action.entranceOpen && !action.hud,
-  "‘Let’s go!’ opens Entrance without opening or starting the dashboard", action);
-check(hud && hud.roadtrip.unlocked && hud.roadtrip.invitationReady && hud.roadtrip.invitationVisible &&
-  hud.chooserOpened,
-  "opening the road/HUD immediately presents the unlocked route chooser", hud);
+var action = step("go-action"), hudCoach = step("hud-coach"), hudInvite = step("hud-invite");
+check(action && action.room === "balcony" && action.entranceOpen && !action.hud &&
+  !action.party && action.roadtrip.authorized && action.roadtrip.unlocked &&
+  (!action.act || action.act.armed === false),
+  "‘Let’s go!’ finishes the party/coda owner, then opens Entrance with the dashboard closed", action);
+check(hudCoach && hudCoach.roadtrip.unlocked && hudCoach.roadtrip.invitationReady &&
+  !hudCoach.roadtrip.invitationVisible && !hudCoach.chooserOpened &&
+  hudCoach.coach && !hudCoach.coach.complete && !hudCoach.coach.dismissed,
+  "a fresh HUD gives the driving coach sole attention before the Road Trip invitation", hudCoach);
+check(hudInvite && hudInvite.coach && hudInvite.coach.dismissed &&
+  hudInvite.roadtrip.invitationVisible && hudInvite.chooserOpened,
+  "explicitly dismissing the driving coach hands attention straight to Road Trip", hudInvite);
 
 if (failures) process.exit(1);
 console.log("Room exploration → Road Trip bridge assertions passed.");

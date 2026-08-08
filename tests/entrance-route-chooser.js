@@ -12,14 +12,19 @@ window.addEventListener("load", function () { setTimeout(function () {
   try {
     Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
     window.__unlockAllRooms();
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "dungeon", "cinema", "bedroom", "entrance"]);
+    window.__setSecondRound(true, { releaseHeld: false });
     window.goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
-    window.__toggleEntrancePorscheEngine();
-    window.__entranceDriveRange("D");
-    window.__entranceDriveControl("throttle", true);
-    for (var tick = 0; tick < 1200 && !state().unlocked; tick++) window.__entranceDriveStep(80);
-    window.__entranceDriveControl("throttle", false);
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var lapRow = window.__captureCheckpointSystems().entrance;
+    lapRow.drive.roadtrip.practiceLaps = 1;
+    window.__restoreCheckpointSystems({ entrance: lapRow }, "afterStage");
+    report.lap = JSON.parse(JSON.stringify(state()));
+    window.__markRoomSeen("bathroom");
     report.opened = window.__entranceRoadtripOpenChooser();
     window.__entranceRoadtripMoveRouteChoice(1);
     report.before = JSON.parse(JSON.stringify(state()));
@@ -49,6 +54,9 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html Road Trip chooser recovery:");
 check(result && result.errors.length === 0, "chooser harness has no uncaught errors", result && result.errors);
+check(result && result.lap.practiceLaps === 1 && !result.lap.explorationComplete &&
+  !result.lap.unlocked && !result.lap.invitationReady,
+  "a completed street lap does not unlock Road Trip before the tenth room", result && result.lap);
 check(result && result.opened && result.before.routeChooserOpen && result.before.routeChoice === "banff",
   "the chooser opens and records the selected Banff card", result && result.before);
 check(result && result.row.drive.roadtrip.routeChooserOpen === true &&

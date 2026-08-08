@@ -129,15 +129,19 @@ console field when you want to type. Desktop app openings retain their ready-to-
 
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
 An activity can expire when its moment passes, but its message stays unread until you read it.
-Shortly after the first party starts, a large dismissible popup and red arrow identify the Garden
-wall switch that ends the party when the player is ready. Any deliberate party teardown checks how
+Shortly after the first party starts, a lightly dimmed popup and red arrow identify the Garden
+wall switch that ends the party when the player is ready. The party keeps playing underneath; use
+the switch to end it, or use the popup’s × or `Enter` to dismiss the lesson and keep dancing. The
+coach waits for an already-visible phone notification or call to finish, and queues new ones while
+it is open. Any deliberate party teardown checks how
 many of the ten rooms have actually been visited. If rooms remain, a second dismissible popup and
 red arrow point to the room map; Phase 2 lets one selection unlock and enter any remaining room.
 Each new lower room gives its own short introduction and a live remaining-room count, while an early
 Entrance visit sends the player back to explore the loft. Calls and unrelated notification popups
-wait while the coach is visible. After all ten rooms have been seen, Behdad and Markéta’s four-line
-Road Trip exchange arrives in order; only **Let’s go!** has an activity arrow, and it opens Entrance
-without starting the dashboard.
+wait while either coach is visible. After all ten rooms have been seen during Phase 2, Behdad and
+Markéta’s four-line Road Trip exchange arrives in order, even if the party is still running. Only
+**Let’s go!** has an activity arrow; it finishes the party through the normal wind-down, then opens
+Entrance without starting the dashboard.
 The party itself does not automatically turn into a piano, dawn, or RSVP sequence; those loft
 activities remain free play, and Camping's `~ fin ~` is the game's terminal RSVP coda.
 Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.
@@ -177,8 +181,12 @@ chooser by long-pressing the shifter.
 The roof, door, windows, compartments, and lights are separate controls. The odometer records real
 distance across street and highway driving and survives engine stops and Continue.
 
-Seeing all ten rooms unlocks **Road Trip**. The exchange’s **Let’s go!** opens Entrance; select the
-road to open the dashboard, then accept the invitation and choose Calgary, Banff, or Abraham Lake as
+Seeing all ten rooms after the party has begun Phase 2 qualifies **Road Trip**; Phase 1 room skips do
+not bypass the party, and the chooser waits until the party is off. The exchange’s **Let’s go!**
+ends any active party before opening Entrance. If the exchange is ignored, deliberately selecting
+the road or pressing `Enter` there performs the same party wind-down before opening the dashboard.
+A fresh driver sees the driving coach first; complete it or use its ×, then accept the
+Road Trip invitation and choose Calgary, Banff, or Abraham Lake as
 the starting segment. Street laps remain optional free driving and do not control progression. A
 private testing shortcut starts near a segment's exit when its chooser item is Shift-clicked. Each
 new route starts stopped on the shoulder without changing the selected transmission setting.

@@ -72,6 +72,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           value: function () { return true; }, configurable: true
         });
         window.__unlockAllRooms();
+        window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+          "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
+        window.__setSecondRound(true, { releaseHeld: false });
+        if (window.__gardenPartyOn) window.__setPartyMode(false, true);
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();

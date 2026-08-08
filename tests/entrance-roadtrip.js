@@ -292,6 +292,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
     Object.defineProperty(document, "hasFocus", { value: function () { return attended; }, configurable: true });
     window.__unlockAllRooms();
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "dungeon", "cinema", "bedroom", "entrance"]);
+    window.__setSecondRound(true, { releaseHeld: false });
     window.goToStage("balcony");
     window.__openEntranceRoom();
     await sleep(40);
@@ -1272,14 +1275,15 @@ check(/id="entrance-roadtrip-curve-sign-right"[\s\S]{0,260}M-7-28C-7-39-3-46 7-5
   "curve signs use contained, dark, softened single-turn arrows");
 check(source.indexOf('id="entrance-roadtrip-winter"') < source.indexOf('id="entrance-roadtrip-road"'),
   "accumulated snow paints beneath the road so shoulder markings remain visible at the horizon");
-check(/function roadtripExplorationComplete\(\)[\s\S]{0,120}window\.__seenRooms\(\)\.length >= 10/.test(source) &&
-  /function startRoadtrip\([^)]*developerBypass\)[\s\S]{0,500}!developerBypass && \(!roadtripExplorationComplete\(\) \|\| !roadtripState\.unlocked\)/.test(source) &&
-  /function unlockRoadtrip\(silent\)\s*\{\s*if \(!roadtripExplorationComplete\(\)\) return false;/.test(source) &&
+check(/function roadtripExplorationComplete\(\)[\s\S]{0,140}window\.__secondRound[\s\S]{0,100}window\.__seenRooms\(\)\.length >= 10/.test(source) &&
+  /function roadtripAuthorized\(\)[\s\S]{0,100}roadtripExplorationComplete\(\) && !window\.__gardenPartyOn/.test(source) &&
+  /function startRoadtrip\([^)]*developerBypass\)[\s\S]{0,500}!developerBypass && \(!roadtripAuthorized\(\) \|\| !roadtripState\.unlocked\)/.test(source) &&
+  /function unlockRoadtrip\(silent\)\s*\{\s*if \(!roadtripAuthorized\(\)\) return false;/.test(source) &&
   /function recordRoadtripPracticeLap\(\)[\s\S]{0,260}roadtripState\.practiceLaps = 1;[\s\S]{0,80}__checkpointChanged/.test(source) &&
   !/function recordRoadtripPracticeLap\(\)[\s\S]{0,300}unlockRoadtrip\(/.test(source) &&
-  /roadtripState\.unlocked = roadtripExplorationComplete\(\);/.test(source) &&
+  /roadtripState\.unlocked = roadtripAuthorized\(\);/.test(source) &&
   /invitationReady: roadtripState\.invitationReady,[\s\S]{0,100}invitationDismissed: roadtripState\.invitationDismissed/.test(source),
-  "ten seen rooms solely own unlock while optional street laps cannot bypass it");
+  "Phase 2, ten seen rooms, and party-off own authorization while street laps cannot bypass it");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
   /function acceptRoadtripInvite\(event\)\s*\{\s*return openRoadtripRouteChooser\(event\);\s*\}/.test(source) &&
   /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-accept"\)\.dispatchEvent/.test(source) &&

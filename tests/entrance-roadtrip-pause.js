@@ -32,6 +32,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     });
     window.getSfxCtx = function () { return null; };
     window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
     window.goToStage("balcony");
     window.__openEntranceRoom();
     await sleep(40);
@@ -63,6 +66,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       savedAt: Date.now(),
       progress: {
         room: "balcony", lowerRoom: "entrance", maxUnlocked: 4,
+        seenRooms: window.__seenRooms(),
         phase2: true, party: false, daylight: true, bbq: false
       },
       puzzle: {}, phone: null, album: null,

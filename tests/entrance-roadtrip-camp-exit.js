@@ -30,8 +30,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       signPostX: Number(sign.getAttribute("data-roadtrip-sign-post-x")),
       transform: sign.getAttribute("transform"),
       spur: spur.getAttribute("visibility"),
+      shoulder: spur.querySelector(".entrance-roadtrip-camp-spur-shoulder").getAttribute("d"),
       asphalt: spur.querySelector(".entrance-roadtrip-camp-spur-asphalt").getAttribute("d"),
       innerEdge: spur.querySelector(".entrance-roadtrip-camp-spur-inner-edge").getAttribute("d"),
+      outerEdge: spur.querySelector(".entrance-roadtrip-camp-spur-outer-edge").getAttribute("d"),
       junctionX: Number(spur.getAttribute("data-roadtrip-junction-x")),
       junctionY: Number(spur.getAttribute("data-roadtrip-junction-y")),
       destinationX: Number(spur.getAttribute("data-roadtrip-destination-x")),
@@ -44,6 +46,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       bendY: Number(spur.getAttribute("data-roadtrip-bend-y")),
       innerEdgeStartX: Number(spur.getAttribute("data-roadtrip-inner-edge-start-x")),
       innerEdgeStartY: Number(spur.getAttribute("data-roadtrip-inner-edge-start-y")),
+      outerEdgeStartX: Number(spur.getAttribute("data-roadtrip-outer-edge-start-x")),
+      outerEdgeStartY: Number(spur.getAttribute("data-roadtrip-outer-edge-start-y")),
+      shoulderMouthInnerX: Number(spur.getAttribute("data-roadtrip-shoulder-mouth-inner-x")),
       destinationInnerX: Number(spur.getAttribute("data-roadtrip-destination-inner-x")),
       destinationOuterX: Number(spur.getAttribute("data-roadtrip-destination-outer-x")),
       nearWidth: Number(spur.getAttribute("data-roadtrip-near-width")),
@@ -61,6 +66,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
+        window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+          "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
+        window.__setSecondRound(true, { releaseHeld: false });
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
@@ -77,6 +85,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.midExit = { state: roadtrip(), visual: visual() };
         setAbraham(first - nominalSecond, .5, 50);
         report.firstExit = { state: roadtrip(), visual: visual() };
+        window.__entranceRoadtripSetDistance(158);
+        setAbraham(first - nominalSecond, .5, 50);
+        report.curvedExitRight = visual();
+        window.__entranceRoadtripSetDistance(260);
+        setAbraham(first - nominalSecond, .5, 50);
+        report.curvedExitLeft = visual();
+        window.__entranceRoadtripSetDistance(0);
         setAbraham(first + 3 * nominalSecond, .5, 50);
         report.missed = { state: roadtrip(), visual: visual() };
 
@@ -144,20 +159,26 @@ function camp(state) {
 }
 function connectedSpur(visual) {
   var asphalt = visual && visual.asphalt || "";
-  return /^M/.test(asphalt) && /Z$/.test(asphalt) &&
-    (asphalt.match(/Q/g) || []).length === 2 &&
+  var shoulder = visual && visual.shoulder || "";
+  return /^M/.test(asphalt) && /Z$/.test(asphalt) && /^M/.test(shoulder) && /Z$/.test(shoulder) &&
+    (asphalt.match(/Q/g) || []).length === 4 &&
     (asphalt.match(/L/g) || []).length === 1 &&
+    (visual.innerEdge.match(/Q/g) || []).length === 4 &&
+    (visual.outerEdge.match(/Q/g) || []).length === 4 &&
     visual.junctionInnerX < visual.junctionOuterX &&
     Number.isFinite(visual.junctionRoadRightX) &&
-    visual.junctionInnerX <= visual.junctionRoadRightX - 7 &&
+    visual.junctionInnerX <= visual.junctionRoadRightX - 9 &&
     visual.junctionRoadRightX < visual.junctionOuterX &&
-    visual.bendInnerX < visual.bendOuterX &&
-    visual.destinationY < visual.bendY && visual.bendY < visual.junctionY &&
-    visual.innerEdgeStartX === visual.bendInnerX &&
-    visual.innerEdgeStartY === visual.bendY &&
-    visual.innerEdgeStartY <= visual.junctionY - 5 &&
+    visual.shoulderMouthInnerX >= visual.junctionRoadRightX - .3 &&
+    visual.junctionInnerX < visual.innerEdgeStartX &&
+    visual.innerEdgeStartX < visual.bendInnerX && visual.bendInnerX < visual.destinationInnerX &&
+    visual.junctionOuterX < visual.outerEdgeStartX &&
+    visual.outerEdgeStartX < visual.bendOuterX && visual.bendOuterX < visual.destinationOuterX &&
+    visual.destinationY < visual.bendY && visual.bendY < visual.innerEdgeStartY &&
+    visual.innerEdgeStartY === visual.outerEdgeStartY && visual.innerEdgeStartY < visual.junctionY &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
+    visual.destinationX >= visual.junctionOuterX + 14 &&
     visual.destinationInnerX > visual.junctionInnerX &&
     visual.nearWidth > visual.farWidth;
 }
@@ -204,6 +225,11 @@ var mobile = run(true);
     firstVisual.signPostX > firstVisual.destinationX && firstVisual.signPostX - firstVisual.destinationX < 30 &&
     connectedSpur(firstVisual) && signsClear(firstVisual) && /^M/.test(firstVisual.innerEdge || ""),
     device + " paints a receding upper-right spur with its larger sign beside it", firstVisual);
+  check(connectedSpur(result && result.curvedExitRight) && signsClear(result.curvedExitRight) &&
+    connectedSpur(result && result.curvedExitLeft) && signsClear(result.curvedExitLeft),
+    device + " keeps the exit lane continuous through both highway bends", result && {
+      right: result.curvedExitRight, left: result.curvedExitLeft
+    });
 
   var missed = result && result.missed || {};
   check(missed.state && missed.state.route === "abraham" && missed.state.active &&

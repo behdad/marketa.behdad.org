@@ -187,6 +187,8 @@ The campsite outdoor bed keeps a low-passed lake lap under its wind and fire/wea
 rain is a softly band-passed wash rather than a bright broadband hiss. The
 sleep finale retains the lake and halves the calm wind while the locally clear stargazing sky keeps
 rain/storm channels at zero; the night therefore stays audible without reverting to broadband hiss.
+At `~ fin ~`, the campsite also suppresses the loft weather scheduler's lightning and thunder,
+including a rumble already queued before the finale, so only the quiet lake/wind bed remains.
 Its attended curtain call adds four one-shot cues: an ember breath when the fire goes out, padded
 footfalls and a low snuffle as the mama bear approaches, dry cob snaps when she collects the food,
 and the shared hushed finish melody at congratulations. These cues run only on live phase advances,

@@ -120120,6 +120120,10 @@ function spawnDustMote(container) {
   // office windows), so the storm reads from any room; the rumble is full out on the balcony but
   // much quieter — muffled through glass — when you're inside another room.
   var lastThunderRoomMoment = -Infinity;
+  function campFinaleOwnsQuiet() {
+    var camp = document.getElementById("entrance-roadtrip-camp");
+    return !!(camp && camp.classList.contains("camp-sleep-congrats"));
+  }
   function thunderRoomMoment() {
     var now = Date.now();
     if (now - lastThunderRoomMoment < 75000 || document.hidden || !document.hasFocus()) return;
@@ -120141,6 +120145,7 @@ function spawnDustMote(container) {
     var sb = document.getElementById("stage-balcony");
     if (!sb) return;                                      // the balcony scene owns the storm's flashes/thunder
     if (document.visibilityState === "hidden") return;    // don't rumble a hidden tab
+    if (campFinaleOwnsQuiet()) return;                     // ~ fin ~ owns a quiet lake-and-wind soundscape
     var area = document.getElementById("hunt-fullscreen-area");
     if (area && area.classList.contains("dollhouse-open")) return; // room portraits do not replay transient lightning
     ["balcony-thunder-flash", "kitchen-window-flash", "office-window-flash", "garden-window-flash"].forEach(function (id) {
@@ -120157,7 +120162,7 @@ function spawnDustMote(container) {
       // re-check at PLAY time (the flash->rumble delay can straddle a hide), and require
       // focus too: the storm timers keep firing for a visible-but-unfocused window, and a
       // full thunderclap from a window nobody's watching reads as a random loud blast
-      if (document.visibilityState === "hidden" || !document.hasFocus()) return;
+      if (document.visibilityState === "hidden" || !document.hasFocus() || campFinaleOwnsQuiet()) return;
       playThunderSound(onBalcony ? 0.5 : 0.15);
     }, 320 + Math.random() * 480);
     // the couple startle at the rumble if you're in the nook with them (.shake is

@@ -147,6 +147,9 @@ check((source.match(/new Ctx\(\)/g) || []).length === 1 &&
   /bed = audioBed\("outdoor"\)/.test(source) &&
   /else if \(kind === "outdoor"\) \{\s*out\.connect\(loftAudioDestination\(ac\)\)/.test(source),
   "the campsite route reuses the sole AudioContext through the authored outdoor bed bus");
+check((source.match(/campFinaleOwnsQuiet\(\)/g) || []).length === 3 &&
+  /!document\.hasFocus\(\) \|\| campFinaleOwnsQuiet\(\)/.test(source),
+  "the terminal campsite blocks both new and already-queued loft thunder");
 
 console.log("");
 if (failures) { console.log(failures + " campsite audio assertion" + (failures === 1 ? "" : "s") + " failed."); process.exit(1); }

@@ -19,7 +19,7 @@ var HARNESS = [
   ' report.steps.dormant.dismissDisplay=getComputedStyle(close).display;',
   ' key(" ");await sleep(90);var frame=host.querySelector("iframe");var ctrl=key("r",{ctrlKey:true});report.steps.started={state:window.__princeState(),input:window.__princeInputActive,frame:!!frame,src:frame&&frame.getAttribute("src"),ctrlPrevented:ctrl.defaultPrevented,dismissDisplay:getComputedStyle(close).display};',
   ' click(close);await sleep(40);report.steps.gameDismissed={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame,dismissDisplay:getComputedStyle(close).display};key("Enter");await sleep(80);report.steps.gameResumed={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
-  ' key("Escape");await sleep(780);report.steps.parked={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
+  ' window.dispatchEvent(new MessageEvent("message",{origin:location.origin,source:frame.contentWindow,data:{kind:"prince-exit"}}));await sleep(40);report.steps.iframeEscaped={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};key("Enter");await sleep(80);key("Escape");await sleep(40);report.steps.keyEscaped={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};key("ArrowUp");await sleep(780);report.steps.parked={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
   ' key("ArrowDown");await sleep(80);report.steps.returned={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};key("Enter");await sleep(80);report.steps.resumed={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
   ' window.__destroyMonitorPrince();await sleep(30);report.steps.destroyed=window.__princeState();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -60,9 +60,15 @@ check(s.gameDismissed && s.gameDismissed.state.basement && !s.gameDismissed.stat
   s.gameResumed && s.gameResumed.state.playing && s.gameResumed.input && s.gameResumed.frame,
   "the game-only × returns to the Dungeon, disappears, and preserves the resumable iframe",
   { dismissed: s.gameDismissed, resumed: s.gameResumed });
+check(s.iframeEscaped && s.iframeEscaped.state.basement && !s.iframeEscaped.state.playing &&
+  !s.iframeEscaped.input && s.iframeEscaped.frame &&
+  s.keyEscaped && s.keyEscaped.state.basement && !s.keyEscaped.state.playing &&
+  !s.keyEscaped.input && s.keyEscaped.frame,
+  "iframe and parent Escape both return to the authored Dungeon without discarding the run",
+  { iframe: s.iframeEscaped, parent: s.keyEscaped });
 check(s.parked && !s.parked.state.open && s.parked.state.parked && s.parked.state.initiated &&
   !s.parked.input && s.parked.frame,
-  "Escape parks the initiated browsing context without leaving keyboard capture behind", s.parked);
+  "ArrowUp parks the initiated browsing context and returns upstairs", s.parked);
 check(s.returned && s.returned.state.basement && !s.returned.state.playing && !s.returned.input &&
   s.returned.frame && s.resumed && s.resumed.state.playing && s.resumed.input && s.resumed.frame,
   "re-entering shows the play wall and bare Enter resumes the same iframe", {returned:s.returned,resumed:s.resumed});

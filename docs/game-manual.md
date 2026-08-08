@@ -107,8 +107,9 @@ The lower rooms offer:
   leaves the Bathroom open.
 - **Dungeon:** select the play wall to start or resume Prince of Persia. Escape leaves the
   presentation without discarding the run.
-- **Cinema:** wake the projector, choose a film, and use its playback controls. The screen × stops
-  the film and returns to the chooser.
+- **Cinema:** wake the projector, choose a film, and use its playback controls. Escape, Backspace,
+  or the screen × stops a film and returns to the chooser; press Escape or Backspace again to turn
+  off the projector.
 - **Bedroom:** select a stained-glass pane to start tic-tac-toe. After a result, clear the board and
   select again for a new game.
 - **Entrance:** select the road to open the Porsche dashboard and driving game. During the Garden

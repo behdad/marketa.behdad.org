@@ -37692,6 +37692,17 @@ window.__cinemaVideoLoaded = false;
     if (typeof playDryClickSound === "function") playDryClickSound("cinema-projector-dismiss");
     return true;
   }
+  function dismissCinemaLayer() {
+    if (!window.__cinemaRoomOpen) return false;
+    if (cinemaPhotobooth) {
+      stopCinemaPhotobooth(true, true);
+      markChooserFilm(chooserIndex, true);
+      return true;
+    }
+    if (currentFilm) return dismissFilm();
+    if (!projectorOn) return false;
+    return toggleProjector();
+  }
   Array.prototype.forEach.call(room.querySelectorAll(".cinema-film"), function (button) {
     button.addEventListener("click", function () { playFilm(button); });
     button.addEventListener("mouseenter", function () { chooser.querySelectorAll(".film-focus").forEach(function (film) { film.classList.remove("film-focus"); }); markChooserFilm(chooserFilms().indexOf(button), false); chooser.classList.add("film-hovering"); button.classList.add("film-hover"); });
@@ -37823,6 +37834,7 @@ window.__cinemaVideoLoaded = false;
   if (window.__deferCheckpointAdapter) window.__deferCheckpointAdapter("cinema-projector", cinemaProjectorCheckpoint);
   else (window.__pendingCheckpointAdapters || (window.__pendingCheckpointAdapters = [])).push(["cinema-projector", cinemaProjectorCheckpoint]);
   window.__cinemaProjectorToggle = toggleProjector;
+  window.__cinemaDismissLayer = dismissCinemaLayer;
   window.__cinemaProjectorPlayPause = toggleFilmPlayback;
   window.__cinemaProjectorNext = nextFilm;
   window.__cinemaSprinkler = spraySprinkler;
@@ -50681,6 +50693,7 @@ document.addEventListener("keydown", function (event) {
   } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
     event.preventDefault();
     event.stopImmediatePropagation();
+    if (window.__cinemaDismissLayer) window.__cinemaDismissLayer();
   } else if (event.key === "ArrowUp") {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -51563,6 +51576,12 @@ document.addEventListener("keydown", function (event) {
     }
     if (window.__closeMonitorPrince) window.__closeMonitorPrince();
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "kitchen" : "cuddly");
+    return;
+  }
+  if (princeBasementActive &&
+      (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace")) {
+    event.preventDefault();
+    if (window.__dismissPrinceBasementGame) window.__dismissPrinceBasementGame();
     return;
   }
   if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" ||
@@ -85906,6 +85925,7 @@ async def localfont(name):
   window.__openMonitorPrince = openPrinceApp;
   window.__openGardenPrince = openPrinceBasement;
   window.__activateGardenPrince = activatePrinceBasementGame;
+  window.__dismissPrinceBasementGame = dismissPrinceBasementGame;
   window.__princeCanFullscreen = function () { return princeMode === "monitor" && !!princeFrame; };
   window.__enterPrinceBrowserFullscreen = function () { setPrinceFullscreen(true); };
   window.__closeMonitorPrince = parkPrinceApp;
@@ -85951,7 +85971,8 @@ async def localfont(name):
   window.addEventListener("message", function (event) {
     if (!princeFrame || event.source !== princeFrame.contentWindow || event.origin !== location.origin || !event.data) return;
     if (event.data.kind === "prince-exit") {
-      parkPrinceApp();
+      if (princeMode === "basement") dismissPrinceBasementGame();
+      else parkPrinceApp();
       return;
     }
     if (event.data.kind === "prince-contextmenu") {

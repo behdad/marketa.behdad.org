@@ -27,6 +27,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       igniting: document.getElementById("entrance-roadtrip-fire-game").classList.contains("igniting"),
       fireBuilderOpen: document.getElementById("entrance-roadtrip-fire-game").classList.contains("open"),
       fireBuilderFocused: document.getElementById("entrance-roadtrip-fire-game").contains(document.activeElement),
+      stewCrateAvailable: document.getElementById("entrance-roadtrip-camp").classList.contains("stew-crate-available"),
       stew: window.__entranceRoadtripCampStewState(),
       stargazing: window.__entranceRoadtripCampStargazingState(),
       dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
@@ -64,7 +65,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     enter(true);
     enter(false);
     report.fireGuarded = snap();
-    await sleep(1700);
+    await sleep(1150);
     report.fireReady = snap();
 
     enter(false);
@@ -156,8 +157,11 @@ check(result && result.fireStarting.active && result.fireStarting.igniting &&
   result.fireStarting.caption === "entrance_roadtrip_camp_fire_igniting",
   "one Enter immediately acknowledges ignition while keeping the canonical builder closed",
   result && result.fireStarting);
-check(result && result.fireGuarded.igniting && !result.fireGuarded.fireBuilt && result.fireReady.fireBuilt && result.fireReady.fireLit,
-  "repeat and double Enter cannot skip the asynchronous ignition", result && { guarded: result.fireGuarded, ready: result.fireReady });
+check(result && result.fireGuarded.igniting && !result.fireGuarded.fireBuilt &&
+  !result.fireGuarded.stewCrateAvailable && result.fireReady.fireBuilt && result.fireReady.fireLit &&
+  result.fireReady.stewCrateAvailable && result.fireReady.caption === "entrance_roadtrip_stew_invite",
+  "repeat and double Enter cannot skip the one-second fire beat before the stew invitation",
+  result && { guarded: result.fireGuarded, ready: result.fireReady });
 var cooking = result && result.stewCooking && result.stewCooking.stew;
 var extras = cooking && ["onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "tomato", "curry", "salt", "pepper", "chilies", "coriander"]
   .filter(function (name) { return cooking[name]; }).length;

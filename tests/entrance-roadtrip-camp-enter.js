@@ -113,7 +113,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.sleepStarted = snap();
     window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
     await sleep(180);
-    document.getElementById("entrance-roadtrip-camp-wisdom").dispatchEvent(
+    document.getElementById("entrance-roadtrip-camp-wisdom-continue").dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true }));
     report.handoffClickBaseline = snap();
   }

@@ -1568,7 +1568,12 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
   transform-box:fill-box;transform-origin:center;transform:scale(.45)
 }
 #entrance-roadtrip-camp-wisdom{opacity:0;pointer-events:none;transition:opacity .45s ease}
-#entrance-roadtrip-camp-wisdom.show{opacity:1;pointer-events:all;cursor:pointer}
+#entrance-roadtrip-camp-wisdom.show{opacity:1;pointer-events:all;cursor:default}
+#entrance-roadtrip-camp-wisdom-continue{opacity:0;pointer-events:none;cursor:pointer;transition:opacity .22s ease}
+#entrance-roadtrip-camp-wisdom.handoff-ready #entrance-roadtrip-camp-wisdom-continue{opacity:1;pointer-events:all}
+#entrance-roadtrip-camp-wisdom-continue rect{fill:#8e3a4a;stroke:#f8f5ec;stroke-width:1.6}
+#entrance-roadtrip-camp-wisdom-continue text{fill:#fffdf8;font:700 11px Fraunces,serif;text-anchor:middle}
+#entrance-roadtrip-camp-wisdom-continue:hover rect{fill:#4a6b94}
 .entrance-roadtrip-camp-wisdom-bubble{opacity:0}
 #entrance-roadtrip-camp-wisdom.show .entrance-roadtrip-camp-wisdom-bubble{animation:entrance-roadtrip-camp-wisdom-in .42s ease both}
 #entrance-roadtrip-camp-wisdom.show .entrance-roadtrip-camp-wisdom-bubble:nth-child(1){animation-delay:2s}
@@ -35114,6 +35119,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                     <text class="entrance-roadtrip-camp-wisdom-text entrance-roadtrip-camp-wisdom-text-compact" x="93"><tspan x="93" y="111" font-style="italic" data-i="entrance_roadtrip_stargazing_marketa_quote_1">When something is over,</tspan> <tspan x="93" y="129" font-style="italic" data-i="entrance_roadtrip_stargazing_marketa_quote_2">something else begins</tspan><tspan x="93" y="147" data-i="entrance_roadtrip_stargazing_ad_infinitum">—ad infinitum.</tspan></text>
                   </g>
                   <rect id="entrance-roadtrip-camp-wisdom-hit" y="-120" width="680" height="340" fill="#000" fill-opacity="0"/>
+                  <g id="entrance-roadtrip-camp-wisdom-continue">
+                    <rect x="270" y="178" width="140" height="27" rx="9"/>
+                    <text x="340" y="196" data-i="entrance_roadtrip_continue">Continue</text>
+                  </g>
                 </g>
               </g>
             </g>
@@ -41576,6 +41585,7 @@ window.__entranceRoomOpen = false;
   var campStargazingGame = roadtripElement("entrance-roadtrip-stargazing-game");
   var campStargazingLive = roadtripElement("entrance-roadtrip-camp-finale-constellations");
   var campStargazingWisdom = roadtripElement("entrance-roadtrip-camp-wisdom");
+  var campStargazingWisdomContinue = roadtripElement("entrance-roadtrip-camp-wisdom-continue");
   var campFinaleDarkness = roadtripElement("entrance-roadtrip-camp-finale-darkness");
   var campFireState = { complete: false, lit: false, open: false, tinder: false, twigs: false, logs: "", igniting: false, pinecones: 0 };
   var campFireTimer = null;
@@ -42243,6 +42253,7 @@ window.__entranceRoomOpen = false;
       campWisdomHandoffTimer = null;
       if (!campWisdomShowing() || !campSleepFinaleAttended()) return;
       campWisdomHandoffReady = true;
+      paintCampStargazing();
       syncRoadtripCampFireCaption(false);
       if (window.__checkpointChanged) window.__checkpointChanged();
     }, CAMP_WISDOM_HANDOFF_MS);
@@ -42259,8 +42270,11 @@ window.__entranceRoomOpen = false;
     if (campFireScene) campFireScene.classList.toggle("stargazing-complete", complete);
     if (campStargazingLive) campStargazingLive.classList.toggle("show", complete);
     if (eligible && complete) setCampStargazingClear(true);
-    if (campStargazingWisdom) campStargazingWisdom.classList.toggle("show",
-      complete && !campStargazingState.wisdomDismissed && campSleepState.phase === "idle");
+    if (campStargazingWisdom) {
+      campStargazingWisdom.classList.toggle("show",
+        complete && !campStargazingState.wisdomDismissed && campSleepState.phase === "idle");
+      campStargazingWisdom.classList.toggle("handoff-ready", campWisdomHandoffReady && campWisdomShowing());
+    }
     if (campWisdomShowing()) scheduleCampWisdomHandoff();
     else pauseCampWisdomHandoff();
     paintCampSleepFinale();
@@ -42801,8 +42815,9 @@ window.__entranceRoomOpen = false;
     event.stopPropagation();
   });
   if (campStargazingWisdom) campStargazingWisdom.addEventListener("click", function (event) {
-    if (!campWisdomShowing()) return;
-    if (campWisdomHandoffReady) dismissCampStargazingWisdom();
+    var continueClick = campStargazingWisdomContinue && event.target.closest &&
+      event.target.closest("#entrance-roadtrip-camp-wisdom-continue") === campStargazingWisdomContinue;
+    if (campWisdomShowing() && campWisdomHandoffReady && continueClick) dismissCampStargazingWisdom();
     event.preventDefault();
     event.stopImmediatePropagation();
   });
@@ -53392,7 +53407,7 @@ var T = {
       entrance_roadtrip_stargazing_invite: "The sky is clear. Click the sky to look up.",
       entrance_roadtrip_stargazing_title: "Stargazing",
       entrance_roadtrip_stargazing_hint: "Tap or drag the glowing star to trace each constellation.",
-      entrance_roadtrip_stargazing_continue: "Great wisdom dispensed. Click anywhere to continue.",
+      entrance_roadtrip_stargazing_continue: "Great wisdom dispensed.",
       entrance_roadtrip_stargazing_cassiopeia: "Cassiopeia",
       entrance_roadtrip_stargazing_ursa_major: "Ursa Major",
       entrance_roadtrip_stargazing_ursa_minor: "Ursa Minor",
@@ -54768,7 +54783,7 @@ var T = {
       entrance_roadtrip_stargazing_invite: "Obloha je jasná. Klikni na ni a podívej se nahoru.",
       entrance_roadtrip_stargazing_title: "Pozorování hvězd",
       entrance_roadtrip_stargazing_hint: "Klepni na zářící hvězdu nebo ji táhni a obkresli každé souhvězdí.",
-      entrance_roadtrip_stargazing_continue: "Velká moudrost rozdána. Klikni kamkoli a pokračuj.",
+      entrance_roadtrip_stargazing_continue: "Velká moudrost rozdána.",
       entrance_roadtrip_stargazing_cassiopeia: "Kasiopeja",
       entrance_roadtrip_stargazing_ursa_major: "Velká medvědice",
       entrance_roadtrip_stargazing_ursa_minor: "Malá medvědice",

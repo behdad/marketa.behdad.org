@@ -11,6 +11,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <style>
 #entrance-roadtrip-stargazing-game *,#entrance-roadtrip-camp-finale-constellations,#entrance-roadtrip-camp-wisdom{transition:none!important}
 #entrance-roadtrip-camp-wisdom.show .entrance-roadtrip-camp-wisdom-bubble{animation:none!important;opacity:1!important}
+#entrance-roadtrip-camp-wisdom-continue{transition:none!important}
 </style>
 <script>
 (function () {
@@ -128,6 +129,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var liveHitRadius = Number(live.querySelector(".entrance-roadtrip-camp-finale-star-hit").getAttribute("r"));
     var campRidge = ridgePoints(document.getElementById("entrance-roadtrip-camp-ridge"));
     var wisdomHit = document.getElementById("entrance-roadtrip-camp-wisdom-hit");
+    var wisdomContinue = document.getElementById("entrance-roadtrip-camp-wisdom-continue");
     var room = document.getElementById("entrance-room");
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     var panel = game.querySelector(".entrance-roadtrip-stargazing-panel");
@@ -192,6 +194,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       wisdomBubbles: wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble").length,
       wisdomSpeakers: wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-speaker").length,
       wisdomClose: !!document.getElementById("entrance-roadtrip-camp-wisdom-close"),
+      wisdomContinue: wisdomContinue && {
+        ready: wisdom.classList.contains("handoff-ready"),
+        opacity: Number(getComputedStyle(wisdomContinue).opacity),
+        pointer: getComputedStyle(wisdomContinue).pointerEvents,
+        tabindex: wisdomContinue.hasAttribute("tabindex"),
+        stroke: getComputedStyle(wisdomContinue.querySelector("rect")).stroke,
+        text: wisdomContinue.textContent.trim()
+      },
       wisdomShapes: Array.prototype.map.call(wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble"), function (bubble) {
         var path = bubble.querySelector("path.entrance-roadtrip-camp-wisdom-shape");
         var box = path && path.getBBox();
@@ -316,10 +326,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                               liveNames: document.querySelectorAll('#entrance-roadtrip-camp-finale-constellations text').length,
                               wisdom: document.getElementById("entrance-roadtrip-camp-wisdom").textContent.replace(/\s+/g, " ").trim(),
                               wisdomTypography: snap().wisdomTypography,
+                              continueButton: document.getElementById("entrance-roadtrip-camp-wisdom-continue").textContent.trim(),
                               continueText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim()
                             };
                             window.setLang("en");
-                            report.dismissTarget = clickPoint(tent);
+                            report.backdropTarget = clickPoint(tent);
+                            report.backdropAfter = snap();
+                            report.dismissTarget = "entrance-roadtrip-camp-wisdom-continue";
+                            click(document.getElementById("entrance-roadtrip-camp-wisdom-continue"));
                             report.dismissed = snap();
                             dragLiveStar("cassiopeia", 0, 24, 30);
                             click(document.querySelector('[data-live-stargazing-constellation="cassiopeia"] [data-live-stargazing-star="0"]'));
@@ -422,7 +436,8 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result.complete.liveConstellations === 3 && result.complete.liveStars === 19 && result.complete.liveMinHit >= 14 &&
   result.complete.moonAfterConstellations && result.complete.wisdomShown &&
   result.complete.wisdomBubbles === 4 && result.complete.wisdomSpeakers === 0 &&
-  !result.complete.wisdomClose &&
+  !result.complete.wisdomClose && result.complete.wisdomContinue &&
+  !result.complete.wisdomContinue.ready && result.complete.wisdomContinue.pointer === "none" &&
   result.complete.wisdomShapes.every(function (shape) {
     return shape.paths === 1 && shape.rects === 0 && shape.width >= 175 && shape.width <= 290;
   }) &&
@@ -493,7 +508,11 @@ check(result && result.touchDragGuard,
   "completed-star touch drags suppress page panning through a non-passive local guard", result && result.touchDragGuard);
 check(result && result.handoff && result.handoff.state.wisdomHandoffReady &&
   result.handoff.caption === "entrance_roadtrip_stargazing_continue" &&
-  result.englishContinue === "Great wisdom dispensed. Click anywhere to continue.",
+  result.handoff.wisdomContinue && result.handoff.wisdomContinue.ready &&
+  result.handoff.wisdomContinue.opacity === 1 && result.handoff.wisdomContinue.pointer === "all" &&
+  !result.handoff.wisdomContinue.tabindex && result.handoff.wisdomContinue.stroke === "rgb(248, 245, 236)" &&
+  result.handoff.wisdomContinue.text === "Continue" &&
+  result.englishContinue === "Great wisdom dispensed.",
   "the persistent handoff clue appears after all four one-second reveals", result && result.handoff);
 check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.builderNames.join("|") === "Kasiopeja|Velká medvědice|Malá medvědice" &&
@@ -503,13 +522,16 @@ check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.wisdomTypography.every(function (row) {
     return row.fontSize >= 12 && row.textWidth <= row.shapeWidth - 24 && row.textHeight <= row.shapeHeight - 10;
   }) &&
-  result.czech.continueText === "Velká moudrost rozdána. Klikni kamkoli a pokračuj.",
+  result.czech.continueButton === "Pokračovat" && result.czech.continueText === "Velká moudrost rozdána.",
   "builder labels and spacious wisdom bubbles switch cleanly to Czech while the permanent sky stays unlabeled", result && result.czech);
-check(result && result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
+check(result && result.backdropAfter && result.backdropTarget === "entrance-roadtrip-camp-wisdom-hit" &&
+  !result.backdropAfter.state.wisdomDismissed && result.backdropAfter.wisdomShown && !result.backdropAfter.tentOpen &&
+  result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
   result.dismissed.state.sleepPhase === "prompt" &&
   result.dismissed.caption === "entrance_roadtrip_camp_sleep_prompt" && result.dismissed.outerDismiss === "grid" &&
-  result.dismissTarget === "entrance-roadtrip-camp-wisdom-hit" && !result.dismissed.tentOpen,
-  "the next campsite click dismisses the exchange without reaching the underlying prop", result && result.dismissed);
+  result.dismissTarget === "entrance-roadtrip-camp-wisdom-continue" && !result.dismissed.tentOpen,
+  "the backdrop stays inert and only the visible Continue control dismisses the exchange",
+  result && { backdrop: result.backdropAfter, dismissed: result.dismissed });
 check(result && result.completeRestored && result.completeRestored.state.complete &&
   !result.completeRestored.state.wisdomDismissed && result.completeRestored.wisdomShown &&
   result.completeRestored.state.sleepPhase === "idle" && result.completeRestored.state.wisdomHandoffReady &&

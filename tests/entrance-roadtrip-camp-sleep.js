@@ -174,7 +174,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           try {
             report.exchange = snap();
             document.getElementById("entrance-roadtrip-camp-tent").classList.add("open");
-            click(document.getElementById("entrance-roadtrip-camp-wisdom"));
+            click(document.getElementById("entrance-roadtrip-camp-wisdom-continue"));
             report.prompt = snap();
             window.setLang("cs");
             report.czechPrompt = snap().captionText;

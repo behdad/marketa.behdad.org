@@ -38788,6 +38788,47 @@ window.__entranceRoomOpen = false;
   function porscheDriveCoachTouchMode() {
     return window.matchMedia("(pointer: coarse)").matches;
   }
+  function porscheAutomaticDriveCoachPending() {
+    return porscheTransmission.mode === "auto" && !roadtripState.active &&
+      !driveCoachComplete && !driveCoachDismissed;
+  }
+  function porscheDriveCoachAllows(action) {
+    if (!driveState.hudOpen || !porscheAutomaticDriveCoachPending()) return true;
+    if (driveCoachStep === 1) return action === "engine";
+    if (driveCoachStep === 2) return action === "steer";
+    if (driveCoachStep === 3) return action === "gear";
+    if (driveCoachStep === 4) return action === "cruise";
+    return action === "pedal" || porscheDriveCoachTouchMode() && action === "steer";
+  }
+  function settlePorscheAutomaticCoachStep() {
+    if (!porscheAutomaticDriveCoachPending()) return false;
+    if (!porscheState.engineOn && driveCoachStep > 1) driveCoachStep = 1;
+    else if (porscheState.engineOn && driveCoachStep === 1) {
+      driveCoachStep = porscheDriveCoachTouchMode() ? 3 : 2;
+    }
+    driveState.cruiseActive = false;
+    driveState.cruiseTarget = 0;
+    driveState.speed = 0;
+    driveState.throttleHeldMs = 0;
+    driveState.shiftCutMs = 0;
+    driveState.redlineMs = 0;
+    driveState.holds.throttle = false;
+    driveState.holds.brake = false;
+    driveState.holds.clutch = false;
+    if (driveCoachStep <= 3) {
+      porscheTransmission.range = "P";
+      driveState.gear = 0;
+      clearPorscheParkMomentum();
+    } else {
+      porscheTransmission.range = "D";
+      driveState.gear = 1;
+    }
+    driveState.rpm = porscheState.engineOn ? 750 : 0;
+    clearPorscheClutchEngagement(true);
+    resetPorscheAutomaticRuntime();
+    if (driveHud) driveHud.classList.remove("drive-cruise-on");
+    return true;
+  }
   function paintPorscheDriveCoach() {
     if (!driveCoach) return;
     var showing = !!driveState.hudOpen && !roadtripState.active &&
@@ -38841,7 +38882,7 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
   }
   function completePorscheDriveCoachAction(action) {
-    if (driveCoachComplete) return;
+    if (driveCoachComplete || driveCoachDismissed) return;
     var touchCoach = porscheDriveCoachTouchMode();
     var expected = touchCoach ? { engine: 1, gear: 3, steer: 5, pedal: 5 }[action] :
       { engine: 1, steer: 2, gear: 3, cruise: 4, pedal: 5 }[action];
@@ -38855,6 +38896,7 @@ window.__entranceRoomOpen = false;
     if (driveCoachStep === 5) {
       driveCoachNeedsFreshPedal = !!(driveState.holds.throttle || driveState.holds.brake);
     }
+    settlePorscheAutomaticCoachStep();
     showPorscheDriveCoach();
   }
   if (driveCoach) driveCoach.addEventListener("click", function (event) {
@@ -39078,6 +39120,7 @@ window.__entranceRoomOpen = false;
       } else driveState.gear = 0;
     }
     porscheTransmission.mode = mode;
+    settlePorscheAutomaticCoachStep();
     resetPorscheAutomaticRuntime();
     setPorscheDriveShiftKeyHeld(false);
     cancelPorscheShifterPress();
@@ -39107,6 +39150,7 @@ window.__entranceRoomOpen = false;
   function selectPorscheDriveRange(range) {
     range = String(range || "").toUpperCase();
     if (porscheTransmission.mode !== "auto" || ["P", "R", "N", "D"].indexOf(range) < 0) return false;
+    if (!porscheDriveCoachAllows("gear")) return false;
     if (roadtripFrontStopBlocksDrive() && range !== "P" && range !== "N") return false;
     if (range !== "P" && range !== "N" && !porscheState.engineOn) {
       pulsePorscheIgnitionKey();
@@ -47937,6 +47981,7 @@ window.__entranceRoomOpen = false;
     if (syncRoadtripDemeritState()) return false;
     if (event.pointerId !== porscheTouchSteering.pointerId) return false;
     var dx = event.clientX - porscheTouchSteering.startX;
+    if (Math.abs(dx) >= 10 && !porscheDriveCoachAllows("steer")) return false;
     var resumed = false;
     if (porscheTouchSteering.mode !== "steering" && Math.abs(dx) >= 10) {
       resumed = resumeRoadtripFromDrivingInput();
@@ -48009,6 +48054,7 @@ window.__entranceRoomOpen = false;
   }
   function updatePorscheTouchSteeringPad(event) {
     if (!driveTouchSteerPad || event.pointerId !== porscheTouchSteering.pointerId) return false;
+    if (!porscheDriveCoachAllows("steer")) return false;
     var previous = porscheTouchSteering.input;
     porscheTouchSteering.input = porscheTouchPadAxis(event, driveTouchSteerPad, false);
     porscheTouchSteering.mode = "steering";
@@ -48027,7 +48073,7 @@ window.__entranceRoomOpen = false;
   }
   function beginPorscheTouchSteeringPad(event) {
     if (event.pointerType !== "touch" || syncRoadtripDemeritState() ||
-        porscheTouchSteering.pointerId !== null) return false;
+        porscheTouchSteering.pointerId !== null || !porscheDriveCoachAllows("steer")) return false;
     clearPorscheTouchHornTimers();
     stopPorscheHornSound();
     porscheTouchSteering.pointerId = event.pointerId;
@@ -48071,6 +48117,7 @@ window.__entranceRoomOpen = false;
   }
   function updatePorscheTouchPedalPad(event) {
     if (!driveTouchPedalPad || event.pointerId !== porscheTouchPedals.pointerId) return false;
+    if (!porscheDriveCoachAllows("pedal")) return false;
     var input = porscheTouchPedalAxis(event);
     if (!input && (porscheTouchPedals.input || porscheTouchPedals.holdSpeed === null)) {
       porscheTouchPedals.holdSpeed = driveState.speed;
@@ -48091,7 +48138,7 @@ window.__entranceRoomOpen = false;
   }
   function beginPorscheTouchPedalPad(event) {
     if (event.pointerType !== "touch" || syncRoadtripDemeritState() ||
-        porscheTouchPedals.pointerId !== null) return false;
+        porscheTouchPedals.pointerId !== null || !porscheDriveCoachAllows("pedal")) return false;
     porscheTouchPedals.pointerId = event.pointerId;
     driveTouchPedalPad.classList.add("active");
     try { driveTouchPedalPad.setPointerCapture(event.pointerId); } catch (_error) {}
@@ -48210,7 +48257,8 @@ window.__entranceRoomOpen = false;
     return selectPorscheDriveGear(next, true);
   }
   function porscheShifterAvailable() {
-    var available = !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled));
+    var available = !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled) &&
+      (porscheTransmission.mode !== "auto" || porscheDriveCoachAllows("gear")));
     if (!available && driveState.hudOpen) pulsePorscheIgnitionKey();
     return available;
   }
@@ -48386,6 +48434,9 @@ window.__entranceRoomOpen = false;
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     if (syncRoadtripDemeritState()) return true;
     held = !!held;
+    var coachedAction = name === "throttle" || name === "brake" ? "pedal" :
+      name === "steerLeft" || name === "steerRight" ? "steer" : "gear";
+    if (held && !porscheDriveCoachAllows(coachedAction)) return false;
     if (name === "brake" && held) setPorscheCruiseActive(false);
     if (name === "clutch" && porscheTransmission.mode === "auto") held = false;
     if (name === "throttle" && held &&
@@ -48457,6 +48508,7 @@ window.__entranceRoomOpen = false;
       paintPorscheDriveHud();
       return true;
     }
+    if (!porscheDriveCoachAllows("cruise")) return false;
     if (!porscheCruiseAvailable()) return false;
     resumeRoadtripFromDrivingInput();
     driveState.cruiseActive = true;
@@ -48501,6 +48553,11 @@ window.__entranceRoomOpen = false;
     // Highway progress is strictly attended play. A direct/testing step is gated too,
     // so no caller can advance time, traffic, police, or score behind another window.
     if (!roadtripSimulationAttended()) return driveState;
+    if (porscheAutomaticDriveCoachPending()) {
+      driveState.speed = 0;
+      driveState.cruiseActive = false;
+      driveState.cruiseTarget = 0;
+    }
     var dt = Math.max(0, Math.min(1000, Number(milliseconds) || 0));
     var seconds = dt / 1000;
     var longitudinalSpeedBefore = Math.abs(driveState.speed);
@@ -48512,7 +48569,9 @@ window.__entranceRoomOpen = false;
     var brake = driveState.holds.brake ?
       (porscheTouchPedals.pointerId !== null ? porscheTouchPedals.brake : 1) : 0;
     stepPorscheAutomaticTransmission(dt, throttle, brake);
-    var keyboardSteerDirection = (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0);
+    var coachSteeringAllowed = porscheDriveCoachAllows("steer");
+    var keyboardSteerDirection = coachSteeringAllowed ?
+      (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0) : 0;
     if (keyboardSteerDirection) {
       if (porscheKeyboardSteering.direction !== keyboardSteerDirection) {
         porscheKeyboardSteering.direction = keyboardSteerDirection;
@@ -48529,7 +48588,8 @@ window.__entranceRoomOpen = false;
       porscheKeyboardSteering.authority = Math.max(0, porscheKeyboardSteering.authority - seconds * 1.8);
     }
     var keyboardSteerInput = keyboardSteerDirection * porscheKeyboardSteering.authority;
-    var steerInput = porscheTouchSteering.mode === "steering" ? porscheTouchSteering.input : keyboardSteerInput;
+    var steerInput = coachSteeringAllowed ?
+      (porscheTouchSteering.mode === "steering" ? porscheTouchSteering.input : keyboardSteerInput) : 0;
     var impairmentSteerInput = roadtripImpairedSteeringInput(seconds);
     var effectiveSteerInput = Math.max(-1, Math.min(1, steerInput + impairmentSteerInput));
     var steeringTarget = effectiveSteerInput * 18;
@@ -48879,6 +48939,7 @@ window.__entranceRoomOpen = false;
     if (controlKeyEvent) {
       if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
       if (down && !event.repeat) {
+        if (!porscheDriveCoachAllows("cruise")) return true;
         completePorscheDriveCoachAction("cruise");
         driveControlKeyDown = true;
         driveControlChord = false;
@@ -48950,9 +49011,9 @@ window.__entranceRoomOpen = false;
       return true;
     }
     if (hold) {
+      setPorscheDriveHold(hold, true);
       if (down && !event.repeat && hold === "steerLeft") signalPorscheSteering("left");
       else if (down && !event.repeat && hold === "steerRight") signalPorscheSteering("right");
-      setPorscheDriveHold(hold, true);
       return true;
     }
     if (!down || event.repeat) return false;
@@ -49115,6 +49176,7 @@ window.__entranceRoomOpen = false;
   function signalPorscheSteering(direction) {
     var now = Date.now();
     if (!porscheState.engineOn) return false;
+    if (!porscheDriveCoachAllows("steer")) return false;
     completePorscheDriveCoachAction("steer");
     if (roadtripState.active) return false;
     if (now - lastSteeringSignalAt[direction] < 2000) return false;
@@ -49204,6 +49266,7 @@ window.__entranceRoomOpen = false;
       event.stopPropagation();
     }
     var action = control.getAttribute("data-car-action") || "";
+    if (action === "engine" && !porscheDriveCoachAllows("engine")) return false;
     carActivations[action] = (carActivations[action] || 0) + 1;
     if (action === "roof") {
       porscheState.roofOpen = !porscheState.roofOpen;
@@ -49313,6 +49376,7 @@ window.__entranceRoomOpen = false;
     if (porscheState.engineOn && driveCoachStep === 1) {
       driveCoachStep = porscheDriveCoachTouchMode() ? 3 : 2;
     }
+    settlePorscheAutomaticCoachStep();
     if (driveCoachComplete) dismissPorscheDriveCoach();
     else showPorscheDriveCoach();
     paintPorscheDriveHud();
@@ -50215,6 +50279,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveAcceleration = porscheDriveAcceleration;
   window.__entranceDriveSetMotion = function (speed, gear) {
     if (syncRoadtripDemeritState()) return false;
+    if (!porscheDriveCoachAllows("motion")) return false;
     if (roadtripFrontStopBlocksDrive()) return false;
     gear = Math.round(Number(gear) || 0);
     if (gear < -1 || gear > (porscheTransmission.mode === "auto" ? 7 : 6)) return false;
@@ -50948,6 +51013,7 @@ window.__entranceRoomOpen = false;
       driveCoachComplete = !!(savedCoach && savedCoach.complete === true);
       driveCoachDismissed = !!(savedCoach && savedCoach.dismissed === true);
       driveCoachNeedsFreshPedal = false;
+      settlePorscheAutomaticCoachStep();
       paintPorscheDriveCoach();
       paintRoadtripInvite();
       windowPayoffShown = false;

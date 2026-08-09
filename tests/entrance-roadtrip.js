@@ -310,6 +310,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.normalHudEnter = normalHudEnter;
     // The rest of this long-running harness assumes a fresh explicit stop/start
     // baseline before its drivetrain sweeps.
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     window.__toggleEntrancePorscheEngine();
     ensureEngine();
     window.__entranceDriveRange("D", true);
@@ -490,6 +492,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       cleared: state().drive.instruction
     };
     window.__entranceDriveTransmissionMode("auto", true);
+    if (window.__cancelCaption) window.__cancelCaption("entrance-transmission");
     startRoadtripInLane();
     window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(90, 3);

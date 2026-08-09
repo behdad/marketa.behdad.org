@@ -33,6 +33,8 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     window.__toggleEntrancePorscheEngine();
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     window.__entranceDriveTransmissionMode("auto", true);
     window.__entranceDriveSetMotion(100, 4);
 
@@ -49,6 +51,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     key("keyup", "Control", "ControlLeft");
     report.chord = JSON.parse(JSON.stringify(drive()));
     window.__entranceDriveTransmissionMode("auto", true);
+    if (window.__cancelCaption) window.__cancelCaption("entrance-transmission");
     window.__entranceDriveSetMotion(100, 4);
 
     report.claimed = controlTap();

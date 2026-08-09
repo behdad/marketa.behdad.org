@@ -180,7 +180,8 @@ Steering or using a pedal also resumes a paused highway. Text fields, open devic
 activities keep ownership of their normal keys.
 
 The driving coach remains the best introduction because it adapts its instructions to the selected
-transmission and input device.
+transmission and input device. During the automatic lesson, each step temporarily owns the driving
+controls: finish the action it points to before another selector or driving input can affect the car.
 
 ## Road Trip and Camping
 

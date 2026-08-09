@@ -58,6 +58,8 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
         autoSelected: autoButton.classList.contains("selected"),
         manualSelected: manualButton.classList.contains("selected")
       };
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       var ignition = document.getElementById("entrance-drive-ignition");
       var blockedAutoShift = window.__entranceDriveRange("D");
       var blockedAutoPulse = {
@@ -112,6 +114,8 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       report.steps.parkToManual = copy(drive());
       window.__entranceDriveTransmissionMode("auto", true);
       window.__toggleEntrancePorscheEngine();
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       var rangeSteps = [];
       ["ArrowDown", "ArrowDown", "ArrowDown", "ArrowUp", "ArrowUp", "ArrowUp",
         "ArrowDown", "ArrowDown", "ArrowDown"].forEach(function (arrow) {

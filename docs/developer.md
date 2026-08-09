@@ -198,6 +198,10 @@ Keep these ownership boundaries intact:
   checkpoint adapter's Fresh Game reset clears it and restores AUTO/P with fresh controller latches.
 - Driving input belongs to the HUD/controller only while `__entranceDriveKeyboardOwnership` says it
   does. A CSS class or visible dashboard is not sufficient keyboard authority.
+- While the undismissed AUTO coach is active, `porscheDriveCoachAllows` gives only the current
+  semantic action (`engine`, `steer`, `gear`, `cruise`, or `pedal`) mutation authority. Keep every
+  keyboard, pointer, touch, and direct SVG path behind that shared gate; restore normalizes old
+  mid-coach snapshots so a stale range or moving car cannot strand the next instruction.
 - The highway remaps `Space` from local throttle to cruise toggle and reserves `Enter` for
   transport pause/resume. Its Escape/Backspace ladder is active → transport-paused → parked; a
   key arriving at an editable target or while a foreground device covers the scene never enters

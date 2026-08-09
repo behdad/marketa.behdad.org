@@ -76,11 +76,12 @@ allowed exception, owner-confirmed.)
   one language and not the other). Add more checks to it over time as new bug classes
   turn up — it's meant to grow, not stay frozen at today's coverage. `tests/` is blocked
   from public access via `.htaccess`, same treatment as `AGENTS.md` and its `CLAUDE.md` symlink.
-- **Run `node tests/play.js` after changes touching rsvp.html game logic/interactions.**
-  Headless end-to-end playthrough (~2s): solves the whole game kitchen→balcony, then
-  click-storms every `.hunt-hit` (click + dblclick + Enter), failing on any uncaught JS
-  error, a broken solve chain, or missing solve-path elements. It patches rAF to
-  setTimeout and stubs window.open — see its header before changing test plumbing.
+- **Keep `node tests/play.js` for full regression rounds, not the default focused cycle.**
+  The headless end-to-end playthrough solves the whole game kitchen→balcony, then click-storms
+  every `.hunt-hit` (click + dblclick + Enter), failing on uncaught JS errors, a broken solve
+  chain, or missing solve-path elements. Run it when changing that solve chain/shared interaction
+  coverage or during the planned test-fixup round. It patches rAF to setTimeout and stubs
+  window.open — see its header before changing test plumbing.
 - **Run `node tests/enter.js` after changes touching the room `Enter` key behavior** — the
   capture-phase document handler and the per-room `__*DoNext` solve-walkers. It drives ONLY
   the document-level Enter (never per-element clicks): asserts Enter alone walks every room's

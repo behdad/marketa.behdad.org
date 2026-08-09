@@ -448,10 +448,10 @@ port nor another developer's server process.
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
 | Rendering | Album signatures and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, screenshots or real CDP Chrome |
 
-Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Game
-logic changes also require `play.js`; Enter and menu changes have their named mandatory runners.
-Then run the focused tests closest to the ownership boundary you changed. Do not run an enormous
-suite instead of adding one regression for a newly discovered bug class.
+Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the
+focused tests closest to the ownership boundary you changed; Enter and menu changes have their named
+mandatory runners. Reserve `play.js` for solve-chain/shared-interaction changes and full regression
+rounds. Do not run an enormous suite instead of adding one regression for a newly discovered bug class.
 
 Most browser runners share helpers in `tests/lib.js`. Read a test's header before changing its
 timing model or browser plumbing. A passing source assertion is not a visual proof, and a screenshot

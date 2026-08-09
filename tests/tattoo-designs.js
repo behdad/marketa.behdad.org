@@ -59,10 +59,10 @@ if (state && !state.error) {
       row.background === (marketa ? "rgb(242, 207, 174)" : "rgb(230, 180, 137)");
   }), "only elephant and boring use Markéta's lighter skin; all six other designs use Behdad's", state.gallery.skins);
   check(state.en.src === "art/tattoo/ayushi.svg" && state.en.alt === "Paisley" &&
-        state.en.credit === "by Ayushi, Diva" && state.en.portrait &&
+        state.en.credit === "by Ayushi, diva" && state.en.portrait &&
         state.en.className === "tattoo-skin-behdad" && state.en.background === "rgb(230, 180, 137)",
     "Ayushi's English detail view keeps its vector, credit, portrait, and Behdad skin backdrop", state.en);
-  check(state.cs.alt === "Paisley" && state.cs.credit === "od Ayushi, Diva",
+  check(state.cs.alt === "Paisley" && state.cs.credit === "od Ayushi, diva",
     "the Czech detail view mirrors the localized credit", state.cs);
   check(state.marketaPreview.className === "tattoo-skin-marketa" &&
         state.marketaPreview.background === "rgb(242, 207, 174)",

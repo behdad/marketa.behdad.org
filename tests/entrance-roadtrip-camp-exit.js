@@ -277,6 +277,15 @@ function smoothJoin(visual) {
     }) && startWidth > 0 && Math.abs(controlWidth - startWidth) <= .03;
   });
 }
+function smoothArrivalWidths(visual) {
+  return [visual.asphalt, visual.shoulder, visual.innerEdge, visual.outerEdge].every(function (path) {
+    var band = cubicBand(path);
+    if (!band) return false;
+    var controlWidth = band.outer[2].x - band.inner[2].x;
+    var endWidth = band.outer[3].x - band.inner[3].x;
+    return endWidth > 0 && Math.abs(controlWidth - endWidth) <= .03;
+  });
+}
 function edgePaintFollowsAsphalt(visual) {
   var asphalt = cubicBand(visual && visual.asphalt);
   var innerEdge = cubicBand(visual && visual.innerEdge);
@@ -285,12 +294,14 @@ function edgePaintFollowsAsphalt(visual) {
   if (!asphalt || !innerEdge || !outerEdge || !Number.isFinite(amount)) return false;
   return Math.abs(innerEdge.inner[0].x - cubicValue(asphalt.inner, amount, "x")) <= .04 &&
     Math.abs(innerEdge.inner[0].y - cubicValue(asphalt.inner, amount, "y")) <= .04 &&
+    Math.abs(innerEdge.outer[0].x - innerEdge.inner[0].x) <= .04 &&
+    Math.abs(innerEdge.outer[0].y - innerEdge.inner[0].y) <= .04 &&
     Math.abs(outerEdge.outer[0].x - asphalt.outer[0].x) <= .04 &&
     Math.abs(outerEdge.outer[0].y - asphalt.outer[0].y) <= .04;
 }
 function coherentSpurTopology(visual) {
   if (!connectedSpur(visual) || !laneCentredApproach(visual) || !smoothJoin(visual) ||
-      !edgePaintFollowsAsphalt(visual)) return false;
+      !smoothArrivalWidths(visual) || !edgePaintFollowsAsphalt(visual)) return false;
   var asphalt = cubicBand(visual.asphalt);
   var shoulder = cubicBand(visual.shoulder);
   var innerEdge = cubicBand(visual.innerEdge);
@@ -309,8 +320,10 @@ function coherentSpurTopology(visual) {
     var innerEdgeOuter = cubicValue(innerEdge.outer, amount, "x");
     var outerEdgeInner = cubicValue(outerEdge.inner, amount, "x");
     var outerEdgeOuter = cubicValue(outerEdge.outer, amount, "x");
+    var innerPaintOrdered = amount === 0 ?
+      Math.abs(innerEdgeInner - innerEdgeOuter) <= .04 : innerEdgeInner < innerEdgeOuter;
     if (!(asphaltInner < asphaltOuter && shoulderInner <= asphaltInner + .02 &&
-        shoulderOuter >= asphaltOuter - .02 && innerEdgeInner < innerEdgeOuter &&
+        shoulderOuter >= asphaltOuter - .02 && innerPaintOrdered &&
         outerEdgeInner < outerEdgeOuter)) return false;
   }
   return visual.innerEdgeStartT >= .35 && visual.innerEdgeStartT <= .42 &&

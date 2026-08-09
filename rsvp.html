@@ -44518,7 +44518,6 @@ window.__entranceRoomOpen = false;
       (referenceRoadFraction - playerRoadFraction) * destinationPoint.halfWidth;
     var shoulderInset = 1.3 + junctionPoint.perspective * 2.2;
     var edgeNearWidth = 1 + junctionPoint.perspective * 1.8;
-    var edgeMidWidth = .85 + point.perspective * 1.4;
     var edgeFarWidth = .7 + destinationPoint.perspective * 1.1;
     var destinationInner = destinationX - farHalfWidth;
     var destinationOuter = destinationX + farHalfWidth;
@@ -44536,42 +44535,33 @@ window.__entranceRoomOpen = false;
     var joinControlDy = control1Y - junctionY;
     var joinControlDx = Math.abs(tangentDy) > .001 ?
       tangentDx * joinControlDy / tangentDy : 0;
-    function curveControls(start, end, outer) {
-      var distance = end - start;
-      return {
-        c1: start + distance * (outer ? .35 : .22),
-        c2: start + distance * (outer ? .78 : .74)
-      };
-    }
-    function curveBand(nearInner, nearOuter, farInner, farOuter) {
-      var inner = curveControls(nearInner, farInner, false);
-      var outer = curveControls(nearOuter, farOuter, true);
-      inner.c1 = nearInner + joinControlDx;
-      outer.c1 = nearOuter + joinControlDx;
-      // A leftward screen-space turn is valid; crossed boundary controls are not.
-      if (outer.c2 - inner.c2 < .8) {
-        var control2Center = (inner.c2 + outer.c2) / 2;
-        inner.c2 = control2Center - .4;
-        outer.c2 = control2Center + .4;
-      }
-      return { inner: inner, outer: outer };
-    }
-    var asphaltBand = curveBand(junctionInner, junctionOuter, destinationInner, destinationOuter);
+    // A shared centre curve plus eased width keeps both road boundaries parallel
+    // through the turn. Equal widths at C1/C2 remove the moving pinches produced
+    // by independently aimed inner and outer Béziers.
+    var nearCenter = (junctionInner + junctionOuter) / 2;
+    var nearHalfWidth = (junctionOuter - junctionInner) / 2;
+    var centerControl1 = nearCenter + joinControlDx;
+    var centerControl2 = nearCenter + (destinationX - nearCenter) * .76;
+    var asphaltBand = {
+      inner: { c1: centerControl1 - nearHalfWidth, c2: centerControl2 - farHalfWidth },
+      outer: { c1: centerControl1 + nearHalfWidth, c2: centerControl2 + farHalfWidth }
+    };
     var innerControls = asphaltBand.inner;
     var outerControls = asphaltBand.outer;
     function spurPath(inset) {
       var nearInner = junctionInner;
       var nearOuter = junctionOuter + inset;
-      var farInner = destinationInner - inset * .4;
-      var farOuter = destinationOuter + inset * .4;
+      var farInset = inset * .4;
+      var farInner = destinationInner - farInset;
+      var farOuter = destinationOuter + farInset;
       var band = inset ? {
         inner: {
           c1: innerControls.c1,
-          c2: innerControls.c2 - inset * .3
+          c2: innerControls.c2 - farInset
         },
         outer: {
           c1: outerControls.c1 + inset,
-          c2: outerControls.c2 + inset * .54
+          c2: outerControls.c2 + farInset
         }
       } : asphaltBand;
       var pathInner = band.inner;
@@ -44622,12 +44612,12 @@ window.__entranceRoomOpen = false;
       innerEdgeX.c2.toFixed(2) + " " + innerEdgeY.c2.toFixed(2) + " " +
       destinationInner.toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + (destinationInner + edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
-      "C" + (innerEdgeX.c2 + edgeMidWidth).toFixed(2) + " " + innerEdgeY.c2.toFixed(2) + " " +
+      "C" + (innerEdgeX.c2 + edgeFarWidth).toFixed(2) + " " + innerEdgeY.c2.toFixed(2) + " " +
       (innerEdgeX.c1 + edgeTailWidth).toFixed(2) + " " + innerEdgeY.c1.toFixed(2) + " " +
-      (innerEdgeX.start + edgeStartWidth).toFixed(2) + " " + innerEdgeY.start.toFixed(2) + "Z");
+      innerEdgeX.start.toFixed(2) + " " + innerEdgeY.start.toFixed(2) + "Z");
     if (outerEdge) outerEdge.setAttribute("d", "M" + (outerEdgeX.start - edgeStartWidth).toFixed(2) + " " + outerEdgeY.start.toFixed(2) +
       "C" + (outerEdgeX.c1 - edgeTailWidth).toFixed(2) + " " + outerEdgeY.c1.toFixed(2) + " " +
-      (outerEdgeX.c2 - edgeMidWidth).toFixed(2) + " " + outerEdgeY.c2.toFixed(2) + " " +
+      (outerEdgeX.c2 - edgeFarWidth).toFixed(2) + " " + outerEdgeY.c2.toFixed(2) + " " +
       (destinationOuter - edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + destinationOuter.toFixed(2) + " " + destinationY.toFixed(2) +
       "C" + outerEdgeX.c2.toFixed(2) + " " + outerEdgeY.c2.toFixed(2) + " " +

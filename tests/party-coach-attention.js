@@ -80,10 +80,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     snap("messageDuringCoach");
     document.querySelector("#party-switch-coach .hunt-coach-x").dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true }));
+    await sleep(40);
+    snap("messageCoachAfterDismiss");
     await sleep(540);
     snap("messageReleased");
     window.__hideMessageThumb();
-    await sleep(3100);
+    await sleep(100);
     snap("messageCoachReleased");
     if (window.__dismissMsgBadgeCoach) window.__dismissMsgBadgeCoach();
 
@@ -171,16 +173,19 @@ check(coachDuringDungeonReturn && !coachDuringDungeonReturn.dungeon && !coachDur
   "the coach stays hidden while Dungeon slides away", coachDuringDungeonReturn);
 check(coachAfterDungeon && !coachAfterDungeon.dungeon && coachAfterDungeon.coach && coachAfterDungeon.coachDue,
   "the settled Garden restores its pending coach after Dungeon", coachAfterDungeon);
-var duringMessage = step("messageDuringCoach"), releasedMessage = step("messageReleased");
+var duringMessage = step("messageDuringCoach"), afterCoachDismiss = step("messageCoachAfterDismiss"),
+  releasedMessage = step("messageReleased");
 check(duringMessage && duringMessage.coach && !duringMessage.thumb && !duringMessage.messageCoach && duringMessage.hold &&
   duringMessage.hold.messages.join(",") === "cue_calendar",
   "a new notification and its unread-message coach queue behind the visible Party-switch coach", duringMessage);
-check(releasedMessage && !releasedMessage.coach && releasedMessage.thumb && !releasedMessage.messageCoach && releasedMessage.hold &&
+check(afterCoachDismiss && !afterCoachDismiss.coach && !afterCoachDismiss.thumb && afterCoachDismiss.messageCoach,
+  "dismissing the Party-switch coach releases the unread-message lesson immediately", afterCoachDismiss);
+check(releasedMessage && !releasedMessage.coach && releasedMessage.thumb && releasedMessage.messageCoach && releasedMessage.hold &&
   releasedMessage.hold.messages.length === 0,
-  "the × releases the queued notification exactly once and keeps the party running", releasedMessage);
+  "the queued preview releases exactly once without hiding the durable lesson", releasedMessage);
 var releasedBadgeCoach = step("messageCoachReleased");
 check(releasedBadgeCoach && !releasedBadgeCoach.coach && !releasedBadgeCoach.thumb && releasedBadgeCoach.messageCoach,
-  "the unread-message coach starts only after the Party-switch coach and released preview are dismissed", releasedBadgeCoach);
+  "the unread-message coach remains until it is explicitly dismissed", releasedBadgeCoach);
 var callBefore = step("callBeforeCoach"), callCleared = step("callCleared"), callDuring = step("callDuringCoach");
 check(callBefore && callBefore.ring && callBefore.coachDue && !callBefore.coach,
   "an already-ringing call also keeps the due coach off-screen", callBefore);

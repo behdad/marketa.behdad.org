@@ -9396,14 +9396,14 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* First unread only: a durable, non-modal coach below the notification lane. Temporary room,
    phone and activity covers may hide it, but only its × or opening Messages retires it. */
 .msg-badge.coached{animation:msg-badge-coach-pulse .9s ease-in-out infinite}
-.msg-badge-coach{position:absolute;top:136px;left:max(10px,calc(50% - 250px));z-index:62;box-sizing:border-box;width:min(390px,calc(100% - 12px));min-height:68px;padding:14px 58px 14px 18px;border:2px solid rgba(142,58,74,.58);border-radius:18px;background:rgba(255,253,248,.98);color:var(--wine);box-shadow:0 5px 18px rgba(69,58,49,.32);font:700 26px/1.16 "Fraunces",serif;text-align:center;text-wrap:balance;overflow-wrap:anywhere;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity .2s ease,transform .2s ease}
+.msg-badge-coach{position:absolute;top:146px;left:max(10px,calc(50% - 255px));z-index:62;box-sizing:border-box;width:min(390px,calc(100% - 12px));min-height:68px;padding:14px 58px 14px 18px;border:2px solid rgba(142,58,74,.58);border-radius:18px;background:rgba(255,253,248,.98);color:var(--wine);box-shadow:0 5px 18px rgba(69,58,49,.32);font:700 26px/1.16 "Fraunces",serif;text-align:center;text-wrap:balance;overflow-wrap:anywhere;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity .2s ease,transform .2s ease}
 .msg-badge-coach.show{opacity:1; transform:translateY(0)}
 .msg-badge-coach-arrow{position:absolute;left:-2px;bottom:calc(100% + 2px);width:48px;height:108px;overflow:visible;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(31,31,31,.45));animation:msg-badge-arrow-bob .8s ease-in-out infinite}
 .msg-badge-coach-arrow path{fill:#ef1717;stroke:#1f1f1f;stroke-width:3.5;stroke-linejoin:round}
 .msg-badge-coach-dismiss{position:absolute;right:.55rem;top:.55rem;display:grid;place-items:center;width:2.2rem;height:2.2rem;padding:0;border:0;border-radius:50%;background:var(--wine);color:#fff;font:800 25px/1 sans-serif;box-shadow:0 2px 7px rgba(0,0,0,.28);cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent}
 @keyframes msg-badge-coach-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14); box-shadow:0 3px 12px rgba(192,57,43,.55)}}
 @keyframes msg-badge-arrow-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-@media (max-width:520px){.msg-badge-coach{top:122px;min-height:62px;padding:11px 52px 11px 14px;border-radius:15px;font-size:22px}.msg-badge-coach-arrow{height:94px}.msg-badge-coach-dismiss{right:.45rem;top:.45rem;width:1.95rem;height:1.95rem;font-size:22px}}
+@media (max-width:520px){.msg-badge-coach{top:132px;min-height:62px;padding:11px 52px 11px 14px;border-radius:15px;font-size:22px}.msg-badge-coach-arrow{height:94px}.msg-badge-coach-dismiss{right:.45rem;top:.45rem;width:1.95rem;height:1.95rem;font-size:22px}}
 @media (prefers-reduced-motion: reduce){.msg-badge.coached,.msg-badge-coach-arrow{animation:none}.msg-badge-coach{transition:none}}
 /* incoming-call ring card (Madla; Markéta's parents on a Saturday) — a sibling of .msg-thumb: drops from the top-centre of the
    loft, pulses, and rings for ~15s. Tap anywhere on it to answer. The green answer glyph on the
@@ -96052,7 +96052,8 @@ async def localfont(name):
       } // action beats keep unrelated scene notifications clear; their own authored text still lands
       var m = MESSAGES[id]; if (!m) return;
       cancelMsgBadgeCoachDelay();
-      hideMsgBadgeCoach(); // never stack the coach over a newer live notification preview
+      // Once introduced, the durable badge lesson stays put through later previews; only its
+      // dismiss button, opening Messages, or a genuine full-screen activity retires/covers it.
       curThumbId = id; // the whole notification opens and centres this exact message
       // anchor to the scene (.hunt-viewport) so the card drops down from the top of the LOFT, not
       // the page — it's inside #hunt-fullscreen-area, so it rides fullscreen too; the viewport's
@@ -96110,6 +96111,20 @@ async def localfont(name):
     var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachDelayT = null;
     var msgBadgeCoachShown = false, msgBadgeCoachAcknowledged = false;
     function unreadCount() { expireStaleMessageActions(); var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
+    function partySwitchBlocksMsgBadgeCoach() {
+      return !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive());
+    }
+    function actionGameBlocksMsgBadgeCoach() {
+      return Object.keys(notificationActionGames).some(function (game) {
+        // The Party bridge owns notification delivery for several consecutive beats. Only its
+        // visible switch coach blocks this lesson; otherwise the broad hold made the lesson arrive
+        // very late, disappear during the exchange, and repaint afterward.
+        return game !== "party-room-map" && notificationActionGames[game];
+      });
+    }
+    function attentionBlocksMsgBadgeCoach() {
+      return partySwitchBlocksMsgBadgeCoach() || actionGameBlocksMsgBadgeCoach();
+    }
     function cancelMsgBadgeCoachDelay() {
       if (msgBadgeCoachDelayT) { clearTimeout(msgBadgeCoachDelayT); msgBadgeCoachDelayT = null; }
     }
@@ -96129,7 +96144,7 @@ async def localfont(name):
     }
     window.__dismissMsgBadgeCoach = function () { return acknowledgeMsgBadgeCoach("dismissed"); };
     function showMsgBadgeCoach(host) {
-      if (msgBadgeCoachAcknowledged || actionGameHoldsNotifications() || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic ||
+      if (msgBadgeCoachAcknowledged || attentionBlocksMsgBadgeCoach() || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic ||
           (window.__monitorZoomed && window.__monitorZoomed())) return false;
       msgBadgeCoachShown = true;
       if (!msgBadgeCoachEl) {
@@ -96144,11 +96159,16 @@ async def localfont(name):
       if (copy) copy.textContent = tr("msg_badge_coach");
       if (msgBadgeCoachEl.parentNode !== host) host.appendChild(msgBadgeCoachEl);
       msgBadgeCoachEl.classList.add("show");
-      if (msgBadgeEl) msgBadgeEl.classList.add("coached");
+      if (msgBadgeEl) {
+        var n = unreadCount();
+        msgBadgeEl.classList.remove("idle");
+        msgBadgeEl.textContent = n >= 8 ? "∞" : String(n);
+        msgBadgeEl.classList.add("show", "coached");
+      }
       return true;
     }
     function maybeShowMsgBadgeCoach() {
-      if (!msgBadgeCoachAcknowledged && !actionGameHoldsNotifications() && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) return showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
+      if (!msgBadgeCoachAcknowledged && !attentionBlocksMsgBadgeCoach() && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) return showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
       return false;
     }
     window.__repeatMsgBadgeCoach = function () { // test hook: repaint after a temporary cover without waiting on a scene transition
@@ -96156,10 +96176,14 @@ async def localfont(name):
       return maybeShowMsgBadgeCoach();
     };
     function scheduleMsgBadgeCoach() {
-      if (msgBadgeCoachAcknowledged || actionGameHoldsNotifications() || (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show"))) return;
+      if (msgBadgeCoachAcknowledged || attentionBlocksMsgBadgeCoach() || (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show"))) return;
       cancelMsgBadgeCoachDelay();
       msgBadgeCoachDelayT = setTimeout(function () { msgBadgeCoachDelayT = null; maybeShowMsgBadgeCoach(); }, 3000);
     }
+    window.__releaseMsgBadgeCoachAfterPartySwitch = function () {
+      cancelMsgBadgeCoachDelay();
+      return maybeShowMsgBadgeCoach();
+    };
     function updateMsgBadge() {
       var n = unreadCount(), host = document.querySelector(".hunt-viewport") || document.body;
       var rosterOpen = rosterHoldsOccupants();
@@ -96172,7 +96196,7 @@ async def localfont(name):
         });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (actionGameHoldsNotifications()) {
+      if (attentionBlocksMsgBadgeCoach()) {
         msgBadgeEl.classList.remove("idle", "show");
         hideMsgBadgeCoach();
       } else if (n > 0 && !isOpen() && !rosterOpen) {
@@ -115984,6 +116008,9 @@ function spawnDustMote(container) {
       if (coachAttentionRetryTimer) { clearTimeout(coachAttentionRetryTimer); coachAttentionRetryTimer = null; }
       if (window.__clearFlashCaption) window.__clearFlashCaption("party-switch-coach");
       paint();
+      if (changed && window.__releaseMsgBadgeCoachAfterPartySwitch) {
+        window.__releaseMsgBadgeCoachAfterPartySwitch();
+      }
       if (changed) checkpointBridge();
       if (changed) offerRoadtripInvite(roadtripExchangeRemaining);
       return changed;

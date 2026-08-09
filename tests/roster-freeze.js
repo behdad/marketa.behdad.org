@@ -40,6 +40,12 @@ var harness = String.raw`<script>
     var liveRunner = document.querySelector('[id^="garden-kid-"].chasing');
     var liveCross = liveRunner && liveRunner.querySelector(".gk-run");
     window.roster(true);
+    var rosterClose = document.querySelector(".roster-close");
+    var rosterCloseRect = rosterClose && rosterClose.getBoundingClientRect();
+    check("the roster has a plainly sized circular dismiss control",
+      rosterCloseRect && rosterCloseRect.width >= 40 && rosterCloseRect.height >= 40 &&
+        getComputedStyle(rosterClose).borderRadius === "50%",
+      rosterCloseRect ? rosterCloseRect.width + "x" + rosterCloseRect.height : "missing");
     check("opening the roster pauses an active chase sprite in place",
       liveCross && state(liveCross) === "paused" &&
         document.getElementById("loft-game-strip").classList.contains("roster-freeze-runners"),

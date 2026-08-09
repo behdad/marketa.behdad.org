@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Date/time join the existing room-navigation row without moving it. The
-// console pull-tab + FPS meter sit in the top chrome at their old scene-left x.
+// console pull-tab + FPS meter stack at the top of the left scene rail.
 "use strict";
 
 var lib = require("./lib");
@@ -20,7 +20,7 @@ var HARNESS = [
   ' var before=ymd();document.getElementById("loft-datenextday").click();await sleep(30);report.steps.step={before:before,after:ymd(),date:new URL(location.href).searchParams.get("date")};',
   ' document.getElementById("loft-datepill").click();await sleep(60);report.steps.calendar={open:!!document.querySelector(".phone-backdrop.show"),phone:!!document.querySelector(".calx-phone"),entrance:!!window.__entranceRoomOpen};if(window.__closePhoneModal)window.__closePhoneModal(true);await sleep(450);',
   ' window.__openEntrancePorscheDriveHud();await sleep(30);var nr=nav.getBoundingClientRect(),vr=vp.getBoundingClientRect();report.steps.driving={display:getComputedStyle(nav).display,hud:document.getElementById("entrance-room").classList.contains("drive-hud-visible"),above:nr.bottom<=vr.top};',
-  ' vp.dispatchEvent(new KeyboardEvent("keydown",{key:"`",code:"Backquote",bubbles:true,cancelable:true}));await sleep(60);var tab=document.getElementById("loft-console-hint"),fps=document.getElementById("dropterm-fps"),tools=document.getElementById("loft-console-tools"),tr=geom(tab),fr=geom(fps),tg=geom(tools),fg=geom(document.querySelector(".hunt-frame"));report.steps.tools={keyboardOpen:!!window.__dropTermOpen(),tabOpen:tab.classList.contains("open"),toolsParent:tools.parentNode&&(tools.parentNode.id||tools.parentNode.className),tabParent:tab.parentNode&&tab.parentNode.id,fpsParent:fps.parentNode&&fps.parentNode.id,tabNorth:tr.bottom<=vr.top-5,fpsNorth:fr.bottom<=vr.top-5,tabX:Math.abs(tr.left-vr.left-3),fpsX:Math.abs(fr.left-vr.left-30),frameLeft:fg.left,viewportLeft:vr.left,toolsLeft:tg.left,tabLeft:tr.left,tabInScene:vp.contains(tab),fpsInScene:vp.contains(fps),tabDisplay:getComputedStyle(tab).display,fpsDisplay:getComputedStyle(fps).display};',
+  ' vp.dispatchEvent(new KeyboardEvent("keydown",{key:"`",code:"Backquote",bubbles:true,cancelable:true}));await sleep(60);var tab=document.getElementById("loft-console-hint"),fps=document.getElementById("dropterm-fps"),tools=document.getElementById("loft-console-tools"),tr=geom(tab),fr=geom(fps),tg=geom(tools),fg=geom(document.querySelector(".hunt-frame"));report.steps.tools={keyboardOpen:!!window.__dropTermOpen(),tabOpen:tab.classList.contains("open"),toolsParent:tools.parentNode&&(tools.parentNode.id||tools.parentNode.className),tabParent:tab.parentNode&&tab.parentNode.id,fpsParent:fps.parentNode&&fps.parentNode.id,tabTop:Math.abs(tr.top-fg.top),fpsBelow:fr.top>=tr.bottom-1,tabX:Math.abs(tr.left-fg.left-3.2),fpsX:Math.abs(fr.left-fg.left-3.2),frameLeft:fg.left,viewportLeft:vr.left,toolsLeft:tg.left,tabLeft:tr.left,tabInScene:vp.contains(tab),fpsInScene:vp.contains(fps),tabDisplay:getComputedStyle(tab).display,fpsDisplay:getComputedStyle(fps).display};',
   ' tab.click();await sleep(30);report.steps.consoleClosed=!window.__dropTermOpen();tab.click();await sleep(30);report.steps.consoleReopened=!!window.__dropTermOpen()&&tab.classList.contains("open");tab.click();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
@@ -66,10 +66,12 @@ function run(label, chromeFlags) {
   check(s.driving && s.driving.hud && s.driving.display !== "none" && s.driving.above,
     "the date controls remain in chrome above the active driving surface", s.driving);
   check(s.tools && s.tools.keyboardOpen && s.tools.tabOpen &&
+    s.tools.toolsParent === "hunt-left" &&
     s.tools.tabParent === "loft-console-tools" && s.tools.fpsParent === "loft-console-tools" &&
-    s.tools.tabNorth && s.tools.fpsNorth && s.tools.tabX < 1.1 && s.tools.fpsX < 1.1 &&
+    s.tools.tabTop < 1.1 && s.tools.fpsBelow && s.tools.tabX < 1.1 && s.tools.fpsX < 1.1 &&
+    Math.abs(s.tools.toolsLeft - s.tools.frameLeft) < 1.1 &&
     !s.tools.tabInScene && !s.tools.fpsInScene && s.tools.tabDisplay !== "none" && s.tools.fpsDisplay !== "none",
-    "real backtick discovery shows console + FPS in top chrome at their old left alignment", s.tools);
+    "real backtick discovery stacks console + FPS at the top of the left scene rail", s.tools);
   check(s.consoleClosed && s.consoleReopened,
     "the relocated pull-tab remains available to close and reopen the drop-down", { closed: s.consoleClosed, reopened: s.consoleReopened });
 }

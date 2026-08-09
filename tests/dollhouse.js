@@ -80,9 +80,22 @@ var harness = String.raw`<script>
     check("the first Bathroom thumbnail has a towel paint fallback",
       document.getElementById("bathroom-waffle-towel").getAttribute("fill") ===
         "url(#bathroom-waffle) #a8a39e");
+    var parkedUpperSources = ["stage-garden", "stage-cuddly", "stage-office", "stage-balcony"]
+      .map(function (id) { return document.getElementById(id); });
+    check("opening The Loft makes every parked upper source tree raster-visible for WebKit",
+      parkedUpperSources.every(function (stage) {
+        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&
+          getComputedStyle(stage.firstElementChild).visibility === "visible";
+      }), parkedUpperSources.map(function (stage) {
+        return stage.id + ":" + getComputedStyle(stage).visibility + "/" +
+          getComputedStyle(stage.firstElementChild).visibility;
+      }).join(","));
     key("Tab");
     check("closing The Loft restores the Road Trip pause overlay",
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");
+    check("closing The Loft restores upper-room raster parking",
+      parkedUpperSources.every(function (stage) { return getComputedStyle(stage).visibility === "hidden"; }),
+      parkedUpperSources.map(function (stage) { return stage.id + ":" + getComputedStyle(stage).visibility; }).join(","));
     document.getElementById("entrance-drive-hud-svg").setAttribute("viewBox", "0 -120 680 340");
     window.__entranceRoadtripTransportState = function () {
       return { active: true, paused: false, route: "camp" };

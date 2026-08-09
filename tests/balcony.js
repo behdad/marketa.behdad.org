@@ -397,7 +397,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
   var drinkFractions = {}, everDrink = false, everNoDrink = false, wrongDrink = false;
-  var sawBaharehWine = false, sawJayBeer = false, sawHostDiet = false;
+  var sawBaharehWine = false, sawJayBeer = false, ordinaryHostsStayedOnFloor = true;
   var N = 300;
   for (var k = 0; k < N; k++) {
     leave(); activate();
@@ -419,10 +419,12 @@ console.log("balcony-hangout controller (Node DOM-shim):");
       }
     });
     if (crowdShown.length) drinkFractions[withDrink + "/" + crowdShown.length] = true;
-    // Markéta and Behdad can use their free hand for Diet Coke; other smokers have no drink.
+    // Ordinary party rotations leave both hosts on the garden floor; BBQ owns their
+    // explicit garden/balcony split. Other smokers never acquire a guest drink.
+    if (shownIds().indexOf("bh-behdad") !== -1 || shownIds().indexOf("bh-marketa") !== -1) {
+      ordinaryHostsStayedOnFloor = false;
+    }
     shownIds().filter(function (id) { return SMOKERS.indexOf(id) !== -1; }).forEach(function (id) {
-      var d = byId[id].querySelector(".bh-diet");
-      if (d && d.classList.contains("on")) sawHostDiet = true;
       var b = byId[id].querySelector(".bh-beer"), f = byId[id].querySelector(".bh-flute");
       if ((b && b.classList.contains("on")) || (f && f.classList.contains("on"))) wrongDrink = true;
     });
@@ -432,7 +434,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   ok("the drink fraction VARIES across showings (" + Object.keys(drinkFractions).length + " distinct)", Object.keys(drinkFractions).length >= 3);
   ok("Bahareh's shown drink is wine", sawBaharehWine);
   ok("Jay's shown drink is beer", sawJayBeer);
-  ok("Markéta/Behdad can appear with Diet Coke", sawHostDiet);
+  ok("ordinary party rotations keep Markéta/Behdad on the garden floor", ordinaryHostsStayedOnFloor);
   ok("no authored preference ever renders as the wrong drink", !wrongDrink);
 })();
 

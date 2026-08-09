@@ -35,8 +35,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html coffee-cat projector:");
-var warm = lib.runPageSync("rsvp.html", HARNESS, 3400, { patchRaf: true, urlSuffix: "?date=2027-07-10#play" });
+console.log("loft-day.html coffee-cat projector:");
+var warm = lib.runPageSync("loft-day.html", HARNESS, 3400, { patchRaf: true, urlSuffix: "?date=2027-07-10" });
 check(!!warm && warm.errors.length === 0, "warm-half harness has no uncaught page errors", warm && warm.errors);
 var w = warm && warm.steps || {};
 check(w.fresh && w.fresh.channel === "coffee" && w.fresh.preferred === "coffee" &&
@@ -64,7 +64,7 @@ check(w.restored && w.restored.channel === "coffee" && w.restored.playing && w.r
 check(w.stopped && !w.stopped.playing && w.stopped.beds === 0,
   "leaving the music channel tears its shared bed down", w.stopped);
 
-var cold = lib.runPageSync("rsvp.html", COLD_HARNESS, 1200, { patchRaf: true, urlSuffix: "?date=2027-01-15#play" });
+var cold = lib.runPageSync("loft-day.html", COLD_HARNESS, 1200, { patchRaf: true, urlSuffix: "?date=2027-01-15" });
 check(!!cold && cold.errors.length === 0, "cold-half harness has no uncaught page errors", cold && cold.errors);
 var c = cold && cold.steps && cold.steps.cold;
 check(c && c.first === "fire" && c.preferred === "fire" && c.order.slice(0, 2).join(",") === "fire,coffee" && c.next === "coffee",

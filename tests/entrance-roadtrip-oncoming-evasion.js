@@ -95,12 +95,12 @@ function check(ok, message, detail) {
 }
 function count(rows) { return (rows || []).filter(Boolean).length; }
 
-console.log("rsvp.html wrong-lane oncoming evasion:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 4200, {
+console.log("loft-day.html wrong-lane oncoming evasion:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 4200, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the focused drive has no uncaught errors", result && result.errors);

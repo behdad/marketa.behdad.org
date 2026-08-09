@@ -35,12 +35,12 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html checkpoint room frontier:");
+console.log("loft-day.html checkpoint room frontier:");
 [false, true].forEach(function (bbqOn) {
   var label = "BBQ " + (bbqOn ? "on" : "off");
-  var result = lib.runPageSync("rsvp.html", harness(bbqOn), 1400, {
+  var result = lib.runPageSync("loft-day.html", harness(bbqOn), 1400, {
     patchRaf: true,
-    urlSuffix: "?date=2026-07-15&time=12:00#play"
+    urlSuffix: "?date=2026-07-15&time=12:00"
   });
   check(result && result.errors.length === 0, label + " recovery has no uncaught errors", result && result.errors);
   check(result && result.before && result.before.gate && result.before.room === "garden" &&

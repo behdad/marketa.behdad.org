@@ -17,10 +17,9 @@ var HARNESS = [
   '})();</script>'
 ].join("\n");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 2200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 2200, {
   patchRaf: true,
   seedRandom: true,
-  urlSuffix: "#play",
   chromeFlags: "--window-size=1100,900"
 });
 var failed = 0;
@@ -28,7 +27,7 @@ function check(ok, message, detail) {
   if (ok) console.log("  ✓ " + message);
   else { failed++; console.log("  ✗ " + message + "   [" + JSON.stringify(detail) + "]"); }
 }
-console.log("rsvp.html block driving travel rate:");
+console.log("loft-day.html block driving travel rate:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 var streetTravel = result && Math.abs(result.street - result.before);
 var highwayTravel = result && Math.abs(result.highway - result.highwayBefore);

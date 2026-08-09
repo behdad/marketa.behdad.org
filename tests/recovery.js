@@ -59,8 +59,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html checkpoint recovery:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
+console.log("loft-day.html checkpoint recovery:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30" });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
@@ -159,7 +159,7 @@ check(!s.continued.recoveryActive && s.continued.leftVisibility === "visible" &&
 check(s.continued.watchParent === "MAIN", "continuing restores Trailer below the shared game shell", s.continued);
 check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "none", "game-only play hides Trailer after the recovery choice", s.continued);
 
-var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
+var restart = lib.runPageSync("loft-day.html", START_OVER_HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30" });
 check(!!restart && restart.errors.length === 0, "Start over harness has no uncaught page errors", restart && restart.errors);
 var startedOver = restart && restart.steps.startedOver;
 check(startedOver && startedOver.confirmations === 0 && !startedOver.gate && !startedOver.save && startedOver.room === "kitchen" && !startedOver.phase2,
@@ -177,7 +177,7 @@ check(startedOver && startedOver.utilities && startedOver.utilities.projector ==
   !startedOver.utilities.faith && !startedOver.utilities.neon,
   "Start over clears restored utility/media intent through the adapter registry", startedOver && startedOver.utilities);
 
-var resetContext = lib.runPageSync("rsvp.html", RESET_CONTEXT_HARNESS, 3000, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
+var resetContext = lib.runPageSync("loft-day.html", RESET_CONTEXT_HARNESS, 3000, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30" });
 check(!!resetContext && resetContext.errors.length === 0, "reset-context harness has no uncaught page errors", resetContext && resetContext.errors);
 check(resetContext && resetContext.steps.physical.date === "2027-02-14" && resetContext.steps.physical.time === "18:30",
   "the in-room extinguisher preserves the pretend date and time", resetContext && resetContext.steps.physical);

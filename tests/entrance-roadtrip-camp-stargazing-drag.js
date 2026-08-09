@@ -132,12 +132,12 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html campsite stargazing pointer drag:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 7000, {
+console.log("loft-day.html campsite stargazing pointer drag:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 7000, {
   forceReduce: true,
   patchRaf: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=22:00#play",
+  urlSuffix: "?date=2026-07-15&time=22:00",
   chromeFlags: "--window-size=1180,900"
 });
 check(result && result.errors.length === 0, "the drag trace has no uncaught errors", result && result.errors);

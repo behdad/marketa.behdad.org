@@ -33,8 +33,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html checkpoint nesting poufs:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 2400, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html checkpoint nesting poufs:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 2400, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, a = s.restored, m = s.mutated, v = s.malformed, z = s.reset;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);

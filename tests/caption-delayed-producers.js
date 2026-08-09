@@ -35,9 +35,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 8000, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 8000, {
   patchRaf: true, forceMotion: true, seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play"
+  urlSuffix: "?date=2026-07-15&time=12:00"
 });
 var LAPTOP_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
@@ -62,9 +62,9 @@ var LAPTOP_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9
   }, 300); });
 })();
 </script>`;
-var laptopResult = lib.runPageSync("rsvp.html", LAPTOP_HARNESS, 6200, {
+var laptopResult = lib.runPageSync("loft-day.html", LAPTOP_HARNESS, 6200, {
   patchRaf: true, forceReduce: true, seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00&captionLaptopFresh=1#play"
+  urlSuffix: "?date=2026-07-15&time=12:00&captionLaptopFresh=1"
 });
 var failures = 0;
 function check(ok, message, detail) {
@@ -72,7 +72,7 @@ function check(ok, message, detail) {
   if (!ok) { failures++; if (detail) console.log("    " + JSON.stringify(detail)); }
 }
 
-console.log("rsvp.html delayed caption producers:");
+console.log("loft-day.html delayed caption producers:");
 check(!!result, "focused harness completed");
 if (result) {
   check(result.errors.length === 0, "no uncaught page errors", result.errors);

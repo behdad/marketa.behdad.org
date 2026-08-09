@@ -145,7 +145,7 @@ var COARSE_HARNESS = String.raw`<script>
 </script>`;
 
 function run(label, harness, opts) {
-  var report = lib.runPageSync("rsvp.html", harness, 1800, Object.assign({ patchRaf: true, forceMotion: true, seedRandom: true, urlSuffix: "#play" }, opts || {}));
+  var report = lib.runPageSync("loft-day.html", harness, 1800, Object.assign({ patchRaf: true, forceMotion: true, seedRandom: true }, opts || {}));
   if (!report) { console.error("piano-lifecycle: no " + label + " report"); return 1; }
   var failed = false;
   report.checks.forEach(function (check) {
@@ -159,7 +159,7 @@ function run(label, harness, opts) {
   return failed ? 1 : 0;
 }
 
-console.log("rsvp.html piano lifecycle:");
+console.log("loft-day.html piano lifecycle:");
 var failures = run("desktop", HARNESS) + run("coarse", COARSE_HARNESS, { forceHybridPointer: true });
 if (failures) process.exit(1);
 console.log("piano-lifecycle: all checks passed");

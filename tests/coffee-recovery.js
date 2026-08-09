@@ -34,8 +34,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html coffee checkpoint recovery:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1700, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html coffee checkpoint recovery:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 1700, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(r.continued && r.continued.state.step === "brewed" && r.continued.state.rounds === 1 &&

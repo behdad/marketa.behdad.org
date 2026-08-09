@@ -31,8 +31,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html piano checkpoint recovery:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3200, { patchRaf: true, forceMotion: true, seedRandom: true, urlSuffix: "#play" });
+console.log("loft-day.html piano checkpoint recovery:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 3200, { patchRaf: true, forceMotion: true, seedRandom: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {}, before = s.before || {}, restored = s.restored, returned = s.returned, same = s.same, changed = s.changed;
 check(result.errors.length === 0, "reload/Continue harness has no uncaught errors", result.errors);

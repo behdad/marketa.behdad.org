@@ -47,10 +47,10 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html Kitchen checkpoint gate:");
-var write = lib.runPageSync("rsvp.html", WRITE_HARNESS, 1800, { patchRaf: true, urlSuffix: "#play" });
-var invalid = lib.runPageSync("rsvp.html", INVALID_HARNESS, 1000, { patchRaf: true, urlSuffix: "#play" });
-var left = lib.runPageSync("rsvp.html", LEFT_HARNESS, 1000, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html Kitchen checkpoint gate:");
+var write = lib.runPageSync("loft-day.html", WRITE_HARNESS, 1800, { patchRaf: true });
+var invalid = lib.runPageSync("loft-day.html", INVALID_HARNESS, 1000, { patchRaf: true });
+var left = lib.runPageSync("loft-day.html", LEFT_HARNESS, 1000, { patchRaf: true });
 
 check(write && write.errors.length === 0, "checkpoint write harness has no uncaught errors", write && write.errors);
 check(write && write.before && !write.before.solved.length && !write.before.tapSaved &&

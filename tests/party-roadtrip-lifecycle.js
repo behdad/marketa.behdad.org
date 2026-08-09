@@ -144,11 +144,11 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 18000, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 18000, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=23:00#play",
+  urlSuffix: "?date=2026-07-15&time=23:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 var failures = 0;
@@ -157,7 +157,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + (detail == null ? "" : " — " + JSON.stringify(detail))); }
 }
 
-console.log("rsvp.html party/Road Trip foreground ownership:");
+console.log("loft-day.html party/Road Trip foreground ownership:");
 check(result && result.errors.length === 0, "the lifecycle probe has no page errors", result && result.errors);
 var s = result && result.steps || {};
 check(s.before && s.before.identity.on && !s.before.foreground.suspended && s.before.runtime.rotation &&

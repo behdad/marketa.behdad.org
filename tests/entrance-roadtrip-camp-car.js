@@ -242,10 +242,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 5200, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -261,7 +261,7 @@ function transformNear(value, x, y) {
   return !!match && Math.abs(+match[1] - x) < 2 && Math.abs(+match[2] - y) < 2;
 }
 
-console.log("rsvp.html campsite parked-car controls:");
+console.log("loft-day.html campsite parked-car controls:");
 check(result && result.errors.length === 0, "controls run without uncaught errors", result && result.errors);
 check(result && result.hitMap && result.hitMap.count === 8 && result.hitMap.actionCount === 7 &&
   result.hitMap.alignedWithArt && result.hitMap.dragBelowControls,
@@ -326,11 +326,11 @@ check(result && result.openRoofTrunkControl && result.openRoofTrunkControl.roofS
   result.openRoofTrunkControl.trunkOpened,
   "the rear trunk remains independently clickable beside an open soft top", result && result.openRoofTrunkControl);
 
-var coarseResult = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+var coarseResult = lib.runPageSync("loft-day.html", HARNESS, 5200, {
   patchRaf: true,
   forceMotion: true,
   forceCoarsePointer: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=844,520"
 });
 check(coarseResult && coarseResult.errors.length === 0 && coarseResult.coarse,

@@ -131,11 +131,11 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 14500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 14500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?fresh=party-coach-attention#play"
+  urlSuffix: "?fresh=party-coach-attention"
 });
 var failed = false;
 function check(ok, message, detail) {
@@ -145,7 +145,7 @@ function check(ok, message, detail) {
 }
 function step(name) { return result && result.steps && result.steps[name]; }
 
-console.log("rsvp.html party coach attention ownership:");
+console.log("loft-day.html party coach attention ownership:");
 check(result && result.errors.length === 0, "attention probe has no page errors", result && result.errors);
 var popupBefore = step("popupBeforeCoach"), popupReentry = step("popupOnReentry"), popupCleared = step("popupCleared");
 check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.coach,

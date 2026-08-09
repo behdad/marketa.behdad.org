@@ -146,18 +146,18 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html slow-traffic overtaking:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html slow-traffic overtaking:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 6/.test(source) &&
   /function syncRoadtripPlayerOvertaker\(seconds\)[\s\S]{0,900}forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX/.test(source) &&
   /spawnRoadtripEntity\(plan\.type, lane, plan\.ahead,[\s\S]{0,140}behind: true/.test(source),
   "travel at 70 km/h or less schedules a vehicle after an opening breathing beat");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 1800, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 1800, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the focused drive has no uncaught errors", result && result.errors);

@@ -83,12 +83,12 @@ function speedSignature(rows) {
   return rows.map(function (row) { return [row.type, row.speedKmh]; });
 }
 
-console.log("rsvp.html route-aware natural traffic speed:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3800, {
+console.log("loft-day.html route-aware natural traffic speed:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 3800, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the production-plan sample has no uncaught errors",

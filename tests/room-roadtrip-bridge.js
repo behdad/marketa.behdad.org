@@ -176,11 +176,11 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 15000, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 15000, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?fresh=room-roadtrip-bridge#play",
+  urlSuffix: "?fresh=room-roadtrip-bridge",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 var failures = 0;
@@ -192,7 +192,7 @@ function step(label) {
   return result && result.steps && result.steps.find(function (row) { return row.label === label; });
 }
 
-console.log("rsvp.html room exploration → Road Trip bridge:");
+console.log("loft-day.html room exploration → Road Trip bridge:");
 check(result && result.errors.length === 0, "the multi-reload probe has no page errors", result && result.errors);
 var nine = step("nine"), partyOff = step("party-off-nine"), first = step("party-on-ten-first-beat");
 var phaseOneTen = step("phase-one-ten");

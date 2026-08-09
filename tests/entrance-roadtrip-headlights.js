@@ -4,7 +4,7 @@
 var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 var failures = 0;
 
 function check(ok, label, detail) {
@@ -91,10 +91,10 @@ var harness = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 3500, {
+var result = lib.runPageSync("loft-day.html", harness, 3500, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-09-22&time=22:00#play",
+  urlSuffix: "?date=2026-09-22&time=22:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 check(result && result.errors.length === 0, "night-driving probe has no page errors", result && result.errors);

@@ -152,8 +152,8 @@ function laneBounded(rows, limit) {
   return rows.every(function (row) { return Math.abs(row.lane) <= limit; });
 }
 
-console.log("rsvp.html attended route-transition continuity:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html attended route-transition continuity:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(/function roadtripRouteBlend\(\)/.test(source) &&
   /travel \* \.018/.test(source) && /travel \* \.055/.test(source) && /travel \* \.12/.test(source),
   "one route blend owns the three distance-parallax rates");
@@ -167,11 +167,11 @@ check(/function roadtripGeometryProfile\(\)/.test(source) &&
 check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*if \(!preserveCamp\) resetRoadtripCampSessionBeforeReveal\(\);/.test(source),
   "fresh Road Trips settle the previous campsite before any transition frame");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 5200, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the transition sweep has no uncaught errors",

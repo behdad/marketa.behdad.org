@@ -28,8 +28,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html monitor checkpoint shell recovery:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 2200, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html monitor checkpoint shell recovery:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 2200, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, continued = s.continued, video = s.video;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);

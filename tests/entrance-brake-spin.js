@@ -68,8 +68,8 @@ window.addEventListener("load", function () {
 });
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 1800, {
-  patchRaf: true, seedRandom: true, urlSuffix: "#play"
+var result = lib.runPageSync("loft-day.html", harness, 1800, {
+  patchRaf: true, seedRandom: true
 });
 if (!result) { console.error("brake spin: no report"); process.exit(1); }
 var failures = 0;

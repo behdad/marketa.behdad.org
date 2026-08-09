@@ -117,15 +117,15 @@ var harness = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 5000, {
+var result = lib.runPageSync("loft-day.html", harness, 5000, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-09-22&time=14:00#play",
+  urlSuffix: "?date=2026-09-22&time=14:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 
-console.log("rsvp.html Abraham turnoff AUTO assist:");
+console.log("loft-day.html Abraham turnoff AUTO assist:");
 check(result && result.errors.length === 0,
   "turnoff-assist probe has no page errors", result && result.errors);
 check(result && result.stopped && result.stopped.roadtrip.route === "banff" &&

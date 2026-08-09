@@ -43,9 +43,9 @@ function check(ok, msg, detail) {
   }
 }
 
-console.log("rsvp.html checkpoint compatibility:");
-var legacy = lib.runPageSync("rsvp.html", LEGACY_HARNESS, 1500, { patchRaf: true, urlSuffix: "#play" });
-var portable = lib.runPageSync("rsvp.html", PORTABLE_HARNESS, 1300, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html checkpoint compatibility:");
+var legacy = lib.runPageSync("loft-day.html", LEGACY_HARNESS, 1500, { patchRaf: true });
+var portable = lib.runPageSync("loft-day.html", PORTABLE_HARNESS, 1300, { patchRaf: true });
 
 check(legacy && legacy.errors.length === 0, "legacy recovery has no uncaught page errors", legacy && legacy.errors);
 check(legacy && legacy.before && legacy.room === "office" &&

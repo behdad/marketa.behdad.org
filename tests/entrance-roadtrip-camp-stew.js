@@ -337,11 +337,11 @@ function samePoint(a, b) {
   return !!(a && b && Math.abs(a.x - b.x) < .5 && Math.abs(a.y - b.y) < .5);
 }
 
-console.log("rsvp.html campsite stew:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 12000, {
+console.log("loft-day.html campsite stew:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 12000, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=20:00#play",
+  urlSuffix: "?date=2026-07-15&time=20:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the real stew interaction loop has no uncaught errors", result && result.errors);

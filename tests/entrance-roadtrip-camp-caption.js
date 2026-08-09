@@ -98,10 +98,10 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Camping RSVP caption:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 7600, {
+console.log("loft-day.html Camping RSVP caption:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 7600, {
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the caption lifecycle has no uncaught errors",

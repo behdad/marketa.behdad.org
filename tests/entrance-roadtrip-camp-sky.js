@@ -115,8 +115,8 @@ function check(ok, label, detail) {
   if (!ok) failures++;
 }
 
-console.log("rsvp.html Abraham Lake campsite sky:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html Abraham Lake campsite sky:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 var campStars = source.match(/<g id="entrance-roadtrip-camp-stars"[\s\S]*?<\/g>\s*<g id="entrance-roadtrip-camp-moon"/);
 check(campStars && (campStars[0].match(/<circle/g) || []).length >= 45,
   "the camp has a dense authored star field");
@@ -143,10 +143,10 @@ check(lakeAt >= 0 && bubblesAt > lakeAt && wavesAt > bubblesAt,
 check(iceBubbleArt && (iceBubbleArt[0].match(/<ellipse/g) || []).length >= 30,
   "winter ice carries a field of layered methane-bubble clusters");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 2600, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 2600, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-08-05&time=12:00#play",
+  urlSuffix: "?date=2026-08-05&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "sky state changes raise no page errors", result && result.errors);

@@ -36,10 +36,10 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html resumed Balcony rain:");
-var stayed = lib.runPageSync("rsvp.html", harness("stay"), 1800, { patchRaf: true, forceMotion: true, urlSuffix: "#play" });
-var left = lib.runPageSync("rsvp.html", harness("leave"), 1800, { patchRaf: true, forceMotion: true, urlSuffix: "#play" });
-var resumed = lib.runPageSync("rsvp.html", harness("hide"), 1800, { patchRaf: true, forceMotion: true, urlSuffix: "#play" });
+console.log("loft-day.html resumed Balcony rain:");
+var stayed = lib.runPageSync("loft-day.html", harness("stay"), 1800, { patchRaf: true, forceMotion: true });
+var left = lib.runPageSync("loft-day.html", harness("leave"), 1800, { patchRaf: true, forceMotion: true });
+var resumed = lib.runPageSync("loft-day.html", harness("hide"), 1800, { patchRaf: true, forceMotion: true });
 
 check(stayed && stayed.errors.length === 0 && stayed.seen.length > 0 && stayed.direct === 0 &&
   stayed.seen.every(function (drop) { return drop.parent === "balcony-precipfx" && drop.stage === "stage-balcony" && drop.x >= 435 && drop.x <= 665; }),

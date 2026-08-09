@@ -14,9 +14,8 @@ var HARNESS = [
   '})();</script>'
 ].join("\n");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 2500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 2500, {
   seedRandom: true,
-  urlSuffix: "#play",
   chromeFlags: "--no-default-browser-check --noerrdialogs --window-size=1100,900"
 });
 var failures = 0;
@@ -31,7 +30,7 @@ function ownsNoPresentationTransition(snapshot) {
     snapshot.worldTransition.running.length === 0 && snapshot.sceneryTransition.running.length === 0;
 }
 
-console.log("rsvp.html Road Trip/HUD atomic handoff:");
+console.log("loft-day.html Road Trip/HUD atomic handoff:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(result && result.started && result.highway.active && result.highway.viewBox === "0 -120 680 340" &&
   result.highway.hudHeight !== result.street.hudHeight && result.highway.worldOpacity === "1" &&

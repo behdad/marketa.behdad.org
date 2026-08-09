@@ -409,10 +409,10 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html campsite sleep finale:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 12400, {
+console.log("loft-day.html campsite sleep finale:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 12400, {
   forceReduce: true,
-  urlSuffix: "?date=2026-07-15&time=23:00#play",
+  urlSuffix: "?date=2026-07-15&time=23:00",
   chromeFlags: "--window-size=1180,900"
 });
 check(result && result.errors.length === 0, "the sleep finale has no uncaught errors", result && result.errors);
@@ -602,9 +602,9 @@ check(result && result.completeExit && !result.completeExit.campActive && result
   Object.keys(result.fresh.progress || {}).every(function (name) { return result.fresh.progress[name] === 0; }),
   "leaving after completion makes the next Camping visit fresh", { exit: result && result.completeExit, fresh: result && result.fresh });
 
-var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1800, {
+var reduced = lib.runPageSync("loft-day.html", REDUCED_HARNESS, 1800, {
   forceReduce: true,
-  urlSuffix: "?date=2026-07-15&time=23:00#play",
+  urlSuffix: "?date=2026-07-15&time=23:00",
   chromeFlags: "--force-prefers-reduced-motion=reduce --window-size=1180,900"
 });
 check(reduced && reduced.errors.length === 0 && reduced.warning && reduced.warning.reduced &&
@@ -616,8 +616,8 @@ check(reduced && reduced.errors.length === 0 && reduced.warning && reduced.warni
   "reduced motion snaps to the safe sky composition while fin still waits for congratulations",
   reduced);
 
-var finMotion = lib.runPageSync("rsvp.html", FIN_MOTION_HARNESS, 800, {
-  urlSuffix: "?date=2026-07-15&time=23:00#play",
+var finMotion = lib.runPageSync("loft-day.html", FIN_MOTION_HARNESS, 800, {
+  urlSuffix: "?date=2026-07-15&time=23:00",
   chromeFlags: "--window-size=1180,900"
 });
 check(finMotion && finMotion.errors.length === 0 && finMotion.normal &&

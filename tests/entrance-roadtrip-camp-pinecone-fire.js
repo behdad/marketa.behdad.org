@@ -137,9 +137,9 @@ var HARNESS = `
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 12500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 12500, {
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=21:00#play",
+  urlSuffix: "?date=2026-07-15&time=21:00",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -151,7 +151,7 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html campsite pinecone kindling:");
+console.log("loft-day.html campsite pinecone kindling:");
 check(result && result.errors.length === 0, "the pinecone sequence has no uncaught errors", result && result.errors);
 check(result && result.initial && result.initial.state.pinecones === 0 && !result.initial.state.complete &&
   !result.initial.state.lit && !result.initial.burning && result.initial.emptySlots === 0,

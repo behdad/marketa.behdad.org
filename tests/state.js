@@ -1086,7 +1086,7 @@ var PROBE_HARNESS = [
 ].join("\n");
 
 // ── game-only explicit fullscreen harness ──────────────────────────────────
-// Loaded with #play so the same non-installed game-only condition used by /loft-day is active.
+// Loaded through canonical Loft Day so its non-installed game-only condition is active.
 var LOFT_FULLSCREEN_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   "<script>",
@@ -1272,7 +1272,7 @@ function fail(msg, detail) {
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
   if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 52000, CHROME_OPTS); // includes the persistent two-step opening guide + latest-popup-aware message-coach delay
   if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
-  if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
+  if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("loft-day.html", LOFT_FULLSCREEN_HARNESS, 7000, CHROME_OPTS);
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "meals".indexOf(ONLY) === 0) jobs.meals = lib.runPage("rsvp.html", MEALS_HARNESS, 12000, CHROME_OPTS);
   if (!Object.keys(jobs).length) {

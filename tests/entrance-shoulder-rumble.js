@@ -19,10 +19,9 @@ var HARNESS = [
   '})();</script>'
 ].join("\n");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 2200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 2200, {
   patchRaf: true,
   seedRandom: true,
-  urlSuffix: "#play",
   chromeFlags: "--no-default-browser-check --noerrdialogs --window-size=1100,900"
 });
 var failed = 0;
@@ -30,7 +29,7 @@ function check(ok, message, detail) {
   if (ok) console.log("  ✓ " + message);
   else { failed++; console.log("  ✗ " + message + "   [" + JSON.stringify(detail) + "]"); }
 }
-console.log("rsvp.html shoulder rumble speed:");
+console.log("loft-day.html shoulder rumble speed:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(result && result.stopped.state.roadtrip.shoulderZone !== "road" && !result.stopped.active,
   "a stopped Porsche on the shoulder does not shake the scene", result && result.stopped);

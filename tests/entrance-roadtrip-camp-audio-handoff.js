@@ -48,11 +48,11 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Abraham Lake audio handoff:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+console.log("loft-day.html Abraham Lake audio handoff:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 5200, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
@@ -79,7 +79,7 @@ check(settled.drive && settled.drive.audioMix.retiring.length === 0 && settled.c
   settled.camp.levels.wind > arrival.camp.levels.wind && settled.beds === 1,
   "the handoff closes every retired vehicle bed and leaves one outdoor bed", settled);
 
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check((source.match(/new Ctx\(\)/g) || []).length === 1 &&
   /stopPorscheDriveAudio\(PORSCHE_CAMP_AUDIO_CROSSFADE_SECONDS\)/.test(source) &&
   /stopPorscheDriveMusic\(PORSCHE_CAMP_AUDIO_CROSSFADE_SECONDS\)/.test(source) &&

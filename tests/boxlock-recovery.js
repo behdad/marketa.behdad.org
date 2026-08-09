@@ -38,8 +38,8 @@ function closedVisual(s) {
     s.transform === "none" && s.miniClosed === "1" && s.miniOpen === "0" && !s.trip;
 }
 
-console.log("rsvp.html magic-box checkpoint:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 2400, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html magic-box checkpoint:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 2400, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);

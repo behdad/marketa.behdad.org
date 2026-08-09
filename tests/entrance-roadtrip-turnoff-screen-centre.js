@@ -126,7 +126,7 @@ var harness = String.raw`<pre id="__report">pending</pre>
 
 function run(label, options) {
   console.log(label + ":");
-  var result = lib.runPageSync("rsvp.html", harness, 6500, options);
+  var result = lib.runPageSync("loft-day.html", harness, 6500, options);
   check(result && result.errors.length === 0,
     "continuous approach has no page errors", result && result.errors);
   var samples = result && result.samples || [];
@@ -147,15 +147,15 @@ function run(label, options) {
   "arrival preserves the same painted lane-centre alignment as the approach", samples);
 }
 
-console.log("rsvp.html continuous Abraham turnoff screen centring:");
+console.log("loft-day.html continuous Abraham turnoff screen centring:");
 run("desktop landscape", {
   patchRaf: true, seedRandom: true, forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,700"
 });
 run("mobile landscape", {
   patchRaf: true, seedRandom: true, forceMotion: true, forceCoarsePointer: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=844,390"
 });
 

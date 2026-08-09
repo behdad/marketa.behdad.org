@@ -14,11 +14,11 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
 const PORT = 9200 + Math.floor(Math.random() * 700);
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), "classics-touch-"));
 const CHROME = process.env.CHROME_BIN || "google-chrome";
-const source = path.join(ROOT, "rsvp.html");
+const source = path.join(ROOT, "loft-day.html");
 const chrome = spawn(CHROME, [
   "--headless=new", "--disable-gpu", "--no-sandbox", "--mute-audio",
   "--remote-debugging-port=" + PORT, "--user-data-dir=" + PROFILE,
-  "--hide-scrollbars", "file://" + source + "?t=" + Date.now() + "#play"
+  "--hide-scrollbars", "file://" + source + "?t=" + Date.now()
 ], { stdio: "ignore" });
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -48,7 +48,7 @@ function check(ok, message, detail) {
   for (let i = 0; i < 80; i++) {
     try {
       const targets = await get("/json");
-      target = targets.find(item => item.type === "page" && item.url.includes("rsvp.html"));
+      target = targets.find(item => item.type === "page" && item.url.includes("loft-day.html"));
       if (target) break;
     } catch {}
     await sleep(250);

@@ -15,7 +15,7 @@ const CHROME = process.env.CHROME_BIN || "google-chrome";
 const chrome = spawn(CHROME, [
   "--headless=new", "--disable-gpu", "--no-sandbox", "--mute-audio",
   "--remote-debugging-port=" + PORT, "--user-data-dir=" + PROFILE,
-  "--hide-scrollbars", "file://" + path.join(ROOT, "rsvp.html") + "?t=" + Date.now() + "#play"
+  "--hide-scrollbars", "file://" + path.join(ROOT, "loft-day.html") + "?t=" + Date.now()
 ], { stdio: "ignore" });
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -44,7 +44,7 @@ function check(ok, message, detail) {
   for (let i = 0; i < 80; i++) {
     try {
       const targets = await get("/json");
-      target = targets.find(item => item.type === "page" && item.url.includes("rsvp.html"));
+      target = targets.find(item => item.type === "page" && item.url.includes("loft-day.html"));
       if (target) break;
     } catch {}
     await sleep(250);

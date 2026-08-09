@@ -144,12 +144,12 @@ function segment(hud, index) {
   return hud && hud.progress && hud.progress.segments && hud.progress.segments[index] || {};
 }
 
-console.log("rsvp.html Road Trip progress HUD:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+console.log("loft-day.html Road Trip progress HUD:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 4500, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 

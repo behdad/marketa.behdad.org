@@ -202,16 +202,16 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Abraham Lake camp interactions:");
-var source = require("fs").readFileSync(require("path").join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html Abraham Lake camp interactions:");
+var source = require("fs").readFileSync(require("path").join(lib.ROOT, "loft-day.html"), "utf8");
 var eyeFrames = source.match(/@keyframes entrance-roadtrip-camp-eye-wiggle\{[^}]+\}[^}]+\}[^}]+\}/);
 check(eyeFrames && /rotate\(/.test(eyeFrames[0]) && /scale\(/.test(eyeFrames[0]) &&
   !/translate/.test(eyeFrames[0]), "the bark eyes visibly flex in place without a lateral translation");
-var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 4500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 

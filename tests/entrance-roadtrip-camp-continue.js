@@ -124,12 +124,12 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Camping preserves Continue:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 4200, {
+console.log("loft-day.html Camping preserves Continue:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 4200, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 

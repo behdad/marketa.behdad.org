@@ -89,8 +89,8 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Road Trip demerit persistence:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3500, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html Road Trip demerit persistence:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 3500, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);

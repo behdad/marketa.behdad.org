@@ -29,8 +29,8 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html checkpoint physical openings:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 2200, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html checkpoint physical openings:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 2200, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, restored = s.restored, persisted = s.persisted, validated = s.validated, legacy = s.legacy, interaction = s.interaction;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);

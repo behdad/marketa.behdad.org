@@ -56,10 +56,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 3500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 3500, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -84,7 +84,7 @@ function safeDeck(rows, length) {
   });
 }
 
-console.log("rsvp.html Road Trip seeded randomization:");
+console.log("loft-day.html Road Trip seeded randomization:");
 var a = result && result.steps && result.steps.seedA;
 var repeat = result && result.steps && result.steps.seedARepeat;
 var b = result && result.steps && result.steps.seedB;

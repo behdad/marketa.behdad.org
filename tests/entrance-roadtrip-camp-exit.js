@@ -177,11 +177,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 </script>`;
 
 function run(coarse) {
-  return lib.runPageSync("rsvp.html", HARNESS, 1200, {
+  return lib.runPageSync("loft-day.html", HARNESS, 1200, {
     forceMotion: true,
     seedRandom: true,
     forceCoarsePointer: coarse,
-    urlSuffix: "?date=2026-07-15&time=12:00#play",
+    urlSuffix: "?date=2026-07-15&time=12:00",
     chromeFlags: "--window-size=1100,900"
   });
 }
@@ -337,7 +337,7 @@ function signsClear(visual) {
   });
 }
 
-console.log("rsvp.html optional recurring Camping exit:");
+console.log("loft-day.html optional recurring Camping exit:");
 var desktop = run(false);
 var mobile = run(true);
 [desktop, mobile].forEach(function (result, index) {

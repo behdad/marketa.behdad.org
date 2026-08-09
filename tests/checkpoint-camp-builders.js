@@ -76,11 +76,11 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Camping builder checkpoints:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 2200, {
+console.log("loft-day.html Camping builder checkpoints:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 2200, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=20:00#play"
+  urlSuffix: "?date=2026-07-15&time=20:00"
 });
 check(result && result.errors.length === 0, "builder restore has no uncaught errors", result && result.errors);
 check(result && result.fireSaved && result.fireSaved.draft &&

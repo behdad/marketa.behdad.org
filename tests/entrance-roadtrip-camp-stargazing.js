@@ -5,7 +5,7 @@
 var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 
 var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <style>
@@ -378,10 +378,10 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html campsite stargazing:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 10000, {
+console.log("loft-day.html campsite stargazing:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 10000, {
   forceReduce: true,
-  urlSuffix: "?date=2026-07-15&time=23:00#play",
+  urlSuffix: "?date=2026-07-15&time=23:00",
   chromeFlags: "--window-size=1180,900"
 });
 function same(actual, expected) { return JSON.stringify(actual) === JSON.stringify(expected); }

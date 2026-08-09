@@ -123,9 +123,9 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Road Trip caption arbitration:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 5500, {
-  patchRaf: true, forceMotion: true, urlSuffix: "?date=2026-07-15&time=12:00#play"
+console.log("loft-day.html Road Trip caption arbitration:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 5500, {
+  patchRaf: true, forceMotion: true, urlSuffix: "?date=2026-07-15&time=12:00"
 });
 check(result && result.errors.length === 0, "the Road Trip ownership harness has no uncaught errors", result && result.errors);
 if (result) {

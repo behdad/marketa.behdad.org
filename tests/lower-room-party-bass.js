@@ -82,9 +82,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 </script>`;
 
 function run(options) {
-  return lib.runPageSync("rsvp.html", HARNESS, 5000, Object.assign({
+  return lib.runPageSync("loft-day.html", HARNESS, 5000, Object.assign({
     seedRandom: true,
-    urlSuffix: "?date=2026-08-21&time=22:00#play"
+    urlSuffix: "?date=2026-08-21&time=22:00"
   }, options));
 }
 
@@ -97,7 +97,7 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html lower-room Party bass vibration:");
+console.log("loft-day.html lower-room Party bass vibration:");
 var result = run({ forceMotion: true });
 var s = (result && result.steps) || {};
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
@@ -120,7 +120,7 @@ check(s.cinema && s.cinema.name === "lower-room-party-bass" && s.cinemaClick &&
 check(s.off && !s.off.live && s.off.motion.name === "none",
   "ending the Party removes the vibration", s.off);
 
-var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
 check(/--party-window-beat", period\.toFixed\(3\) \+ "s"/.test(source) &&
   /animation:lower-room-party-bass var\(--party-window-beat,\.533s\)/.test(source) &&
   /@media \(prefers-reduced-motion:reduce\)\{[\s\S]*html\.mir-party-bass-live #cinema-window,[\s\S]*html\.mir-party-bass-live #bedroom-stained-glass\{animation:none\}/.test(source),

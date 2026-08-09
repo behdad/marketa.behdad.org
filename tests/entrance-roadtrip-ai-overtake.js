@@ -116,18 +116,18 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html AI traffic overtaking:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html AI traffic overtaking:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(/function syncRoadtripTrafficLane\(entity, seconds\)/.test(source) &&
   /function roadtripTrafficLead\(entity, lane\)/.test(source) &&
   /ROADTRIP_TRAFFIC_FOLLOW_MIN_GAP/.test(source) && /entity\.passReturning/.test(source),
   "traffic has explicit pass and bounded following states");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 1800, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 1800, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the focused drive has no uncaught errors", result && result.errors);

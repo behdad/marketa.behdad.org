@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// The direct hash family shares one game-only shell, but only Trailer takes
-// ownership after normal entry/recovery initialization has settled.
+// Canonical Loft Day is game-only, #invite reveals its invitation, and only
+// #trailer takes ownership after normal entry/recovery initialization settles.
 var lib = require("./lib");
 
 var HARNESS = [
@@ -17,7 +17,7 @@ var HARNESS = [
 ].join("\n");
 
 function run(urlSuffix) {
-  return lib.runPageSync("rsvp.html", HARNESS, 2600, {
+  return lib.runPageSync("loft-day.html", HARNESS, 2600, {
     patchRaf: true,
     forceMotion: true,
     urlSuffix: urlSuffix
@@ -36,7 +36,7 @@ var RECOVERY_TRAILER = [
 ].join("\n");
 
 function runRecovery(hash, harness) {
-  return lib.runPageSync("rsvp.html", harness, 2700, {
+  return lib.runPageSync("loft-day.html", harness, 2700, {
     patchRaf: true,
     forceMotion: true,
     urlSuffix: hash
@@ -52,20 +52,23 @@ function check(ok, msg, detail) {
   }
 }
 
-console.log("rsvp.html direct URL entries:");
-var play = run("#play");
+console.log("loft-day.html direct URL entries:");
+var game = run("");
+var invite = run("#invite");
 var trailer = run("#trailer");
 var recoveryTrailer = runRecovery("#trailer", RECOVERY_TRAILER);
 
-check(play && !play.revealed && !play.cinematic,
-  "#play is game-only and starts no presentation", play);
+check(game && !game.revealed && !game.cinematic,
+  "canonical Loft Day is game-only and starts no presentation", game);
+check(invite && invite.revealed && !invite.cinematic,
+  "#invite reveals the invitation without starting a presentation", invite);
 check(trailer && !trailer.revealed && trailer.cinematic,
   "#trailer is game-only and starts the fixed reel", trailer);
 check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && recoveryTrailer.checkpoint,
   "#trailer starts across recovery without discarding the saved checkpoint", recoveryTrailer);
-[play, trailer].forEach(function (report) {
+[game, invite, trailer].forEach(function (report) {
   check(report && report.errors.length === 0,
-    (report && report.hash || "missing entry") + " has no uncaught page errors",
+    (report && report.hash || "canonical Loft Day") + " has no uncaught page errors",
     report && report.errors);
 });
 check(recoveryTrailer && recoveryTrailer.errors.length === 0,

@@ -98,11 +98,10 @@ function check(ok, msg, detail) {
   }
 }
 
-console.log("rsvp.html lower-room checkpoint recovery:");
+console.log("loft-day.html lower-room checkpoint recovery:");
 CASES.forEach(function (testCase) {
-  var result = lib.runPageSync("rsvp.html", harness(testCase), 1200, {
+  var result = lib.runPageSync("loft-day.html", harness(testCase), 1200, {
     patchRaf: true,
-    urlSuffix: "#play"
   });
   check(result && result.errors.length === 0, testCase.id + " recovery has no uncaught errors", result && result.errors);
   check(result && result.preview && result.preview.shown && result.preview.ariaHidden === null &&
@@ -141,9 +140,8 @@ CASES.forEach(function (testCase) {
   }
 });
 
-var mismatch = lib.runPageSync("rsvp.html", mismatchHarness(), 1200, {
+var mismatch = lib.runPageSync("loft-day.html", mismatchHarness(), 1200, {
   patchRaf: true,
-  urlSuffix: "#play"
 });
 check(mismatch && mismatch.errors.length === 0, "mismatched lower-room recovery has no uncaught errors", mismatch && mismatch.errors);
 check(mismatch && mismatch.room === "kitchen" &&
@@ -151,9 +149,8 @@ check(mismatch && mismatch.room === "kitchen" &&
     mismatch.persisted === undefined,
   "a lower-room id is accepted only for its paired upstairs room", mismatch);
 
-var restarted = lib.runPageSync("rsvp.html", restartHarness(), 1200, {
+var restarted = lib.runPageSync("loft-day.html", restartHarness(), 1200, {
   patchRaf: true,
-  urlSuffix: "#play"
 });
 check(restarted && restarted.errors.length === 0, "lower-room Start over has no uncaught errors", restarted && restarted.errors);
 check(restarted && !restarted.gate && !restarted.preview && !restarted.openClass &&

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual">
 <script>
-  // Only an rsvp/rsvp.html pathname reveals the surrounding invitation. Every other
-  // filename is Loft Day alone; #play/#trailer also force that shell through the RSVP
-  // aliases. Flag <html> synchronously so neither entry flashes the other one's chrome.
+  // The rsvp aliases reveal the surrounding invitation, and #invite can reveal it from
+  // any filename. Canonical Loft Day stays game-only; #trailer also forces that shell
+  // through the RSVP aliases. Flag <html> synchronously so neither entry flashes the other.
   (function () {
     function installedApp() {
       try {
@@ -15,9 +15,11 @@
       } catch (_error) { return false; }
     }
     function apply() {
-      var forcedGame = /^#(?:play|trailer)$/.test((location.hash || "").toLowerCase());
+      var hash = (location.hash || "").toLowerCase();
+      var forcedGame = hash === "#trailer";
+      var forcedInvitation = hash === "#invite";
       var rsvpEntry = /(?:^|\/)rsvp(?:\.html)?$/i.test(location.pathname);
-      var revealed = rsvpEntry && !forcedGame;
+      var revealed = forcedInvitation || (rsvpEntry && !forcedGame);
       document.documentElement.classList.toggle("revealed", revealed);
       if (document.readyState === "loading" &&
           !document.documentElement.classList.contains("loft-entry-ready")) {
@@ -13288,9 +13290,9 @@ section{margin:1.9rem 0}
 @media (prefers-reduced-motion: reduce){
   .flight-plane{animation:none; transform:translateX(130px)}
 }
-/* The rsvp/rsvp.html aliases reveal names, dates, RSVP, footer + the game. Every other
-   pathname, plus #play/#trailer, gets the self-contained game shell. Entry identity/actions
-   live inside that shell; the RSVP page retains the outer title, language and browser advice. */
+/* The rsvp aliases and #invite reveal names, dates, RSVP, footer + the game. Canonical
+   Loft Day and #trailer get the self-contained game shell. Entry identity/actions live
+   inside that shell; the RSVP page retains the outer title, language and browser advice. */
 :root.loft-entry-pending #hunt-fullscreen-area{visibility:hidden}
 :root:not(.revealed) main{
   max-width:none;
@@ -123555,7 +123557,7 @@ function spawnDustMote(container) {
     return null;
   }
   function calZ(n) { return (n < 10 ? "0" : "") + n; }
-  function calSetDateParam(str) { // set/clear the ?date= override without reloading (keeps #play)
+  function calSetDateParam(str) { // set/clear the ?date= override without reloading (preserves the hash)
     try {
       var url = new URL(location.href);
       if (str) url.searchParams.set("date", str); else url.searchParams.delete("date");
@@ -125277,10 +125279,8 @@ function spawnDustMote(container) {
   window.__startCinematic = startCinematic; // for headless driving / tests
   window.__stopCinematic = stopCinematic; // 'w' keybind toggles the show off with this
 
-  // Direct URL entries for the presentation shell. `#play` is deliberately neutral: it selects
-  // the game-only shell but starts nothing. `#trailer` starts the fixed reel after normal
-  // entry/recovery setup has settled. Hash changes are useful when setting up a display without
-  // reloading.
+  // `#trailer` starts the fixed reel after normal entry/recovery setup has settled. Hash changes
+  // are useful when setting up a display without reloading; #invite is handled by the entry shell.
   var lastUrlEntryMode = null;
   function urlEntryMode() {
     return (location.hash || "").toLowerCase() === "#trailer" ? "trailer" : null;

@@ -166,13 +166,13 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html final-action checkpoint handoffs:");
+console.log("loft-day.html final-action checkpoint handoffs:");
 Object.keys(CASES).forEach(function (id) {
   var testCase = CASES[id];
-  var result = lib.runPageSync("rsvp.html", recoveryHarness(id, testCase), 3200, {
+  var result = lib.runPageSync("loft-day.html", recoveryHarness(id, testCase), 3200, {
     patchRaf: true,
     forceMotion: true,
-    urlSuffix: "?date=2026-07-15&time=12:00#play"
+    urlSuffix: "?date=2026-07-15&time=12:00"
   });
   check(result && result.errors.length === 0, id + " reload has no uncaught errors", result && result.errors);
   check(result && result.immediate && result.immediate.room === testCase.room &&
@@ -196,7 +196,7 @@ Object.keys(CASES).forEach(function (id) {
   id + " the unlocked next-room control completes the cancelled handoff", result && result.afterNext);
 });
 
-var visit = lib.runPageSync("rsvp.html", VISIT_HARNESS, 1000, { patchRaf: true, urlSuffix: "#play" });
+var visit = lib.runPageSync("loft-day.html", VISIT_HARNESS, 1000, { patchRaf: true });
 check(visit && visit.errors.length === 0, "unlocked-room visit harness has no uncaught errors", visit && visit.errors);
 check(visit && visit.room === "office" && visit.max === 4 && visit.solved.length === 0,
   "freely visiting unlocked Garden, Cuddly, and Office never marks them solved", visit);

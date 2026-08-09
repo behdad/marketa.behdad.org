@@ -104,22 +104,22 @@ function verify(name, rows, destination) {
 }
 function run(label, opts) {
   console.log(label + ":");
-  var result = lib.runPageSync("rsvp.html", HARNESS, 5000, opts);
+  var result = lib.runPageSync("loft-day.html", HARNESS, 5000, opts);
   check(result && result.errors.length === 0, "the boundary sweep has no uncaught errors",
     result && result.errors);
   verify("Calgary → Banff", result && result.calgaryBanff || [], "banff");
   verify("Banff → Abraham Lake", result && result.banffAbraham || [], "abraham");
 }
 
-console.log("rsvp.html Road Trip foreground handoffs:");
+console.log("loft-day.html Road Trip foreground handoffs:");
 run("desktop landscape", {
   patchRaf: true, seedRandom: true, forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,700"
 });
 run("mobile landscape", {
   patchRaf: true, seedRandom: true, forceMotion: true, forceCoarsePointer: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=844,390"
 });
 

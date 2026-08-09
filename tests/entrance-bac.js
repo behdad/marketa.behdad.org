@@ -92,9 +92,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 3500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 3500, {
   patchRaf: true,
-  urlSuffix: "#play",
   chromeFlags: "--no-default-browser-check --noerrdialogs --window-size=1100,900"
 });
 var failures = 0;
@@ -103,7 +102,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + "   [" + JSON.stringify(detail) + "]"); }
 }
 
-console.log("rsvp.html persistent BAC and demerit status:");
+console.log("loft-day.html persistent BAC and demerit status:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(result && result.restored.drinkEquivalents === 4 && result.restored.bac === .12 &&
   result.restored.impairmentLevel === .5,

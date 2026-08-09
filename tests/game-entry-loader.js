@@ -37,10 +37,9 @@ function harness(options) {
 }
 
 function run(options) {
-  return lib.runPageSync("rsvp.html", harness(options), 2800, {
+  return lib.runPageSync(options.gameOnly ? "loft-day.html" : "rsvp.html", harness(options), 2800, {
     patchRaf: true,
-    forceStandalone: !!options.standalone,
-    urlSuffix: options.gameOnly ? "#play" : ""
+    forceStandalone: !!options.standalone
   });
 }
 
@@ -53,7 +52,7 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html game-entry loader:");
+console.log("Loft Day game-entry loader:");
 var revealed = run({});
 var browser = run({ gameOnly: true });
 var czech = run({ gameOnly: true, czech: true, early: true });
@@ -66,8 +65,8 @@ check(revealed && revealed.sync.revealed && !revealed.sync.used && revealed.sync
   "the revealed invitation never mounts a game-entry loader", revealed);
 
 [
-  ["browser #play", browser, false],
-  ["installed #play", installed, true]
+  ["canonical browser", browser, false],
+  ["canonical installed", installed, true]
 ].forEach(function (row) {
   var label = row[0], report = row[1], expectsInstalled = row[2];
   check(report && !report.sync.revealed && report.sync.installed === expectsInstalled &&

@@ -146,12 +146,12 @@ function campIsOpen(state) {
     /roadtrip-active/.test(state.classes || "") && /roadtrip-route-camp/.test(state.classes || "");
 }
 
-console.log("rsvp.html Abraham Lake camp keyboard ownership:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+console.log("loft-day.html Abraham Lake camp keyboard ownership:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 4500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 

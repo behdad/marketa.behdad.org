@@ -151,10 +151,10 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html campsite fire:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+console.log("loft-day.html campsite fire:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 5200, {
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the fire sequence has no uncaught errors", result && result.errors);

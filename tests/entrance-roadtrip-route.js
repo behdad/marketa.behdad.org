@@ -86,8 +86,8 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Calgary-to-Banff route:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html Calgary-to-Banff route:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(/ROADTRIP_CALGARY_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_CALGARY_SECONDS\)/.test(source) &&
   /ROADTRIP_TURNOFF_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_TURNOFF_SECONDS\)/.test(source),
   "the attended Calgary leg and right-turn approach own explicit travel distances");
@@ -103,11 +103,11 @@ check(/ROADTRIP_CALGARY_MEDIAN_FRACTION = \.14/.test(source) &&
   /var calgaryFirstBoundary = ROADTRIP_CALGARY_MEDIAN_FRACTION \+ ROADTRIP_CALGARY_LANE_FRACTION/.test(source),
   "the wide median expands both carriageways instead of narrowing their three equal lanes");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 5000, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the route phases render without uncaught errors",

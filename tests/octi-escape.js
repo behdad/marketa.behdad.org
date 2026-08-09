@@ -51,8 +51,8 @@ function check(ok, msg, detail) {
   }
 }
 
-console.log("rsvp.html Octi's Escape:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 13000, { patchRaf: true, forceMotion: true, seedRandom: true, urlSuffix: "#play" });
+console.log("loft-day.html Octi's Escape:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 13000, { patchRaf: true, forceMotion: true, seedRandom: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var checks = {
   solve_click_protected: "the first solve squeeze and a fast repeat cannot launch the optional game",

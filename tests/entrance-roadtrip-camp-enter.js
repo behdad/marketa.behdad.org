@@ -141,12 +141,12 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html campsite Enter solve-walker:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 12500, {
+console.log("loft-day.html campsite Enter solve-walker:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 12500, {
   forceReduce: true,
   patchRaf: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=14:00#play",
+  urlSuffix: "?date=2026-07-15&time=14:00",
   chromeFlags: "--window-size=1180,900"
 });
 check(result && result.errors.length === 0, "the Enter-only campsite walk has no uncaught errors", result && result.errors);

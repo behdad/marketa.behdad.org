@@ -138,8 +138,8 @@ function check(ok, label, detail) {
   if (!ok) failures++;
 }
 
-console.log("rsvp.html Camping algorithmic aurora:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html Camping algorithmic aurora:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 var auroraAt = source.indexOf('id="entrance-roadtrip-camp-aurora"');
 var constellationAt = source.indexOf('id="entrance-roadtrip-camp-finale-cassiopeia"');
 var block = source.slice(auroraAt, constellationAt);
@@ -163,10 +163,10 @@ document.hasFocus=function(){return window.__campAuroraTestFocus;};
 try{Object.defineProperty(document,"hidden",{configurable:true,get:function(){return window.__campAuroraTestHidden;}});}catch(e){}
 </script>`;
 FULL = focusHook + FULL;
-var full = lib.runPageSync("rsvp.html", FULL, 2600, {
+var full = lib.runPageSync("loft-day.html", FULL, 2600, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-09-23&time=23:30#play",
+  urlSuffix: "?date=2026-09-23&time=23:30",
   chromeFlags: "--window-size=1180,900"
 });
 check(full && full.errors.length === 0, "full-motion lifecycle raises no page errors", full && full.errors);
@@ -193,9 +193,9 @@ check(full && full.sleep && full.sleep.sleep === "fire-out" && !full.sleep.state
   !full.sleep.state.running && !full.sleep.raf,
   "starting the existing sleep finale freezes the aurora as the solved sky recedes", full && full.sleep);
 
-var reduced = lib.runPageSync("rsvp.html", REDUCED, 2100, {
+var reduced = lib.runPageSync("loft-day.html", REDUCED, 2100, {
   forceReduce: true,
-  urlSuffix: "?date=2026-09-23&time=23:30#play",
+  urlSuffix: "?date=2026-09-23&time=23:30",
   chromeFlags: "--window-size=390,844"
 });
 check(reduced && reduced.errors.length === 0, "reduced-motion lifecycle raises no page errors", reduced && reduced.errors);

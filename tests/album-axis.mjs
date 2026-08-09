@@ -31,8 +31,8 @@ import { spawn } from 'child_process';
 const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const MATERIAL_PEAK = 30; // a channel delta this large somewhere in frame = a different photograph
 
-// __albumPhotoSvg + __albumSkySig are permanent test hooks in rsvp.html; the page is loaded as-is.
-const SRC = path.join(REPO, 'rsvp.html');
+// __albumPhotoSvg + __albumSkySig are permanent test hooks in loft-day.html; the page is loaded as-is.
+const SRC = path.join(REPO, 'loft-day.html');
 
 const PORT = 9200 + Math.floor(Math.random() * 700);
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'axisprof-'));
@@ -41,7 +41,7 @@ const chrome = spawn(CHROME, [
   '--headless=new', '--disable-gpu', '--no-sandbox',
   '--remote-debugging-port=' + PORT, '--user-data-dir=' + PROFILE,
   '--hide-scrollbars', '--window-size=500,400',
-  'file://' + SRC + '?t=' + Date.now() + '#play'
+  'file://' + SRC + '?t=' + Date.now()
 ], { stdio: 'ignore' });
 
 const get = p => new Promise((res, rej) => {
@@ -73,7 +73,7 @@ const fail = (m, d) => { failures++; console.log('  ✗ ' + m); if (d) console.l
 (async () => {
   let t;
   for (let i = 0; i < 80; i++) {
-    try { const l = await get('/json'); t = l.find(x => x.type === 'page' && x.url.includes('rsvp.html')); if (t) break; } catch {}
+    try { const l = await get('/json'); t = l.find(x => x.type === 'page' && x.url.includes('loft-day.html')); if (t) break; } catch {}
     await sleep(250);
   }
   if (!t) { console.error('no target'); cleanup(); process.exit(1); }

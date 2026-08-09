@@ -195,12 +195,12 @@ function check(ok, message, detail) {
 }
 function same(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
 
-console.log("rsvp.html Road Trip paused-run recovery:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 8500, {
+console.log("loft-day.html Road Trip paused-run recovery:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 8500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }

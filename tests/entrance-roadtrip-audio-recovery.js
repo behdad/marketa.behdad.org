@@ -89,11 +89,11 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Road Trip audio recovery:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
+console.log("loft-day.html Road Trip audio recovery:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 5000, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
@@ -116,7 +116,7 @@ check(s.input && s.input.context === "running" && s.input.roadtrip &&
   !s.input.resumePending && s.input.active && s.input.gain > .1,
   "fresh driving input resumes both the Road Trip and a clean drivetrain owner", s.input);
 
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(/addEventListener\("statechange",[\s\S]*__sharedAC\.state\s*!==\s*"running"[\s\S]*resumeSharedAudio\(\)/.test(source) &&
   /if \(ac\.state !== "running"\) resumeSharedAudio\(\)/.test(source),
   "the shared owner handles every non-running browser state, including interruption");

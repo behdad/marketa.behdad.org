@@ -42,12 +42,11 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html lower-room cat cameos:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 11000, {
+console.log("loft-day.html lower-room cat cameos:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 11000, {
   patchRaf: true,
   forceHybridPointer: true,
   chromeFlags: "--window-size=844,390",
-  urlSuffix: "#play"
 });
 if (!r) {
   console.log("  ✗ harness produced no report");
@@ -113,11 +112,10 @@ check(r.dungeon && r.dungeon.count === 1 && r.dungeon.parent === "prince-cat-ove
   r.returned && r.returned.count === 1 && r.returned.parent === "garden-chest" && r.returned.visible,
   "the dungeon cameo returns cleanly to the upstairs garden", { dungeon: r.dungeon, returned: r.returned });
 
-var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1200, {
+var reduced = lib.runPageSync("loft-day.html", REDUCED_HARNESS, 1200, {
   patchRaf: true,
   forceReduce: true,
   chromeFlags: "--force-prefers-reduced-motion=reduce",
-  urlSuffix: "#play"
 });
 check(reduced && reduced.errors.length === 0,
   "the reduced-motion sprinkler reaction has no page errors", reduced && reduced.errors);

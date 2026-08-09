@@ -21,9 +21,9 @@ window.addEventListener("load", function () {
 </script>`;
 
 function run(forceCoarsePointer) {
-  return lib.runPageSync("rsvp.html", HARNESS, 1200, {
+  return lib.runPageSync("loft-day.html", HARNESS, 1200, {
     forceCoarsePointer: forceCoarsePointer,
-    urlSuffix: "?date=2026-07-15&time=12:00#play"
+    urlSuffix: "?date=2026-07-15&time=12:00"
   });
 }
 
@@ -41,7 +41,7 @@ function check(ok, message, detail) {
   if (!ok) failures++;
 }
 
-console.log("rsvp.html mobile Road Trip distance:");
+console.log("loft-day.html mobile Road Trip distance:");
 check(desktop && desktop.errors.length === 0 && desktop.scale === 1 &&
   distancesEqual(desktop.distances, [75, 6, 75, 6, 75], desktop.pace),
   "fine-pointer desktop keeps the authored route lengths", desktop);

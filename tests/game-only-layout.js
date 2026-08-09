@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 "use strict";
 
-// Direct #play/loft-day mode owns the browser window without surrounding page chrome.
+// Canonical Loft Day owns the browser window without surrounding page chrome.
 // Fresh/recovery entry carries identity, language and watch actions inside the shell.
 var lib = require("./lib");
 
-function run(width, height, standalone, fullPage, entryFile, directGame) {
+function run(width, height, standalone, fullPage, entryFile) {
   var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
@@ -215,8 +215,7 @@ function run(width, height, standalone, fullPage, entryFile, directGame) {
   }, 100);
 })();
 </script>`;
-  return lib.runPageSync(entryFile || "rsvp.html", harness, standalone ? 4600 : 3200, {
-    urlSuffix: (fullPage || directGame) ? "" : "#play",
+  return lib.runPageSync(entryFile || (fullPage ? "rsvp.html" : "loft-day.html"), harness, standalone ? 4600 : 3200, {
     forceStandalone: !!standalone,
     patchRaf: true,
     chromeFlags: "--window-size=" + width + "," + height + " --force-device-scale-factor=1"
@@ -225,7 +224,7 @@ function run(width, height, standalone, fullPage, entryFile, directGame) {
 
 var reports = [
   { label: "wide", report: run(1800, 1000) },
-  { label: "canonical Loft Day", report: run(1800, 1000, false, false, "loft-day.html", true) },
+  { label: "canonical Loft Day", report: run(1800, 1000, false, false, "loft-day.html") },
   { label: "installed desktop", report: run(1800, 1000, true) },
   { label: "landscape phone", report: run(844, 390) },
   { label: "installed landscape phone", report: run(844, 390, true) },

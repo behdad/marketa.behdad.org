@@ -182,10 +182,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 4200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 4200, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?fresh=entrance-roadtrip-keyboard#play",
+  urlSuffix: "?fresh=entrance-roadtrip-keyboard",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -203,7 +203,7 @@ function sameDrive(left, right) {
     left.drive.cruise.target === right.drive.cruise.target;
 }
 
-console.log("rsvp.html Road Trip keyboard mapping:");
+console.log("loft-day.html Road Trip keyboard mapping:");
 var s = result && result.steps || {};
 check(result && result.errors.length === 0,
   "the keyboard mapping harness has no uncaught errors", result && result.errors);

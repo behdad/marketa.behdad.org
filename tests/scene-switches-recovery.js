@@ -39,10 +39,10 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html checkpoint scene switches:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 2600, {
+console.log("loft-day.html checkpoint scene switches:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 2600, {
   patchRaf: true,
-  urlSuffix: "?date=2026-12-20#play"
+  urlSuffix: "?date=2026-12-20"
 });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, a = s.restored, v = s.validated, z = s.reset, m = s.mutated;

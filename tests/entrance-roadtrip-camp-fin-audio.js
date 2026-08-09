@@ -4,7 +4,7 @@
 var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
-var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
 var failed = false;
 
 function check(ok, label) {
@@ -46,7 +46,7 @@ check(/kind\s*===\s*"finale"[\s\S]*playCampFinMelody\(\)[\s\S]*scheduleCampFinLo
   !/playFinishMelody/.test(coda),
   "the campsite finale owns its new cue instead of reusing the Balcony melody");
 
-var runtime = lib.runPageSync("rsvp.html", String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+var runtime = lib.runPageSync("loft-day.html", String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
 window.addEventListener("load", function () {
   setTimeout(function () {
@@ -98,7 +98,7 @@ window.addEventListener("load", function () {
 </script>`, 1100, {
   forceMotion: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 var runtimeOk = runtime && !runtime.errors.runtime && runtime.errors.console && !runtime.errors.console.length &&

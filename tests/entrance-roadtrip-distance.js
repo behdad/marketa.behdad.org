@@ -64,12 +64,12 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Road Trip distance progression:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 2500, {
+console.log("loft-day.html Road Trip distance progression:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 2500, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the distance scenario has no uncaught errors",

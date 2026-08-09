@@ -142,11 +142,11 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html finale attended time:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 8500, {
+console.log("loft-day.html finale attended time:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 8500, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=23:00#play"
+  urlSuffix: "?date=2026-07-15&time=23:00"
 });
 check(result && !result.harnessError && result.errors && result.errors.length === 0,
   "the lifecycle harness completes without page errors", result);

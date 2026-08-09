@@ -199,7 +199,7 @@ window.addEventListener("load", function () { setTimeout(function () {
 }, 180); });
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 2400, { patchRaf: true });
+var result = lib.runPageSync("loft-day.html", HARNESS, 2400, { patchRaf: true });
 var RECOVERY_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
 (function () {
@@ -232,8 +232,8 @@ var RECOVERY_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:
   }, 180); });
 })();
 </script>`;
-var recovery = lib.runPageSync("rsvp.html", RECOVERY_HARNESS, 2200,
-  { patchRaf: true, urlSuffix: "?coach-recovery=1#play" });
+var recovery = lib.runPageSync("loft-day.html", RECOVERY_HARNESS, 2200,
+  { patchRaf: true, urlSuffix: "?coach-recovery=1" });
 var MOBILE_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
 window.addEventListener("load", function () { setTimeout(function () {
@@ -306,7 +306,7 @@ window.addEventListener("load", function () { setTimeout(function () {
   document.getElementById("__report").textContent = JSON.stringify(report);
 }, 180); });
 </script>`;
-var mobile = lib.runPageSync("rsvp.html", MOBILE_HARNESS, 2400,
+var mobile = lib.runPageSync("loft-day.html", MOBILE_HARNESS, 2400,
   { patchRaf: true, forceCoarsePointer: true, chromeFlags: "--window-size=844,390" });
 var failed = false;
 function check(ok, message, detail) {
@@ -315,7 +315,7 @@ function check(ok, message, detail) {
   if (!ok) failed = true;
 }
 
-console.log("rsvp.html driving coach:");
+console.log("loft-day.html driving coach:");
 check(result && result.errors.length === 0, "coach harness has no uncaught errors", result && result.errors);
 check(result && result.fresh.show && result.fresh.step === 1,
   "a fresh dashboard starts with ignition", result && result.fresh);

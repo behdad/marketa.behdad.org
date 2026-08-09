@@ -25,8 +25,8 @@ function extractScript(html) {
   // Concatenate EVERY authored <script> block in document order, not a greedy
   // first-open..last-close span. Local src files are included too: Loft Day keeps
   // its language dictionaries reviewable outside the otherwise single-file game.
-  // (that swallowed all the HTML in between once a second <script>, e.g. the head
-  // #reveal toggle, was added). Joined so node --check validates the same ordered
+  // (that swallowed all the HTML in between once a second head entry-selector script
+  // was added). Joined so node --check validates the same ordered
   // program the browser loads and dictionary/i18n scans see external messages.
   var re = /<script\b([^>]*)>([\s\S]*?)<\/script>/g, m, parts = [];
   while ((m = re.exec(html))) {

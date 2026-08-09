@@ -2,8 +2,7 @@
 "use strict";
 
 // The same canonical file serves two public entry names. The filename is the
-// contract: Egg Hunt is game-only, while save-the-dates reveals the invitation;
-// #play can still force the game through the invitation alias.
+// contract: Egg Hunt is game-only, while save-the-dates and #invite reveal the invitation.
 var lib = require("./lib");
 
 var HARNESS = String.raw`<script>
@@ -27,7 +26,7 @@ function run(file, suffix) {
 var cases = [
   { name: "canonical Egg Hunt is game-only", report: run("egg-hunt.html"), revealed: false, title: "Egg Hunt" },
   { name: "save-the-dates alias reveals the invitation", report: run("save-the-dates.html"), revealed: true, title: "markéta & behdad — Save the Dates — Egg Hunt" },
-  { name: "#play forces Egg Hunt through the invitation alias", report: run("save-the-dates.html", "#play"), revealed: false, title: "Egg Hunt" }
+  { name: "#invite reveals the invitation through canonical Egg Hunt", report: run("egg-hunt.html", "#invite"), revealed: true, title: "markéta & behdad — Save the Dates — Egg Hunt" }
 ];
 
 var failed = false;

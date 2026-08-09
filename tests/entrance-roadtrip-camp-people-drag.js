@@ -158,10 +158,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 4500, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -178,7 +178,7 @@ function sameDelta(rows) {
   });
 }
 
-console.log("rsvp.html campsite camper dragging:");
+console.log("loft-day.html campsite camper dragging:");
 check(result && result.errors.length === 0,
   "camper drag harness has no uncaught errors", result && result.errors);
 check(result && result.paintOrder && result.paintOrder.marketaBeforeTent &&
@@ -205,11 +205,11 @@ check(result && result.notebook && result.notebook.open && result.notebook.headI
 check(result && result.bodyClick && result.bodyClick.headIdle && result.bodyClick.notebookClosed,
   "an ordinary body/chair click triggers no old camper action", result && result.bodyClick);
 
-var mobileResult = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+var mobileResult = lib.runPageSync("loft-day.html", HARNESS, 4500, {
   patchRaf: true,
   forceMotion: true,
   forceCoarsePointer: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=390,844"
 });
 check(mobileResult && mobileResult.errors.length === 0,

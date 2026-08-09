@@ -31,11 +31,11 @@ function check(ok, msg, detail) {
   else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html phone launcher notification badges:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 8000, {
+console.log("loft-day.html phone launcher notification badges:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 8000, {
   patchRaf: true,
   // Keep the probe's two explicit messages isolated from the daytime-party BBQ invitation.
-  urlSuffix: "?date=2026-07-15&time=23:00#play"
+  urlSuffix: "?date=2026-07-15&time=23:00"
 });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;

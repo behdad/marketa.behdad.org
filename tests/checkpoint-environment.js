@@ -33,8 +33,8 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html environment checkpoint:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 1800, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html environment checkpoint:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 1800, { patchRaf: true });
 if (!result) {
   console.log("  ✗ harness produced no report");
   process.exit(1);

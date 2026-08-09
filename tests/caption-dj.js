@@ -40,8 +40,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 1800, {
-  urlSuffix: "?date=2026-08-08&time=20:00&captionDjFresh=1#play",
+var result = lib.runPageSync("loft-day.html", HARNESS, 1800, {
+  urlSuffix: "?date=2026-08-08&time=20:00&captionDjFresh=1",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -50,7 +50,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + "   [" + JSON.stringify(detail) + "]"); }
 }
 
-console.log("rsvp.html DJ caption arbitration:");
+console.log("loft-day.html DJ caption arbitration:");
 check(result && result.errors.length === 0, "the real DJ swap has no uncaught errors",
   result && result.errors);
 check(result && result.en.key === "dj_danesh" && result.en.owner === "dj-shout" &&

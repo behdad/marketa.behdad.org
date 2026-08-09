@@ -144,17 +144,17 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Road Trip route shortcuts:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html Road Trip route shortcuts:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(/ROADTRIP_SHORTCUT_REMAINING_SECONDS = 5/.test(source) &&
   /ROADTRIP_SHORTCUT_REMAINING_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_SHORTCUT_REMAINING_SECONDS\)/.test(source),
   "the private shortcut leaves five nominal seconds of travel in the selected segment");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 5000, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the shortcut runs without uncaught errors",

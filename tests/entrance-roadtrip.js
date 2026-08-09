@@ -1219,8 +1219,8 @@ function sameRetainedRun(left, right) {
   return JSON.stringify(retainedRun(left)) === JSON.stringify(retainedRun(right));
 }
 
-console.log("rsvp.html Entrance highway roadtrip:");
-var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+console.log("loft-day.html Entrance highway roadtrip:");
+var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(REQUIRED_IDS.every(function (id) {
   return (source.match(new RegExp('id=["\\\']' + id + '["\\\']', "g")) || []).length === 1;
 }), "fresh source contains one of every roadtrip HUD/world/weather id");
@@ -1303,11 +1303,11 @@ if (process.argv.indexOf("--source-only") >= 0) {
   process.exit(0);
 }
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 3500, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 3500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 if (!result) {

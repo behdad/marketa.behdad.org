@@ -8,10 +8,11 @@ pages offline in Chrome and in **real WebKit** (Safari engine) for cross-browser
 ```bash
 google-chrome --headless --disable-gpu --no-sandbox \
   --window-size=1000,760 --virtual-time-budget=2500 \
-  --screenshot=out.png "file:///home/behdad/wedding/loft-day.html#play"
+  --screenshot=out.png "file:///home/behdad/wedding/loft-day.html"
 ```
 
-- `#play` = game-only view; no hash = full page (hero + game); `#reveal` also full.
+- Canonical `loft-day.html` is game-only; the `rsvp` aliases or `#invite` reveal the invitation.
+- `#trailer` opens the game-only shell and starts its presentation.
 - To exercise click/keyboard behaviour: copy to a scratch file, inject a `<script>` before
   `</body>` that dispatches events after a `setTimeout`, then screenshot / `--dump-dom`.
 - Gotchas (see CLAUDE.md "Headless-Chrome testing gotchas"): under `--virtual-time-budget`,
@@ -26,7 +27,7 @@ google-chrome --headless --disable-gpu --no-sandbox \
 
 ```bash
 google-chrome --headless --disable-gpu --no-sandbox --remote-debugging-port=9222 \
-  --hide-scrollbars "file:///home/behdad/wedding/loft-day.html#play" >/dev/null 2>&1 &
+  --hide-scrollbars "file:///home/behdad/wedding/loft-day.html" >/dev/null 2>&1 &
 ```
 
 Then Node (v22 has a global `WebSocket` — no `ws` module needed):
@@ -105,7 +106,7 @@ PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 node render.mjs
 ```js
 import { webkit, chromium } from 'playwright';
 const engine = process.argv[2] === 'chromium' ? chromium : webkit;
-const url = 'file:///home/behdad/wedding/loft-day.html#play';
+const url = 'file:///home/behdad/wedding/loft-day.html';
 const b = await engine.launch();
 const p = await b.newPage({ viewport: { width: 1000, height: 760 } });
 p.on('pageerror', e => console.log('PAGEERROR:', e.message));

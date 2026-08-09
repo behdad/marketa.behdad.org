@@ -44,8 +44,8 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
-console.log("rsvp.html phone checkpoint data:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 2600, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html phone checkpoint data:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 2600, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {}, saved = s.saved || {}, malformed = s.malformed || {}, restored = s.restored || {};
 var savedRows = saved.rows || [], badRows = malformed.rows || [];

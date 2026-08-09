@@ -49,14 +49,14 @@ var HARNESS = [
   '})();</script>'
 ].join("\n");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 5000, { patchRaf: true, urlSuffix: "#play" });
+var result = lib.runPageSync("loft-day.html", HARNESS, 5000, { patchRaf: true });
 var failures = 0;
 function check(ok, label, detail) {
   if (ok) console.log("  ✓ " + label);
   else { failures++; console.log("  ✗ " + label + (detail ? "   [" + detail + "]" : "")); }
 }
 
-console.log("rsvp.html occasion checkpoint recovery:");
+console.log("loft-day.html occasion checkpoint recovery:");
 if (!result) {
   console.log("  ✗ harness produced no report");
   process.exit(1);

@@ -38,8 +38,8 @@ function resetClean(step) {
     Math.abs(step.visual.outlineOpacity - .18) < .001;
 }
 
-console.log("rsvp.html monitor Video Kill variants:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1800, { patchRaf: true, urlSuffix: "#play" });
+console.log("loft-day.html monitor Video Kill variants:");
+var r = lib.runPageSync("loft-day.html", HARNESS, 1800, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);

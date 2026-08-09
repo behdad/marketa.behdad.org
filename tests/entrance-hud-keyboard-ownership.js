@@ -106,10 +106,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 4200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 4200, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?fresh=entrance-hud-keyboard-ownership#play",
+  urlSuffix: "?fresh=entrance-hud-keyboard-ownership",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -118,7 +118,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + (detail == null ? "" : " — " + JSON.stringify(detail))); }
 }
 
-console.log("rsvp.html Entrance HUD keyboard ownership:");
+console.log("loft-day.html Entrance HUD keyboard ownership:");
 var s = result && result.steps || {};
 check(result && result.errors.length === 0,
   "the focused keyboard probe has no page errors", result && result.errors);

@@ -35,10 +35,10 @@ function check(ok, msg, detail) {
 
 function run(label, chromeFlags) {
   console.log("  " + label + ":");
-  var r = lib.runPageSync("rsvp.html", HARNESS, 3200, {
+  var r = lib.runPageSync("loft-day.html", HARNESS, 3200, {
     patchRaf: true,
     chromeFlags: chromeFlags,
-    urlSuffix: "?date=2027-08-04#play"
+    urlSuffix: "?date=2027-08-04"
   });
   if (!r) { check(false, "harness produced a report"); return; }
   var s = r.steps;
@@ -76,7 +76,7 @@ function run(label, chromeFlags) {
     "the relocated pull-tab remains available to close and reopen the drop-down", { closed: s.consoleClosed, reopened: s.consoleReopened });
 }
 
-console.log("rsvp.html Entrance date controls:");
+console.log("loft-day.html Entrance date controls:");
 run("desktop", "--window-size=1100,900");
 run("wide desktop", "--window-size=2048,700");
 run("mobile landscape", "--window-size=844,390");

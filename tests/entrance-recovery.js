@@ -78,10 +78,10 @@ function allCar(car, value) {
     .every(function (key) { return car[key] === value; });
 }
 
-console.log("rsvp.html Entrance checkpoint recovery:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3000, {
+console.log("loft-day.html Entrance checkpoint recovery:");
+var result = lib.runPageSync("loft-day.html", HARNESS, 3000, {
   patchRaf: true,
-  urlSuffix: "?date=2026-07-31&time=12:00#play"
+  urlSuffix: "?date=2026-07-31&time=12:00"
 });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};

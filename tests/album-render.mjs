@@ -1,5 +1,5 @@
 // Scratch harness: render every seeded album photo to PNG via CDP + analyze overlaps/mode.
-// Injects the __albumPhotoSvg test hook (already permanent in rsvp.html), renders each subjectId
+// Injects the __albumPhotoSvg test hook (already permanent in loft-day.html), renders each subjectId
 // at 400x300 with centre/floor guides, screenshots it, and measures on-screen figure bboxes to
 // flag overlaps. Also renders each subject in every FORCED mode when MODE=1 is set.
 // Usage: node tests/album-render.mjs [outdir]   (MODE=1 to also dump forced-mode grids)
@@ -13,7 +13,7 @@ const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const OUT = process.argv[2] || path.join(REPO, 'tests', '_album_out');
 fs.mkdirSync(OUT, { recursive: true });
 
-const srcPath = path.join(REPO, 'rsvp.html');
+const srcPath = path.join(REPO, 'loft-day.html');
 let html = fs.readFileSync(srcPath, 'utf8');
 if (!/window\.__albumPhotoSvg\s*=/.test(html)) {
   html = html.replace('window.__albumAdd = captureAlbumShot;',
@@ -25,7 +25,7 @@ fs.writeFileSync(scratch, html);
 const PORT = 9333 + Math.floor(Math.random() * 400);
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'albprof-'));
 const CHROME = process.env.CHROME || 'google-chrome'; // on PATH (set CHROME=... to override)
-const url = 'file://' + scratch + '?t=' + Date.now() + '#play';
+const url = 'file://' + scratch + '?t=' + Date.now();
 
 const chrome = spawn(CHROME, [
   '--headless=new', '--disable-gpu', '--no-sandbox',

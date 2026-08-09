@@ -78,10 +78,9 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 3000, {
+var result = lib.runPageSync("loft-day.html", harness, 3000, {
   patchRaf: true,
   seedRandom: true,
-  urlSuffix: "#play"
 });
 var failures = 0;
 function check(ok, message, detail) {
@@ -89,7 +88,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + "   [" + JSON.stringify(detail) + "]"); }
 }
 
-console.log("rsvp.html highway objects:");
+console.log("loft-day.html highway objects:");
 check(result && result.errors.length === 0, "object harness has no uncaught errors", result && result.errors);
 var planPickups = result && result.plan && result.plan.filter(function (item) {
   return ["heart", "mushroom", "kiss", "frog", "inf"].indexOf(item.type) >= 0;

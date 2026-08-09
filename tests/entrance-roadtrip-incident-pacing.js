@@ -119,10 +119,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 4800, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 4800, {
   patchRaf: true,
   forceMotion: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  urlSuffix: "?date=2026-07-15&time=12:00",
   chromeFlags: "--window-size=1100,900"
 });
 var failures = 0;
@@ -137,7 +137,7 @@ function overtakers(state) {
   return (state && state.entities || []).filter(function (entity) { return entity.overtakingPlayer; });
 }
 
-console.log("rsvp.html Road Trip incident pacing:");
+console.log("loft-day.html Road Trip incident pacing:");
 var steps = result && result.steps || {};
 check(result && result.errors.length === 0, "the production pacing probes have no uncaught errors",
   result && result.errors);

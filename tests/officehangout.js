@@ -8,7 +8,7 @@
 //   2) the one-room exclusion holds (skips anyone on the garden floor / at the bar / on the balcony),
 //   3) __officeCoupleNow() reports the current couple's member ids (and null when empty),
 //   4) drinks roll per showing and respect the actual holder's preference,
-//   5) teardown (reset/party-off/room-leave) strands nothing (no timers left, DOM cleared).
+//   5) teardown (reset/party-off) strands nothing, while room changes preserve the assignment.
 //
 // Zero deps, like check.js. Run: node tests/officehangout.js
 "use strict";
@@ -238,32 +238,29 @@ for (var r = 0; r < 200; r++) {
 var distinct = Object.keys(seen).length;
 ok(distinct >= 3, "rotation surfaces multiple distinct couples over time (" + distinct + " seen: " + Object.keys(seen).join(",") + ")");
 
-// 5) one-room exclusion: the office excludes the BAR and the BALCONY, but deliberately NOT the
-//    garden dance floor — the floor is off-screen while you're in the office, and floor(8)+bar+
-//    balcony would consume all eight couples and leave the office permanently empty (see eligible()).
+// 5) one-room exclusion: the office excludes the garden floor, BAR, BALCONY and Cuddly.
 sandbox.officefolks(false);
-// Ali+Goli on the garden floor — still eligible for the office:
+// Ali+Goli on the garden floor:
 gardenGuests.querySelector(".g-ali").classList.add("arrived");
 gardenGuests.querySelector(".g-goli").classList.add("arrived");
 // Spencer+Jay at the bar:
 sandbox.__barCoupleNow = function () { return ["spencer", "jay"]; };
 // Farhang+Lauren on the balcony:
-sandbox.__balconySmokerNow = function () { return ["farhang", "lauren"]; };
+sandbox.__balconyHangoutNow = function () { return [{ key: "farhang" }, { key: "lauren" }]; };
 sandbox.__cuddlyVisitorsNow = function () { return [{ key: "ayushi" }]; };
 sandbox.__updateOfficeHangout();
-var violated = false, sawSomeone = false, sawFloorPair = false;
-var EXCLUDED = { spencer:1, jay:1, farhang:1, lauren:1, ayushi:1 };
+var violated = false, sawSomeone = false;
+var EXCLUDED = { ali:1, goli:1, spencer:1, jay:1, farhang:1, lauren:1, ayushi:1 };
 for (var q = 0; q < 300; q++) {
   advance(60000);
   var m = sandbox.__officeCoupleNow();
   if (m) {
     sawSomeone = true;
-    for (var mi = 0; mi < m.length; mi++) { if (EXCLUDED[m[mi]]) violated = true; if (m[mi] === "ali") sawFloorPair = true; }
+    for (var mi = 0; mi < m.length; mi++) if (EXCLUDED[m[mi]]) violated = true;
   }
 }
-ok(!violated, "one-room rule holds: office never shows anyone at the bar, on the balcony, or visiting the nook");
+ok(!violated, "one-room rule holds: office never duplicates anyone from the floor, bar, balcony, or nook");
 ok(sawSomeone, "one-room rule still lets eligible couples in (didn't just go permanently empty)");
-ok(sawFloorPair, "the garden floor is NOT an office exclusion (a dancing couple can still drift in)");
 
 // forcing an eligible-only pick honors exclusion (officefolks(true) skips excluded)
 sandbox.officefolks(false);
@@ -284,14 +281,15 @@ sandbox.__updateOfficeHangout();
 advance(120000);
 ok(sandbox.__officeCoupleNow() === null && pendingTimers() === 0, "party-off teardown stays torn down (no phantom re-arm)");
 
-// gate: leaving the office (still party-on) tears down
+// Room changes do not alter party attendance: the silent assignment keeps rotating.
 sandbox.__gardenPartyOn = true;
 sandbox.currentStageName = "office";
 sandbox.__updateOfficeHangout();
 advance(60000);
 sandbox.currentStageName = "kitchen"; // walked away
 sandbox.__updateOfficeHangout();
-ok(sandbox.__officeCoupleNow() === null && pendingTimers() === 0, "room-leave teardown: office empties + disarms when you leave the room");
+ok(sandbox.__officeCoupleNow() !== null && pendingTimers() === 1,
+  "room leave preserves the office assignment and its single rotation timer");
 
 console.log("\n" + (fails ? (fails + " office-hangout check(s) FAILED") : "All office-hangout checks passed (" + passes + ")"));
 process.exit(fails ? 1 : 0);

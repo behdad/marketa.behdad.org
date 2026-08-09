@@ -68,7 +68,7 @@ check(sources.photos && sources.photos.length > 0 && sources.photos.every(functi
 check(sources.tattoos && sources.tattoos.length === 8 &&
   sources.tattoos.some(function (t) { return t.design === "pufferfish" && t.artist === "Markéta"; }) &&
   sources.tattoos.some(function (t) { return t.design === "bored" && t.artist === "Behdad"; }) &&
-  sources.tattoos.some(function (t) { return t.design === "ayushi" && t.artist === "Ayushi" && t.relationship === "Diva"; }),
+  sources.tattoos.some(function (t) { return t.design === "ayushi" && t.artist === "Ayushi" && t.relationship === "diva"; }),
   "tattoo designs retain canonical artist credits", sources.tattoos);
 check(sources.notes && sources.notes.length === 15 && sources.notes.every(function (note) { return typeof note === "string"; }) && !/draft/i.test(JSON.stringify(sources.notes)), "Notes exposes only the couple's authored cards, never a visitor draft", sources.notes);
 check(sources.named && sources.named.length === 1 && sources.named[0].name === "Pouria" && /bartender/i.test(sources.named[0].role), "a named-person question retrieves only the matching public contact", sources.named);

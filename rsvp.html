@@ -44398,8 +44398,7 @@ window.__entranceRoomOpen = false;
     var junctionPoint = roadtripProject(Math.max(8, point.remaining - 36));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 32));
     var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
-    var junctionOverlap = 12 + junctionPoint.perspective * 19;
-    var junctionInner = junctionRoadRight - junctionOverlap;
+    var junctionInner = junctionRoadRight - .25;
     var junctionOuterWidth = 9 + junctionPoint.perspective * 17;
     var junctionOuter = junctionRoadRight + junctionOuterWidth;
     var junctionY = junctionPoint.y;
@@ -44441,8 +44440,8 @@ window.__entranceRoomOpen = false;
     }
     var innerControls = curveControls(junctionInner, destinationInner, false);
     var outerControls = curveControls(junctionOuter, destinationOuter, true);
-    function spurPath(inset, shoulderMouth) {
-      var nearInner = shoulderMouth ? junctionRoadRight - .25 : junctionInner;
+    function spurPath(inset) {
+      var nearInner = junctionInner;
       var nearOuter = junctionOuter + inset;
       var farInner = destinationInner - inset * .4;
       var farOuter = destinationOuter + inset * .4;
@@ -44457,9 +44456,8 @@ window.__entranceRoomOpen = false;
         pathOuter.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
         nearOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z";
     }
-    // The asphalt overlaps the highway to make one wide mouth, but its two edge
-    // ribbons begin at the actual shoulder/branch boundaries so no gap appears
-    // while the junction moves through perspective.
+    // All four branch layers share the live highway edge at the mouth. A wider
+    // asphalt overlap hides that edge before the branch stripe can meet it.
     var innerEdgeOrigin = junctionRoadRight - .25;
     var innerEdgeLineControls = curveControls(innerEdgeOrigin, destinationInner, false);
     function cubicTail(start, c1, c2, end, t) {
@@ -44478,7 +44476,7 @@ window.__entranceRoomOpen = false;
       var tail = cubicTail(start, c1, c2, end, t);
       return tail.start;
     }
-    var innerEdgeStart = .38;
+    var innerEdgeStart = 0;
     var innerEdgeX = cubicTail(innerEdgeOrigin, innerEdgeLineControls.c1,
       innerEdgeLineControls.c2, destinationInner, innerEdgeStart);
     var outerEdgeX = cubicTail(junctionOuter, outerControls.c1, outerControls.c2,
@@ -44487,7 +44485,7 @@ window.__entranceRoomOpen = false;
     var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
     var edgeStartWidth = edgeNearWidth * .72;
     var edgeTailWidth = edgeNearWidth * .88;
-    if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset, true));
+    if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset));
     if (asphalt) asphalt.setAttribute("d", spurPath(0));
     if (innerEdge) innerEdge.setAttribute("d", "M" + innerEdgeX.start.toFixed(2) + " " + innerEdgeY.start.toFixed(2) +
       "C" + innerEdgeX.c1.toFixed(2) + " " + innerEdgeY.c1.toFixed(2) + " " +

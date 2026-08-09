@@ -124,6 +124,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           report.laneViews[row[0]] = visual();
         });
 
+        report.geometrySweep = [];
+        [0, 158, 260].forEach(function (roadDistance) {
+          window.__entranceRoadtripSetDistance(roadDistance);
+          [5.4, 5, 4, 3, 2.4, 1.2, .4, 0].forEach(function (countdown) {
+            [-1.32, -.5, 0, .5, 1, 1.32].forEach(function (lane) {
+              setAbraham(first - countdown * nominalSecond, lane, 0);
+              report.geometrySweep.push({
+                roadDistance: roadDistance,
+                countdown: countdown,
+                lane: lane,
+                visual: visual()
+              });
+            });
+          });
+        });
+        window.__entranceRoadtripSetDistance(0);
+
         setAbraham(first + 13 * nominalSecond, .5, 42);
         window.__exitEntranceRoadtrip();
         var checkpoint = window.__captureCheckpointSystems().entrance;
@@ -188,21 +205,74 @@ function connectedSpur(visual) {
     (visual.outerEdge.match(/C/g) || []).length === 2 &&
     visual.junctionInnerX < visual.junctionOuterX &&
     Number.isFinite(visual.junctionRoadRightX) &&
-    visual.junctionInnerX <= visual.junctionRoadRightX - 9 &&
+    Math.abs(visual.junctionInnerX - visual.shoulderMouthInnerX) <= .02 &&
     visual.junctionRoadRightX < visual.junctionOuterX &&
     visual.shoulderMouthInnerX >= visual.junctionRoadRightX - .3 &&
-    visual.innerEdgeStartX > visual.shoulderMouthInnerX + 3 &&
+    Math.abs(visual.innerEdgeStartX - visual.shoulderMouthInnerX) <= .02 &&
     visual.innerEdgeStartX < visual.bendInnerX && visual.bendInnerX < visual.destinationInnerX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
     visual.outerEdgeStartX < visual.bendOuterX && visual.bendOuterX < visual.destinationOuterX &&
-    visual.destinationY < visual.bendY && visual.bendY < visual.innerEdgeStartY &&
-    visual.innerEdgeStartY < visual.junctionY - 1 &&
+    visual.destinationY < visual.bendY && visual.bendY < visual.junctionY &&
+    Math.abs(visual.innerEdgeStartY - visual.junctionY) <= .02 &&
     Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02 &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     visual.destinationX >= visual.junctionOuterX + 14 &&
     visual.destinationInnerX > visual.junctionInnerX &&
     visual.nearWidth > visual.farWidth;
+}
+function cubicBand(path) {
+  var values = String(path || "").match(/-?(?:\d+\.?\d*|\.\d+)/g);
+  if (!values || values.length !== 16) return null;
+  values = values.map(Number);
+  function point(index) { return { x: values[index], y: values[index + 1] }; }
+  return {
+    inner: [point(0), point(2), point(4), point(6)],
+    outer: [point(14), point(12), point(10), point(8)]
+  };
+}
+function cubicValue(points, amount, axis) {
+  var reverse = 1 - amount;
+  return reverse * reverse * reverse * points[0][axis] +
+    3 * reverse * reverse * amount * points[1][axis] +
+    3 * reverse * amount * amount * points[2][axis] +
+    amount * amount * amount * points[3][axis];
+}
+function monotonicCurve(points) {
+  return points.every(function (point, index) {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+    if (!index) return true;
+    return point.x >= points[index - 1].x - .02 && point.y <= points[index - 1].y + .02;
+  });
+}
+function coherentSpurTopology(visual) {
+  if (!connectedSpur(visual)) return false;
+  var asphalt = cubicBand(visual.asphalt);
+  var shoulder = cubicBand(visual.shoulder);
+  var innerEdge = cubicBand(visual.innerEdge);
+  var outerEdge = cubicBand(visual.outerEdge);
+  if (!asphalt || !shoulder || !innerEdge || !outerEdge) return false;
+  var curves = [asphalt.inner, asphalt.outer, shoulder.inner, shoulder.outer,
+    innerEdge.inner, innerEdge.outer, outerEdge.inner, outerEdge.outer];
+  if (!curves.every(monotonicCurve)) return false;
+  for (var step = 0; step <= 40; step++) {
+    var amount = step / 40;
+    var asphaltInner = cubicValue(asphalt.inner, amount, "x");
+    var asphaltOuter = cubicValue(asphalt.outer, amount, "x");
+    var shoulderInner = cubicValue(shoulder.inner, amount, "x");
+    var shoulderOuter = cubicValue(shoulder.outer, amount, "x");
+    var innerEdgeInner = cubicValue(innerEdge.inner, amount, "x");
+    var innerEdgeOuter = cubicValue(innerEdge.outer, amount, "x");
+    var outerEdgeInner = cubicValue(outerEdge.inner, amount, "x");
+    var outerEdgeOuter = cubicValue(outerEdge.outer, amount, "x");
+    if (!(asphaltInner < asphaltOuter && shoulderInner <= asphaltInner + .02 &&
+        shoulderOuter >= asphaltOuter - .02 && innerEdgeInner < innerEdgeOuter &&
+        outerEdgeInner < outerEdgeOuter)) return false;
+  }
+  return Math.abs(visual.innerEdgeStartX - visual.shoulderMouthInnerX) <= .02 &&
+    Math.abs(visual.innerEdgeStartY - visual.junctionY) <= .02 &&
+    Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
+    Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02;
 }
 function signsClear(visual) {
   return visual && visual.speedClearances.every(function (gap) {
@@ -262,12 +332,19 @@ var mobile = run(true);
     return view && view.destinationX - view.junctionOuterX;
   });
   check(laneShapes.every(function (view) {
-    return view && view.sign === "visible" && view.spur === "visible" && connectedSpur(view);
+    return view && view.sign === "visible" && view.spur === "visible" && coherentSpurTopology(view);
   }) && laneDivergences.every(Number.isFinite) &&
     Math.max.apply(Math, laneDivergences) - Math.min.apply(Math, laneDivergences) <= .05,
     device + " preserves the shoulder-composed exit divergence in every player lane", {
       divergences: laneDivergences, views: laneViews
     });
+  var brokenGeometry = (result && result.geometrySweep || []).filter(function (sample) {
+    return !sample.visual || sample.visual.sign !== "visible" || sample.visual.spur !== "visible" ||
+      !coherentSpurTopology(sample.visual);
+  });
+  check(result && result.geometrySweep && result.geometrySweep.length === 144 && !brokenGeometry.length,
+    device + " keeps every spur boundary nested, connected, and monotonic across lane, approach, curve, and grade",
+    brokenGeometry.slice(0, 4));
 
   var missed = result && result.missed || {};
   check(missed.state && missed.state.route === "abraham" && missed.state.active &&

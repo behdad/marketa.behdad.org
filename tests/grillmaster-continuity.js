@@ -23,8 +23,12 @@ var harness = String.raw`<script>
 
   window.__gameStarted = function () { return true; };
   window.goToStage("balcony");
+  // A stopped/restored party may briefly retain the old Garden arrival class even
+  // though no party room is visible. It must not hide a directly started cookout.
+  document.querySelector("#garden-guests .g-hamid").classList.add("arrived");
   document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  check("lighting summons Hamid and his serving plate", lit() && shown() && plateVisible());
+  check("lighting without a party summons Hamid despite stale hidden attendance",
+    !window.__gardenPartyOn && lit() && shown() && plateVisible());
 
   Math.random = function () { return 0.99; }; // the old drift roll hid him at this value
   window.__balconyGrillmasterDriftNow();

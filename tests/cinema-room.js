@@ -180,7 +180,7 @@ check(s.open && s.open.posters.length === 3 &&
   s.open.posters.every(function (poster) { var box=poster.box,img=poster.image,first=s.open.posters[0].box;return Math.abs(box[1]-first[1])<0.6 && Math.abs(box[2]-first[2])<0.6 && Math.abs(box[3]-first[3])<0.6 && poster.fit==="cover" && Math.abs(img[0]-box[0]-1)<0.6 && Math.abs(img[1]-box[1]-1)<0.6 && Math.abs(img[2]-box[2]+2)<0.6 && Math.abs(img[3]-box[3]+2)<0.6; }) &&
   Math.abs((s.open.posters[1].box[0]-s.open.posters[0].box[0])-(s.open.posters[2].box[0]-s.open.posters[1].box[0]))<0.6,
   "three equal poster cards form one balanced row", s.open && s.open.posters);
-check(s.open && s.open.posters.every(function(p){return p.video && p.src===p.poster && /^art\/cinema-(identity|mania|water)\.png$/.test(p.src);}),
+check(s.open && s.open.posters.every(function(p){return p.video && p.src===p.poster && /^art\/cinema-(identity|mania|water)\.jpg$/.test(p.src);}),
   "the original posters retain exact video and artwork hooks", s.open && s.open.posters);
 check(s.play && s.play.state.playing && s.play.state.video === "1096537359" &&
   /player\.vimeo\.com\/video\/1096537359/.test(s.play.src || "") && /dnt=1/.test(s.play.src || "") &&
@@ -323,7 +323,7 @@ var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
   check(new RegExp('data-vimeo-id="' + id + '"').test(source), "chooser includes Vimeo " + id);
 });
 check(!/930085724/.test(source), "the retired fourth film is absent");
-check((source.match(/data-poster="art\/cinema-(?:identity|mania|water)\.png"/g) || []).length === 3,
+check((source.match(/data-poster="art\/cinema-(?:identity|mania|water)\.jpg"/g) || []).length === 3,
   "all three chooser cards expose their original artwork through the poster hook");
 check((source.match(/data-vimeo-hash=""/g) || []).length === 3,
   "all three chooser cards expose the unlisted-video hash hook");

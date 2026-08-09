@@ -182,6 +182,14 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__entranceDriveStep(1000);
     window.__entranceDriveControl("throttle", false);
     report.manualUnchanged = { coach: coach(), state: copy(window.__entranceRoomState()) };
+    help.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    key("keydown", "Enter", "Enter"); key("keyup", "Enter", "Enter");
+    key("keydown", "ArrowLeft", "ArrowLeft");
+    key("keyup", "ArrowLeft", "ArrowLeft");
+    window.__entranceDriveShift(1, true);
+    report.manualCruiseBefore = { coach: coach(), state: copy(window.__entranceRoomState()) };
+    key("keydown", " ", "Space"); key("keyup", " ", "Space");
+    report.manualCruiseAfter = { coach: coach(), state: copy(window.__entranceRoomState()) };
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
   }
@@ -420,6 +428,11 @@ check(result && result.manualUnchanged && result.manualUnchanged.coach.show &&
   result.manualUnchanged.state.drive.gear === 1 && result.manualUnchanged.state.drive.speed > 0,
   "manual transmission retains its existing free input behavior during coaching",
   result && result.manualUnchanged);
+check(result && result.manualCruiseBefore && result.manualCruiseAfter &&
+  result.manualCruiseBefore.coach.step === 4 && result.manualCruiseBefore.state.drive.speed === 0 &&
+  result.manualCruiseAfter.coach.step === 5 && !result.manualCruiseAfter.state.drive.cruise.active,
+  "Space completes MANUAL's stopped cruise lesson without manufacturing active cruise",
+  result && { before: result.manualCruiseBefore, after: result.manualCruiseAfter });
 check(mobile && mobile.errors.length === 0 && mobile.fresh.show && mobile.fresh.step === 1,
   "mobile coach starts with ignition", mobile);
 check(mobile && mobile.freshBlocked && mobile.freshBlocked.coach.step === 1 &&

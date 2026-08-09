@@ -32,6 +32,16 @@ var harness = String.raw`<pre id="__report">pending</pre>
     window.__entranceDriveSetMotion(speed, speed >= 70 ? 3 : 1);
     return copy(drive());
   }
+  function setTurnoff(progress, lane, speed) {
+    var trip = drive().roadtrip;
+    window.__entranceRoadtripSetRouteDistance("lake-turnoff",
+      trip.lakeTurnoffDistanceRequired * progress);
+    window.__entranceRoadtripSetDistance(445);
+    window.__entranceRoadtripSetLane(lane);
+    window.__entranceDriveTransmissionMode("auto", false);
+    window.__entranceDriveSetMotion(speed, speed >= 70 ? 3 : 1);
+    return copy(drive());
+  }
   try {
     Object.defineProperty(document, "hasFocus", {
       value: function () { return true; }, configurable: true
@@ -70,6 +80,35 @@ var harness = String.raw`<pre id="__report">pending</pre>
     setup("manual", turnoffLength, 100);
     step(5, 100);
     report.manual = copy(drive());
+
+    report.turnoffStoppedPositive = setTurnoff(.5, .5, 0);
+    report.turnoffStoppedNegative = setTurnoff(.5, -.5, 0);
+
+    setTurnoff(.5, .5, 100);
+    step(5, 100);
+    report.turnoffAtSpeed = copy(drive());
+
+    setTurnoff(.5, .5, 100);
+    window.__entranceDriveControl("steerLeft", true);
+    step(5, 100);
+    window.__entranceDriveControl("steerLeft", false);
+    report.turnoffSteer = copy(drive());
+
+    setTurnoff(.92, .5, 100);
+    for (var transitionStep = 0; transitionStep < 10 &&
+        drive().roadtrip.route === "lake-turnoff"; transitionStep++) {
+      window.__entranceDriveSetMotion(100, 3);
+      step(1, 100);
+    }
+    report.completedPositive = copy(drive());
+
+    setTurnoff(.92, -.5, 100);
+    for (transitionStep = 0; transitionStep < 10 &&
+        drive().roadtrip.route === "lake-turnoff"; transitionStep++) {
+      window.__entranceDriveSetMotion(100, 3);
+      step(1, 100);
+    }
+    report.completedNegative = copy(drive());
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
   }
@@ -106,6 +145,29 @@ check(result && result.beforeApproach && result.beforeApproach.roadtrip.playerLa
   result && result.beforeApproach);
 check(result && result.manual && result.manual.roadtrip.playerLane > .56,
   "MANUAL retains the full bend load through the same approach", result && result.manual);
+check(result && result.turnoffStoppedPositive && result.turnoffStoppedNegative &&
+  Math.abs(result.turnoffStoppedPositive.roadtrip.playerLane - .5) < .001 &&
+  Math.abs(result.turnoffStoppedPositive.roadtrip.handling.cameraRoadFraction - .375) < .001 &&
+  Math.abs(result.turnoffStoppedNegative.roadtrip.playerLane + .5) < .001 &&
+  Math.abs(result.turnoffStoppedNegative.roadtrip.handling.cameraRoadFraction + .375) < .001,
+  "a stopped car stays in either travel lane while the road narrows",
+  result && { positive: result.turnoffStoppedPositive, negative: result.turnoffStoppedNegative });
+check(result && result.turnoffAtSpeed && result.turnoffAtSpeed.roadtrip.route === "lake-turnoff" &&
+  Math.abs(result.turnoffAtSpeed.roadtrip.playerLane - .5) < .001 &&
+  result.turnoffAtSpeed.roadtrip.handling.cameraRoadFraction > .375 &&
+  result.turnoffAtSpeed.roadtrip.handling.cameraRoadFraction < .5,
+  "AUTO remains centred in the live narrowing at highway speed", result && result.turnoffAtSpeed);
+check(result && result.turnoffSteer && result.turnoffSteer.roadtrip.playerLane < .48,
+  "deliberate steering remains authoritative inside the narrowing", result && result.turnoffSteer);
+check(result && result.completedPositive && result.completedNegative &&
+  result.completedPositive.roadtrip.route === "abraham" &&
+  Math.abs(result.completedPositive.roadtrip.playerLane - .5) < .002 &&
+  Math.abs(result.completedPositive.roadtrip.handling.cameraRoadFraction - .5) < .002 &&
+  result.completedNegative.roadtrip.route === "abraham" &&
+  Math.abs(result.completedNegative.roadtrip.playerLane + .5) < .002 &&
+  Math.abs(result.completedNegative.roadtrip.handling.cameraRoadFraction + .5) < .002,
+  "both through-route travel sides land at Abraham's lane centres, not its shoulder",
+  result && { positive: result.completedPositive, negative: result.completedNegative });
 
 if (failures) process.exit(1);
 console.log("Abraham turnoff AUTO-assist assertions passed.");

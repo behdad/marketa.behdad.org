@@ -40910,7 +40910,7 @@ window.__entranceRoomOpen = false;
         roadtripState.lakeTurnoffDistance / ROADTRIP_LAKE_TURNOFF_DISTANCE);
       var sourceFraction = roadtripLaneRoadFractionForRoute(lane, "banff");
       var abrahamFraction = roadtripLaneRoadFractionForRoute(
-        playerLane ? (lane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE) :
+        playerLane ? (lane < 0 ? -.5 : .5) :
           roadtripHandoffLane(lane, .5), "abraham");
       return sourceFraction + (abrahamFraction - sourceFraction) * abrahamProgress;
     }
@@ -40954,9 +40954,10 @@ window.__entranceRoomOpen = false;
   function roadtripCurveDriftScale() {
     if (porscheTransmission.mode !== "auto") return 1;
     // The final Banff bend leads into a scripted right-hand turnoff. AUTO holds
-    // the driver's chosen lane until that turnoff owns the lateral transition.
-    if (roadtripState.route === "banff" &&
-        ROADTRIP_BANFF_DISTANCE - roadtripState.banffDistance <= ROADTRIP_LAKE_TURNOFF_DISTANCE) {
+    // the driver's chosen lane while the road geometry owns that transition.
+    if (roadtripState.route === "lake-turnoff" ||
+        (roadtripState.route === "banff" &&
+        ROADTRIP_BANFF_DISTANCE - roadtripState.banffDistance <= ROADTRIP_LAKE_TURNOFF_DISTANCE)) {
       return 0;
     }
     return .42;
@@ -43233,7 +43234,7 @@ window.__entranceRoomOpen = false;
         roadtripState.abrahamDistance = 0;
         roadtripState.campExitDistance = ROADTRIP_ABRAHAM_DISTANCE;
         roadtripState.campExitLatched = false;
-        roadtripState.playerLane = roadtripState.playerLane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE;
+        roadtripState.playerLane = roadtripState.playerLane < 0 ? -.5 : .5;
         transitionRoadtripTraffic(previousLakeTurnoffRoute);
         syncRoadtripRouteClass();
       }
@@ -50340,7 +50341,8 @@ window.__entranceRoomOpen = false;
             surfaceRoughness: roadtripState.surfaceRoughness,
             curveWeight: roadtripCurveWeight(driveState.speed),
             steeringAuthority: roadtripSteeringAuthority(driveState.speed),
-            grip: 1 - roadtripState.surfaceRoughness * ROADTRIP_GRAVEL_GRIP_LOSS
+            grip: 1 - roadtripState.surfaceRoughness * ROADTRIP_GRAVEL_GRIP_LOSS,
+            cameraRoadFraction: roadtripVisualLaneRoadFraction(roadtripPlayerLane(), true)
           },
           medianBarrier: roadtripState.medianBarrier,
           impairmentLevel: roadtripImpairmentLevel(),

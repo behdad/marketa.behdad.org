@@ -167,7 +167,8 @@ var harness = String.raw`<script>
 
 var report = lib.runPageSync("rsvp.html", harness, 4000, {
   forceMotion: true,
-  seedRandom: true
+  seedRandom: true,
+  patchRaf: true
 });
 
 if (!report) { console.error("roster freeze: no report"); process.exit(1); }

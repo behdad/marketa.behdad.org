@@ -64826,8 +64826,12 @@ function quickReversalGesture(action) {
     var keyPitchIdx = 0;
     var typeLineIdx = Math.floor(Math.random() * (T.en.typewriter_lines.length || 1));
     function typeKey() {
-      playTypewriterSound(keyPitches[keyPitchIdx % keyPitches.length]);
-      keyPitchIdx++;
+      var burst = 3 + Math.floor(Math.random() * 3), at = 0;
+      for (var i = 0; i < burst; i++) {
+        playTypewriterSound(keyPitches[keyPitchIdx % keyPitches.length], "office-typewriter", at);
+        keyPitchIdx++;
+        at += 0.055 + Math.random() * 0.035;
+      }
       var l = document.documentElement.lang;
       var totalKeys = 0;
       try {
@@ -112376,12 +112380,12 @@ function playBassBoomSound(panId) {
     osc.stop(t + 0.45);
   } catch (e) {}
 }
-function playTypewriterSound(pitchMult, panId) {
+function playTypewriterSound(pitchMult, panId, delaySeconds) {
   pitchMult = pitchMult || 1;
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
-    var t = ctx.currentTime;
+    var t = ctx.currentTime + Math.max(0, delaySeconds || 0);
     [[0, 1500], [0.09, 950]].forEach(function (pair) {
       var t0 = pair[0], freq = pair[1] * pitchMult;
       var osc = ctx.createOscillator();

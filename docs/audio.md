@@ -360,6 +360,8 @@ do not compete with traffic, tire, pursuit, or collision cues.
   three glassy high-low-rise tones; video-call connection keeps its low swell and rising
   C-major arpeggio. PC-driven monitor/typewriter swaps suppress their separate genie-poof
   cue, while manual swaps retain it. Device helpers re-check focus and visibility before scheduling.
+- **The office typewriter** schedules a 3–5-key burst directly on the shared audio clock for each
+  activation, varying pitch and spacing without leaving timer-driven sounds behind.
 - **The office laptop's automatic update** keeps animating while the desktop monitor is
   being engaged or is zoomed, but its update click and laptop-specific reboot cue are
   suppressed at callback time. Attention begins on the initiating monitor tap, including the brief

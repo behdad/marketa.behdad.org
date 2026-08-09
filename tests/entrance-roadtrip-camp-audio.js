@@ -148,12 +148,11 @@ check(s.refocus && s.refocus.audio.active && s.refocus.audio.attended && s.refoc
 check(s.hidden && !s.hidden.audio.active && !s.hidden.audio.attended && s.hidden.beds === s.calm.before &&
   s.visible && s.visible.audio.active && s.visible.beds === s.calm.beds,
   "visibility teardown and recovery preserve one-bed ownership", { hidden: s.hidden, visible: s.visible });
-var resumedPartyBeds = s.dismissed && s.dismissed.partyRuntime ?
-  s.dismissed.partyRuntime.audio.filter(function (row) { return row.target === 1; }).length : -1;
 check(s.dismissed && !s.dismissed.audio.active && !s.dismissed.audio.attended &&
+  !s.dismissed.audio.outdoor && !s.dismissed.audio.sources && !s.dismissed.audio.retiring &&
   s.dismissed.partyForeground && !s.dismissed.partyForeground.suspended &&
-  resumedPartyBeds >= 0 && s.dismissed.beds === s.calm.before + resumedPartyBeds,
-  "Road Trip dismissal closes the campsite mix without counting any restored party bed as a leak", s.dismissed);
+  s.dismissed.partyRuntime && !s.dismissed.partyRuntime.suspended,
+  "Road Trip dismissal closes every campsite-owned source before restoring shared ambience", s.dismissed);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/new Ctx\(\)/g) || []).length === 1 &&

@@ -42808,6 +42808,16 @@ window.__entranceRoomOpen = false;
     event.preventDefault();
     event.stopImmediatePropagation();
   });
+  if (campStargazingWisdom) {
+    Array.prototype.forEach.call(
+      campStargazingWisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble"),
+      function (bubble, index) {
+        bubble.addEventListener("animationstart", function (event) {
+          if (event.target !== bubble || event.animationName !== "entrance-roadtrip-camp-wisdom-in") return;
+          playCampWisdomMurmurSound(index);
+        });
+      });
+  }
   if (campFinaleDarkness) campFinaleDarkness.addEventListener("click", function (event) {
     if (campSleepPhaseIndex(campSleepState.phase) < campSleepPhaseIndex("fire-out")) return;
     event.preventDefault();
@@ -104253,6 +104263,57 @@ function scheduleCampFinLoveVoices() {
   setTimeout(function () {
     if (campFinLoveVoiceAllowed()) playILoveYouSound("entrance-roadtrip-camp-behdad", .82, .9);
   }, Math.round(CAMP_FIN_MELODY_SECONDS * 1000 + 1550));
+}
+// Each Camping wisdom bubble gets a short, low formant murmur in its speaker's
+// register. The animationstart wiring below keeps the sound exactly on the visual
+// reveal instead of maintaining a second set of reveal timers.
+function playCampWisdomMurmurSound(index) {
+  if (document.hidden || !document.hasFocus || !document.hasFocus()) return false;
+  if (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) return false;
+  var camp = document.getElementById("entrance-roadtrip-camp");
+  var roomState = window.__entranceRoomState && window.__entranceRoomState();
+  var trip = roomState && roomState.drive && roomState.drive.roadtrip;
+  if (!camp || !camp.classList.contains("stargazing-complete") ||
+      !trip || !trip.active || trip.route !== "camp") return false;
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return false;
+    var marketa = index % 2 === 1;
+    var voice = marketa ?
+      { f0: 185, f1: 650, f2: 1880, pan: "entrance-roadtrip-camp-marketa" } :
+      { f0: 118, f1: 490, f2: 1380, pan: "entrance-roadtrip-camp-behdad" };
+    var t = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = .34;
+    master.connect(pannedOut(ctx, voice.pan));
+    function formant(frequency, level) {
+      var filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = frequency;
+      filter.Q.value = 5;
+      var gain = ctx.createGain();
+      gain.gain.value = level;
+      filter.connect(gain); gain.connect(master);
+      return filter;
+    }
+    var low = formant(voice.f1, 1);
+    var high = formant(voice.f2, .24);
+    [0, .13, .25].forEach(function (offset, syllable) {
+      var start = t + offset;
+      var oscillator = ctx.createOscillator();
+      oscillator.type = "sawtooth";
+      var pitch = voice.f0 * [1, 1.06, .94][syllable] * (1 + (index - 1.5) * .012);
+      oscillator.frequency.setValueAtTime(pitch, start);
+      oscillator.frequency.exponentialRampToValueAtTime(pitch * .91, start + .105);
+      var envelope = ctx.createGain();
+      envelope.gain.setValueAtTime(.0001, start);
+      envelope.gain.exponentialRampToValueAtTime(.042, start + .016);
+      envelope.gain.exponentialRampToValueAtTime(.0001, start + .11);
+      oscillator.connect(envelope); envelope.connect(low); envelope.connect(high);
+      oscillator.start(start); oscillator.stop(start + .12);
+    });
+    return true;
+  } catch (e) { return false; }
 }
 // Four quiet, synthesized punctuation marks for the attended campsite curtain call.
 // This is timer-driven audio, so it owns the full crane-rule gate itself: checkpoint

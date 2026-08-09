@@ -63,6 +63,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceRoadtripCampStargazingOpen();
     report.steps.clearNight = snap();
 
+    var wisdomCheckpoint = window.__captureCheckpointSystems().entrance;
+    wisdomCheckpoint.drive.roadtrip.campFireLit = true;
+    wisdomCheckpoint.drive.roadtrip.stargazing = {
+      progress: { cassiopeia: 5, "ursa-major": 7, "ursa-minor": 7 },
+      completed: ["cassiopeia", "ursa-major", "ursa-minor"],
+      complete: true, wisdomDismissed: false, wisdomHandoffReady: false, sleepPhase: "idle"
+    };
+    window.__restoreCheckpointSystems({ entrance: wisdomCheckpoint }, "afterStage");
+    var attendedWisdomMurmurs = [0, 1, 2, 3].map(window.playCampWisdomMurmurSound);
+    focused = false;
+    var unfocusedWisdomMurmur = window.playCampWisdomMurmurSound(0);
+    focused = true;
+    report.steps.wisdomMurmur = {
+      attended: attendedWisdomMurmurs,
+      unfocused: unfocusedWisdomMurmur
+    };
+
     var finaleCheckpoint = window.__captureCheckpointSystems().entrance;
     finaleCheckpoint.drive.roadtrip.campFireLit = false;
     finaleCheckpoint.drive.roadtrip.stargazing = {
@@ -133,6 +150,9 @@ check(s.clearNight && s.clearNight.audio.rain && s.clearNight.audio.storm &&
   s.clearNight.audio.mix.rain === 0 && s.clearNight.audio.mix.storm === 0 &&
   s.clearNight.audio.mix.wind < s.storm.audio.mix.wind,
   "the locally clear stargazing sky suppresses hidden rain and storm hiss", s.clearNight);
+check(s.wisdomMurmur && s.wisdomMurmur.attended.every(function (played) { return played === true; }) &&
+  s.wisdomMurmur.unfocused === false,
+  "all four speaker murmurs play only for an attended wisdom exchange", s.wisdomMurmur);
 check(s.finale && s.finale.audio.active && !s.finale.audio.fireLit &&
   s.finale.audio.mix.lake > 0 && s.finale.audio.mix.wind > 0 &&
   s.finale.audio.mix.wind < s.clearNight.audio.mix.wind &&

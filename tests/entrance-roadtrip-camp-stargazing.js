@@ -288,6 +288,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                         var tent = document.getElementById("entrance-roadtrip-camp-tent");
                         report.earlyTarget = clickPoint(tent);
                         report.earlyClick = snap();
+                        report.wisdomMurmurs = [];
+                        var originalWisdomMurmur = window.playCampWisdomMurmurSound;
+                        window.playCampWisdomMurmurSound = function (index) {
+                          report.wisdomMurmurs.push(index);
+                          return true;
+                        };
+                        Array.prototype.forEach.call(
+                          document.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble"),
+                          function (bubble) {
+                            var reveal = new Event("animationstart", { bubbles: true });
+                            Object.defineProperty(reveal, "animationName", {
+                              configurable: true, value: "entrance-roadtrip-camp-wisdom-in"
+                            });
+                            bubble.dispatchEvent(reveal);
+                          });
+                        window.playCampWisdomMurmurSound = originalWisdomMurmur;
                         setTimeout(function () {
                           try {
                             report.handoff = snap();
@@ -440,6 +456,8 @@ check(/camp-wisdom-bubble:nth-child\(1\)\{animation-delay:2s\}/.test(source) &&
   /camp-wisdom-bubble:nth-child\(3\)\{animation-delay:4s\}/.test(source) &&
   /camp-wisdom-bubble:nth-child\(4\)\{animation-delay:5s\}/.test(source),
   "the exchange waits two seconds, then reveals its four bubbles one second apart");
+check(result && same(result.wisdomMurmurs, [0, 1, 2, 3]),
+  "each wisdom bubble reveal triggers its alternating quiet speaker murmur", result && result.wisdomMurmurs);
 check(result && result.complete &&
   same(result.complete.liveShapes.cassiopeia.points, [[53.735,-95.87],[70.565,-79.04],[88.415,-87.2],[102.185,-74.45],[120.545,-88.73]]) &&
   same(result.complete.liveShapes["ursa-minor"].points, [[166.615,-69.265],[178.345,-61.615],[191.095,-75.895],[179.875,-85.585],[216.595,-91.705],[244.645,-91.705],[270.145,-86.605]]) &&

@@ -27,7 +27,6 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-grade",
   "entrance-roadtrip-invite",
   "entrance-roadtrip-invite-accept",
-  "entrance-roadtrip-invite-later",
   "entrance-roadtrip-reenter",
   "entrance-roadtrip-pause-dialog",
   "entrance-roadtrip-crack",
@@ -63,7 +62,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-lane-marks", "entrance-roadtrip-furniture", "entrance-roadtrip-entities",
     "entrance-roadtrip-curve-signs",
     "entrance-roadtrip-speed", "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier", "entrance-roadtrip-grade",
-    "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later", "entrance-roadtrip-reenter",
+    "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-reenter",
     "entrance-roadtrip-pause-dialog",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
     "entrance-roadtrip-mirror-housing", "entrance-roadtrip-mirror-gasket",
@@ -350,14 +349,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       metadata: metadataCount(invitation),
       transform: invitation.getAttribute("transform"),
       viewBox: viewBox(),
+      panelX: Number(invitation.children[0].getAttribute("x")),
+      panelWidth: Number(invitation.children[0].getAttribute("width")),
+      panelHeight: Number(invitation.children[0].getAttribute("height")),
+      dismissControl: !!document.getElementById("entrance-roadtrip-invite-later"),
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim()
     };
     window.setLang("cs");
     offer.czech = {
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim(),
       accept: invitation.querySelector("[data-i=entrance_roadtrip_invite_accept]").textContent.trim(),
-      acceptMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-accept")),
-      laterMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-later"))
+      acceptMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-accept"))
     };
     window.setLang("en");
     pressKey("Escape");
@@ -1277,8 +1279,8 @@ check(/function roadtripExplorationComplete\(\)[\s\S]{0,140}window\.__secondRoun
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
   /function acceptRoadtripInvite\(event\)\s*\{\s*return openRoadtripRouteChooser\(event\);\s*\}/.test(source) &&
   /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-accept"\)\.dispatchEvent/.test(source) &&
-  /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-later"\)\.dispatchEvent/.test(source),
-  "the first highway entry is explicit and its full offer owns Enter and Escape");
+  /roadtripInviteVisible && window\.__dismissEntranceRoadtripInvite/.test(source),
+  "the first highway entry is explicit and its full offer owns Enter and keyboard Escape");
 check(/id="entrance-roadtrip-reenter"[^>]+tabindex="0"/.test(source) &&
   /roadtripState\.everAccepted \|\| roadtripState\.invitationDismissed/.test(source) &&
   /data-roadtrip-reentry-choice="continue"/.test(source) &&
@@ -1401,8 +1403,10 @@ check(activation && activation.offer.before.practiceLaps === 1 && activation.off
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
   activation.offer.metadata === 0 && activation.offer.title === "Let’s road trip!" &&
   activation.offer.transform === "translate(396 0)" &&
+  activation.offer.panelX === 47 && activation.offer.panelWidth === 160 && activation.offer.panelHeight === 54 &&
+  !activation.offer.dismissControl &&
   activation.offer.czech.title === "Jedeme na výlet!" && activation.offer.czech.accept === "Vyjet na dálnici" &&
-  activation.offer.czech.acceptMetadata === 0 && activation.offer.czech.laterMetadata === 0 &&
+  activation.offer.czech.acceptMetadata === 0 &&
   activation.offer.viewBox === "0 -31 680 207" && activation.firstDismissed &&
   !activation.firstDismissed.visible && activation.firstDismissed.metadata === 0 &&
   !activation.firstDismissed.state.drive.roadtrip.active && !activation.firstDismissed.state.drive.roadtrip.accepted &&

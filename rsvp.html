@@ -35822,14 +35822,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             </g>
           </g>
           <g id="entrance-roadtrip-invite" transform="translate(396 0)">
-            <rect x="18" y="-25" width="218" height="58" rx="10" fill="#453a31" fill-opacity=".96" stroke="#d9a6a6" stroke-width="1.5"/>
+            <rect x="47" y="-25" width="160" height="54" rx="10" fill="#453a31" fill-opacity=".96" stroke="#d9a6a6" stroke-width="1.5"/>
             <text class="entrance-roadtrip-invite-copy" x="127" y="-7" font-size="13" font-weight="700" data-i="entrance_roadtrip_invite_title">Let’s road trip!</text>
-            <g id="entrance-roadtrip-invite-later" class="entrance-roadtrip-invite-button" tabindex="0">
-              <circle cx="220" cy="-10" r="9" fill="#1d1918" stroke="#fffdf8" stroke-width="1"/>
-              <text class="entrance-roadtrip-invite-copy" x="220" y="-6" font-size="13">×</text>
-            </g>
             <g id="entrance-roadtrip-invite-accept" class="entrance-roadtrip-invite-button" tabindex="0">
-              <rect x="30" y="1" width="194" height="23" rx="7" fill="#8e3a4a" stroke="#f0d8b8" stroke-width="1"/>
+              <rect x="53" y="1" width="148" height="23" rx="7" fill="#8e3a4a" stroke="#f0d8b8" stroke-width="1"/>
               <text class="entrance-roadtrip-invite-copy" x="127" y="16" font-size="9.5" data-i="entrance_roadtrip_invite_accept">Take the highway</text>
             </g>
           </g>
@@ -38017,7 +38013,6 @@ window.__entranceRoomOpen = false;
   var driveCoachHelp = document.getElementById("entrance-drive-help");
   var roadtripInvite = document.getElementById("entrance-roadtrip-invite");
   var roadtripInviteAccept = document.getElementById("entrance-roadtrip-invite-accept");
-  var roadtripInviteLater = document.getElementById("entrance-roadtrip-invite-later");
   var roadtripRouteChooser = document.getElementById("entrance-roadtrip-route-chooser");
   var roadtripRouteChoices = roadtripRouteChooser ?
     Array.prototype.slice.call(roadtripRouteChooser.querySelectorAll("[data-roadtrip-route-choice]")) : [];
@@ -40357,6 +40352,7 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
+  window.__dismissEntranceRoadtripInvite = dismissRoadtripInvite;
   function bindRoadtripInviteControl(control, action) {
     if (!control) return;
     control.addEventListener("click", action);
@@ -40365,7 +40361,6 @@ window.__entranceRoomOpen = false;
     });
   }
   bindRoadtripInviteControl(roadtripInviteAccept, acceptRoadtripInvite);
-  bindRoadtripInviteControl(roadtripInviteLater, dismissRoadtripInvite);
   bindRoadtripInviteControl(roadtripRouteLater, dismissRoadtripInvite);
   roadtripRouteChoices.forEach(function (choice) {
     var longPressTimer = null;
@@ -51534,8 +51529,9 @@ document.addEventListener("keydown", function (event) {
     } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
       if (event.repeat) {
         // Holding a back key must not satisfy both rungs of the pause-then-exit ladder.
-      } else if (roadtripInviteVisible) document.getElementById("entrance-roadtrip-invite-later").dispatchEvent(
-        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      } else if (roadtripInviteVisible && window.__dismissEntranceRoadtripInvite) {
+        window.__dismissEntranceRoadtripInvite(event);
+      }
       else if (!(window.__backFromEntranceRoadtrip && window.__backFromEntranceRoadtrip()) &&
           window.__dismissEntrancePorscheDriveHud) window.__dismissEntrancePorscheDriveHud();
     } else if (event.key === "Enter" &&

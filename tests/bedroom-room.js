@@ -24,6 +24,7 @@ var HARNESS = [
   ' var wash=room.querySelector(".bedroom-night-wash"),halo=room.querySelector(".bedroom-lamp-halo");wash.style.transition="none";halo.style.transition="none";report.steps.day={state:window.__bedroomRoomState(),wash:getComputedStyle(wash).opacity,halo:getComputedStyle(halo).opacity};window.__setDayNight(true);await sleep(50);report.steps.night={state:window.__bedroomRoomState(),wash:getComputedStyle(wash).opacity,halo:getComputedStyle(halo).opacity};window.__setDayNight(false);await sleep(50);',
   ' setLang("cs");report.steps.cs={lang:document.documentElement.lang,props:room.querySelectorAll(".bedroom-prop").length,suits:room.querySelectorAll(".bedroom-suit").length};setLang("en");',
   ' var glass=document.getElementById("bedroom-stained-glass"),sprinkler=document.getElementById("bedroom-sprinkler"),leftLamp=document.getElementById("bedroom-left-lamp"),rightLamp=document.getElementById("bedroom-right-lamp"),gearLeft=document.getElementById("bedroom-wall-gear-left"),gearMiddle=document.getElementById("bedroom-wall-gear-middle"),gearRight=document.getElementById("bedroom-wall-gear-right"),wardrobe=document.getElementById("bedroom-wardrobe"),pinkSuit=document.getElementById("bedroom-suit-pink"),blueSuit=document.getElementById("bedroom-suit-blue"),bed=document.getElementById("bedroom-bed"),coats=document.getElementById("bedroom-party-coats"),leftTable=document.getElementById("bedroom-left-table"),rightTable=document.getElementById("bedroom-right-table");pinkSuit.style.transition="none";blueSuit.style.transition="none";coats.style.transition="none";report.steps.coats={off:getComputedStyle(coats).opacity,parent:coats.parentNode.id,pointer:getComputedStyle(coats).pointerEvents,garments:Array.from(coats.querySelectorAll(".bedroom-party-coat")).map(function(garment){var b=garment.getBBox();return {name:garment.getAttribute("class"),paths:garment.querySelectorAll("path").length,box:[b.x,b.y,b.width,b.height]};})};strip.classList.add("party-on");window.__syncScopeMirrors();report.steps.coats.on=getComputedStyle(coats).opacity;strip.classList.remove("party-on");window.__syncScopeMirrors();report.steps.coats.ended=getComputedStyle(coats).opacity;click(glass);click(leftLamp);click(rightLamp);click(gearLeft);click(gearMiddle);propkey(gearRight,"Enter");propkey(wardrobe," ");click(pinkSuit);report.steps.suits={pink:pinkSuit.getAttribute("class"),blue:blueSuit.getAttribute("class"),wardrobe:wardrobe.getAttribute("class"),opacity:[getComputedStyle(pinkSuit).opacity,getComputedStyle(blueSuit).opacity]};click(blueSuit);report.steps.suits.blueAfter=blueSuit.getAttribute("class");click(bed);click(leftTable);propkey(rightTable,"Enter");report.steps.props={state:window.__bedroomRoomState(),focus:document.activeElement&&document.activeElement.id};report.steps.sleep={wash:getComputedStyle(room.querySelector(".bedroom-night-wash")).opacity,linen:getComputedStyle(room.querySelector(".bedroom-linen")).animationName,zzz:getComputedStyle(room.querySelector(".bedroom-sleep-z")).animationName,saved:(window.__captureCheckpointSystems()["bedroom-lamps"]||null)};click(sprinkler);report.steps.spray=window.__bedroomRoomState();await sleep(1250);report.steps.soaked=window.__bedroomRoomState();await sleep(4100);report.steps.dry=window.__bedroomRoomState();',
+  ' var burgundyShoes=document.getElementById("bedroom-shoes-burgundy"),blueShoes=document.getElementById("bedroom-shoes-blue");burgundyShoes.style.transition="none";blueShoes.style.transition="none";var burgundyArt=burgundyShoes.querySelector(".bedroom-shoe-art"),blueArt=blueShoes.querySelector(".bedroom-shoe-art");click(burgundyShoes);report.steps.shoes={count:room.querySelectorAll(".bedroom-wedding-shoes").length,opacity:[getComputedStyle(burgundyShoes).opacity,getComputedStyle(blueShoes).opacity],burgundy:burgundyShoes.getAttribute("class"),blue:blueShoes.getAttribute("class"),suits:[box(pinkSuit),box(blueSuit)],art:[box(burgundyArt),box(blueArt)],paths:[burgundyArt.querySelectorAll("path").length,blueArt.querySelectorAll("path").length],blueDots:blueArt.querySelectorAll("circle").length};click(blueShoes);report.steps.shoes.blueAfter=blueShoes.getAttribute("class");',
   ' window.__secondRound=true;window.__deliverPhoneMessage("cue_mail");await sleep(80);badge=document.querySelector(".msg-badge");coach=document.querySelector(".msg-badge-coach");thumb=document.querySelector(".msg-thumb");report.steps.hold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread(),badge:badge&&badge.classList.contains("show"),coach:coach&&coach.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};',
   ' key("ArrowUp");await sleep(1300);badge=document.querySelector(".msg-badge");thumb=document.querySelector(".msg-thumb");report.steps.return={state:window.__bedroomRoomState(),hidden:room.hidden,klass:viewport.classList.contains("bedroom-room-open"),focus:document.activeElement===viewport,held:window.__messageNotificationsHeld(),badge:badge&&badge.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
   ' window.goToStage("office");dblclick(document.getElementById("office-stainedglass"));await sleep(40);report.steps.interactive=window.__bedroomRoomState();',
@@ -32,7 +33,7 @@ var HARNESS = [
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.left={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__cinemaRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(40);key("ArrowRight");await sleep(780);report.steps.right={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__entranceRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);var dot=document.querySelectorAll(".hunt-dot")[0];dot.focus();click(dot);await sleep(780);report.steps.dot={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__bathroomRoomState(),hidden:room.hidden,focus:document.activeElement===dot};',
-  ' window.goToStage("office");key("ArrowDown");await sleep(100);wardrobe=document.getElementById("bedroom-wardrobe");pinkSuit=document.getElementById("bedroom-suit-pink");click(wardrobe);click(pinkSuit);report.steps.suitClose={before:pinkSuit.getAttribute("class")};window.__closeBedroomRoom();report.steps.suitClose.after=pinkSuit.getAttribute("class");await sleep(780);',
+  ' window.goToStage("office");key("ArrowDown");await sleep(100);wardrobe=document.getElementById("bedroom-wardrobe");pinkSuit=document.getElementById("bedroom-suit-pink");burgundyShoes=document.getElementById("bedroom-shoes-burgundy");click(wardrobe);click(pinkSuit);click(burgundyShoes);report.steps.suitClose={before:pinkSuit.getAttribute("class"),shoeBefore:burgundyShoes.getAttribute("class")};window.__closeBedroomRoom();report.steps.suitClose.after=pinkSuit.getAttribute("class");report.steps.suitClose.shoeAfter=burgundyShoes.getAttribute("class");await sleep(780);',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -105,6 +106,16 @@ check(s.suits && /\bswinging\b/.test(s.suits.pink) && !/\bswinging\b/.test(s.sui
   /\btidied\b/.test(s.suits.wardrobe) && Number(s.suits.opacity[0]) === 1 &&
   Number(s.suits.opacity[1]) === 1 && /\bswinging\b/.test(s.suits.blueAfter),
   "the open wardrobe reveals both suits and each hanger swings independently", s.suits);
+check(s.shoes && s.shoes.count === 2 && s.shoes.opacity.every(function (opacity) { return opacity === "1"; }) &&
+  /\bshining\b/.test(s.shoes.burgundy) && !/\bshining\b/.test(s.shoes.blue) &&
+  /\bshining\b/.test(s.shoes.blueAfter) && s.shoes.paths[0] === 3 &&
+  s.shoes.paths[1] === 2 && s.shoes.blueDots === 6 &&
+  s.shoes.art.every(function (shoe, index) {
+    var suit = s.shoes.suits[index];
+    return shoe[1] > suit[1] + suit[3] && shoe[2] > 20 && shoe[3] > 3;
+  }),
+  "the open wardrobe reveals the copied wedding shoes beneath their matching suits and each pair shines independently",
+  s.shoes);
 check(s.coats && s.coats.off === "0" && s.coats.on === "1" && s.coats.ended === "0" &&
   s.coats.parent === "bedroom-bed" && s.coats.pointer === "none",
   "the guest-coat pile appears only during the party without intercepting the bed", s.coats);
@@ -146,8 +157,9 @@ check(s.dot && s.dot.room === "kitchen" && !s.dot.source.open && s.dot.hidden &&
   s.dot.target.open && s.dot.focus,
   "a room dot pans from Bedroom to Bathroom and retains dot focus", s.dot);
 check(s.suitClose && /\bswinging\b/.test(s.suitClose.before) &&
-  !/\bswinging\b/.test(s.suitClose.after),
-  "closing Bedroom clears a suit swing whose cleanup timer was canceled", s.suitClose);
+  /\bshining\b/.test(s.suitClose.shoeBefore) &&
+  !/\bswinging\b/.test(s.suitClose.after) && !/\bshining\b/.test(s.suitClose.shoeAfter),
+  "closing Bedroom clears suit and shoe one-shots whose cleanup timers were canceled", s.suitClose);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-wall-gear-left", "bedroom-wall-gear-middle", "bedroom-wall-gear-right", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {
@@ -161,6 +173,10 @@ check(!/id="bedroom-(?:left|right)-lamp"[^>]*tabindex=/.test(source),
 check((source.match(/class="bedroom-suit"/g) || []).length === 2 &&
   !/id="bedroom-suit-(?:pink|blue)"[^>]*tabindex=/.test(source),
   "the two wedding suits are native SVG click targets outside the Tab order");
+check((source.match(/class="bedroom-wedding-shoes"/g) || []).length === 2 &&
+  (source.match(/class="bedroom-shoe-art"/g) || []).length === 2 &&
+  !/id="bedroom-shoes-(?:burgundy|blue)"[^>]*tabindex=/.test(source),
+  "the two code-native wedding-shoe pairs remain click targets outside the Tab order");
 check(!/#bedroom-room\s+\.bedroom-prop:hover\s*\{[^}]*opacity/.test(source),
   "Bedroom props stay fully opaque on hover");
 check((source.match(/class="bedroom-lamp-pedestal"/g) || []).length === 2 &&

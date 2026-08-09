@@ -2,6 +2,8 @@
 "use strict";
 
 var lib = require("./lib");
+var fs = require("fs");
+var path = require("path");
 
 var HARNESS = String.raw`<pre id="__report">pending</pre>
 <script>
@@ -18,42 +20,31 @@ addEventListener("load", function () {
       var picker = document.getElementById("garden-djpicker");
       head.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" }));
       head.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      report.normal = {
-        picker: picker.classList.contains("open"),
-        bang: head.classList.contains("bang"),
-        caption: window.__captionKey()
-      };
-      window.__clearFlashCaption("dj-context");
-      window.setCaption("garden_party", true);
-      trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      report.repeat = {
-        picker: picker.classList.contains("open"),
-        caption: window.__captionKey()
-      };
-      var ev = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
-      report.contextCancelled = !head.dispatchEvent(ev);
-      report.contextOpen = picker.classList.contains("open");
-      var second = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
-      report.openContextCancelled = !head.dispatchEvent(second);
-      var sceneMenu = document.querySelector(".scene-ctx");
-      var escapeLabel = sceneMenu && sceneMenu.querySelector("button span:last-child");
-      report.escapeOffered = !!escapeLabel && escapeLabel.textContent.trim() === "Escape";
-      var escape = sceneMenu && sceneMenu.querySelector("button");
-      if (escape) escape.click();
-      report.contextClosed = !picker.classList.contains("open");
-      var originalMatchMedia = window.matchMedia;
-      window.matchMedia = function (q) {
-        if (/hover:none|pointer:coarse/.test(q)) return { matches: true, addListener: function () {}, removeListener: function () {} };
-        return originalMatchMedia.call(window, q);
-      };
-      trigger.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
-      trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      report.touchOpen = picker.classList.contains("open");
+      setTimeout(function () {
+        report.normal = {
+          picker: picker.classList.contains("open"),
+          bang: head.classList.contains("bang"),
+          scratch: document.getElementById("garden-dj-scratch").classList.contains("scratching")
+        };
+        window.__closeDjPicker();
+        head.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 }));
+        report.contextOpen = picker.classList.contains("open");
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+        trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        report.triggerOpen = picker.classList.contains("open");
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+        report.escapeClosed = !picker.classList.contains("open");
+        trigger.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+        trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        report.touchOpen = picker.classList.contains("open");
+        report.errors = window.__errs;
+        document.getElementById("__report").textContent = JSON.stringify(report);
+      }, 80);
     } catch (e) {
       window.__errs.push("harness: " + String(e && e.stack || e));
+      report.errors = window.__errs;
+      document.getElementById("__report").textContent = JSON.stringify(report);
     }
-    report.errors = window.__errs;
-    document.getElementById("__report").textContent = JSON.stringify(report);
   }, 350);
 });
 </script>`;
@@ -72,17 +63,16 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 2400, { patchRaf: true, force
 check(!!result, "focused browser harness completed", result);
 if (result) {
   check(!result.errors.length, "no uncaught page errors", result.errors);
-  check(result.normal && !result.normal.picker &&
-    result.normal.caption === "dj_right_click_hint",
-    "an ordinary desktop click reacts and teaches right-click without opening requests", result.normal);
-  check(result.repeat && !result.repeat.picker && result.repeat.caption === "garden_party",
-    "the right-click coach appears only once", result.repeat);
-  check(result.contextCancelled && result.contextOpen,
-    "right-click suppresses the native menu and opens requests", result);
-  check(result.openContextCancelled && result.escapeOffered,
-    "right-clicking open requests offers the shared Escape action", result);
-  check(result.contextClosed, "the Escape action closes requests", result);
-  check(result.touchOpen, "touch retains a direct tap route", result);
+  check(result.normal && result.normal.picker && result.normal.bang && result.normal.scratch,
+    "an ordinary desktop click reacts and opens song requests", result.normal);
+  check(!result.contextOpen, "right-click does not open song requests", result);
+  check(result.triggerOpen, "the booth hit surface uses the same direct click route", result);
+  check(result.escapeClosed, "Escape closes song requests", result);
+  check(result.touchOpen, "touch uses the same direct tap route", result);
 }
+
+var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+check(!/__coachDjContext|dj_right_click_hint|contextRequest/.test(source),
+  "the obsolete DJ-specific right-click coach and handler are absent");
 
 process.exitCode = failures ? 1 : 0;

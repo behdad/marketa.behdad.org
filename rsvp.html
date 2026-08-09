@@ -54155,7 +54155,6 @@ var T = {
       coffee: "Slow coffee", workout: "Workout beat", totoro: "Woodland rain", aqua: "Aquarium ambient"
     },
     dj_pick_title: "request a song", // the DJ-booth style picker's heading
-    dj_right_click_hint: "Right-click the DJ for requests.",
     kbd_trips: "laughing gas · shrooms · acid · froggies · dmt · molly · k. · iboga",
     kbd_qm: "this list",
     kbd_manual: "Game manual",
@@ -55526,7 +55525,6 @@ var T = {
       coffee: "Pomalá káva", workout: "Rytmus na cvičení", totoro: "Lesní déšť", aqua: "Zvuky akvária"
     },
     dj_pick_title: "vyber si písničku", // the DJ-booth style picker's heading
-    dj_right_click_hint: "Klikni na DJ pravým tlačítkem pro přání.",
     kbd_trips: "rajský plyn · houbičky · kyselina · žabičky · dmt · molly · k. · iboga",
     kbd_qm: "tento seznam",
     kbd_manual: "Herní manuál",
@@ -68080,12 +68078,8 @@ function quickReversalGesture(action) {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { head.classList.add("bang"); });
     });
-    // Mouse/trackpad keeps the ordinary physical reaction here; requests live on right-click.
-    // Touch has no dependable secondary click, so its ordinary tap remains the direct route.
-    var coarse = window.__djLastPointerType === "touch" ||
-      (!window.__djLastPointerType && window.matchMedia && window.matchMedia("(hover:none), (pointer:coarse)").matches);
-    if (coarse) { if (window.__openDjPicker) window.__openDjPicker(); }
-    else if (window.__coachDjContext) window.__coachDjContext();
+    if (window.__djScratchNow) window.__djScratchNow(true);
+    if (window.__openDjPicker) window.__openDjPicker();
   });
   head.addEventListener("dblclick", function (e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -68188,21 +68182,7 @@ function quickReversalGesture(action) {
   var gs2 = document.getElementById("stage-garden");
   if (!picker || !trigger || !gs2) return;
   var SVGNS = "http://www.w3.org/2000/svg";
-  var built = false, open = false, contextCoachShown = false;
-  function coarsePointer() {
-    return window.__djLastPointerType === "touch" ||
-      (!window.__djLastPointerType && !!(window.matchMedia && window.matchMedia("(hover:none), (pointer:coarse)").matches));
-  }
-  window.__coachDjContext = function () {
-    if (contextCoachShown || coarsePointer()) return false;
-    var claim = window.__captionOverlay && window.__captionOverlay("dj_right_click_hint", {
-      owner: "dj-context", scope: "stage:garden",
-      priority: ((window.__captionPriorities && window.__captionPriorities.progress) || 40) + 1,
-      duration: 3500, clock: "attended"
-    });
-    if (claim) contextCoachShown = true;
-    return !!claim;
-  };
+  var built = false, open = false;
   // Panel geometry (garden view-box coords): keep the slab fully left of the booth's x=560
   // edge so an open picker never intercepts a follow-up tap on the DJ.
   var PX = 402, PY = 40, PW = 150, ROW_H = 13, HEAD_H = 20, PAD = 6;
@@ -68344,27 +68324,11 @@ function quickReversalGesture(action) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     window.__closeDjPicker();
   }
-  function contextRequest(e) {
-    if (open) return;
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    if (!window.__gardenPartyOn) return;
-    openPicker();
-  }
-  trigger.addEventListener("contextmenu", contextRequest);
-  var djHead = document.getElementById("garden-dj-headbang");
-  if (djHead) djHead.addEventListener("contextmenu", contextRequest);
-  trigger.addEventListener("pointerdown", function (e) { window.__djLastPointerType = e.pointerType || ""; });
-
-  // Touch keeps a direct tap route because it has no dependable secondary click. On mouse,
-  // an ordinary booth tap teaches the right-click once and leaves the physical DJ reaction alone.
+  // The booth hit surface shares the head's direct request path on mouse and touch.
   trigger.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
     if (!window.__gardenPartyOn) return;
-    if (coarsePointer()) {
-      if (open) window.__closeDjPicker(); else openPicker();
-    } else {
-      window.__coachDjContext();
-    }
+    openPicker();
   });
 
   // party ends / room class churn → close the picker (mirrors the scratch module's observer)

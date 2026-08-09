@@ -8943,6 +8943,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit; touch-action:none; -webkit-user-select:none; user-select:none}
 .phone-app-tile .pat-ico{position:relative; width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
+.phone-vector-fallback{display:inline-flex; align-items:center; justify-content:center; line-height:1}
 .phone-app-tile .pat-badge{position:absolute; right:-7px; top:-7px; z-index:2; min-width:19px; height:19px; padding:0 4px; box-sizing:border-box; border:2px solid var(--cream); border-radius:10px; background:#d33a34; color:#fff; font:700 10.5px/15px system-ui,sans-serif; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.28)}
 .phone-app-tile .pat-badge[hidden]{display:none}
 .phone-app-tile .pat-label{font-size:10.5px; color:var(--ink); text-align:center; line-height:1.1; max-width:62px}
@@ -90245,7 +90246,7 @@ async def localfont(name):
   // ── Loft phone modal (the balcony phone) ─────────────────────────────────────
   // Tapping the phone boots the loft's own pocket OS: a cream-∞-on-wine splash (first
   // open per session only, mirroring the monitor's boot), then a home screen of app
-  // tiles that reuse the desktop's #dicon-* icons, branded m ∞ b in the status bar and
+  // tiles that share the desktop's #dicon-* artwork, branded m ∞ b in the status bar and
   // themed off the site palette with wine as the accent. The headline app is the
   // Dialer — Tehran / Prague / Lübeck, each family's
   // existing call art (#monitor-tehran-scene / #laptop-call-scene / #laptop-lueb-scene)
@@ -90264,6 +90265,27 @@ async def localfont(name):
   // right after an in-shell tap, so an in-app link opening a new browser tab leaves the phone up.)
   (function () {
     var SVGNS = "http://www.w3.org/2000/svg";
+    var phoneIconSerial = 0;
+    var PHONE_ICON_FALLBACKS = {
+      phone: "☎", mail: "✉", album: "▣", photobooth: "📷", music: "♪",
+      weather: "☀", currency: "⇄", chrome: "◎", firefox: "◉", globe: "◎",
+      mines: "✳", chat: "…"
+    };
+    function phoneIconMarkup(icon, fallback, className) {
+      var symbol = document.getElementById("dicon-" + icon);
+      if (!symbol) return '<span class="phone-vector-fallback">' + (fallback || PHONE_ICON_FALLBACKS[icon] || "•") + "</span>";
+      // These icons live in an HTML modal, outside the room SVG that owns the shared
+      // symbols. Some Chromium/Mac paint paths leave a cross-SVG <use> shadow tree blank.
+      // Clone the tiny authored geometry into the phone SVG instead; the artwork stays
+      // shared at source while the painted icon has no cross-root reference to resolve.
+      var inner = symbol.innerHTML;
+      if (inner.indexOf("url(#dicon-cream-depth)") !== -1) {
+        var depthId = "phone-icon-cream-depth-" + (++phoneIconSerial);
+        inner = '<defs><linearGradient id="' + depthId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf8"/><stop offset="0.48" stop-color="#f4efe5"/><stop offset="1" stop-color="#bdb3a3"/></linearGradient></defs>' +
+          inner.split("url(#dicon-cream-depth)").join("url(#" + depthId + ")");
+      }
+      return '<svg' + (className ? ' class="' + className + '"' : "") + ' viewBox="' + (symbol.getAttribute("viewBox") || "0 0 12 12") + '" data-phone-vector-icon="' + icon + '">' + inner + "</svg>";
+    }
     function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
     // keep every call mutually exclusive: the three predicates now also report a live
     // PHONE call, and the pre-wrap originals tell us whether the monitor/laptop is busy
@@ -90887,9 +90909,7 @@ async def localfont(name):
         var button = document.createElement("button");
         button.type = "button";
         button.className = "phone-recent-app";
-        var icon = app.icon
-          ? '<svg viewBox="0 0 12 12"><use href="#dicon-' + app.icon + '"/></svg>'
-          : app.glyph;
+        var icon = app.icon ? phoneIconMarkup(app.icon, app.glyph) : app.glyph;
         button.innerHTML = '<span class="pra-ico" style="background:' + app.tile + '">' + icon + '</span>' +
           '<span class="pra-label">' + tr(app.labelKey) + '</span>';
         button.addEventListener("click", function () { recentsReturnApp = null; launchApp(app); });
@@ -90935,9 +90955,7 @@ async def localfont(name):
             '<span class="cal-tile"><span class="cal-tile-head"></span><span class="cal-tile-day"></span></span>' +
             '</span><span class="pat-label">' + tr(app.labelKey) + '</span>';
         } else {
-          var ico = app.icon
-            ? '<svg viewBox="0 0 12 12"><use href="#dicon-' + app.icon + '"/></svg>'
-            : app.glyph;
+          var ico = app.icon ? phoneIconMarkup(app.icon, app.glyph) : app.glyph;
           tile.innerHTML = '<span class="pat-ico" style="background:' + app.tile + '">' + ico + '</span>' +
             '<span class="pat-label">' + tr(app.labelKey) + '</span>';
         }
@@ -91279,7 +91297,7 @@ async def localfont(name):
       callBtn.type = "button";
       callBtn.className = "dial-call-btn";
       callBtn.disabled = !selectedCity;
-      callBtn.innerHTML = '<svg viewBox="0 0 12 12"><use href="#dicon-phone"/></svg><span>' + tr("dial_call") + '</span>';
+      callBtn.innerHTML = phoneIconMarkup("phone") + '<span>' + tr("dial_call") + '</span>';
       callBtn.addEventListener("click", function () { if (selectedCity) startCall(selectedCity); });
       body.appendChild(callBtn);
     }
@@ -96707,7 +96725,7 @@ async def localfont(name):
         }
       } else if (messagesThread.length > 0 && !isOpen() && !rosterOpen) {
         msgBadgeEl.classList.add("idle", "show");
-        msgBadgeEl.innerHTML = '<svg class="msg-badge-idle-icon" viewBox="0 0 12 12"><use href="#dicon-chat"></use></svg>';
+        msgBadgeEl.innerHTML = phoneIconMarkup("chat", null, "msg-badge-idle-icon");
         hideMsgBadgeCoach();
       } else {
         msgBadgeEl.classList.remove("idle", "show");

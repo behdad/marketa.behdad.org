@@ -172,7 +172,6 @@ and the console.
 - `←` / `→`: steer.
 - `↑`: accelerate; `↓`: brake and cancel cruise control.
 - `Space`: set or reset cruise control at the current speed.
-- `A` / `M`: select automatic or manual transmission.
 - `Shift` + `↑` / `↓`: change gear or move the automatic selector toward P/D.
 On a Road Trip, `Enter` toggles pause/resume, while `Space`, steering, or a pedal also resumes a
 paused highway. `Escape` / `Backspace` pause first and exit only when pressed again while paused.

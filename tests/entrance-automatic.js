@@ -93,9 +93,17 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
           return [node.getAttribute("data-drive-range"), node.getAttribute("tabindex"), node.classList.contains("selected")];
         })
       };
-      key("m", "KeyM");
-      key("a", "KeyA");
-      report.steps.shortcuts = copy(drive().transmission);
+      var modeBeforeLetters = copy(drive().transmission);
+      var mKey = key("m", "KeyM");
+      var modeAfterM = copy(drive().transmission);
+      var aKey = key("a", "KeyA");
+      report.steps.shortcuts = {
+        before: modeBeforeLetters,
+        afterM: modeAfterM,
+        afterA: copy(drive().transmission),
+        mPrevented: mKey.defaultPrevented,
+        aPrevented: aKey.defaultPrevented
+      };
       var ctrlRight = key("ArrowRight", "ArrowRight", null, { ctrlKey: true });
       var ctrlRightMode = copy(drive().transmission);
       var ctrlLeft = key("ArrowLeft", "ArrowLeft", null, { ctrlKey: true });
@@ -428,7 +436,9 @@ check(s.focusedEnter && !s.focusedEnter.engine && s.focusedEnter.mode === "manua
   }), "Enter/Space operate focused transmission controls without falling through to ignition", {
     enter: s.focusedEnter, space: s.focusedSpace
   });
-check(s.shortcuts && s.shortcuts.mode === "auto", "A/M mode shortcuts operate while the HUD is open", s.shortcuts);
+check(s.shortcuts && s.shortcuts.before.mode === "auto" && s.shortcuts.afterM.mode === "auto" &&
+  s.shortcuts.afterA.mode === "auto" && s.shortcuts.mPrevented && s.shortcuts.aPrevented,
+  "A/M stay inert inside the HUD instead of changing transmission or leaking upstairs", s.shortcuts);
 check(s.ctrlShortcuts && s.ctrlShortcuts.right.mode === "manual" &&
   s.ctrlShortcuts.left.mode === "auto" && s.ctrlShortcuts.rightPrevented &&
   s.ctrlShortcuts.leftPrevented,

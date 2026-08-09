@@ -185,7 +185,7 @@ controls: finish the action it points to before another selector or driving inpu
 
 Street laps are optional free driving and do not unlock the journey. Once the Party has started and
 all ten rooms have been visited, finish or dismiss the car coach and use **Road Trip** to choose a
-starting segment. A new route begins stopped on the shoulder and keeps the selected transmission
+destination. A new route begins stopped on the shoulder and keeps the selected transmission
 mode.
 
 The choices move progressively west from Calgary through Banff to Abraham Lake. Start at the

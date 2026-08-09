@@ -36,8 +36,8 @@ var harness = String.raw`<script>
             avatar.querySelector("#garden-ayushi-jewelry") && avatar.querySelector(".bd-hat-ayushi")));
 
         var profile = (window.__chatPeopleKnowledge ? window.__chatPeopleKnowledge() : []).filter(function (p) { return p.id === "ayushi"; })[0];
-        check("public cast knowledge names Ayushi as the Diva without an invented relationship",
-          !!(profile && profile.name === "Ayushi" && profile.role === "Diva" &&
+        check("public cast knowledge names Ayushi as the lowercase diva without an invented relationship",
+          !!(profile && profile.name === "Ayushi" && profile.role === "diva" &&
             profile.relationship === "" && /Stand-up comedian in practice\./.test(profile.fun_fact)),
           JSON.stringify(profile || null));
 
@@ -47,9 +47,9 @@ var harness = String.raw`<script>
         var cs = window.castPersonCard("ayushi");
         window.setLang("en");
         check("the English direct-person card carries the supplied role and fun fact",
-          /Ayushi/.test(en) && /Diva/.test(en) && !/from India/.test(en) && /Stand-up comedian in practice\./.test(en), en);
+          /Ayushi/.test(en) && /diva/.test(en) && !/from India/.test(en) && /Stand-up comedian in practice\./.test(en), en);
         check("the Czech direct-person card mirrors all Ayushi copy",
-          /Ayushi/.test(cs) && /Diva/.test(cs) && !/z Indie/.test(cs) && /stand-up komička v zácviku\./.test(cs), cs);
+          /Ayushi/.test(cs) && /diva/.test(cs) && !/z Indie/.test(cs) && /stand-up komička v zácviku\./.test(cs), cs);
 
         window.goToStage("cuddly");
         document.getElementById("stage-cuddly").classList.remove("dusk");

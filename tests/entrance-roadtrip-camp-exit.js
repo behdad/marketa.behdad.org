@@ -38,6 +38,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       junctionY: Number(spur.getAttribute("data-roadtrip-junction-y")),
       destinationX: Number(spur.getAttribute("data-roadtrip-destination-x")),
       destinationY: Number(spur.getAttribute("data-roadtrip-destination-y")),
+      junctionLaneCenterX: Number(spur.getAttribute("data-roadtrip-junction-lane-center-x")),
+      destinationLaneCenterX: Number(spur.getAttribute("data-roadtrip-destination-lane-center-x")),
       junctionInnerX: Number(spur.getAttribute("data-roadtrip-junction-inner-x")),
       junctionRoadRightX: Number(spur.getAttribute("data-roadtrip-junction-road-right-x")),
       junctionOuterX: Number(spur.getAttribute("data-roadtrip-junction-outer-x")),
@@ -209,16 +211,14 @@ function connectedSpur(visual) {
     visual.junctionRoadRightX < visual.junctionOuterX &&
     visual.shoulderMouthInnerX >= visual.junctionRoadRightX - .3 &&
     Math.abs(visual.innerEdgeStartX - visual.shoulderMouthInnerX) <= .02 &&
-    visual.innerEdgeStartX < visual.bendInnerX && visual.bendInnerX < visual.destinationInnerX &&
+    visual.bendInnerX < visual.bendOuterX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
-    visual.outerEdgeStartX < visual.bendOuterX && visual.bendOuterX < visual.destinationOuterX &&
     visual.destinationY < visual.bendY && visual.bendY < visual.junctionY &&
     Math.abs(visual.innerEdgeStartY - visual.junctionY) <= .02 &&
     Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02 &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
-    visual.destinationX >= visual.junctionOuterX + 14 &&
-    visual.destinationInnerX > visual.junctionInnerX &&
+    Number.isFinite(visual.junctionLaneCenterX) && Number.isFinite(visual.destinationLaneCenterX) &&
     visual.nearWidth > visual.farWidth;
 }
 function cubicBand(path) {
@@ -238,15 +238,21 @@ function cubicValue(points, amount, axis) {
     3 * reverse * amount * amount * points[2][axis] +
     amount * amount * amount * points[3][axis];
 }
-function monotonicCurve(points) {
+function forwardCurve(points) {
   return points.every(function (point, index) {
     if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
     if (!index) return true;
-    return point.x >= points[index - 1].x - .02 && point.y <= points[index - 1].y + .02;
+    return point.y <= points[index - 1].y + .02;
   });
 }
+function laneCentredApproach(visual) {
+  var nearGap = visual.junctionX - visual.junctionLaneCenterX;
+  var farGap = visual.destinationX - visual.destinationLaneCenterX;
+  return Number.isFinite(nearGap) && Number.isFinite(farGap) && nearGap > 12 && farGap > 5 &&
+    farGap < nearGap * .55;
+}
 function coherentSpurTopology(visual) {
-  if (!connectedSpur(visual)) return false;
+  if (!connectedSpur(visual) || !laneCentredApproach(visual)) return false;
   var asphalt = cubicBand(visual.asphalt);
   var shoulder = cubicBand(visual.shoulder);
   var innerEdge = cubicBand(visual.innerEdge);
@@ -254,7 +260,7 @@ function coherentSpurTopology(visual) {
   if (!asphalt || !shoulder || !innerEdge || !outerEdge) return false;
   var curves = [asphalt.inner, asphalt.outer, shoulder.inner, shoulder.outer,
     innerEdge.inner, innerEdge.outer, outerEdge.inner, outerEdge.outer];
-  if (!curves.every(monotonicCurve)) return false;
+  if (!curves.every(forwardCurve)) return false;
   for (var step = 0; step <= 40; step++) {
     var amount = step / 40;
     var asphaltInner = cubicValue(asphalt.inner, amount, "x");
@@ -315,12 +321,12 @@ var mobile = run(true);
     firstVisual.spur === "visible" && firstVisual.afterRoad &&
     Number.isFinite(firstVisual.roadRight) && firstVisual.signLeft - firstVisual.roadRight >= 5.9 &&
     Number.isFinite(firstVisual.junctionX) && Number.isFinite(firstVisual.junctionY) &&
-    firstVisual.destinationX > firstVisual.junctionX + 20 &&
+    laneCentredApproach(firstVisual) &&
     firstVisual.destinationY < firstVisual.junctionY - 15 &&
     firstVisual.nearWidth > firstVisual.farWidth * 2 && firstVisual.nearWidth < 80 &&
-    firstVisual.signPostX > firstVisual.destinationX && firstVisual.signPostX - firstVisual.destinationX < 30 &&
+    firstVisual.signPostX > firstVisual.destinationX &&
     connectedSpur(firstVisual) && signsClear(firstVisual) && /^M/.test(firstVisual.innerEdge || ""),
-    device + " paints a receding upper-right spur with its larger sign beside it", firstVisual);
+    device + " paints a receding right-hand spur with its larger sign beside it", firstVisual);
   check(connectedSpur(result && result.curvedExitRight) && signsClear(result.curvedExitRight) &&
     connectedSpur(result && result.curvedExitLeft) && signsClear(result.curvedExitLeft),
     device + " keeps the exit lane continuous through both highway bends", result && {
@@ -328,22 +334,26 @@ var mobile = run(true);
     });
   var laneViews = result && result.laneViews || {};
   var laneShapes = [laneViews.left, laneViews.centre, laneViews.right, laneViews.shoulder];
-  var laneDivergences = laneShapes.map(function (view) {
-    return view && view.destinationX - view.junctionOuterX;
+  var laneNearGaps = laneShapes.map(function (view) {
+    return view && view.junctionX - view.junctionLaneCenterX;
+  });
+  var laneFarGaps = laneShapes.map(function (view) {
+    return view && view.destinationX - view.destinationLaneCenterX;
   });
   check(laneShapes.every(function (view) {
     return view && view.sign === "visible" && view.spur === "visible" && coherentSpurTopology(view);
-  }) && laneDivergences.every(Number.isFinite) &&
-    Math.max.apply(Math, laneDivergences) - Math.min.apply(Math, laneDivergences) <= .05,
-    device + " preserves the shoulder-composed exit divergence in every player lane", {
-      divergences: laneDivergences, views: laneViews
+  }) && laneNearGaps.every(Number.isFinite) && laneFarGaps.every(Number.isFinite) &&
+    Math.max.apply(Math, laneNearGaps) - Math.min.apply(Math, laneNearGaps) <= .05 &&
+    Math.max.apply(Math, laneFarGaps) - Math.min.apply(Math, laneFarGaps) <= .05,
+    device + " preserves the shoulder composition with depth-correct lane parallax", {
+      nearGaps: laneNearGaps, farGaps: laneFarGaps, views: laneViews
     });
   var brokenGeometry = (result && result.geometrySweep || []).filter(function (sample) {
     return !sample.visual || sample.visual.sign !== "visible" || sample.visual.spur !== "visible" ||
       !coherentSpurTopology(sample.visual);
   });
   check(result && result.geometrySweep && result.geometrySweep.length === 144 && !brokenGeometry.length,
-    device + " keeps every spur boundary nested, connected, and monotonic across lane, approach, curve, and grade",
+    device + " keeps every spur boundary nested and lane-centred across lane, approach, curve, and grade",
     brokenGeometry.slice(0, 4));
 
   var missed = result && result.missed || {};

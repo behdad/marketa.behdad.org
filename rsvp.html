@@ -44457,9 +44457,8 @@ window.__entranceRoomOpen = false;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationY = destinationPoint.y;
     var farHalfWidth = 2.5 + destinationPoint.perspective * 4.5;
-    // Keep the pleasant parked-shoulder divergence at every camera lane. If the
-    // far endpoint follows its own projected road edge, moving left shifts the
-    // nearer mouth farther than that endpoint and folds the branch back over itself.
+    // Author the turnoff in the parked-shoulder view, then reproject its far end
+    // at its own depth so other lanes see it converge toward the travel lane.
     var referenceRoadFraction = roadtripLaneRoadFraction(ROADTRIP_ABRAHAM_START_LANE);
     function referenceRoadRight(projected) {
       return 340 + roadtripCurveOffset(projected.remaining) +
@@ -44469,7 +44468,9 @@ window.__entranceRoomOpen = false;
     var referenceDestinationX = Math.max(
       referenceJunctionOuter + 14 + point.perspective * 55,
       referenceRoadRight(destinationPoint) + 18 + destinationPoint.perspective * 38);
-    var destinationX = junctionOuter + referenceDestinationX - referenceJunctionOuter;
+    var playerRoadFraction = roadtripVisualLaneRoadFraction(roadtripPlayerLane(), true);
+    var destinationX = referenceDestinationX +
+      (referenceRoadFraction - playerRoadFraction) * destinationPoint.halfWidth;
     var shoulderInset = 1.3 + junctionPoint.perspective * 2.2;
     var edgeNearWidth = 1 + junctionPoint.perspective * 1.8;
     var edgeMidWidth = .85 + point.perspective * 1.4;
@@ -44490,15 +44491,38 @@ window.__entranceRoomOpen = false;
         c2: start + distance * (outer ? .78 : .74)
       };
     }
-    var innerControls = curveControls(junctionInner, destinationInner, false);
-    var outerControls = curveControls(junctionOuter, destinationOuter, true);
+    function curveBand(nearInner, nearOuter, farInner, farOuter) {
+      var inner = curveControls(nearInner, farInner, false);
+      var outer = curveControls(nearOuter, farOuter, true);
+      // A leftward screen-space turn is valid; crossed boundary controls are not.
+      ["c1", "c2"].forEach(function (key) {
+        if (outer[key] - inner[key] >= .8) return;
+        var center = (inner[key] + outer[key]) / 2;
+        inner[key] = center - .4;
+        outer[key] = center + .4;
+      });
+      return { inner: inner, outer: outer };
+    }
+    var asphaltBand = curveBand(junctionInner, junctionOuter, destinationInner, destinationOuter);
+    var innerControls = asphaltBand.inner;
+    var outerControls = asphaltBand.outer;
     function spurPath(inset) {
       var nearInner = junctionInner;
       var nearOuter = junctionOuter + inset;
       var farInner = destinationInner - inset * .4;
       var farOuter = destinationOuter + inset * .4;
-      var pathInner = curveControls(nearInner, farInner, false);
-      var pathOuter = curveControls(nearOuter, farOuter, true);
+      var band = inset ? {
+        inner: {
+          c1: innerControls.c1 - inset * .1,
+          c2: innerControls.c2 - inset * .3
+        },
+        outer: {
+          c1: outerControls.c1 + inset * .8,
+          c2: outerControls.c2 + inset * .54
+        }
+      } : asphaltBand;
+      var pathInner = band.inner;
+      var pathOuter = band.outer;
       return "M" + nearInner.toFixed(2) + " " + junctionY.toFixed(2) +
         "C" + pathInner.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
         pathInner.c2.toFixed(2) + " " + control2Y.toFixed(2) + " " +
@@ -44511,7 +44535,7 @@ window.__entranceRoomOpen = false;
     // All four branch layers share the live highway edge at the mouth. A wider
     // asphalt overlap hides that edge before the branch stripe can meet it.
     var innerEdgeOrigin = junctionRoadRight - .25;
-    var innerEdgeLineControls = curveControls(innerEdgeOrigin, destinationInner, false);
+    var innerEdgeLineControls = innerControls;
     function cubicTail(start, c1, c2, end, t) {
       var p01 = start + (c1 - start) * t;
       var p12 = c1 + (c2 - c1) * t;
@@ -44580,6 +44604,10 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-y", junctionY.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-x", destinationX.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-y", destinationY.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-lane-center-x",
+      roadtripProjectLateral(junctionPoint, .5).toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-destination-lane-center-x",
+      roadtripProjectLateral(destinationPoint, .5).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-near-width", (junctionOuter - junctionInner).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-geometry", "cubic-merge");

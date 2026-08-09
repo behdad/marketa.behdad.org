@@ -45827,6 +45827,7 @@ window.__entranceRoomOpen = false;
   };
   function resetRoadtripRun(fresh) {
     restoreRoadtripCampOnEntranceOpen = false;
+    restoreRoadtripHighwayOnEntranceOpen = false;
     clearRoadtripEntities();
     roadtripState.paused = false;
     roadtripTransportPaused = false;
@@ -45912,6 +45913,7 @@ window.__entranceRoomOpen = false;
   }
   var roadtripHandoffSerial = 0;
   var restoreRoadtripCampOnEntranceOpen = false;
+  var restoreRoadtripHighwayOnEntranceOpen = false;
   function beginRoadtripHandoff() {
     var serial = ++roadtripHandoffSerial;
     room.classList.add("roadtrip-handoff");
@@ -46092,6 +46094,17 @@ window.__entranceRoomOpen = false;
     if (!startRoadtrip(false)) return false;
     roadtripTransportPaused = false;
     setRoadtripResumePending(false);
+    syncPorscheDriveInstruction(true);
+    return true;
+  }
+  function restoreRoadtripHighwayPresentationWhenReady() {
+    if (!restoreRoadtripHighwayOnEntranceOpen || roadtripState.route === "camp" ||
+        !window.__entranceRoomOpen || !driveState.hudOpen) return false;
+    restoreRoadtripHighwayOnEntranceOpen = false;
+    roadtripState.accepted = true;
+    if (!startRoadtrip(false)) return false;
+    roadtripTransportPaused = true;
+    setRoadtripResumePending(true);
     syncPorscheDriveInstruction(true);
     return true;
   }
@@ -50023,6 +50036,7 @@ window.__entranceRoomOpen = false;
     if (window.__hideCallRing) window.__hideCallRing();
     paintPorscheDriveHud();
     restoreRoadtripCampPresentationWhenReady();
+    restoreRoadtripHighwayPresentationWhenReady();
     updatePorscheDriveLifecycle();
     if (window.__homeCatLower) window.__homeCatLower("entrance");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
@@ -51057,6 +51071,8 @@ window.__entranceRoomOpen = false;
       roadtrip.stew = captureCampStew();
       roadtrip.stargazing = captureCampStargazing();
       roadtrip.campActive = roadtripState.active && roadtripState.route === "camp";
+      roadtrip.highwayActive = roadtripState.active && roadtripState.route !== "camp" &&
+        room.classList.contains("roadtrip-active");
       if (roadtripCampResumeRun && validRoadtripRunSnapshot(roadtripCampResumeRun)) {
         roadtrip.pausedRun = roadtripCampResumeRun;
       } else if ((roadtripState.active || roadtripState.paused) && roadtripState.route !== "camp" &&
@@ -51198,6 +51214,8 @@ window.__entranceRoomOpen = false;
           }
           var restoreCampPresentation = roadtripState.unlocked && (roadtrip.campActive === true ||
             !!(roadtrip.pausedRun && roadtrip.pausedRun.state && roadtrip.pausedRun.state.route === "camp"));
+          var restoreHighwayPresentation = roadtripState.unlocked && roadtrip.highwayActive === true &&
+            validRoadtripRunSnapshot(roadtrip.pausedRun) && roadtrip.pausedRun.state.route !== "camp";
           var restoredRoadtripRun = false;
           if (restoreCampPresentation) {
             roadtripCampResumeRun = validRoadtripRunSnapshot(roadtrip.pausedRun) &&
@@ -51210,6 +51228,7 @@ window.__entranceRoomOpen = false;
             restoredRoadtripRun = true;
           } else {
             restoredRoadtripRun = roadtripState.unlocked && restoreRoadtripRun(roadtrip.pausedRun);
+            restoreRoadtripHighwayOnEntranceOpen = restoreHighwayPresentation && restoredRoadtripRun;
           }
           if (restoredRoadtripRun) {
             roadtripState.everAccepted = true;
@@ -51244,6 +51263,7 @@ window.__entranceRoomOpen = false;
       syncPorscheState();
       refreshEntranceWeatherAudio();
       restoreRoadtripCampPresentationWhenReady();
+      restoreRoadtripHighwayPresentationWhenReady();
       if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     },
     reset: function () {

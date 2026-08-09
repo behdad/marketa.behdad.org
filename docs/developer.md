@@ -196,6 +196,9 @@ Keep these ownership boundaries intact:
 - `roadtripState` owns route selection, saved run, accepted trip, pause, Camping availability, and
   the signed per-leg distances painted by the three-part route ribbon; paused-run snapshots retain
   those display distances.
+- The Entrance checkpoint records highway presentation intent separately from its paused-run data:
+  reload reopens a previously visible highway with transport paused, while a deliberately parked run
+  stays behind the **Continue** choice.
 - The transmission preference survives ordinary room changes and Continue, while the Entrance
   checkpoint adapter's Fresh Game reset clears it and restores AUTO/P with fresh controller latches.
 - Driving input belongs to the HUD/controller only while `__entranceDriveKeyboardOwnership` says it

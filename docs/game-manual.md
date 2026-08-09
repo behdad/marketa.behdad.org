@@ -193,8 +193,9 @@ beginning for the whole drive, or choose a later segment to shorten it. The Camp
 on the Abraham Lake segment and returns if you miss it. The three-part ribbon in the driving HUD
 tracks each leg; earlier legs are hatched when a journey starts farther west.
 
-Leaving or unfocusing a highway pauses it. Open **Road Trip** again to **Continue** the saved run,
-start **New**, or return to **Camping** after the campsite has been reached.
+Unfocusing a highway pauses it in place. Reloading while the highway is visible reopens that same
+view paused; leaving the Entrance instead offers **Continue**, **New**, or **Camping** after the
+campsite has been reached.
 
 At Camping, follow the caption through the fire, stew, stargazing, and sleep. Once cooking starts,
 the stew burns after 45 seconds of counted cooking time; opening Markéta’s notebook pauses that

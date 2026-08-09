@@ -190,7 +190,8 @@ mode.
 
 The choices move progressively west from Calgary through Banff to Abraham Lake. Start at the
 beginning for the whole drive, or choose a later segment to shorten it. The Camping turnoff appears
-on the Abraham Lake segment and returns if you miss it. The three-part ribbon in the driving HUD
+on the Abraham Lake segment and, if missed, returns after 30 seconds of desktop travel or 20 seconds
+on mobile. The three-part ribbon in the driving HUD
 tracks each leg; earlier legs are hatched when a journey starts farther west.
 Each leg is about 2.08 km on desktop and 1.25 km on coarse-pointer/mobile devices.
 

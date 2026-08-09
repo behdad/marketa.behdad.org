@@ -285,7 +285,7 @@ var desktop = run(false);
 var mobile = run(true);
 [desktop, mobile].forEach(function (result, index) {
   var device = index ? "touch" : "desktop";
-  var expectedRepeat = index ? 45 : 60;
+  var expectedRepeat = index ? 20 : 30;
   check(clean(result), device + " scenario has no uncaught errors", result && result.errors);
   var far = result && result.farExit || {};
   var farState = far.state || {};

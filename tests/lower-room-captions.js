@@ -49,14 +49,14 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 
 var expected = {
   en: {
-    bathroom: "Bathroom · fixtures welcome.",
+    bathroom: "Bathroom · play with the fixtures.",
     dungeon: "Dungeon · the old game is awake.",
     cinema: "Cinema · choose a film to watch.",
     bedroom: "Click any pane to play tic-tac-toe",
     entrance: "The car is yours to drive · finish the upstairs clue trail to unlock the party first."
   },
   cs: {
-    bathroom: "Koupelna · vybavení vítá hru.",
+    bathroom: "Koupelna · pohraj si s vybavením.",
     dungeon: "Žalář · stará hra se probudila.",
     cinema: "Kino · vyber si film.",
     bedroom: "Kliknutím na libovolné políčko spustit piškvorky",

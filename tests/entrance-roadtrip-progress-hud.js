@@ -41,7 +41,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       }),
       labels: Array.prototype.map.call(root.querySelectorAll("[data-roadtrip-progress-label]"),
         function (node) { return node.textContent; }),
-      campMarker: !!document.getElementById("entrance-roadtrip-progress-camp"),
+      campMarker: (function () {
+        var marker = document.getElementById("entrance-roadtrip-progress-camp");
+        return marker && { text: marker.textContent, x: Number(marker.getAttribute("x")),
+          y: Number(marker.getAttribute("y")) };
+      })(),
       stats: document.getElementById("entrance-roadtrip-score-trip").textContent,
       legacyPoints: !!document.getElementById("entrance-roadtrip-score-points")
     };
@@ -171,8 +175,9 @@ check(starts.calgary && starts.calgary.labels.join("|") === "CALGARY|BANFF|ABRAH
   starts.calgary.opacity === 1 && starts.calgary.progress.segments.length === 3 &&
   starts.calgary.geometry.every(function (row) { return row.width === 68; }) &&
   starts.calgary.geometry.map(function (row) { return row.x; }).join(",") === "29,97,165" &&
-  starts.calgary.campMarker,
-  "the active ribbon names all three equal route segments", starts.calgary);
+  starts.calgary.campMarker && starts.calgary.campMarker.text === "🏕️" &&
+  starts.calgary.campMarker.x > 233 && starts.calgary.campMarker.y === -63.5,
+  "the active ribbon names three equal route segments and ends at Camping", starts.calgary);
 check(starts.calgary && starts.calgary.stats.split("·").length === 3 &&
   /km · 0 pts$/.test(starts.calgary.stats) && !starts.calgary.legacyPoints &&
   /km · 0 b$/.test(result.czechStats || ""),

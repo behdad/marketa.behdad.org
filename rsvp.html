@@ -72551,11 +72551,14 @@ setOfficeProgress("pc", false);
   // Tumbalalaika measures about 8dB quieter than the other two recordings. Keep every
   // caller/fade in the same logical 0..1 range and apply its makeup gain only at output.
   var SONG_LEVEL_GAIN = { "tumbala-song-audio": 2.5 };
+  var SONG_AUDIBLE_FLOOR = 0.01;
   function songOutputLevel(a, v) { return Math.max(0, v) * (SONG_LEVEL_GAIN[a.id] || 1); }
   function setSongLevel(a, v) {
     if (!a) return;
     v = Math.max(0, v);
+    var wasAudible = a._songLevelAudible !== false;
     a._songLogicalLevel = v;
+    a._songLevelAudible = v > SONG_AUDIBLE_FLOOR;
     var output = songOutputLevel(a, v);
     // Captured songs reach the shared lower-floor bus. Native fallback audio cannot be
     // filtered, so apply the same floor attenuation at its element-level output.
@@ -72564,6 +72567,9 @@ setOfficeProgress("pc", false);
       try { if (eqAudioCtx) a._eqGain.gain.setTargetAtTime(output, eqAudioCtx.currentTime, 0.012); else a._eqGain.gain.value = output; } catch (e) {}
     } else {
       try { a.volume = Math.min(1, output); } catch (e) {} // native element volume cannot exceed unity
+    }
+    if (wasAudible !== a._songLevelAudible) {
+      try { a.dispatchEvent(new CustomEvent("loft:songlevelchange")); } catch (e) {}
     }
   }
   function songLevel(a) {
@@ -123609,9 +123615,13 @@ function spawnDustMote(container) {
   function audiosForInstrument(spot) {
     return (spot && spot.audioIds || []).map(function (audioId) { return document.getElementById(audioId); }).filter(Boolean);
   }
+  function instrumentAudioPlaying(audio) {
+    return !!(audio && !audio.paused && !audio.ended &&
+      (!window.__songLevel || window.__songLevel(audio) > 0.01));
+  }
   function playingAudioForInstrument(spot) {
     var audios = audiosForInstrument(spot);
-    for (var i = 0; i < audios.length; i++) if (!audios[i].paused && !audios[i].ended) return audios[i];
+    for (var i = 0; i < audios.length; i++) if (instrumentAudioPlaying(audios[i])) return audios[i];
     return null;
   }
   function playingInstrumentAudio() {
@@ -124090,12 +124100,15 @@ function spawnDustMote(container) {
     audio.addEventListener("play", updateCuddlyGrooving);
     audio.addEventListener("pause", updateCuddlyGrooving);
     audio.addEventListener("ended", updateCuddlyGrooving);
+    audio.addEventListener("loft:songlevelchange", updateCuddlyGrooving);
     audio.addEventListener("play", updateInstrumentSway);
     audio.addEventListener("pause", updateInstrumentSway);
     audio.addEventListener("ended", updateInstrumentSway);
+    audio.addEventListener("loft:songlevelchange", updateInstrumentSway);
     audio.addEventListener("play", updateNoteFlow);
     audio.addEventListener("pause", updateNoteFlow);
     audio.addEventListener("ended", updateNoteFlow);
+    audio.addEventListener("loft:songlevelchange", updateNoteFlow);
   });
   // Each instrument's strings shimmer on the beat only while one of its own songs plays.
   // The ukulele follows either birthday-concert recording; the guitar follows either Markéta piece. Tempo
@@ -124109,7 +124122,7 @@ function spawnDustMote(container) {
     if (!stringsWrap || !audios.length) return;
     var strRAF = null;
     function playingAudio() {
-      for (var i = 0; i < audios.length; i++) if (!audios[i].paused && !audios[i].ended) return audios[i];
+      for (var i = 0; i < audios.length; i++) if (instrumentAudioPlaying(audios[i])) return audios[i];
       return null;
     }
     function settle() { stringsWrap.removeAttribute("transform"); stringsWrap.style.opacity = ""; }
@@ -124137,6 +124150,7 @@ function spawnDustMote(container) {
       audio.addEventListener("play", poke);
       audio.addEventListener("pause", poke); // one more frame settles it back to static
       audio.addEventListener("ended", poke);
+      audio.addEventListener("loft:songlevelchange", poke);
     });
     document.addEventListener("visibilitychange", function () { if (!document.hidden) poke(); });
   }

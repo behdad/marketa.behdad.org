@@ -413,6 +413,11 @@ under the song everywhere and returns when the song stops. Every dance bed retar
 projection by cancelling-and-holding its current AudioParam automation first; overlapping monitor
 focus and song fades therefore cannot leave an old duck ramp stranded after both gates clear.
 
+Instrument motion follows audible playback, not transport state alone. The shared song-level
+setter publishes the zero/nonzero boundary used by the guitar/ukulele sway, string shimmer,
+garden notes, and room groovers. A track that remains technically playing while an ownership or
+snippet fade reaches silence therefore settles visually; raising its level resumes those visuals.
+
 While a visible graceful party wind-down walks the guests out, the dedicated output gain
 linearly lowers every connected party bed over the same 3.1 seconds. It sits downstream of each
 dance's master, bass lift, and panner, so every party source crosses the fade before reaching the

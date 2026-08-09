@@ -191,8 +191,10 @@ At `~ fin ~`, the campsite also suppresses the loft weather scheduler's lightnin
 including a rumble already queued before the finale, so only the quiet lake/wind bed remains.
 Its attended curtain call adds four one-shot cues: an ember breath when the fire goes out, padded
 footfalls and a low snuffle as the mama bear approaches, dry cob snaps when she collects the food,
-and the shared hushed finish melody at congratulations. These cues run only on live phase advances,
-never checkpoint paint/restore, and each applies the hidden-or-unfocused gate before touching audio.
+and a campsite-only couple motif at `~fin~`. Markéta's glassy upper voice and Behdad's warm lower
+voice trade phrases, resolve together, then their existing formant synths answer with sequential
+high/low “I love you” lines. The delayed voices re-check the terminal Camping foreground, focus,
+and visibility before playing. No curtain-call cue replays during checkpoint paint/restore.
 
 The Porsche HUD adds an original compact four-bar driving loop on its own `audioBed()`:
 four-on-the-floor kick, short “doob” bass replies, muted chord stabs, and sparse hats.

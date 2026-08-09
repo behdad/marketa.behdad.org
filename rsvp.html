@@ -104209,6 +104209,66 @@ function playFinishMelody(panId) {
 
   } catch (e) {}
 }
+// The terminal ~fin~ has its own couple motif: Markéta's glassy upper voice and
+// Behdad's warmer lower voice trade a small phrase, then meet on a D-add9 glow.
+// It is deliberately separate from the Balcony's shared finish melody.
+var CAMP_FIN_MELODY_SECONDS = 3.55;
+function playCampFinMelody() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return false;
+    var t0 = ctx.currentTime;
+    var outs = {
+      marketa: pannedOut(ctx, "entrance-roadtrip-camp-marketa"),
+      behdad: pannedOut(ctx, "entrance-roadtrip-camp-behdad")
+    };
+    function note(voice, frequency, at, duration, level) {
+      var glass = voice === "marketa";
+      [{ ratio: 1, level: 1, type: glass ? "sine" : "triangle" },
+        { ratio: 2.01, level: glass ? .2 : .09, type: "sine" }].forEach(function (partial) {
+        var osc = ctx.createOscillator();
+        osc.type = partial.type;
+        osc.frequency.setValueAtTime(frequency * partial.ratio, t0 + at);
+        var gain = ctx.createGain();
+        gain.gain.setValueAtTime(.0001, t0 + at);
+        gain.gain.exponentialRampToValueAtTime(level * partial.level, t0 + at + .018);
+        gain.gain.exponentialRampToValueAtTime(.0001, t0 + at + duration);
+        osc.connect(gain); gain.connect(outs[voice]);
+        osc.start(t0 + at); osc.stop(t0 + at + duration + .025);
+      });
+    }
+    [
+      ["marketa", 440, 0, .68, .05],
+      ["behdad", 196, .28, .76, .056],
+      ["marketa", 587.33, .64, .72, .052],
+      ["behdad", 146.83, .96, .78, .06],
+      ["marketa", 493.88, 1.28, .78, .048],
+      ["behdad", 185, 1.58, .82, .055],
+      ["behdad", 146.83, 2.08, 1.37, .052],
+      ["behdad", 220, 2.08, 1.37, .035],
+      ["marketa", 440, 2.08, 1.37, .038],
+      ["marketa", 659.25, 2.08, 1.37, .027]
+    ].forEach(function (entry) { note.apply(null, entry); });
+    return true;
+  } catch (e) { return false; }
+}
+function campFinLoveVoiceAllowed() {
+  if (document.hidden || !document.hasFocus || !document.hasFocus()) return false;
+  if (window.__roomAmbienceCovered && window.__roomAmbienceCovered()) return false;
+  var camp = document.getElementById("entrance-roadtrip-camp");
+  var roomState = window.__entranceRoomState && window.__entranceRoomState();
+  var trip = roomState && roomState.drive && roomState.drive.roadtrip;
+  return !!(camp && camp.classList.contains("camp-sleep-congrats") &&
+    trip && trip.active && trip.route === "camp");
+}
+function scheduleCampFinLoveVoices() {
+  setTimeout(function () {
+    if (campFinLoveVoiceAllowed()) playILoveYouSound("entrance-roadtrip-camp-marketa", 1.08, .9);
+  }, Math.round(CAMP_FIN_MELODY_SECONDS * 1000 + 100));
+  setTimeout(function () {
+    if (campFinLoveVoiceAllowed()) playILoveYouSound("entrance-roadtrip-camp-behdad", .82, .9);
+  }, Math.round(CAMP_FIN_MELODY_SECONDS * 1000 + 1550));
+}
 // Four quiet, synthesized punctuation marks for the attended campsite curtain call.
 // This is timer-driven audio, so it owns the full crane-rule gate itself: checkpoint
 // painting/restores never call it, and a visible-but-unfocused campsite stays silent.
@@ -104219,7 +104279,8 @@ function playCampBearCodaSound(kind) {
     return;
   }
   if (kind === "finale") {
-    playFinishMelody("entrance-roadtrip-camp-mama-bear");
+    playCampFinMelody();
+    scheduleCampFinLoveVoices();
     return;
   }
   try {

@@ -164,6 +164,8 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.copy = {
       en: T.en.hunt.entrance_drive_coach_cruise_text,
       cs: T.cs.hunt.entrance_drive_coach_cruise_text,
+      gearEn: T.en.hunt.entrance_drive_coach_auto_gear_desktop,
+      gearCs: T.cs.hunt.entrance_drive_coach_auto_gear_desktop,
       pedalEn: T.en.hunt.entrance_drive_coach_auto_pedals_desktop,
       pedalCs: T.cs.hunt.entrance_drive_coach_auto_pedals_desktop
     };
@@ -418,6 +420,8 @@ check(result && result.copy && result.copy.en === "Press Space to hold speed." &
   /mezerník/.test(result.copy.cs) && !/Space/.test(result.copy.pedalEn) &&
   !/mezerník/.test(result.copy.pedalCs),
   "the dedicated cruise step teaches Space in both languages", result && result.copy);
+check(result && /into D$/.test(result.copy.gearEn) && /do D$/.test(result.copy.gearCs),
+  "the desktop AUTO shifter instruction still names Drive as its destination", result && result.copy);
 check(result && result.reentryHelpDisplay === "none",
   "desktop hides driving help while its coach is active", result && result.reentryHelpDisplay);
 check(result && result.coachAboveReentry,

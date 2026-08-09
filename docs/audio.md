@@ -208,8 +208,8 @@ Autonomous weather thunder keeps its lightning visuals across the loft, but its 
 owned only by an attended Balcony, Entrance, active Road Trip, or Camping scene. Indoor loft rooms,
 foreground covers, a paused Road Trip, blur/hide, and room navigation are silent; every delayed clap
 rechecks ownership at playback so a queued sound cannot follow the player away. Entrance street
-driving and active Road Trip also snapshot the Porsche roof/window exposure at playback: roof-open
-is prominent and unfiltered, windows-open is intermediate, and a closed cabin remains clearly
+driving and active Road Trip also snapshot the Porsche cabin exposure at playback: roof-open
+is prominent and unfiltered, a door or window opening is intermediate, and a closed cabin remains clearly
 audible but darker behind a low-pass. Cabin weather is mixed high enough to survive the drivetrain
 and road bed; filtering, rather than near-silence, carries most of the enclosure contrast. The
 Entrance façade without its driving HUD and Camping remain outside that car-only
@@ -247,9 +247,9 @@ While the visual rain layer is live, both Entrance street driving and active hig
 one bounded cabin-rain noise source in the shared AudioContext. Its lifecycle follows the attended
 HUD rather than ignition, so rain remains audible while parked with the engine off. Keeping it
 separate from the road/tyre voice also makes precipitation perceptually distinct. Roof-open,
-windows-open, and closed profiles progressively lower both gain and low-pass cutoff while keeping
+door/window-open, and closed profiles progressively lower both gain and low-pass cutoff while keeping
 rain unmistakable over the moving drivetrain. Rain uses a deliberately wider exposure curve than
-thunder so roof and window changes are immediately audible. Snow suppresses
+thunder so roof, door, and window changes are immediately audible. Snow suppresses
 the branch with the Entrance rain streaks; Camping remains outdoors on its separate lake/weather bed.
 Engine/HUD teardown, Road Trip pause, blur/hide, foreground coverage, route arrival, and Entrance exit
 therefore remove cabin rain through the drivetrain's existing lifecycle with no duplicate tail.

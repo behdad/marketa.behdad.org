@@ -46909,19 +46909,20 @@ window.__entranceRoomOpen = false;
     };
   }
   // Weather heard from the moving cabin follows one shared exposure verdict. The roof
-  // wins over the side windows: with the top down the cabin is effectively outdoors;
-  // a cracked-open cabin is intermediate; a fully closed one is quietest and darkest.
+  // wins over the side openings: with the top down the cabin is effectively outdoors;
+  // an open window or door is intermediate; a fully closed one is quietest and darkest.
   // The gains deliberately stay substantial: drivetrain/road noise otherwise masks weather,
   // making a storm read as silence precisely while the player is driving through it.
   function porscheCabinWeatherProfile() {
     var exposure = porscheState.roofOpen ? "roof-open" :
-      porscheState.windowOpen ? "windows-open" : "closed";
+      porscheState.windowOpen || porscheState.doorOpen ? "windows-open" : "closed";
     return {
       exposure: exposure,
       gain: exposure === "roof-open" ? 1.25 : exposure === "windows-open" ? .92 : .65,
       cutoff: exposure === "roof-open" ? 18000 : exposure === "windows-open" ? 7600 : 3000,
       roofOpen: porscheState.roofOpen,
-      windowOpen: porscheState.windowOpen
+      windowOpen: porscheState.windowOpen,
+      doorOpen: porscheState.doorOpen
     };
   }
   function porscheCabinRainLayerActive() {
@@ -46952,7 +46953,8 @@ window.__entranceRoomOpen = false;
       gain: wanted ? rainGain : .0001,
       cutoff: rainCutoff,
       roofOpen: enclosure.roofOpen,
-      windowOpen: enclosure.windowOpen
+      windowOpen: enclosure.windowOpen,
+      doorOpen: enclosure.doorOpen
     };
   }
   // The autonomous loft-weather scheduler lives later in this file. These are narrow

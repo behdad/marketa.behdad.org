@@ -14,10 +14,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function setExposure(name) {
     var state = car();
-    var wantRoof = name === "roof-open", wantWindow = name === "windows-open";
+    var wantRoof = name === "roof-open" || name === "all-open";
+    var wantWindow = name === "windows-open" || name === "door-window-open" || name === "all-open";
+    var wantDoor = name === "door-open" || name === "door-window-open" || name === "all-open";
     if (!!state.roofOpen !== wantRoof) click("entrance-porsche-roof");
     state = car();
     if (!!state.windowOpen !== wantWindow) click("entrance-porsche-window");
+    state = car();
+    if (!!state.doorOpen !== wantDoor) click("entrance-porsche-door");
     return car();
   }
   function rainState() { return window.__entranceDriveWeatherAudioState(); }
@@ -95,13 +99,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setExposure("closed");
     var streetClosed = rainState();
     await fire("streetThunderClosed");
+    setExposure("door-open");
+    var streetDoor = rainState();
+    await fire("streetThunderDoor");
     setExposure("windows-open");
     var streetWindow = rainState();
     await fire("streetThunderWindows");
+    setExposure("door-window-open");
+    var streetDoorWindow = rainState();
+    await fire("streetThunderDoorWindow");
     setExposure("roof-open");
     var streetRoof = rainState();
     await fire("streetThunderRoof");
-    report.steps.streetRain = { closed: streetClosed, windows: streetWindow, roof: streetRoof };
+    setExposure("all-open");
+    var streetAll = rainState();
+    await fire("streetThunderAll");
+    report.steps.streetRain = { closed: streetClosed, door: streetDoor, windows: streetWindow,
+      doorWindow: streetDoorWindow, roof: streetRoof, all: streetAll };
 
     focused = false; window.dispatchEvent(new Event("blur")); await sleep(30);
     report.steps.rainBlur = rainState();
@@ -221,6 +235,8 @@ check(s.streetEngineOffRain && s.streetEngineOffRain.bedActive &&
 check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   s.streetThunderClosed.calls.length === 1 &&
   s.streetThunderClosed.calls[0].enclosure.exposure === "closed" &&
+  s.streetThunderDoor && s.streetThunderDoor.calls.length === 1 &&
+  s.streetThunderDoor.calls[0].enclosure.exposure === "windows-open" &&
   s.streetThunderWindows && s.streetThunderWindows.calls.length === 1 &&
   s.streetThunderWindows.calls[0].enclosure.exposure === "windows-open" &&
   s.streetThunderRoof && s.streetThunderRoof.calls.length === 1 &&
@@ -229,14 +245,34 @@ check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   s.streetThunderWindows.calls[0].enclosure.gain < s.streetThunderRoof.calls[0].enclosure.gain &&
   s.streetThunderClosed.calls[0].enclosure.cutoff < s.streetThunderWindows.calls[0].enclosure.cutoff &&
   s.streetThunderWindows.calls[0].enclosure.cutoff < s.streetThunderRoof.calls[0].enclosure.cutoff,
-  "Entrance street thunder follows all three cabin exposures", {
-    closed: s.streetThunderClosed, windows: s.streetThunderWindows, roof: s.streetThunderRoof
+  "Entrance street thunder follows closed, side-opening, and roof-open exposure", {
+    closed: s.streetThunderClosed, door: s.streetThunderDoor,
+    windows: s.streetThunderWindows, roof: s.streetThunderRoof
+  });
+check(s.streetThunderDoorWindow && s.streetThunderDoorWindow.calls.length === 1 &&
+  s.streetThunderAll && s.streetThunderAll.calls.length === 1 &&
+  s.streetThunderDoorWindow.calls[0].enclosure.gain === s.streetThunderWindows.calls[0].enclosure.gain &&
+  s.streetThunderDoorWindow.calls[0].enclosure.cutoff === s.streetThunderWindows.calls[0].enclosure.cutoff &&
+  s.streetThunderAll.calls[0].enclosure.gain === s.streetThunderRoof.calls[0].enclosure.gain &&
+  s.streetThunderAll.calls[0].enclosure.cutoff === s.streetThunderRoof.calls[0].enclosure.cutoff,
+  "multiple cabin openings do not stack the thunder exposure boost", {
+    doorWindow: s.streetThunderDoorWindow, all: s.streetThunderAll
   });
 check(exposureOrder(s.streetRain) && audibleCabinRain(s.streetRain) &&
   s.streetRain.closed.rain.scene === "street" &&
   s.streetRain.closed.sources === 1 && s.streetRain.windows.sources === 1 &&
   s.streetRain.roof.sources === 1 && s.streetRain.closed.dedicatedRainSource,
   "street driving rain owns one bounded cabin bed and follows all three exposures", s.streetRain);
+check(s.streetRain && s.streetRain.door.rain.exposure === "windows-open" &&
+  s.streetRain.door.rain.gain === s.streetRain.windows.rain.gain &&
+  s.streetRain.door.rain.cutoff === s.streetRain.windows.rain.cutoff &&
+  s.streetRain.doorWindow.rain.gain === s.streetRain.windows.rain.gain &&
+  s.streetRain.doorWindow.rain.cutoff === s.streetRain.windows.rain.cutoff &&
+  s.streetRain.all.rain.gain === s.streetRain.roof.rain.gain &&
+  s.streetRain.all.rain.cutoff === s.streetRain.roof.rain.cutoff &&
+  [s.streetRain.door, s.streetRain.doorWindow, s.streetRain.all].every(function (state) {
+    return state.sources === 1 && state.dedicatedRainSource;
+  }), "an open door raises cabin rain without duplicating or stacking its source", s.streetRain);
 check(s.rainBlur && !s.rainBlur.bedActive && s.rainBlur.sources === 0 &&
   s.rainRefocus && s.rainRefocus.bedActive && s.rainRefocus.rain.active &&
   s.rainHidden && !s.rainHidden.bedActive && s.rainHidden.sources === 0 &&

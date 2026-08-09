@@ -41,18 +41,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
       window.__toggleEntrancePorscheEngine();
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       window.__entranceDriveTransmissionMode("auto", true);
       window.__entranceDriveRange("D", true);
       window.__entranceDriveSetMotion(60, 3);
 
       var localDown = key("keydown", " ", "Space");
-      var localHeld = state();
+      var localSet = state();
       var localUp = key("keyup", " ", "Space");
       var localReleased = state();
       report.steps.local = {
         downPrevented: localDown.defaultPrevented,
         upPrevented: localUp.defaultPrevented,
-        held: localHeld,
+        set: localSet,
         released: localReleased
       };
 
@@ -61,9 +63,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var spaceOn = state();
       key("keydown", " ", "Space", document, { repeat: true });
       var spaceRepeat = state();
+      window.__entranceDriveSetMotion(105, 3);
       key("keydown", " ", "Space");
-      var spaceOff = state();
+      var spaceRetargeted = state();
       window.__entranceDriveSetMotion(5, 1);
+      window.__entranceDriveStep(16);
       key("keydown", " ", "Space");
       var spaceUnavailable = state();
       window.__entranceDriveSetMotion(90, 3);
@@ -71,7 +75,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         prevented: spaceOnEvent.defaultPrevented,
         on: spaceOn,
         repeat: spaceRepeat,
-        off: spaceOff,
+        retargeted: spaceRetargeted,
         unavailable: spaceUnavailable
       };
 
@@ -84,6 +88,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         prevented: enterPauseEvent.defaultPrevented,
         paused: enterPaused,
         repeat: enterRepeat,
+        resumed: state()
+      };
+
+      key("keydown", "Enter", "Enter");
+      var spacePaused = state();
+      var spaceResumeEvent = key("keydown", " ", "Space");
+      report.steps.spaceResume = {
+        prevented: spaceResumeEvent.defaultPrevented,
+        paused: spacePaused,
         resumed: state()
       };
 
@@ -152,12 +165,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         en: {
           drive: T.en.hunt.entrance_roadtrip_drive,
           paused: T.en.hunt.entrance_roadtrip_pause_line,
-          cruise: T.en.hunt.entrance_drive_cruise_active_roadtrip
+          cruise: T.en.hunt.entrance_drive_cruise_active
         },
         cs: {
           drive: T.cs.hunt.entrance_roadtrip_drive,
           paused: T.cs.hunt.entrance_roadtrip_pause_line,
-          cruise: T.cs.hunt.entrance_drive_cruise_active_roadtrip
+          cruise: T.cs.hunt.entrance_drive_cruise_active
         }
       };
     } catch (error) {
@@ -194,22 +207,29 @@ console.log("rsvp.html Road Trip keyboard mapping:");
 var s = result && result.steps || {};
 check(result && result.errors.length === 0,
   "the keyboard mapping harness has no uncaught errors", result && result.errors);
-check(s.local && s.local.downPrevented && s.local.upPrevented &&
-  s.local.held.drive.holds.throttle && !s.local.held.drive.cruise.active &&
-  !s.local.released.drive.holds.throttle && !s.local.released.drive.roadtrip.active,
-  "local street driving keeps Space as a momentary throttle", s.local);
+check(s.local && s.local.downPrevented && !s.local.upPrevented &&
+  !s.local.set.drive.holds.throttle && s.local.set.drive.cruise.active &&
+  s.local.set.drive.cruise.target === 60 && s.local.released.drive.cruise.active &&
+  !s.local.released.drive.roadtrip.active,
+  "local street Space sets cruise without becoming throttle", s.local);
 check(s.space && s.space.prevented && s.space.on.drive.roadtrip.active &&
   !s.space.on.drive.roadtrip.resumePending && s.space.on.drive.cruise.active &&
   s.space.on.drive.cruise.target === 90 && !s.space.on.drive.holds.throttle &&
   s.space.repeat.drive.cruise.active && s.space.repeat.drive.cruise.target === 90 &&
-  !s.space.off.drive.cruise.active && !s.space.off.drive.roadtrip.resumePending &&
+  s.space.retargeted.drive.cruise.active && s.space.retargeted.drive.cruise.target === 105 &&
+  !s.space.retargeted.drive.roadtrip.resumePending &&
   !s.space.unavailable.drive.cruise.active && !s.space.unavailable.drive.roadtrip.resumePending,
-  "Road Trip Space toggles cruise once per press and never becomes throttle or transport", s.space);
+  "Road Trip Space sets or retargets cruise but never turns it off", s.space);
 check(s.enter && s.enter.prevented && s.enter.paused.drive.roadtrip.active &&
   s.enter.paused.drive.roadtrip.resumePending && s.enter.repeat.drive.roadtrip.resumePending &&
   s.enter.resumed.drive.roadtrip.active && !s.enter.resumed.drive.roadtrip.resumePending &&
   s.enter.resumed.car.engineOn,
   "Road Trip Enter toggles pause/resume and ignores key repeat", s.enter);
+check(s.spaceResume && s.spaceResume.prevented &&
+  s.spaceResume.paused.drive.roadtrip.resumePending &&
+  !s.spaceResume.resumed.drive.roadtrip.resumePending &&
+  s.spaceResume.resumed.drive.cruise.active && s.spaceResume.resumed.drive.cruise.target === 90,
+  "Space resumes a paused Road Trip while setting its cruise speed", s.spaceResume);
 check(s.escape && s.escape.prevented && s.escape.paused.drive.roadtrip.active &&
   s.escape.paused.drive.roadtrip.resumePending && sameDrive(s.escape.paused, s.escape.repeat) &&
   !s.escape.exited.drive.roadtrip.active && s.escape.exited.drive.roadtrip.paused &&
@@ -224,11 +244,11 @@ check(s.editable && s.editable.prevented.every(function (value) { return !value;
   "search/editable targets keep Backspace, Enter, and Space without changing the drive", s.editable);
 check(s.covered && sameDrive(s.covered.before, s.covered.after),
   "a foreground device keeps all four keys out of the Entrance controller", s.covered);
-check(s.copy && /Space/.test(s.copy.en.drive) && /Enter/.test(s.copy.en.drive) &&
-  /Esc/.test(s.copy.en.paused) && /Space/.test(s.copy.en.cruise) &&
+check(s.copy && /Space sets cruise/.test(s.copy.en.drive) && /Enter/.test(s.copy.en.drive) &&
+  s.copy.en.paused === "Play to resume · Esc to exit." && /Space/.test(s.copy.en.cruise) &&
   /mezerník/.test(s.copy.cs.drive) && /Enter/.test(s.copy.cs.drive) &&
   /Esc/.test(s.copy.cs.paused) && /mezerník/.test(s.copy.cs.cruise),
-  "English and Czech highway copy teaches cruise, pause, and the second back action", s.copy);
+  "English and Czech highway copy teaches cruise, pause, and exit", s.copy);
 
 if (failures) process.exit(1);
 console.log("Road Trip keyboard assertions passed.");

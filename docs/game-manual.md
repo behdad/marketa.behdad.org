@@ -145,8 +145,8 @@ opens the complete keyboard-shortcut card.
 - `Enter`: perform the next guided action. After the Morning routine it uses the room's main
   activity: the daytime Kitchen repeats the espresso steps, the visible Bar starts Flair Catch,
   and the Garden / Party toggles the party.
-- `Space`: play, pause, or act in the current game or media surface. On a Road Trip it toggles
-  cruise control instead.
+- `Space`: play, pause, or act in the current game or media surface. While driving, it sets cruise
+  control to the current speed; pressing it again resets the held speed rather than cancelling it.
 - `C`: open or close the phone.
 - `/`: open or close Messages.
 - `M`: open the Office monitor.
@@ -169,15 +169,13 @@ and the console.
 
 - `Enter`: start the engine when it is off.
 - `←` / `→`: steer.
-- `Space` or `↑`: accelerate; `↓`: brake.
+- `↑`: accelerate; `↓`: brake and cancel cruise control.
+- `Space`: set or reset cruise control at the current speed.
 - `A` / `M`: select automatic or manual transmission.
 - `Shift` + `↑` / `↓`: change gear or move the automatic selector toward P/D.
-- `Ctrl`: set cruise control at the current speed; braking cancels it.
-
-These are the local street controls. On a Road Trip, `Space` toggles cruise control, `Enter` toggles
-pause/resume, and `Escape` / `Backspace` pause first and exit only when pressed again while paused.
-Steering or using a pedal also resumes a paused highway. Text fields, open devices, and Camping
-activities keep ownership of their normal keys.
+On a Road Trip, `Enter` toggles pause/resume, while `Space`, steering, or a pedal also resumes a
+paused highway. `Escape` / `Backspace` pause first and exit only when pressed again while paused.
+Text fields, open devices, and Camping activities keep ownership of their normal keys.
 
 The driving coach remains the best introduction because it adapts its instructions to the selected
 transmission and input device. During the automatic lesson, each step temporarily owns the driving

@@ -1124,8 +1124,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var transport = { before: copy(state()) };
     pressDocumentKey(" ");
     transport.spaceCruiseOn = copy(state());
+    window.__entranceDriveSetMotion(104, 4);
     pressDocumentKey(" ");
-    transport.spaceCruiseOff = copy(state());
+    transport.spaceCruiseRetargeted = copy(state());
     pressDocumentKey("Enter");
     transport.enterPaused = copy(state());
     step(1000);
@@ -1371,13 +1372,15 @@ var transport = s.transport;
 check(transport && transport.before.drive.roadtrip.active && !transport.before.drive.roadtrip.resumePending &&
   transport.spaceCruiseOn.drive.roadtrip.active && !transport.spaceCruiseOn.drive.roadtrip.resumePending &&
   transport.spaceCruiseOn.drive.cruise.active && transport.spaceCruiseOn.car.engineOn &&
-  !transport.spaceCruiseOff.drive.cruise.active && !transport.spaceCruiseOff.drive.roadtrip.resumePending &&
+  transport.spaceCruiseRetargeted.drive.cruise.active &&
+  transport.spaceCruiseRetargeted.drive.cruise.target === 104 &&
+  !transport.spaceCruiseRetargeted.drive.roadtrip.resumePending &&
   transport.enterPaused.drive.roadtrip.resumePending &&
   transport.enterHeld.drive.roadtrip.elapsedSeconds === transport.enterPaused.drive.roadtrip.elapsedSeconds &&
   !transport.pedalResumed.drive.roadtrip.resumePending && transport.pedalResumed.car.engineOn &&
   transport.steeringPaused.drive.roadtrip.resumePending &&
   !transport.steeringResumed.drive.roadtrip.resumePending && transport.steeringResumed.car.engineOn,
-  "Space toggles Road Trip cruise while Enter pauses in place; pedals and steering still resume", transport);
+  "Space sets or retargets Road Trip cruise while Enter pauses; pedals and steering still resume", transport);
 check(transport && transport.enterPausedAgain.drive.roadtrip.resumePending &&
   !transport.enterResumed.drive.roadtrip.resumePending && transport.enterResumed.car.engineOn,
   "Enter pauses and resumes Road Trip instead of toggling the engine", transport);

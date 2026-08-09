@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// A Control tap latches a speed floor; throttle may exceed it and braking cancels it.
+// Space latches or retargets a speed floor; throttle may exceed it and braking cancels it.
 "use strict";
 
 var lib = require("./lib");
@@ -16,10 +16,10 @@ window.addEventListener("load", function () { setTimeout(function () {
     document.dispatchEvent(event);
     return event.defaultPrevented;
   }
-  function controlTap() {
-    var down = key("keydown", "Control", "ControlLeft", { ctrlKey: true });
-    var up = key("keyup", "Control", "ControlLeft");
-    return down && up;
+  function spaceTap() {
+    var down = key("keydown", " ", "Space");
+    key("keyup", " ", "Space");
+    return down;
   }
   try {
     Object.defineProperty(document, "hasFocus", {
@@ -46,6 +46,10 @@ window.addEventListener("load", function () { setTimeout(function () {
     };
 
     key("keydown", "Control", "ControlLeft", { ctrlKey: true });
+    key("keyup", "Control", "ControlLeft");
+    report.ctrlNoop = JSON.parse(JSON.stringify(drive()));
+
+    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
     key("keydown", "ArrowRight", "ArrowRight", { ctrlKey: true });
     key("keyup", "ArrowRight", "ArrowRight", { ctrlKey: true });
     key("keyup", "Control", "ControlLeft");
@@ -54,7 +58,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     if (window.__cancelCaption) window.__cancelCaption("entrance-transmission");
     window.__entranceDriveSetMotion(100, 4);
 
-    report.claimed = controlTap();
+    report.claimed = spaceTap();
     report.engaged = JSON.parse(JSON.stringify(drive()));
     report.engaged.caption = document.getElementById("hunt-caption").textContent;
     report.engaged.indicatorOpacity = document.getElementById("entrance-drive-cruise-indicator").getAttribute("opacity");
@@ -71,19 +75,19 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.settled = JSON.parse(JSON.stringify(drive()));
 
     window.__entranceDriveSetMotion(118, 4);
-    report.retargetedTap = controlTap();
+    report.retargetedTap = spaceTap();
     window.__entranceDriveStep(1000);
     report.retargeted = JSON.parse(JSON.stringify(drive()));
 
     window.__entranceDriveSetMotion(90, 4);
-    controlTap();
+    spaceTap();
     key("keydown", "ArrowDown", "ArrowDown");
     report.braked = JSON.parse(JSON.stringify(drive()));
     key("keyup", "ArrowDown", "ArrowDown");
 
     window.__entranceRoadtripDevStart();
     window.__entranceDriveSetMotion(88, 4);
-    controlTap();
+    spaceTap();
     window.__toggleEntranceRoadtripTransport();
     var checkpoint = window.__captureCheckpointSystems().entrance;
     report.paused = {
@@ -118,15 +122,17 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html desktop cruise control:");
 check(result && result.errors.length === 0, "cruise harness has no uncaught errors", result && result.errors);
-check(result && result.coach && /Ctrl/.test(result.coach.caption) &&
-  /Ctrl/.test(result.coach.en) && /Ctrl/.test(result.coach.cs),
+check(result && result.coach && /Space/.test(result.coach.caption) &&
+  /Space/.test(result.coach.en) && /mezerník/.test(result.coach.cs),
   "the initial driving instruction teaches cruise in both languages", result && result.coach);
+check(result && result.ctrlNoop && !result.ctrlNoop.cruise.active,
+  "plain Ctrl no longer changes cruise", result && result.ctrlNoop);
 check(result && result.chord && result.chord.transmission.mode === "manual" && !result.chord.cruise.active,
   "Ctrl+Right changes transmission without toggling cruise", result && result.chord);
 check(result && result.claimed && result.engaged.cruise.active &&
   Math.abs(result.engaged.cruise.target - 100) < .01 && /100 km\/h/.test(result.engaged.caption) &&
   result.engaged.indicatorOpacity === "1",
-  "a Control tap captures speed, captions it, and lights the speedometer telltale", result && result.engaged);
+  "Space captures speed, captions it, and lights the speedometer telltale", result && result.engaged);
 check(result && result.steering && result.steering.cruise.active && result.steering.holds.steerLeft,
   "latched cruise leaves the arrow keys available for steering", result && result.steering);
 check(result && result.accelerated && result.accelerated.cruise.active &&
@@ -137,7 +143,7 @@ check(result && result.settled && result.settled.cruise.active && result.settled
   "releasing Up settles back without dropping below the captured speed", result && result.settled);
 check(result && result.retargetedTap && result.retargeted && result.retargeted.cruise.active &&
   result.retargeted.cruise.target === 118 && result.retargeted.speed >= 118,
-  "another Control tap retargets active cruise instead of cancelling it", result && result.retargeted);
+  "another Space press retargets active cruise instead of cancelling it", result && result.retargeted);
 check(result && result.braked && result.braked.holds.brake && !result.braked.cruise.active &&
   result.braked.cruise.target === 0,
   "braking cancels cruise immediately", result && result.braked);

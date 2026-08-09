@@ -124,12 +124,12 @@ window.addEventListener("load", function () { setTimeout(function () {
       accepted: { range: step4Range, pedal: step4Pedal, motion: step4Motion },
       coach: coach(), state: copy(window.__entranceRoomState())
     };
-    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
+    key("keydown", " ", "Space");
     report.cruisePressed = coach();
     report.cruisePressed.arrowTips = Array.prototype.map.call(
       document.querySelectorAll('[data-coach-step="5"] .entrance-drive-coach-arrow'),
       function (arrow) { var box = arrow.getBBox(); return box.y + box.height; });
-    key("keyup", "Control", "ControlLeft");
+    key("keyup", " ", "Space");
     report.tooSlowForCruise = coach();
     var step5Range = window.__entranceDriveRange("N");
     var step5Steer = window.__entranceDriveControl("steerLeft", true);
@@ -386,7 +386,7 @@ check(result && result.step4Ownership && !result.step4Ownership.accepted.range &
   result && result.step4Ownership);
 check(result && result.cruisePressed.show && result.cruisePressed.step === 5 &&
   result.tooSlowForCruise.show && result.tooSlowForCruise.step === 5,
-  "pressing Ctrl advances to pedals even below cruise speed",
+  "pressing Space advances to pedals even below cruise speed",
   result && { pressed: result.cruisePressed, released: result.tooSlowForCruise });
 check(result && result.cruisePressed.arrowTips.length === 2 &&
   result.cruisePressed.arrowTips.every(function (tip) { return tip >= 159; }),
@@ -406,9 +406,10 @@ check(result && result.reset && !result.reset.helpFocusable,
 check(result && result.restarted.coach.show && result.restarted.coach.step === 2 &&
   result.restarted.state.car.engineOn,
   "Enter resumes the restarted lesson by starting the engine", result && result.restarted);
-check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result.copy.cs) &&
-  !/Ctrl/.test(result.copy.pedalEn) && !/Ctrl/.test(result.copy.pedalCs),
-  "the dedicated cruise step teaches Ctrl in both languages", result && result.copy);
+check(result && result.copy && result.copy.en === "Press Space to hold speed." &&
+  /mezerník/.test(result.copy.cs) && !/Space/.test(result.copy.pedalEn) &&
+  !/mezerník/.test(result.copy.pedalCs),
+  "the dedicated cruise step teaches Space in both languages", result && result.copy);
 check(result && result.reentryHelpDisplay === "none",
   "desktop hides driving help while its coach is active", result && result.reentryHelpDisplay);
 check(result && result.coachAboveReentry,

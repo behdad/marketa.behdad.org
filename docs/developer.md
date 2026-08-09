@@ -204,10 +204,11 @@ Keep these ownership boundaries intact:
   semantic action (`engine`, `steer`, `gear`, `cruise`, or `pedal`) mutation authority. Keep every
   keyboard, pointer, touch, and direct SVG path behind that shared gate; restore normalizes old
   mid-coach snapshots so a stale range or moving car cannot strand the next instruction.
-- The highway remaps `Space` from local throttle to cruise toggle and reserves `Enter` for
-  transport pause/resume. Its Escape/Backspace ladder is active → transport-paused → parked; a
-  key arriving at an editable target or while a foreground device covers the scene never enters
-  that ladder. Camping and terminal police beats retain their own input priority.
+- Driving reserves `Space` for setting or retargeting cruise; only braking cancels it. On the
+  highway the same key also releases transport pause, while `Enter` toggles pause/resume. Its
+  Escape/Backspace ladder is active → transport-paused → parked; a key arriving at an editable
+  target or while a foreground device covers the scene never enters that ladder. Camping and
+  terminal police beats retain their own input priority.
 - Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases
   that suspension. This parks Party foreground work without pretending the story latch was reset.
 

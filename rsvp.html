@@ -35791,10 +35791,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                 <rect x="132" y="-18" width="74" height="27" rx="7" fill="#111" stroke="#a9a9a9" stroke-width="1.4"/>
                 <rect x="138" y="-14" width="62" height="19" rx="5" fill="#242424" stroke="#555" stroke-width=".8"/>
                 <path d="M141-11H197" fill="none" stroke="#777" stroke-width=".7" opacity=".65"/>
-                <text x="146" y="-.5" fill="#fff" font-family="Arial,sans-serif" font-size="10">Ctrl</text>
+                <text x="169" y="-.5" fill="#fff" font-family="Arial,sans-serif" font-size="10" text-anchor="middle">Space</text>
               </g>
               <text class="entrance-drive-coach-copy entrance-drive-coach-title" x="385" y="-7" data-i="entrance_drive_coach_cruise_title">Auto-cruise</text>
-              <text class="entrance-drive-coach-copy entrance-drive-coach-line" x="385" y="5" data-i="entrance_drive_coach_cruise_text">At 10+ km/h, tap Ctrl to hold speed</text>
+              <text class="entrance-drive-coach-copy entrance-drive-coach-line" x="385" y="5" data-i="entrance_drive_coach_cruise_text">Press Space to hold speed.</text>
             </g>
             <g id="entrance-drive-coach-dismiss" class="entrance-drive-coach-dismiss">
               <circle cx="554" cy="-5" r="8" fill="#1d1918" stroke="#fffdf8" stroke-width="1"/>
@@ -35842,7 +35842,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <g id="entrance-roadtrip-pause-dialog">
             <rect x="170" y="-45" width="340" height="86" rx="15" fill="#8e3a4a" fill-opacity=".5" stroke="#fffdf8" stroke-width="2.4"/>
             <text class="entrance-roadtrip-pause-copy" x="340" y="-9" font-size="22" font-weight="800" data-i="entrance_roadtrip_pause_title">PAUSED</text>
-            <text class="entrance-roadtrip-pause-copy" x="340" y="15" font-size="8.2" font-weight="600" data-i="entrance_roadtrip_pause_line">Resume with Enter, Play, steering or a pedal · Esc again exits.</text>
+            <text class="entrance-roadtrip-pause-copy" x="340" y="15" font-size="8.2" font-weight="600" data-i="entrance_roadtrip_pause_line">Play to resume · Esc to exit.</text>
           </g>
           </g>
         </svg>
@@ -38226,9 +38226,8 @@ window.__entranceRoomOpen = false;
   var driveShifterSuppressClickUntil = 0;
   var driveShiftKeyHeld = false;
   var driveDownshiftArrowHeld = false;
-  var driveControlKeyDown = false;
-  var driveControlChord = false;
   var lastDriveInstruction = "";
+  var lastDriveInstructionSpeed = null;
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
   var roadtripCampCaptionTimer = null;
@@ -46188,6 +46187,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.active && roadtripState.police.phase === "pursuit" &&
         roadtripState.police.escapeGap > 0) return "entrance_roadtrip_police_escape";
     if (roadtripState.active && roadtripState.police.phase === "pursuit") return "entrance_roadtrip_police_pull_over";
+    if (driveState.cruiseActive) return "entrance_drive_cruise_active";
     if (porscheState.engineOn && driveState.rpm >= PORSCHE_REV_SHIFT_PROMPT_RPM &&
         (porscheTransmission.mode === "auto" ?
           porscheTransmission.range === "P" || porscheTransmission.range === "N" :
@@ -46234,9 +46234,15 @@ window.__entranceRoomOpen = false;
   function syncPorscheDriveInstruction(force) {
     if (!window.__entranceRoomOpen || !window.__setLowerRoomCaption) return;
     var key = porscheDriveInstructionKey();
-    if (!force && key === lastDriveInstruction) return;
+    var cruiseSpeed = driveState.cruiseActive ? Math.round(driveState.cruiseTarget) : null;
+    if (!force && key === lastDriveInstruction && cruiseSpeed === lastDriveInstructionSpeed) return;
     lastDriveInstruction = key;
-    window.__setLowerRoomCaption(key);
+    lastDriveInstructionSpeed = cruiseSpeed;
+    if (cruiseSpeed !== null && window.__captionBase) {
+      window.__captionBase(key, {
+        owner: "lower-room", scope: "lower:entrance", replacements: { speed: cruiseSpeed }
+      });
+    } else window.__setLowerRoomCaption(key);
   }
   function porscheShifterOffset(gear) {
     if (porscheTransmission.mode === "auto") {
@@ -48657,6 +48663,7 @@ window.__entranceRoomOpen = false;
       driveState.cruiseActive = false;
       driveState.cruiseTarget = 0;
       if (driveHud) driveHud.classList.remove("drive-cruise-on");
+      syncPorscheDriveInstruction(true);
       paintPorscheDriveHud();
       return true;
     }
@@ -48667,8 +48674,8 @@ window.__entranceRoomOpen = false;
     driveState.cruiseTarget = driveState.speed * driveState.facing;
     completePorscheDriveCoachAction("cruise");
     if (driveHud) driveHud.classList.add("drive-cruise-on");
-    if (window.__captionOverlay) window.__captionOverlay(roadtripState.active ?
-      "entrance_drive_cruise_active_roadtrip" : "entrance_drive_cruise_active", {
+    syncPorscheDriveInstruction(true);
+    if (window.__captionOverlay) window.__captionOverlay("entrance_drive_cruise_active", {
       owner: "entrance-drive-cruise", scope: "lower:entrance", priority: 30,
       duration: 3200, clock: "attended", replacements: { speed: Math.round(driveState.cruiseTarget) }
     });
@@ -48676,8 +48683,15 @@ window.__entranceRoomOpen = false;
     ensurePorscheDriveFrame();
     return true;
   }
-  function togglePorscheCruiseActive() {
-    return setPorscheCruiseActive(!driveState.cruiseActive);
+  function setPorscheCruiseFromSpace() {
+    if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
+    if (porscheAutomaticDriveCoachPending() && driveCoachStep === 4) {
+      if (!porscheDriveCoachAllows("cruise")) return false;
+      completePorscheDriveCoachAction("cruise");
+      return true;
+    }
+    var resumed = resumeRoadtripFromDrivingInput();
+    return setPorscheCruiseActive(true) || resumed;
   }
   function restorePorscheCruiseSnapshot(snapshot) {
     var target = snapshot && Number(snapshot.target);
@@ -49001,8 +49015,6 @@ window.__entranceRoomOpen = false;
     porscheTouchSteering.returning = false;
     setPorscheDriveShiftKeyHeld(false);
     driveDownshiftArrowHeld = false;
-    driveControlKeyDown = false;
-    driveControlChord = false;
     if (driveFrame) cancelAnimationFrame(driveFrame);
     if (driveTimer) clearTimeout(driveTimer);
     driveFrame = null;
@@ -49087,27 +49099,12 @@ window.__entranceRoomOpen = false;
     if (!event) return false;
     var key = String(event.key || "").toLowerCase();
     var code = String(event.code || "");
-    var controlKeyEvent = code === "ControlLeft" || code === "ControlRight" || key === "control";
-    if (controlKeyEvent) {
-      if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
-      if (down && !event.repeat) {
-        if (!porscheDriveCoachAllows("cruise")) return true;
-        completePorscheDriveCoachAction("cruise");
-        driveControlKeyDown = true;
-        driveControlChord = false;
-      } else if (!down && driveControlKeyDown) {
-        if (!driveControlChord) setPorscheCruiseActive(true);
-        driveControlKeyDown = false;
-        driveControlChord = false;
-      }
-      return true;
-    }
+    var spaceKey = code === "Space" || key === " " || key === "spacebar";
     var transmissionModeArrow = event.ctrlKey && !event.metaKey && !event.altKey &&
       (code === "ArrowLeft" || code === "ArrowRight");
     if (transmissionModeArrow) {
       if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
       if (down && !event.repeat) {
-        driveControlChord = true;
         setPorscheTransmissionMode(code === "ArrowLeft" ? "auto" : "manual", true);
       }
       return true;
@@ -49140,7 +49137,7 @@ window.__entranceRoomOpen = false;
       }
       return !!window.__entranceRoomOpen;
     }
-    var hold = code === "Space" || code === "ArrowUp" || key === " " || key === "spacebar" || key === "arrowup" ? "throttle" :
+    var hold = code === "ArrowUp" || key === "arrowup" ? "throttle" :
       code === "ArrowDown" || key === "arrowdown" ? "brake" :
       code === "ShiftLeft" || code === "ShiftRight" || key === "shift" ? "clutch" :
       code === "ArrowLeft" || key === "arrowleft" ? "steerLeft" :
@@ -49154,6 +49151,10 @@ window.__entranceRoomOpen = false;
     var target = event.target;
     if (target && target !== document && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName || "")) return false;
     if (!driveState.hudOpen) return false;
+    if (spaceKey) {
+      if (down && !event.repeat) setPorscheCruiseFromSpace();
+      return true;
+    }
     if (down && !event.repeat && key === "a") {
       setPorscheTransmissionMode("auto", true);
       return true;
@@ -49892,8 +49893,6 @@ window.__entranceRoomOpen = false;
     var driveSceneCovered = window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered();
     if (!window.__entranceRoomOpen || driveSceneCovered || unattendedRoadtrip) {
       if (!window.__entranceRoomOpen || driveSceneCovered) setPorscheCruiseActive(false);
-      driveControlKeyDown = false;
-      driveControlChord = false;
       cancelPorscheShifterPress();
       cancelPorscheTouchSteering();
       cancelPorscheTouchPedals();
@@ -50418,7 +50417,7 @@ window.__entranceRoomOpen = false;
   window.__dismissEntrancePorscheDriveHud = dismissPorscheDriveHud;
   window.__exitEntranceRoadtrip = exitRoadtrip;
   window.__backFromEntranceRoadtrip = backFromRoadtrip;
-  window.__toggleEntrancePorscheCruise = togglePorscheCruiseActive;
+  window.__setEntrancePorscheCruise = setPorscheCruiseFromSpace;
   window.__updatePorscheIdle = updatePorscheDriveLifecycle;
   window.__entranceDriveKey = handlePorscheDriveKey;
   window.__entranceDriveStep = porscheDriveStep;
@@ -51283,13 +51282,6 @@ document.addEventListener("keydown", function (event) {
   var driveKeyboardOwnership = window.__entranceDriveKeyboardOwnership ?
     window.__entranceDriveKeyboardOwnership() : { owned: false, hudOpen: false, partyStopPending: false };
   var driveHudOpen = driveKeyboardOwnership.owned;
-  if (driveHudOpen && !campSceneOpen && !event.metaKey && !event.altKey &&
-      (event.code === "ControlLeft" || event.code === "ControlRight" || event.key === "Control")) {
-    if (window.__entranceDriveKey) window.__entranceDriveKey(event, true);
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return;
-  }
   if (driveHudOpen && (!event.ctrlKey || event.code === "ArrowDown" || event.code === "ArrowLeft" ||
       event.code === "ArrowRight") && !event.metaKey) {
     if (event.code === "Backquote" || event.key === "`") return;
@@ -51392,10 +51384,6 @@ document.addEventListener("keydown", function (event) {
     } else if (event.key === "Enter" &&
         !document.getElementById("entrance-drive-hud").classList.contains("drive-engine-on")) {
       if (window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
-    } else if ((event.key === " " || event.key === "Spacebar") &&
-        window.__toggleEntrancePorscheCruise &&
-        window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState().active) {
-      if (!event.repeat) window.__toggleEntrancePorscheCruise();
     } else if (event.key === "Enter" &&
         window.__toggleEntranceRoadtripTransport &&
         window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState().active) {
@@ -51469,11 +51457,9 @@ document.addEventListener("keyup", function (event) {
   var entranceRoom = document.getElementById("entrance-room");
   var driveKeyboardOwnership = window.__entranceDriveKeyboardOwnership ?
     window.__entranceDriveKeyboardOwnership() : { owned: false };
-  var driveRelease = event.code === "Space" || event.code === "ArrowUp" ||
-    event.code === "ArrowDown" || event.code === "ArrowLeft" ||
+  var driveRelease = event.code === "ArrowUp" || event.code === "ArrowDown" || event.code === "ArrowLeft" ||
     event.code === "ArrowRight" || event.code === "ShiftLeft" ||
-    event.code === "ShiftRight" || event.code === "ControlLeft" ||
-    event.code === "ControlRight";
+    event.code === "ShiftRight";
   if (entranceRoom && driveKeyboardOwnership.owned &&
       !(entranceRoom.classList.contains("roadtrip-active") && entranceRoom.classList.contains("roadtrip-route-camp")) && driveRelease) {
     window.__entranceDriveKey(event, false);
@@ -53102,9 +53088,9 @@ var T = {
       lower_entrance_ready: "All 10 rooms seen · click the road to start your Road Trip.",
       lower_entrance_locked: "The car is yours to drive · explore all 10 rooms to unlock Road Trip.",
       entrance_drive_manual: "Let’s drive manual.",
-      entrance_drive_manual_desktop: "Manual · ↑ accelerates · ↓ brakes · tap Ctrl to hold speed.",
+      entrance_drive_manual_desktop: "Manual · ↑ accelerates · ↓ brakes · Space holds speed.",
       entrance_drive_auto: "Automatic · steer, accelerate and brake.",
-      entrance_drive_auto_desktop: "Automatic · ↑ accelerates · ↓ brakes · tap Ctrl to hold speed.",
+      entrance_drive_auto_desktop: "Automatic · ↑ accelerates · ↓ brakes · Space holds speed.",
       entrance_drive_mode_auto: "Automatic transmission.",
       entrance_drive_mode_manual: "Manual transmission.",
       entrance_drive_status_auto: "Automatic, {gear}",
@@ -53129,7 +53115,7 @@ var T = {
       entrance_drive_coach_auto_pedals_desktop: "↑ accelerates · ↓ brakes",
       entrance_drive_coach_auto_pedals_touch: "Blue steers · pink accelerates/brakes · centre holds speed",
       entrance_drive_coach_cruise_title: "Auto-cruise",
-      entrance_drive_coach_cruise_text: "At 10+ km/h, tap Ctrl to hold speed",
+      entrance_drive_coach_cruise_text: "Press Space to hold speed.",
       entrance_roadtrip_exit: "Leave highway",
       entrance_drive_neutral_hint: "Let’s drive manual · put it in gear.",
       entrance_drive_auto_park_hint: "Automatic is in P · select D to drive.",
@@ -53144,14 +53130,13 @@ var T = {
       entrance_drive_rev_shift_auto: "Shift into D to drive.",
       entrance_drive_rev_shift_manual: "Shift into 1st to drive.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
-      entrance_drive_cruise_active: "Cruising at {speed} km/h · tap Ctrl to reset the held speed · brake to cancel.",
-      entrance_drive_cruise_active_roadtrip: "Cruising at {speed} km/h · Space turns cruise off · brake cancels.",
-      entrance_roadtrip_drive: "Highway · Space toggles cruise · Enter pauses · dodge traffic and collect ♥️, 🍄, 💋, 🐸 & ∞.",
+      entrance_drive_cruise_active: "Cruising at {speed} km/h · Space resets held speed · brake cancels.",
+      entrance_roadtrip_drive: "Highway · Space sets cruise · Enter pauses · dodge traffic and collect ♥️, 🍄, 💋, 🐸 & ∞.",
       entrance_roadtrip_unlocked: "All 10 rooms explored · fancy a road trip?",
       entrance_roadtrip_resume: "Roadtrip paused · steer or press a pedal to resume.",
-      entrance_roadtrip_transport_paused: "Road Trip paused · resume with Enter, Play, steering or a pedal · Esc again exits.",
+      entrance_roadtrip_transport_paused: "Play to resume · Esc to exit.",
       entrance_roadtrip_pause_title: "PAUSED",
-      entrance_roadtrip_pause_line: "Resume with Enter, Play, steering or a pedal · Esc again exits.",
+      entrance_roadtrip_pause_line: "Play to resume · Esc to exit.",
       entrance_roadtrip_invite_title: "Let’s road trip!",
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_route_title: "Choose a starting segment",
@@ -53990,7 +53975,7 @@ var T = {
     browser_noframe: "if it stays blank, that site refuses to live in a picture frame — most big ones do",
     eq_off_note: "This browser plays the songs directly — there's no audio pipeline for the equalizer to pull on. Try it on another device 🎚",
     kbd_title: "Keyboard shortcuts",
-    kbd_space: "game / media action · Road Trip cruise",
+    kbd_space: "game / media action · set driving cruise",
     kbd_esc: "dismiss / go back · Road Trip pause, then exit",
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
@@ -54479,9 +54464,9 @@ var T = {
       lower_entrance_ready: "Všech 10 pokojů navštíveno · klikni na silnici a vyraz na výlet.",
       lower_entrance_locked: "Autem se můžeš projet hned · výlet se odemkne po návštěvě všech 10 pokojů.",
       entrance_drive_manual: "Jeďme s manuálem.",
-      entrance_drive_manual_desktop: "Manuál · ↑ zrychluje · ↓ brzdí · Ctrl udrží rychlost.",
+      entrance_drive_manual_desktop: "Manuál · ↑ zrychluje · ↓ brzdí · mezerník drží rychlost.",
       entrance_drive_auto: "Automat · řiď, zrychluj a brzdi.",
-      entrance_drive_auto_desktop: "Automat · ↑ zrychluje · ↓ brzdí · Ctrl udrží rychlost.",
+      entrance_drive_auto_desktop: "Automat · ↑ zrychluje · ↓ brzdí · mezerník drží rychlost.",
       entrance_drive_mode_auto: "Automatická převodovka.",
       entrance_drive_mode_manual: "Manuální převodovka.",
       entrance_drive_status_auto: "Automat, {gear}",
@@ -54506,7 +54491,7 @@ var T = {
       entrance_drive_coach_auto_pedals_desktop: "↑ zrychluje · ↓ brzdí",
       entrance_drive_coach_auto_pedals_touch: "Modrý řídí · růžový zrychluje/brzdí · střed drží rychlost",
       entrance_drive_coach_cruise_title: "Tempomat",
-      entrance_drive_coach_cruise_text: "Při 10+ km/h stiskni Ctrl a rychlost se bude držet",
+      entrance_drive_coach_cruise_text: "Stiskni mezerník a rychlost se bude držet.",
       entrance_roadtrip_exit: "Opustit dálnici",
       entrance_drive_neutral_hint: "Jeďme s manuálem · zařaď rychlost.",
       entrance_drive_auto_park_hint: "Automat je v P · pro jízdu zařaď D.",
@@ -54521,14 +54506,13 @@ var T = {
       entrance_drive_rev_shift_auto: "Zařaď D a rozjeď se.",
       entrance_drive_rev_shift_manual: "Zařaď jedničku a rozjeď se.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
-      entrance_drive_cruise_active: "Tempomat drží {speed} km/h · Ctrl nastaví novou rychlost · brzda ho zruší.",
-      entrance_drive_cruise_active_roadtrip: "Tempomat drží {speed} km/h · mezerník ho vypne · brzda ho zruší.",
-      entrance_roadtrip_drive: "Dálnice · mezerník přepíná tempomat · Enter pozastaví · vyhýbej se provozu a sbírej ♥️, 🍄, 💋, 🐸 a ∞.",
+      entrance_drive_cruise_active: "Tempomat drží {speed} km/h · mezerník nastaví novou rychlost · brzda ho zruší.",
+      entrance_roadtrip_drive: "Dálnice · mezerník nastaví tempomat · Enter pozastaví · vyhýbej se provozu a sbírej ♥️, 🍄, 💋, 🐸 a ∞.",
       entrance_roadtrip_unlocked: "Všech 10 pokojů je prozkoumaných · dáme si výlet?",
       entrance_roadtrip_resume: "Jízda pozastavena · pokračuj volantem nebo pedálem.",
-      entrance_roadtrip_transport_paused: "Jízda pozastavena · pokračuj Enterem, přehráním, řízením nebo pedálem · dalším Esc odejdeš.",
+      entrance_roadtrip_transport_paused: "Přehrát pokračuje · Esc ukončí.",
       entrance_roadtrip_pause_title: "POZASTAVENO",
-      entrance_roadtrip_pause_line: "Pokračuj Enterem, přehráním, řízením nebo pedálem · dalším Esc odejdeš.",
+      entrance_roadtrip_pause_line: "Přehrát pokračuje · Esc ukončí.",
       entrance_roadtrip_invite_title: "Jedeme na výlet!",
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_route_title: "Vyber výchozí úsek",
@@ -55363,7 +55347,7 @@ var T = {
     browser_noframe: "když zůstane prázdná, ten web se odmítá nastěhovat do obrázkového rámečku — většina velkých to tak má",
     eq_off_note: "Tenhle prohlížeč přehrává písničky napřímo — ekvalizér tu nemá za co tahat. Zkus to na jiném zařízení 🎚",
     kbd_title: "Klávesové zkratky",
-    kbd_space: "akce ve hře / média · tempomat na výletě",
+    kbd_space: "akce ve hře / média · nastavit tempomat",
     kbd_esc: "zavřít / zpět · výlet nejdřív pozastaví",
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",

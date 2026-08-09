@@ -114263,6 +114263,12 @@ function spawnDustMote(container) {
   }
   window.__resetExplore = function () { exploreSeen = {}; }; // resetHunt (this IIFE) calls it; explorePtr is reset via its own brick-IIFE hook
   function restoreStageHint(name) {
+    // A lower-room round-trip must not rewind an active Act Two instruction to the
+    // room's generic base line (most confusingly, Balcony's old BBQ promise while
+    // its light-switch beat is still waiting). Story guidance owns every restore.
+    var beat = window.__actBeatHint ? window.__actBeatHint(name) : null;
+    if (beat === "rsvp_exit") { showRsvpNudge(); return; }
+    if (beat) { setCaption(beat); return; }
     var solved = roomSolved(name);
     if (solved && !liveSolveState(name)) {
       if (name === "kitchen") updateKitchenInvite(); // a completed solve never revives its first-run object arrows

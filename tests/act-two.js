@@ -19,6 +19,7 @@ var HARNESS = [
   'window.__resetActTwo();window.__armActTwo(true);',
   'var partySwitch=document.getElementById("balcony-partyswitch");',
   'report.steps.before={beat:window.__actBeat(),caption:window.__captionKey(),room:window.currentStageName,pulse:partySwitch.classList.contains("invite-pulse")};',
+  'window.__openEntranceRoom();window.__closeEntranceRoom();report.steps.lowerReturn={beat:window.__actBeat(),caption:window.__captionKey(),room:window.currentStageName};',
   'window.goToStage("kitchen");for(var i=0;i<120;i++)window.__actTwoTick();',
   'report.steps.away={beat:window.__actBeat(),state:window.__actTwoState(),party:!!window.__gardenPartyOn,pulse:partySwitch.classList.contains("invite-pulse")};',
   'window.goToStage("balcony");',
@@ -59,6 +60,10 @@ if (result) {
     { hidden: result.steps.hiddenArrival, resumed: result.steps.hiddenArrivalResumed });
   check(result.steps.before.beat === "act_b2" && result.steps.before.caption === "act_b2" && result.steps.before.pulse,
     "the balcony switch cue owns the caption before ignition", result.steps.before);
+  check(result.steps.lowerReturn.beat === "act_b2" && result.steps.lowerReturn.caption === "act_b2" &&
+    result.steps.lowerReturn.room === "balcony",
+    "an Entrance round-trip restores the active switch cue instead of Balcony's base caption",
+    result.steps.lowerReturn);
   check(result.steps.away.beat === "act_b2" && result.steps.away.state.elapsed >= 120000 &&
     result.steps.away.state.claimElapsed === 0 && !result.steps.away.party && result.steps.away.pulse,
     "time in another room cannot consume the switch cue or start the party", result.steps.away);

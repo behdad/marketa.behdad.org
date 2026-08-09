@@ -81,6 +81,15 @@ existing linear levels. Overall level is otherwise the device's job. The headpho
 filter (bass shelf + lowpass) lives only in the song pipeline — music-only, deliberately
 not applied to SFX/beds or Vimeo.
 
+The one-minute Trailer owns Tumbalalaika as a temporary score. In the full reel, its Road Trip cut
+lands at the recording's authored near-silent 38-second seam, fades the last breath, rewinds, and
+fades the same track back as an ending reprise; the reduced-motion edit reuses that transition
+earlier. This keeps an intentional cue under Camping and the final card without asking autoplay
+policy to unlock a second media element. Natural completion, Take over, and hide-abort all cancel
+an in-flight element fade, pause and rewind the track, and restore its logical level. The visual
+highway/Camping adapter deliberately leaves the real transport and camp audio controllers inactive,
+so it creates no drivetrain, lake, wind, fire, or weather bed.
+
 ## Lower-floor acoustics
 
 `lowerFloorAudioOutput()` is one lazily-created low-pass plus gain stage shared

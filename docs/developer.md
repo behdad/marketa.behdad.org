@@ -374,6 +374,13 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
+The cinematic runner stays inline with that controller: its cut/caption/cursor/entry/recovery
+dependencies are closure-local, so extracting it would require a broad game-to-trailer ABI and make
+the canonical page depend on optional trailer code. Its Road Trip ending crosses only the narrow
+`__cineRoadtripDemo("highway"|"camp"|false)` adapter. That adapter owns presentation attributes and
+restores them exactly; it must not start transport/audio loops, call dev shortcuts, advance Road Trip
+or Camping state, or checkpoint. `tests/cine.js` drives canonical `loft-day.html` and covers both
+tableaux, player-state isolation, score/reprise ownership, spoilers, and every teardown path.
 
 `loftSessionExport` and `loftSessionImport` are deliberately narrower than a full checkpoint: they
 move progress and puzzle state without exporting bulky or personal app data. Do not broaden that

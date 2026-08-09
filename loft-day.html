@@ -1194,6 +1194,30 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp.fire-out #entrance-roadtrip-camp-finished-fire{cursor:pointer}
 #entrance-roadtrip-camp-empty-pit{cursor:pointer;outline:none}
 #entrance-roadtrip-camp.fire-built #entrance-roadtrip-camp-empty-pit{opacity:0;pointer-events:none}
+/* The trailer borrows the authored Road Trip/Camping artwork without starting either
+   controller. Keep its tableau inert and suppress mechanics/reward layers; the dedicated
+   adapter below owns these classes and restores the exact pre-preview attributes. */
+#entrance-room.cine-roadtrip-preview #entrance-drive-hud{pointer-events:none}
+#entrance-room.cine-roadtrip-preview :is(
+  #entrance-roadtrip-dismiss,#entrance-drive-help,#entrance-drive-coach,
+  #entrance-drive-touch-controls,#entrance-roadtrip-score,#entrance-roadtrip-route-progress,
+  #entrance-roadtrip-route-chooser,#entrance-roadtrip-pause-dialog,
+  #entrance-roadtrip-run-panel,#entrance-roadtrip-meta-panel-group,
+  #entrance-drive-transmission-mode
+){display:none!important}
+#entrance-room.cine-roadtrip-camp-preview #entrance-roadtrip-camp-builder-overlays{display:none!important}
+#entrance-room.cine-roadtrip-camp-preview #entrance-roadtrip-camp-stars>:not(#entrance-roadtrip-camp-star-scatter){
+  display:inline;opacity:.82
+}
+#entrance-room.cine-roadtrip-camp-preview :is(
+  #entrance-roadtrip-camp-finale-constellations,#entrance-roadtrip-camp-wisdom,
+  #entrance-roadtrip-camp-mama-bear,#entrance-roadtrip-camp-food-crate,
+  #entrance-roadtrip-camp-pot,#entrance-roadtrip-camp-finale-night-sky,
+  #entrance-roadtrip-camp-finale-fin
+){display:none!important}
+#entrance-room.cine-roadtrip-camp-preview :is(#entrance-roadtrip-camp,#entrance-roadtrip-camp-builder-overlays){
+  pointer-events:none!important
+}
 #entrance-roadtrip-fire-game{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease}
 #entrance-roadtrip-fire-game.open{opacity:1;visibility:visible;pointer-events:auto}
 .entrance-roadtrip-fire-game-button{cursor:pointer;outline:none}
@@ -41284,6 +41308,105 @@ window.__entranceRoomOpen = false;
     paintCampCarDrag();
     host.setAttribute("data-ready", "true");
   }
+  // The cinematic needs two late-story images, not a second Road Trip session. This narrow
+  // adapter changes presentation attributes only: it never starts a frame/audio loop, calls a
+  // gameplay/dev hook, advances roadtripState, or checkpoints. Teardown restores the exact
+  // incoming class/style attributes so Take over, hide, and natural completion are equivalent.
+  var cineRoadtripDemoSnapshot = null;
+  var cineRoadtripDemoMode = null;
+  function restoreCineRoadtripAttr(node, name, value) {
+    if (!node) return;
+    if (value == null) node.removeAttribute(name);
+    else node.setAttribute(name, value);
+  }
+  function stopCineRoadtripDemo() {
+    if (!cineRoadtripDemoSnapshot) return false;
+    var camp = roadtripElement("entrance-roadtrip-camp");
+    var campPorsche = roadtripElement("entrance-roadtrip-camp-porsche");
+    restoreCineRoadtripAttr(room, "class", cineRoadtripDemoSnapshot.roomClass);
+    restoreCineRoadtripAttr(room, "style", cineRoadtripDemoSnapshot.roomStyle);
+    restoreCineRoadtripAttr(camp, "class", cineRoadtripDemoSnapshot.campClass);
+    restoreCineRoadtripAttr(camp, "style", cineRoadtripDemoSnapshot.campStyle);
+    restoreCineRoadtripAttr(campPorsche, "class", cineRoadtripDemoSnapshot.campPorscheClass);
+    restoreCineRoadtripAttr(campPorsche, "style", cineRoadtripDemoSnapshot.campPorscheStyle);
+    restoreCineRoadtripAttr(campPorsche, "data-ready", cineRoadtripDemoSnapshot.campPorscheReady);
+    if (campPorsche && cineRoadtripDemoSnapshot.campPorscheChildren) {
+      Array.prototype.slice.call(campPorsche.childNodes).forEach(function (node) {
+        if (cineRoadtripDemoSnapshot.campPorscheChildren.indexOf(node) < 0) campPorsche.removeChild(node);
+      });
+      cineRoadtripDemoSnapshot.campPorscheChildren.forEach(function (node, index) {
+        if (campPorsche.childNodes[index] !== node) {
+          campPorsche.insertBefore(node, campPorsche.childNodes[index] || null);
+        }
+      });
+    }
+    restoreCineRoadtripAttr(driveHudSvg, "viewBox", cineRoadtripDemoSnapshot.driveViewBox);
+    restoreCineRoadtripAttr(driveHudSvg, "preserveAspectRatio", cineRoadtripDemoSnapshot.driveAspect);
+    cineRoadtripDemoSnapshot = null;
+    cineRoadtripDemoMode = null;
+    return true;
+  }
+  function showCineRoadtripDemo(mode) {
+    if ((mode !== "highway" && mode !== "camp") || !window.__cinematic ||
+        !window.__entranceRoomOpen) return false;
+    ensureRoadtripScene();
+    var camp = roadtripElement("entrance-roadtrip-camp");
+    var campPorsche = roadtripElement("entrance-roadtrip-camp-porsche");
+    if (!camp) return false;
+    if (!cineRoadtripDemoSnapshot) {
+      cineRoadtripDemoSnapshot = {
+        roomClass: room.getAttribute("class"),
+        roomStyle: room.getAttribute("style"),
+        campClass: camp.getAttribute("class"),
+        campStyle: camp.getAttribute("style"),
+        campPorscheClass: campPorsche && campPorsche.getAttribute("class"),
+        campPorscheStyle: campPorsche && campPorsche.getAttribute("style"),
+        campPorscheReady: campPorsche && campPorsche.getAttribute("data-ready"),
+        campPorscheChildren: campPorsche ? Array.prototype.slice.call(campPorsche.childNodes) : null,
+        driveViewBox: driveHudSvg && driveHudSvg.getAttribute("viewBox"),
+        driveAspect: driveHudSvg && driveHudSvg.getAttribute("preserveAspectRatio")
+      };
+    }
+    ["calgary", "turnoff", "banff", "lake-turnoff", "abraham", "camp"].forEach(function (route) {
+      room.classList.remove("roadtrip-route-" + route);
+    });
+    room.classList.add("roadtrip-active", "cine-roadtrip-preview");
+    room.classList.remove("cine-roadtrip-highway-preview", "cine-roadtrip-camp-preview",
+      "entrance-clouded", "entrance-raining", "entrance-snowing", "roadtrip-on-shoulder",
+      "roadtrip-on-gravel", "roadtrip-resume-pending");
+    room.style.setProperty("--roadtrip-road-mix", "1");
+    room.style.setProperty("--roadtrip-banff-mix", "1");
+    if (driveHudSvg) driveHudSvg.setAttribute("viewBox", "0 -120 680 340");
+    if (mode === "highway") {
+      if (driveHudSvg) driveHudSvg.setAttribute("preserveAspectRatio", "xMidYMax slice");
+      room.classList.add("roadtrip-route-banff", "cine-roadtrip-highway-preview", "entrance-day",
+        "entrance-roadtrip-season-summer");
+      room.classList.remove("camp-stargazing-clear");
+    } else {
+      if (driveHudSvg) driveHudSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      ensureRoadtripCampPorsche();
+      room.classList.add("roadtrip-route-camp", "cine-roadtrip-camp-preview", "camp-stargazing-clear");
+      room.classList.remove("entrance-day");
+      Array.prototype.slice.call(camp.classList).forEach(function (name) {
+        if (/^(?:camp-sleep-|stargazing-|stew-|pinecone-)/.test(name)) camp.classList.remove(name);
+      });
+      camp.classList.add("fire-built");
+      camp.classList.remove("fire-out");
+    }
+    cineRoadtripDemoMode = mode;
+    return true;
+  }
+  window.__cineRoadtripDemo = function (mode) {
+    return mode === false || mode == null ? stopCineRoadtripDemo() : showCineRoadtripDemo(mode);
+  };
+  window.__cineRoadtripDemoState = function () {
+    return {
+      active: !!cineRoadtripDemoSnapshot,
+      mode: cineRoadtripDemoMode,
+      highway: room.classList.contains("cine-roadtrip-highway-preview"),
+      camp: room.classList.contains("cine-roadtrip-camp-preview")
+    };
+  };
   var campNotebook = roadtripElement("entrance-roadtrip-camp-notebook");
   var campCharacterDrag = null;
   var campCharacters = [
@@ -124619,6 +124742,7 @@ function spawnDustMote(container) {
   var cinematicTimers = [];
   var cinematicTeardown = null;
   var cineScoreStarted = false;
+  var cineTailCueStarted = false;
   var cineArcadeLedger = null;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // NB: named cineBeat, NOT beat — keep the trailer timing helper distinct from the other
@@ -124848,6 +124972,7 @@ function spawnDustMote(container) {
     }
     if (window.__closeCinemaRoom) window.__closeCinemaRoom();
     if (window.__closeBedroomRoom) window.__closeBedroomRoom();
+    if (window.__cineRoadtripDemo) window.__cineRoadtripDemo(false);
     if (window.__closeEntranceRoom) window.__closeEntranceRoom();
     // Device previews are real apps, but they are not a real play session. A clean monitor
     // shutdown drops their loops and the office solve milestone the previewed boot would set.
@@ -124856,7 +124981,7 @@ function spawnDustMote(container) {
     if (window.stopPcFan) window.stopPcFan();
     if (window.resetOfficeMonitor) window.resetOfficeMonitor();
     // Direct editorial cuts deliberately bypass the solve gates, and goToStage records every
-    // visited room as navigable. Hand control back at the real Phase 1 starting line so the
+    // visited room as navigable. Hand control back at the real starting line so the
     // reel never becomes a progression shortcut or a substitute playthrough.
     if (window.goToStage && window.currentStageName !== "kitchen") window.goToStage("kitchen");
     if (window.__setMaxUnlocked) window.__setMaxUnlocked(0);
@@ -125045,16 +125170,22 @@ function spawnDustMote(container) {
   function cineHushSong() {
     ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio", "marketa-czech-song-audio"].forEach(function (id) {
       var a = document.getElementById(id);
-      if (a && !a.paused) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
+      if (!a) return;
+      if (a._fadeTimer) { clearInterval(a._fadeTimer); a._fadeTimer = null; }
+      try {
+        a.pause();
+        a.currentTime = 0;
+        if (window.__setSongLevel) window.__setSongLevel(a, window.__songVolume ? window.__songVolume() : 0.5);
+      } catch (e) {}
     });
     cineScoreStarted = false;
+    cineTailCueStarted = false;
   }
   // ── THE TRAILER — a curated 60-second invitation to play ─────────────────────
   // Editorial rule: advertise possibility, never progression. The montage jumps across
-  // floors in deliberately arbitrary order, uses direct preview hooks so no trigger is
-  // demonstrated, and leaves Phase 2 locked. Its only explanation is the broad promise:
-  // follow clues to unlock the loft, then wander and play freely. The party and every
-  // first-arrival/formal payoff remain completely absent.
+  // floors in deliberately arbitrary order, uses dedicated preview hooks so no trigger is
+  // demonstrated, and leaves the later act locked. The party and every first-arrival/formal
+  // payoff remain completely absent; the road/camp adapter is presentation-only.
   function startCinematicScore() {
     var a = document.getElementById("tumbala-song-audio");
     if (!a || !window.__cinematic) return;
@@ -125068,6 +125199,32 @@ function spawnDustMote(container) {
       if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] trailer score rejected:", e); });
     } catch (e) {}
   }
+  // Tumbalalaika naturally falls silent near 38 seconds. The road cut lands at that seam:
+  // fade the last breath, rewind, and bring it back as a quiet reprise so the camp and final
+  // card have an authored cue instead of twenty seconds of accidental silence.
+  function startCinematicTailCue() {
+    var a = document.getElementById("tumbala-song-audio");
+    if (!a || !window.__cinematic || cineTailCueStarted) return;
+    cineTailCueStarted = true;
+    var level = window.__songVolume ? window.__songVolume() : 0.5;
+    var restart = function () {
+      if (!window.__cinematic) return;
+      try {
+        a.currentTime = 0;
+        if (window.__setSongLevel) window.__setSongLevel(a, 0); else a.volume = 0;
+        var p = a.play();
+        if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] trailer reprise rejected:", e); });
+        if (window.__fadeSongTo) window.__fadeSongTo(a, level, 900);
+        else if (window.__setSongLevel) window.__setSongLevel(a, level);
+        else a.volume = level;
+      } catch (e) {}
+    };
+    if (window.__fadeSongTo) window.__fadeSongTo(a, 0, 650, restart);
+    else restart();
+  }
+  window.__cinematicAudioState = function () {
+    return { scoreStarted: cineScoreStarted, tailCueStarted: cineTailCueStarted };
+  };
   // Starting the two real arcade previews should not quietly consume the player's cross-game
   // recommendations. Snapshot only that separate promotion ledger; scores already use their
   // own preview-safe lifecycle.
@@ -125114,7 +125271,7 @@ function spawnDustMote(container) {
       // never a solve object, hidden multi-tap, or punchline.
       tapAt(1400, "cinema-bike"),
       tapAt(1300, "cinema-cushion-blue"),
-      [1800, function () { cineCutTo("garden", "cine_chapter_unlock", "cine_phase1"); }],
+      [1800, function () { cineCutTo("garden", "cine_chapter_unlock", "cine_clues"); }],
       tapAt(1400, "garden-tensegrity"),
       [1400, null],
       [2200, function () {
@@ -125141,45 +125298,48 @@ function spawnDustMote(container) {
         });
       }],
 
-      // 27.4–37.2 · One unfinished round downstairs, then two safe Cuddly toys. The
-      // Phase 2 promise is copy only: __secondRound remains false for the entire reel.
-      [2200, cine("cine_phase2")],
+      // 27.4–35.0 · One unfinished round downstairs, then two safe Cuddly toys. The
+      // later story remains locked for the entire reel.
+      [2200, cine("cine_more")],
       [2600, function () { cineCutTo("cuddly", "cine_chapter_soft", "cine_soft"); }],
       tapAt(1400, "cuddly-panedge-hit"),
       tapAt(1400, "cuddly-bolster"),
-      [2200, function () { cineCutTo("balcony", "cine_chapter_skyline", "cine_skyline"); }],
 
-      // 37.2–51.0 · Block Party runs briefly across the skyline, then the Office monitor
-      // jumps between two apps without showing its desktop or a complete inventory.
-      [1000, function () { if (window.__startBalconyTetris) window.__startBalconyTetris(); }],
-      [5000, function () {
-        if (window.__stopBalconyTetris) window.__stopBalconyTetris();
-        cineCutTo("office", "cine_chapter_apps", "cine_apps");
+      // 35.0–56.2 · Leave the redundant skyline/app sampler behind. A presentation-only
+      // adapter holds a westbound highway, then a quiet fire-and-stars campsite without
+      // starting Road Trip, building the fire, solving stargazing, or saving any state.
+      [2200, function () {
+        startCinematicTailCue();
+        cineCutTo("balcony", "cine_chapter_road", "cine_road", function () {
+          if (window.__openEntranceRoom) window.__openEntranceRoom();
+          if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("highway");
+        });
       }],
-      [1200, function () { if (window.__openMonitorApp) window.__openMonitorApp("life"); }],
-      [3600, function () { if (window.__openMonitorApp) window.__openMonitorApp("code"); }],
-      [3000, function () {
-        cineCutTo("balcony", "cine_chapter_discover", "cine_discover", openLower("__openEntranceRoom"));
+      [6000, function () {
+        cursorHide();
+        if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("camp");
+        cineChapter("cine_chapter_camp");
+        paintCineCaption("cine_camp");
       }],
 
-      // 51.0–60.0 · Hold on the Entrance/Porsche as one last unexplained possibility,
-      // then state the two-phase promise and hand the controls back. No wedding card.
-      [1200, function () { cursorHide(); }],
-      [3500, function () {
+      // 43.2–60.0 · Let the campsite breathe, then make one concise invitation and return
+      // control. No Party, camp mechanics, story reward, wedding card, or final payoff.
+      [13000, function () {
         cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_detail", "cine_final_note");
         paintCineCaption("cine_signoff");
       }],
-      [4300, function () { stopCinematic(); }]
+      [3800, function () { stopCinematic(); }]
     ]);
   }
 
   function runReducedCinematic() {
     // The same arbitrary-floor promise, compressed into held tableaux. Animation is disabled
-    // by CSS, but lower rooms, device apps, and static minigame frames still advertise breadth.
+    // by CSS, but lower rooms, static minigame frames, and the inert road/camp preview remain.
     var D = 2200;
     ensureCineOverlay();
     cineShowCard("title", "cine_title_kicker", "cine_title", "cine_title_sub");
     paintCineCaption("cine_open");
+    cineBeat(500, startCinematicScore);
     cineBeat(D, function () {
       cineHideCard(); goToStage("office"); cineChapter("cine_chapter_jump");
       if (window.__arcadeTest) window.__arcadeTest(12, 80);
@@ -125192,7 +125352,7 @@ function spawnDustMote(container) {
     });
     cineBeat(D * 3, function () {
       goToStage("garden"); cineChapter("cine_chapter_unlock");
-      cineClick("garden-tensegrity"); paintCineCaption("cine_phase1");
+      cineClick("garden-tensegrity"); paintCineCaption("cine_clues");
     });
     cineBeat(D * 4, function () {
       goToStage("kitchen"); if (window.__openBathroomRoom) window.__openBathroomRoom();
@@ -125205,7 +125365,7 @@ function spawnDustMote(container) {
     });
     cineBeat(D * 6, function () {
       if (window.__openPhoneAppHere) window.__openPhoneAppHere("mines", true);
-      paintCineCaption("cine_phase2");
+      paintCineCaption("cine_more");
     });
     cineBeat(D * 7, function () {
       cinePhoneClose(); goToStage("office");
@@ -125214,17 +125374,16 @@ function spawnDustMote(container) {
       cineChapter("cine_chapter_round"); paintCineCaption("cine_round");
     });
     cineBeat(D * 8, function () {
-      goToStage("balcony"); if (window.__startBalconyTetris) window.__startBalconyTetris();
-      cineChapter("cine_chapter_skyline"); paintCineCaption("cine_skyline");
+      startCinematicTailCue();
+      goToStage("balcony"); if (window.__openEntranceRoom) window.__openEntranceRoom();
+      if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("highway");
+      cineChapter("cine_chapter_road"); paintCineCaption("cine_road");
     });
     cineBeat(D * 9, function () {
-      if (window.__stopBalconyTetris) window.__stopBalconyTetris();
-      goToStage("office"); if (window.__openMonitorApp) window.__openMonitorApp("life");
-      cineChapter("cine_chapter_apps"); paintCineCaption("cine_apps");
+      if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("camp");
+      cursorHide(); cineChapter("cine_chapter_camp"); paintCineCaption("cine_camp");
     });
     cineBeat(D * 10, function () {
-      goToStage("balcony"); if (window.__openEntranceRoom) window.__openEntranceRoom();
-      cursorHide(); cineChapter("cine_chapter_discover");
       cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_detail", "cine_final_note");
       paintCineCaption("cine_signoff");
     });
@@ -125233,6 +125392,7 @@ function spawnDustMote(container) {
 
   function startCinematic() {
     if (window.__cinematic) return;
+    if (window.__cineRoadtripDemo) window.__cineRoadtripDemo(false);
     window.__cinematic = true;
     captureCinematicArcadeLedger();
     stopHintBlink(); // the show owns the caption — end any attract-blink first (Watch is off-strip)
@@ -125240,7 +125400,7 @@ function spawnDustMote(container) {
     if (skipBtn) skipBtn.hidden = false;
     var cineFrame = document.getElementById("hunt-fullscreen-area");
     if (cineFrame) cineFrame.classList.add("cinematic-running");
-    resetHunt(); // deterministic Phase 1 loft; the fixed cut owns everything shown from here
+    resetHunt(); // deterministic fresh loft; the fixed cut owns everything shown from here
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky so arbitrary cuts stay visually coherent
     // Seasonal defaults can otherwise wake a music/video projector channel before a Cuddly
     // cut. Pin its ordinary fire tableau so the montage never previews the richer selector.

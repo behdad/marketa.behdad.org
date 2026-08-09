@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Trailer (▷ Trailer) cinematic tests: drives window.__startCinematic in headless
 // Chrome and verifies (1) the FULL reel runs to a clean end in ~55-68s, crosses floors in
-// deliberately non-map order, and selectively shows the promised games/apps, (2) the entire
-// run keeps Phase 2, the party, solutions, inventories, and major payoffs hidden, and (3) full
-// end, Take over, and hidden-tab abort leave no cinematic/device/game state behind. A
+// deliberately non-map order, then reaches a preview-only highway and camp tableau, (2) the
+// entire run keeps the later act, party, solutions, inventories, and major payoffs hidden, and
+// (3) full end, Take over, and hidden-tab abort leave no cinematic/device/game state behind. A
 // reduced-motion run checks the same editorial contract, and a real post-reel balcony entry
 // proves the normal first-arrival finale remains available.
 //
@@ -21,6 +21,7 @@ var COMMON = [
   "function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
   "function finish(report) { report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report); }",
   "function seedArcadeLedger() { localStorage.setItem('loftArcadesPlayed', '[\"flair\"]'); localStorage.setItem('loftArcadesSuggested', '[\"pacman\"]'); }",
+  "function instrumentCineAudio() { var a = document.getElementById('tumbala-song-audio'); if (!a || a._cineTestPlayOwner) return; a._cineTestPlayOwner = a.play; a._cineTestPlayCalls = 0; a.play = function () { a._cineTestPlayCalls++; return a._cineTestPlayOwner.call(a); }; }",
   // a compact snapshot of every bit of state the reel touches — read after the show ends
   "function snapshot() {",
   "  var strip = document.getElementById('loft-game-strip');",
@@ -28,6 +29,12 @@ var COMMON = [
   "  var sg = document.getElementById('stage-garden');",
   "  var sb = document.getElementById('stage-balcony');",
   "  var panel = document.getElementById('roster-panel');",
+  "  var cineRoad = window.__cineRoadtripDemoState ? window.__cineRoadtripDemoState() : {active:false};",
+  "  var entranceState = window.__entranceRoomState ? window.__entranceRoomState() : null;",
+  "  var roadtrip = entranceState && entranceState.drive && entranceState.drive.roadtrip;",
+  "  var cineAudio = window.__cinematicAudioState ? window.__cinematicAudioState() : {};",
+  "  var score = document.getElementById('tumbala-song-audio');",
+  "  var campPorsche = document.getElementById('entrance-roadtrip-camp-porsche');",
   "  return {",
   "    cinematic: !!window.__cinematic,",
   "    cursor: !!document.getElementById('cine-cursor'),",
@@ -43,6 +50,21 @@ var COMMON = [
   "    frameRunning: !!document.querySelector('#hunt-fullscreen-area.cinematic-running'),",
   "    cineCaption: !!document.querySelector('#hunt-caption.cine-caption'),",
   "    secondRound: !!window.__secondRound,",
+  "    cineRoadtripActive: !!cineRoad.active,",
+  "    cineRoadtripClass: !!document.querySelector('#entrance-room.cine-roadtrip-preview'),",
+  "    cineCampPorscheReady: !!(campPorsche && campPorsche.getAttribute('data-ready') === 'true'),",
+  "    cineCampPorscheChildren: campPorsche ? campPorsche.childNodes.length : 0,",
+  "    roadtripActive: !!(roadtrip && roadtrip.active),",
+  "    roadtripRoute: roadtrip ? roadtrip.route : null,",
+  "    roadtripCampVisited: !!(roadtrip && roadtrip.campVisited),",
+  "    roadtripCampFire: !!(roadtrip && roadtrip.campFire && roadtrip.campFire.complete),",
+  "    roadtripStargazing: !!(roadtrip && roadtrip.stargazing && roadtrip.stargazing.complete),",
+  "    cineScoreStarted: !!cineAudio.scoreStarted,",
+  "    cineTailCueStarted: !!cineAudio.tailCueStarted,",
+  "    scorePlayCalls: score ? score._cineTestPlayCalls || 0 : 0,",
+  "    scorePaused: !score || score.paused,",
+  "    scoreTime: score ? score.currentTime : 0,",
+  "    scoreFadeActive: !!(score && score._fadeTimer),",
   "    lowerRooms: { bathroom:!!window.__bathroomRoomOpen, cinema:!!window.__cinemaRoomOpen, bedroom:!!window.__bedroomRoomOpen, entrance:!!window.__entranceRoomOpen },",
   "    phoneOpen: !!(window.__chatPhoneState && window.__chatPhoneState().open),",
   "    arcadeActive: !!(window.__arcadeState && window.__arcadeState().active),",
@@ -72,6 +94,10 @@ var COMMON = [
   "  var picker = document.getElementById('garden-djpicker');",
   "  var phoneState = window.__chatPhoneState ? window.__chatPhoneState() : {open:false,app:null};",
   "  var projector = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : 'off';",
+  "  var cineRoad = window.__cineRoadtripDemoState ? window.__cineRoadtripDemoState() : {active:false,mode:null};",
+  "  var entranceState = window.__entranceRoomState ? window.__entranceRoomState() : null;",
+  "  var roadtrip = entranceState && entranceState.drive && entranceState.drive.roadtrip;",
+  "  var cineAudio = window.__cinematicAudioState ? window.__cinematicAudioState() : {};",
   "  var albumNow = window.__albumList ? window.__albumList().length : report.albumStart;",
   "  if (key && key.indexOf('cine_') !== 0) report.spoilers.explanatoryCaption = true;",
   "  if ((window.__rosterOpen && window.__rosterOpen()) || (panel && panel.classList.contains('show'))) report.spoilers.roster = true;",
@@ -85,6 +111,20 @@ var COMMON = [
   "  if (document.querySelector('#balcony-couple.showing')) report.spoilers.couple = true;",
   "  if (document.querySelector('#stage-garden.aurora-force, #stage-balcony.aurora-force')) report.spoilers.aurora = true;",
   "  if (window.__balconyUnlocked && window.__balconyUnlocked()) report.spoilers.finale = true;",
+  "  if (cineRoad.active) {",
+  "    report.seenRoadtripPreview[cineRoad.mode] = true;",
+  "    if (roadtrip && (roadtrip.active || roadtrip.route !== 'calgary' || roadtrip.campVisited || roadtrip.campFire.complete || roadtrip.stargazing.complete)) report.previewPlayerStateStable = false;",
+  "    if (cineRoad.mode === 'highway' && cineRoad.highway && document.querySelector('#entrance-room.roadtrip-route-banff')) report.highwayTableau = true;",
+  "    if (cineRoad.mode === 'camp') {",
+  "      var camp = document.getElementById('entrance-roadtrip-camp');",
+  "      var stars = document.getElementById('entrance-roadtrip-camp-const-cassiopeia');",
+  "      var finale = document.getElementById('entrance-roadtrip-camp-finale-constellations');",
+  "      var bear = document.getElementById('entrance-roadtrip-camp-mama-bear');",
+  "      if (cineRoad.camp && camp && camp.classList.contains('fire-built') && stars && getComputedStyle(stars).display !== 'none' && finale && getComputedStyle(finale).display === 'none' && bear && getComputedStyle(bear).display === 'none') report.campTableauSafe = true;",
+  "      if ((finale && getComputedStyle(finale).display !== 'none') || (bear && getComputedStyle(bear).display !== 'none')) report.spoilers.campPayoff = true;",
+  "    }",
+  "  }",
+  "  if (cineAudio.tailCueStarted) report.sawTailCue = true;",
   "  if (albumNow > report.albumStart) report.spoilers.album = true;",
   "  if (report.stageOrder[report.stageOrder.length - 1] !== stage) report.stageOrder.push(stage);",
   "  if (window.__cinemaRoomOpen) report.seenLower.cinema = true;",
@@ -109,11 +149,12 @@ var FULL_HARNESS = [
   "<script>",
   "(function () {",
   COMMON,
-  "  var report = { errors: [], reducedMotion: null, durationMs: null, ended: false, snap: null, realEntryArmed: false, sawCursorDuringRun: false, seenStages: {}, stageOrder: [], seenLower: {}, seenPhoneApps: {}, seenMonitorApps: {}, seenGames: {}, seenCaptions: {}, sawPresentation: false, albumStart: 0, spoilers: { party:false, phase2:false, explanatoryCaption:false, roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, couple:false, aurora:false, finale:false, album:false } };",
+  "  var report = { errors: [], reducedMotion: null, durationMs: null, ended: false, snap: null, realEntryArmed: false, sawCursorDuringRun: false, seenStages: {}, stageOrder: [], seenLower: {}, seenPhoneApps: {}, seenMonitorApps: {}, seenGames: {}, seenCaptions: {}, seenRoadtripPreview: {}, previewPlayerStateStable: true, highwayTableau: false, campTableauSafe: false, sawTailCue: false, sawPresentation: false, albumStart: 0, spoilers: { party:false, phase2:false, explanatoryCaption:false, roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, couple:false, aurora:false, finale:false, campPayoff:false, album:false } };",
   "  async function run() {",
   "    report.reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);",
   "    if (!window.__startCinematic) { window.__errs.push('no __startCinematic hook'); return; }",
   "    seedArcadeLedger();",
+  "    instrumentCineAudio();",
   "    var t0 = performance.now();",
   "    window.__startCinematic();",
   "    report.albumStart = window.__albumList ? window.__albumList().length : 0;",
@@ -148,10 +189,11 @@ var TAKEOVER_HARNESS = [
   "<script>",
   "(function () {",
   COMMON,
-  "  var report = { errors: [], stoppedMidRun: false, snap: null, seenStages: {}, stageOrder: [], seenLower: {}, seenPhoneApps: {}, seenMonitorApps: {}, seenGames: {}, seenCaptions: {}, sawPresentation: false, albumStart: 0, spoilers: { party:false, phase2:false, explanatoryCaption:false, roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, couple:false, aurora:false, finale:false, album:false } };",
+  "  var report = { errors: [], stoppedMidRun: false, snap: null, seenStages: {}, stageOrder: [], seenLower: {}, seenPhoneApps: {}, seenMonitorApps: {}, seenGames: {}, seenCaptions: {}, seenRoadtripPreview: {}, previewPlayerStateStable: true, highwayTableau: false, campTableauSafe: false, sawTailCue: false, sawPresentation: false, albumStart: 0, spoilers: { party:false, phase2:false, explanatoryCaption:false, roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, couple:false, aurora:false, finale:false, campPayoff:false, album:false } };",
   "  async function run() {",
   "    if (!window.__startCinematic) { window.__errs.push('no __startCinematic hook'); return; }",
   "    seedArcadeLedger();",
+  "    instrumentCineAudio();",
   "    window.__startCinematic();",
   "    report.albumStart = window.__albumList ? window.__albumList().length : 0;",
   "    for (var i=0; i<167 && window.__cinematic; i++) { sample(report); await sleep(120); }",
@@ -181,6 +223,7 @@ var HIDDEN_HARNESS = [
   "  async function run() {",
   "    if (!window.__startCinematic) { window.__errs.push('no __startCinematic hook'); return; }",
   "    seedArcadeLedger();",
+  "    instrumentCineAudio();",
   "    Object.defineProperty(document, 'hidden', { configurable:true, get:function(){ return forcedHidden; } });",
   "    window.__startCinematic();",
   "    await sleep(2500);",
@@ -194,6 +237,53 @@ var HIDDEN_HARNESS = [
   "      run().catch(function (e) { window.__errs.push('harness: ' + String(e && e.stack || e)); }).then(function () { finish(report); });",
   "    }, 400);",
   "  });",
+  "})();",
+  "</script>"
+].join("\n");
+
+// Exercise the road/camp boundary directly: presentation attributes restore byte-for-byte,
+// player state stays identical, and the adapter never asks the checkpoint owner to write.
+var ROAD_PREVIEW_HARNESS = [
+  "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
+  "<script>",
+  "(function () {",
+  "  function compactRoadtrip() {",
+  "    var entrance = window.__entranceRoomState ? window.__entranceRoomState() : null;",
+  "    var r = entrance && entrance.drive && entrance.drive.roadtrip;",
+  "    return r ? { active:r.active, paused:r.paused, campVisited:r.campVisited, route:r.route, routeDistance:r.routeDistance, distance:r.distance, score:r.score, accepted:r.accepted, unlocked:r.unlocked, fire:{ complete:r.campFire.complete, lit:r.campFire.lit, open:r.campFire.open }, stew:{ status:r.stew.status, open:r.stew.open }, stars:{ open:r.stargazing.open, complete:r.stargazing.complete, progress:r.stargazing.progress } } : null;",
+  "  }",
+  "  window.addEventListener('load', function () { setTimeout(function () {",
+  "    var report = { errors: [] };",
+  "    try {",
+  "      window.__cinematic = true;",
+  "      if (window.goToStage) window.goToStage('balcony');",
+  "      if (window.__openEntranceRoom) window.__openEntranceRoom();",
+  "      var room = document.getElementById('entrance-room');",
+  "      var camp = document.getElementById('entrance-roadtrip-camp');",
+  "      var campPorsche = document.getElementById('entrance-roadtrip-camp-porsche');",
+  "      var driveSvg = document.getElementById('entrance-drive-hud-svg');",
+  "      var beforeAttrs = [room.getAttribute('class'), room.getAttribute('style'), camp.getAttribute('class'), camp.getAttribute('style'), campPorsche.getAttribute('class'), campPorsche.getAttribute('style'), campPorsche.getAttribute('data-ready'), campPorsche.childNodes.length, driveSvg.getAttribute('viewBox'), driveSvg.getAttribute('preserveAspectRatio')];",
+  "      var beforeState = compactRoadtrip();",
+  "      var checkpoints = 0, checkpointOwner = window.__checkpointChanged;",
+  "      window.__checkpointChanged = function () { checkpoints++; };",
+  "      report.highway = !!(window.__cineRoadtripDemo && window.__cineRoadtripDemo('highway'));",
+  "      report.highwayState = window.__cineRoadtripDemoState ? window.__cineRoadtripDemoState() : null;",
+  "      report.camp = !!(window.__cineRoadtripDemo && window.__cineRoadtripDemo('camp'));",
+  "      report.campState = window.__cineRoadtripDemoState ? window.__cineRoadtripDemoState() : null;",
+  "      report.duringState = compactRoadtrip();",
+  "      report.stopped = !!(window.__cineRoadtripDemo && window.__cineRoadtripDemo(false));",
+  "      report.afterAttrs = [room.getAttribute('class'), room.getAttribute('style'), camp.getAttribute('class'), camp.getAttribute('style'), campPorsche.getAttribute('class'), campPorsche.getAttribute('style'), campPorsche.getAttribute('data-ready'), campPorsche.childNodes.length, driveSvg.getAttribute('viewBox'), driveSvg.getAttribute('preserveAspectRatio')];",
+  "      report.afterState = compactRoadtrip();",
+  "      report.checkpoints = checkpoints;",
+  "      report.previewClassAfter = room.classList.contains('cine-roadtrip-preview');",
+  "      window.__checkpointChanged = checkpointOwner;",
+  "      window.__cinematic = false;",
+  "      if (window.__closeEntranceRoom) window.__closeEntranceRoom();",
+  "      report.beforeAttrs = beforeAttrs;",
+  "      report.beforeState = beforeState;",
+  "    } catch (e) { report.errors.push(String(e && e.stack || e)); }",
+  "    document.getElementById('__report').textContent = JSON.stringify(report);",
+  "  }, 400); });",
   "})();",
   "</script>"
 ].join("\n");
@@ -214,7 +304,17 @@ function assertClean(label, s) {
   if (!s.auroraForceGarden && !s.auroraForceBalcony) pass(label + ": aurora override cleared"); else fail(label + ": aurora override cleared", JSON.stringify({ g: s.auroraForceGarden, b: s.auroraForceBalcony }));
   if (!s.seasonClass) pass(label + ": no previewed season stranded"); else fail(label + ": no previewed season stranded", s.seasonClass);
   if (!s.frameRunning && !s.cineCaption) pass(label + ": cinematic presentation classes cleared"); else fail(label + ": cinematic presentation classes cleared", JSON.stringify({ frame: s.frameRunning, caption: s.cineCaption }));
-  if (!s.secondRound) pass(label + ": Phase 2 remains locked"); else fail(label + ": Phase 2 remains locked");
+  if (!s.secondRound) pass(label + ": later act remains locked"); else fail(label + ": later act remains locked");
+  if (!s.cineRoadtripActive && !s.cineRoadtripClass) pass(label + ": road/camp preview adapter torn down");
+  else fail(label + ": road/camp preview adapter torn down", JSON.stringify({ active: s.cineRoadtripActive, className: s.cineRoadtripClass }));
+  if (!s.cineCampPorscheReady && s.cineCampPorscheChildren === 0) pass(label + ": preview-only camp car DOM removed");
+  else fail(label + ": preview-only camp car DOM removed", JSON.stringify({ ready: s.cineCampPorscheReady, children: s.cineCampPorscheChildren }));
+  if (!s.roadtripActive && s.roadtripRoute === "calgary" && !s.roadtripCampVisited && !s.roadtripCampFire && !s.roadtripStargazing) pass(label + ": preview left Road Trip/Camping player state fresh");
+  else fail(label + ": preview left Road Trip/Camping player state fresh", JSON.stringify({ active: s.roadtripActive, route: s.roadtripRoute, visited: s.roadtripCampVisited, fire: s.roadtripCampFire, stars: s.roadtripStargazing }));
+  if (!s.cineScoreStarted && !s.cineTailCueStarted) pass(label + ": trailer score and reprise ownership cleared");
+  else fail(label + ": trailer score and reprise ownership cleared", JSON.stringify({ score: s.cineScoreStarted, tail: s.cineTailCueStarted }));
+  if (s.scorePaused && s.scoreTime < 0.01 && !s.scoreFadeActive) pass(label + ": score paused, rewound, and has no live fade");
+  else fail(label + ": score paused, rewound, and has no live fade", JSON.stringify({ paused:s.scorePaused, time:s.scoreTime, fade:s.scoreFadeActive }));
   var strandedLower = Object.keys(s.lowerRooms || {}).filter(function (room) { return s.lowerRooms[room]; });
   if (!strandedLower.length) pass(label + ": no lower room stranded"); else fail(label + ": no lower room stranded", strandedLower.join(", "));
   if (!s.phoneOpen) pass(label + ": phone preview closed"); else fail(label + ": phone preview closed");
@@ -223,16 +323,16 @@ function assertClean(label, s) {
   if (!s.pcOn && s.monitorApps.length === 0) pass(label + ": monitor previews shut down"); else fail(label + ": monitor previews shut down", JSON.stringify({ pc: s.pcOn, apps: s.monitorApps }));
   if (s.arcadePlayed === '["flair"]' && s.arcadeSuggested === '["pacman"]') pass(label + ": passive previews preserve arcade recommendations");
   else fail(label + ": passive previews preserve arcade recommendations", JSON.stringify({ played: s.arcadePlayed, suggested: s.arcadeSuggested }));
-  if (s.stage === "kitchen" && s.maxUnlocked === 0) pass(label + ": control returns to the Phase 1 starting line");
-  else fail(label + ": control returns to the Phase 1 starting line", JSON.stringify({ stage: s.stage, maxUnlocked: s.maxUnlocked }));
+  if (s.stage === "kitchen" && s.maxUnlocked === 0) pass(label + ": control returns to the fresh starting line");
+  else fail(label + ": control returns to the fresh starting line", JSON.stringify({ stage: s.stage, maxUnlocked: s.maxUnlocked }));
   if (!s.balconyUnlocked) pass(label + ": first-arrival finale remains unspent"); else fail(label + ": first-arrival finale remains unspent");
 }
 
 function assertSpoilerFree(label, s) {
   if (!s) { fail(label + ": run report captured"); return; }
   var shown = Object.keys(s.spoilers || {}).filter(function (k) { return s.spoilers[k]; });
-  if (shown.length === 0) pass(label + ": no party, Phase 2, solution, or payoff systems shown");
-  else fail(label + ": no party, Phase 2, solution, or payoff systems shown", shown.join(", "));
+  if (shown.length === 0) pass(label + ": no party, later-act solution, or payoff systems shown");
+  else fail(label + ": no party, later-act solution, or payoff systems shown", shown.join(", "));
 }
 
 function assertKeys(label, seen, expected) {
@@ -255,7 +355,7 @@ function assertCaptions(label, seen, expected) {
 }
 
 console.log("Trailer cinematic — FULL reel (forced full-motion, focused):");
-var r = lib.runPageSync("rsvp.html", FULL_HARNESS, 90000, { patchRaf: true, forceMotion: true });
+var r = lib.runPageSync("loft-day.html", FULL_HARNESS, 90000, { patchRaf: true, forceMotion: true });
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
@@ -269,15 +369,23 @@ if (!r) {
   else fail("ghost cursor visible during the run");
   if (r.sawPresentation) pass("authored film presentation active during the run");
   else fail("authored film presentation active during the run");
-  assertNonSequential("full reel", r.stageOrder, ["kitchen", "office", "cuddly", "garden", "kitchen", "office", "cuddly", "balcony", "office", "balcony"]);
+  assertNonSequential("full reel", r.stageOrder, ["kitchen", "office", "cuddly", "garden", "kitchen", "office", "cuddly", "balcony"]);
   assertKeys("full reel: selected lower rooms appear", r.seenLower, ["cinema", "bathroom", "bedroom", "entrance"]);
   assertKeys("full reel: selected phone apps appear", r.seenPhoneApps, ["clock", "mines"]);
-  assertKeys("full reel: selected monitor apps appear", r.seenMonitorApps, ["life", "code"]);
-  assertKeys("full reel: selected minigames appear", r.seenGames, ["arcade", "bubbles", "ttt", "tetris"]);
-  assertCaptions("full reel", r.seenCaptions, ["cine_open", "cine_arcade", "cine_below", "cine_phase1", "cine_anywhere", "cine_phone", "cine_round", "cine_phase2", "cine_soft", "cine_skyline", "cine_apps", "cine_discover", "cine_signoff"]);
+  assertKeys("full reel: selected minigames appear", r.seenGames, ["arcade", "bubbles", "ttt"]);
+  assertKeys("full reel: road and camp tableaux appear", r.seenRoadtripPreview, ["highway", "camp"]);
+  if (r.highwayTableau && r.campTableauSafe) pass("full reel: authored highway plus spoiler-light fire/stars camp held");
+  else fail("full reel: authored highway plus spoiler-light fire/stars camp held", JSON.stringify({ highway: r.highwayTableau, camp: r.campTableauSafe }));
+  if (r.previewPlayerStateStable) pass("full reel: road/camp adapter never advances player state");
+  else fail("full reel: road/camp adapter never advances player state");
+  if (r.sawTailCue) pass("full reel: ending reprise cue started at the road cut");
+  else fail("full reel: ending reprise cue started at the road cut");
+  if (r.snap && r.snap.scorePlayCalls >= 3) pass("full reel: score was primed, started, and replayed for the ending");
+  else fail("full reel: score was primed, started, and replayed for the ending", r.snap && r.snap.scorePlayCalls);
+  assertCaptions("full reel", r.seenCaptions, ["cine_open", "cine_arcade", "cine_below", "cine_clues", "cine_anywhere", "cine_phone", "cine_round", "cine_more", "cine_soft", "cine_road", "cine_camp", "cine_signoff"]);
   assertSpoilerFree("full reel", r);
-  if (r.seenLower && r.seenLower.entrance) pass("reel closes over the downstairs Entrance/Porsche shot");
-  else fail("reel closes over the downstairs Entrance/Porsche shot");
+  if (r.seenLower && r.seenLower.entrance) pass("reel closes through the downstairs road/camp preview");
+  else fail("reel closes through the downstairs road/camp preview");
   assertClean("full-end", r.snap);
   if (r.realEntryArmed) pass("a later real balcony entry still arms the finale");
   else fail("a later real balcony entry still arms the finale");
@@ -287,7 +395,7 @@ if (!r) {
 
 console.log("");
 console.log("Trailer cinematic — mid-reel TAKE OVER teardown:");
-var t = lib.runPageSync("rsvp.html", TAKEOVER_HARNESS, 40000, { patchRaf: true, forceMotion: true });
+var t = lib.runPageSync("loft-day.html", TAKEOVER_HARNESS, 40000, { patchRaf: true, forceMotion: true });
 if (!t) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
@@ -301,7 +409,7 @@ if (!t) {
 
 console.log("");
 console.log("Trailer cinematic — reduced-motion path (default headless):");
-var rm = lib.runPageSync("rsvp.html", FULL_HARNESS, 45000, { patchRaf: true, forceReduce: true });
+var rm = lib.runPageSync("loft-day.html", FULL_HARNESS, 45000, { patchRaf: true, forceReduce: true });
 if (!rm) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
@@ -314,9 +422,15 @@ if (!rm) {
   assertNonSequential("reduced reel", rm.stageOrder);
   assertKeys("reduced reel: selected lower rooms appear", rm.seenLower, ["cinema", "bathroom", "bedroom", "entrance"]);
   assertKeys("reduced reel: selected phone apps appear", rm.seenPhoneApps, ["clock", "mines"]);
-  assertKeys("reduced reel: selected monitor app appears", rm.seenMonitorApps, ["life"]);
-  assertKeys("reduced reel: selected minigames appear", rm.seenGames, ["arcade", "bubbles", "ttt", "tetris"]);
-  assertCaptions("reduced reel", rm.seenCaptions, ["cine_open", "cine_arcade", "cine_below", "cine_phase1", "cine_anywhere", "cine_phone", "cine_phase2", "cine_round", "cine_skyline", "cine_apps", "cine_signoff"]);
+  assertKeys("reduced reel: selected minigames appear", rm.seenGames, ["arcade", "bubbles", "ttt"]);
+  assertKeys("reduced reel: road and camp tableaux appear", rm.seenRoadtripPreview, ["highway", "camp"]);
+  if (rm.highwayTableau && rm.campTableauSafe && rm.previewPlayerStateStable) pass("reduced reel: safe road/camp adapter held");
+  else fail("reduced reel: safe road/camp adapter held", JSON.stringify({ highway: rm.highwayTableau, camp: rm.campTableauSafe, stable: rm.previewPlayerStateStable }));
+  if (rm.sawTailCue) pass("reduced reel: ending reprise cue started");
+  else fail("reduced reel: ending reprise cue started");
+  if (rm.snap && rm.snap.scorePlayCalls >= 3) pass("reduced reel: score was primed, started, and replayed for the ending");
+  else fail("reduced reel: score was primed, started, and replayed for the ending", rm.snap && rm.snap.scorePlayCalls);
+  assertCaptions("reduced reel", rm.seenCaptions, ["cine_open", "cine_arcade", "cine_below", "cine_clues", "cine_anywhere", "cine_phone", "cine_more", "cine_round", "cine_road", "cine_camp", "cine_signoff"]);
   assertSpoilerFree("reduced reel", rm);
   assertClean("reduced-end", rm.snap);
   if (rm.errors.length === 0) pass("no uncaught JS errors across the reduced reel");
@@ -325,7 +439,7 @@ if (!rm) {
 
 console.log("");
 console.log("Trailer cinematic — hidden-tab abort:");
-var h = lib.runPageSync("rsvp.html", HIDDEN_HARNESS, 15000, { patchRaf: true, forceMotion: true });
+var h = lib.runPageSync("loft-day.html", HIDDEN_HARNESS, 15000, { patchRaf: true, forceMotion: true });
 if (!h) {
   fail("hidden-tab harness reported");
 } else {
@@ -333,6 +447,26 @@ if (!h) {
   assertClean("hidden-tab", h.snap);
   if (h.errors.length === 0) pass("no uncaught JS errors through hidden-tab abort");
   else fail("no uncaught JS errors through hidden-tab abort", h.errors.slice(0, 12).join("\n"));
+}
+
+console.log("");
+console.log("Trailer cinematic — road/camp preview adapter contract:");
+var p = lib.runPageSync("loft-day.html", ROAD_PREVIEW_HARNESS, 15000, { patchRaf: true, forceMotion: true });
+if (!p) {
+  fail("road/camp preview adapter harness reported");
+} else {
+  if (p.highway && p.highwayState && p.highwayState.highway) pass("adapter presents the highway tableau");
+  else fail("adapter presents the highway tableau", JSON.stringify(p.highwayState));
+  if (p.camp && p.campState && p.campState.camp) pass("adapter presents the camp tableau");
+  else fail("adapter presents the camp tableau", JSON.stringify(p.campState));
+  if (p.stopped && !p.previewClassAfter && JSON.stringify(p.beforeAttrs) === JSON.stringify(p.afterAttrs)) pass("adapter restores exact incoming presentation attributes");
+  else fail("adapter restores exact incoming presentation attributes", JSON.stringify({ stopped:p.stopped, preview:p.previewClassAfter, before:p.beforeAttrs, after:p.afterAttrs }));
+  if (JSON.stringify(p.beforeState) === JSON.stringify(p.duringState) && JSON.stringify(p.beforeState) === JSON.stringify(p.afterState)) pass("adapter never mutates Road Trip/Camping player state");
+  else fail("adapter never mutates Road Trip/Camping player state", JSON.stringify({ before:p.beforeState, during:p.duringState, after:p.afterState }));
+  if (p.checkpoints === 0) pass("adapter never checkpoints");
+  else fail("adapter never checkpoints", p.checkpoints);
+  if (p.errors.length === 0) pass("no uncaught JS errors across adapter contract");
+  else fail("no uncaught JS errors across adapter contract", p.errors.join("\n"));
 }
 
 console.log("");

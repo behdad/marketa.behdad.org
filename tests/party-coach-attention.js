@@ -19,6 +19,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       party: !!window.__gardenPartyOn,
       coach: !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive()),
       coachDue: !!(window.__partyLifecycleState && window.__partyLifecycleState().switchCoachSeen),
+      messageCoach: visible(".msg-badge-coach"),
       thumb: visible(".msg-thumb"),
       ring: visible(".call-ring"),
       hold: window.__messageNotificationsHeld ? window.__messageNotificationsHeld() : null,
@@ -75,13 +76,17 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     snap("coachAfterDungeon");
     window.__deliverPhoneMessage("cue_calendar");
     await sleep(30);
+    if (window.__repeatMsgBadgeCoach) window.__repeatMsgBadgeCoach();
     snap("messageDuringCoach");
     document.querySelector("#party-switch-coach .hunt-coach-x").dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true }));
     await sleep(540);
     snap("messageReleased");
-
     window.__hideMessageThumb();
+    await sleep(3100);
+    snap("messageCoachReleased");
+    if (window.__dismissMsgBadgeCoach) window.__dismissMsgBadgeCoach();
+
     window.__resetPartyExitHint();
     window.goToStage("garden");
     window.__madlaRingForced();
@@ -124,7 +129,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 10500, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 14500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,
@@ -167,12 +172,15 @@ check(coachDuringDungeonReturn && !coachDuringDungeonReturn.dungeon && !coachDur
 check(coachAfterDungeon && !coachAfterDungeon.dungeon && coachAfterDungeon.coach && coachAfterDungeon.coachDue,
   "the settled Garden restores its pending coach after Dungeon", coachAfterDungeon);
 var duringMessage = step("messageDuringCoach"), releasedMessage = step("messageReleased");
-check(duringMessage && duringMessage.coach && !duringMessage.thumb && duringMessage.hold &&
+check(duringMessage && duringMessage.coach && !duringMessage.thumb && !duringMessage.messageCoach && duringMessage.hold &&
   duringMessage.hold.messages.join(",") === "cue_calendar",
-  "a new notification queues behind the visible coach", duringMessage);
-check(releasedMessage && !releasedMessage.coach && releasedMessage.thumb && releasedMessage.hold &&
+  "a new notification and its unread-message coach queue behind the visible Party-switch coach", duringMessage);
+check(releasedMessage && !releasedMessage.coach && releasedMessage.thumb && !releasedMessage.messageCoach && releasedMessage.hold &&
   releasedMessage.hold.messages.length === 0,
   "the × releases the queued notification exactly once and keeps the party running", releasedMessage);
+var releasedBadgeCoach = step("messageCoachReleased");
+check(releasedBadgeCoach && !releasedBadgeCoach.coach && !releasedBadgeCoach.thumb && releasedBadgeCoach.messageCoach,
+  "the unread-message coach starts only after the Party-switch coach and released preview are dismissed", releasedBadgeCoach);
 var callBefore = step("callBeforeCoach"), callCleared = step("callCleared"), callDuring = step("callDuringCoach");
 check(callBefore && callBefore.ring && callBefore.coachDue && !callBefore.coach,
   "an already-ringing call also keeps the due coach off-screen", callBefore);

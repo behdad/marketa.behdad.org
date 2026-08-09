@@ -70390,7 +70390,8 @@ setOfficeProgress("pc", false);
     // as her machine rudely interrupting her translating. Every 3rd update installs
     // something sweet instead: release notes + a heart where the apple logo should be.
     function laptopUpdateSoundAllowed() {
-      return !(window.__monitorAttention && window.__monitorAttention());
+      return !document.hidden && document.hasFocus() &&
+        !(window.__monitorAttention && window.__monitorAttention());
     }
     function runLaptopUpdate() {
       if (!laptop.classList.contains("open")) return;
@@ -70411,7 +70412,7 @@ setOfficeProgress("pc", false);
       }, 3600));
       laptopUpdateTimers.push(setTimeout(function () {
         laptop.classList.remove("rebooting", "sweet");
-        if (laptopUpdateSoundAllowed()) playBootChimeSound();
+        if (laptopUpdateSoundAllowed()) playLaptopBootSound("office-laptop");
         scheduleLaptopSaver(); // back to idle — the screensaver clock resumes
       }, 5300));
     }
@@ -70486,7 +70487,7 @@ setOfficeProgress("pc", false);
         laptop.classList.remove("connecting");
         laptop.classList.add("connected");
         if (callCallee === "prague") markPragueCalled(); // Lübeck never feeds the office gate
-        playBootChimeSound();
+        playCallConnectSound("office-laptop");
         playCallLaughSound(); // the family cheering across the ocean
         // the ongoing static/giggling bed while it lasts — Lübeck's flat shares the
         // indoor ("tehran") flavor; Prague keeps the garden wind
@@ -71998,7 +71999,7 @@ setOfficeProgress("pc", false);
     if (window.__monitorZoomIn) window.__monitorZoomIn(); // booting pulls the view up to the screen
     bootTimers.push(setTimeout(function () {
       monitor.classList.remove("show-fedora");
-      playBootChimeSound();
+      playPcBootSound("office-monitor");
       // a wall sign that triggered this boot lands the browser on its own page; a plain
       // power-on lands on the caps "home"
       if (pendingBootSite) {
@@ -109740,14 +109741,16 @@ function playCallHangupSound(panId) {
     });
   } catch (e) {}
 }
-// The monitor's power-on jingle: a low CRT swell under a soft rising arpeggio,
-// like a friendly Linux desktop finishing its boot.
-function playBootChimeSound(panId) {
+// A video call's connection cue: the original low swell + rising C-major
+// arpeggio. Device boots have their own signatures below, so this now means
+// only "the far end answered."
+function playCallConnectSound(panId) {
   try {
+    if (document.hidden || !document.hasFocus()) return;
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;
-    // low power-on swell (the machine waking)
+    // low carrier-lock swell
     var hum = ctx.createOscillator();
     hum.type = "sine";
     hum.frequency.setValueAtTime(70, t);
@@ -109774,6 +109777,81 @@ function playBootChimeSound(panId) {
       gain.connect(pannedOut(ctx, panId == null ? "office-laptop" : panId));
       osc.start(t0);
       osc.stop(t0 + 0.75);
+    });
+  } catch (e) {}
+}
+// The desktop PC wakes with a little three-packet handshake, then resolves into
+// a warm open fifth over its power-supply swell: compact, sturdy, slightly nerdy.
+function playPcBootSound(panId) {
+  try {
+    if (document.hidden || !document.hasFocus()) return;
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 0.52;
+    master.connect(pannedOut(ctx, panId == null ? "office-monitor" : panId));
+
+    var power = ctx.createOscillator();
+    power.type = "sine";
+    power.frequency.setValueAtTime(46, t);
+    power.frequency.exponentialRampToValueAtTime(92, t + 0.34);
+    var powerGain = ctx.createGain();
+    powerGain.gain.setValueAtTime(0.0001, t);
+    powerGain.gain.exponentialRampToValueAtTime(0.085, t + 0.045);
+    powerGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.48);
+    power.connect(powerGain); powerGain.connect(master);
+    power.start(t); power.stop(t + 0.5);
+
+    [{ f: 164.81, at: 0.08 }, { f: 246.94, at: 0.17 }, { f: 196, at: 0.26 }].forEach(function (note) {
+      var osc = ctx.createOscillator(); osc.type = "triangle";
+      var tt = t + note.at;
+      osc.frequency.setValueAtTime(note.f * 0.97, tt);
+      osc.frequency.exponentialRampToValueAtTime(note.f, tt + 0.035);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, tt);
+      gain.gain.exponentialRampToValueAtTime(0.052, tt + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, tt + 0.105);
+      osc.connect(gain); gain.connect(master);
+      osc.start(tt); osc.stop(tt + 0.12);
+    });
+    [{ f: 293.66, level: 0.065 }, { f: 440, level: 0.045 }].forEach(function (note) {
+      var osc = ctx.createOscillator(); osc.type = "sine";
+      var tt = t + 0.34;
+      osc.frequency.setValueAtTime(note.f, tt);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, tt);
+      gain.gain.exponentialRampToValueAtTime(note.level, tt + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, tt + 0.56);
+      osc.connect(gain); gain.connect(master);
+      osc.start(tt); osc.stop(tt + 0.6);
+    });
+  } catch (e) {}
+}
+// The laptop answers with three small glass tones tracing a high-low-rise
+// contour. No low hum or packet blips: it stays airy and unlike both PC and call.
+function playLaptopBootSound(panId) {
+  try {
+    if (document.hidden || !document.hasFocus()) return;
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 0.48;
+    master.connect(pannedOut(ctx, panId == null ? "office-laptop" : panId));
+    [{ f: 1318.51, at: 0, level: 0.052 }, { f: 880, at: 0.13, level: 0.044 },
+      { f: 1108.73, at: 0.29, level: 0.068 }].forEach(function (note) {
+      [1, 2.01].forEach(function (partial, index) {
+        var osc = ctx.createOscillator(); osc.type = "sine";
+        var tt = t + note.at;
+        osc.frequency.setValueAtTime(note.f * partial, tt);
+        var gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, tt);
+        gain.gain.exponentialRampToValueAtTime(note.level * (index ? 0.22 : 1), tt + 0.009);
+        gain.gain.exponentialRampToValueAtTime(0.0001, tt + (index ? 0.32 : 0.58));
+        osc.connect(gain); gain.connect(master);
+        osc.start(tt); osc.stop(tt + 0.62);
+      });
     });
   } catch (e) {}
 }
@@ -132531,7 +132609,7 @@ function spawnDustMote(container) {
     bowl: function () { playBowlRingSound.apply(null, arguments); },
     alien: function () { playAlienBlipSound.apply(null, arguments); },
     // office & computer
-    boot: function () { playBootChimeSound.apply(null, arguments); },
+    boot: function () { playPcBootSound.apply(null, arguments); },
     typewriter: function () { playTypewriterSound.apply(null, arguments.length ? arguments : [1]); },
     "desk-motor": function () { playDeskMotorSound.apply(null, arguments); },
     "chair-whirl": function () { playChairWhirlSound.apply(null, arguments.length ? arguments : [1]); },

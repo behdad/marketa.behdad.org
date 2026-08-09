@@ -1245,12 +1245,12 @@ function checkLaptopUpdateSoundGate(file, script) {
   var end = script.indexOf("// Call the Prague garden:", start);
   var body = start >= 0 && end > start ? script.slice(start, end) : "";
   var gatedClick = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playLaptopClickSound\("office-laptop"\)/.test(body);
-  var gatedChime = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playBootChimeSound\(\)/.test(body);
-  var readsZoom = /function laptopUpdateSoundAllowed\(\)\s*\{[\s\S]*?__monitorAttention/.test(script);
-  if (!gatedClick || !gatedChime || !readsZoom) {
-    fail(file + ": automatic laptop update sounds are muted during monitor zoom");
+  var gatedChime = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playLaptopBootSound\("office-laptop"\)/.test(body);
+  var readsAttention = /function laptopUpdateSoundAllowed\(\)\s*\{[\s\S]*?document\.hidden[\s\S]*?document\.hasFocus\(\)[\s\S]*?__monitorAttention/.test(script);
+  if (!gatedClick || !gatedChime || !readsAttention) {
+    fail(file + ": automatic laptop update sounds are muted when unattended or during monitor zoom");
   } else {
-    pass(file + ": automatic laptop update sounds are muted during monitor zoom");
+    pass(file + ": automatic laptop update sounds are muted when unattended or during monitor zoom");
   }
 }
 

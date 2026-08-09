@@ -351,9 +351,13 @@ do not compete with traffic, tire, pursuit, or collision cues.
   backing score alone, survives room changes and Continue/reload, and rearms only after an
   explicit projector-channel change. Party start/stop does not release voices, because
   playing along is supported during the party.
+- **Office device signatures** are separate one-shots on the shared SFX bus: the PC uses
+  a low power swell, three packet-like blips, and an open-fifth resolve; the laptop uses
+  three glassy high-low-rise tones; video-call connection keeps its low swell and rising
+  C-major arpeggio. Their helpers all re-check focus and visibility before scheduling.
 - **The office laptop's automatic update** keeps animating while the desktop monitor is
-  being engaged or is zoomed, but its update click and reboot chime are suppressed at
-  callback time. Attention begins on the initiating monitor tap, including the brief
+  being engaged or is zoomed, but its update click and laptop-specific reboot cue are
+  suppressed at callback time. Attention begins on the initiating monitor tap, including the brief
   dark-screen boot interval before zoom becomes eligible. Room tone (fire, aquarium
   hush/rain, birds/crickets, kettle, radio, PC fan, AC, and city hum) yields while the pocket phone or either
   office screen owns the foreground, then re-evaluate on dismissal. Player-triggered app,

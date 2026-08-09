@@ -135,7 +135,8 @@ opens the complete keyboard-shortcut card.
 - `Tab`: open or close **The Loft** room map. Its arrow-key selection follows the room layout;
   `Enter` opens the selected room. A locked room takes two quick `Enter` presses before the Party and
   one after it begins.
-- `Escape` / `Backspace`: dismiss the current activity or layer. In a search field, Backspace only
+- `Escape` / `Backspace`: dismiss the current activity or layer. On an active Road Trip, the first
+  press pauses the highway and a second press exits it. In a search field, Backspace only
   edits the query and stays put even when it is empty; use `Escape` to leave. In an idle lower room
   both keys leave you there; use `↑` when you want to go upstairs.
 
@@ -144,7 +145,8 @@ opens the complete keyboard-shortcut card.
 - `Enter`: perform the next guided action. After the Morning routine it uses the room's main
   activity: the daytime Kitchen repeats the espresso steps, the visible Bar starts Flair Catch,
   and the Garden / Party toggles the party.
-- `Space`: play, pause, or act in the current game or media surface.
+- `Space`: play, pause, or act in the current game or media surface. On a Road Trip it toggles
+  cruise control instead.
 - `C`: open or close the phone.
 - `/`: open or close Messages.
 - `M`: open the Office monitor.
@@ -171,6 +173,11 @@ and the console.
 - `A` / `M`: select automatic or manual transmission.
 - `Shift` + `↑` / `↓`: change gear or move the automatic selector toward P/D.
 - `Ctrl`: set cruise control at the current speed; braking cancels it.
+
+These are the local street controls. On a Road Trip, `Space` toggles cruise control, `Enter` toggles
+pause/resume, and `Escape` / `Backspace` pause first and exit only when pressed again while paused.
+Steering or using a pedal also resumes a paused highway. Text fields, open devices, and Camping
+activities keep ownership of their normal keys.
 
 The driving coach remains the best introduction because it adapts its instructions to the selected
 transmission and input device.

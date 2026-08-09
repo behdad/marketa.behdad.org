@@ -35795,7 +35795,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <g id="entrance-roadtrip-pause-dialog">
             <rect x="170" y="-45" width="340" height="86" rx="15" fill="#8e3a4a" fill-opacity=".5" stroke="#fffdf8" stroke-width="2.4"/>
             <text class="entrance-roadtrip-pause-copy" x="340" y="-9" font-size="22" font-weight="800" data-i="entrance_roadtrip_pause_title">PAUSED</text>
-            <text class="entrance-roadtrip-pause-copy" x="340" y="15" font-size="8.2" font-weight="600" data-i="entrance_roadtrip_pause_line">Steer, use a pedal, Space, Enter or Play to resume.</text>
+            <text class="entrance-roadtrip-pause-copy" x="340" y="15" font-size="8.2" font-weight="600" data-i="entrance_roadtrip_pause_line">Resume with Enter, Play, steering or a pedal · Esc again exits.</text>
           </g>
           </g>
         </svg>
@@ -45762,6 +45762,14 @@ window.__entranceRoomOpen = false;
     }
     return exited;
   }
+  function backFromRoadtrip() {
+    if (!roadtripState.active) return false;
+    if (roadtripState.route !== "camp" && !roadtripResumePending &&
+        ["capture", "stopped", "arrest"].indexOf(roadtripState.police.phase) < 0) {
+      return toggleRoadtripTransport();
+    }
+    return exitRoadtrip();
+  }
   function startRoadtrip(forceFresh, startingRoute, startingDistance, preserveCamp, developerBypass) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
     if (window.__finishOpeningGuide) window.__finishOpeningGuide();
@@ -48452,13 +48460,17 @@ window.__entranceRoomOpen = false;
     driveState.cruiseTarget = driveState.speed * driveState.facing;
     completePorscheDriveCoachAction("cruise");
     if (driveHud) driveHud.classList.add("drive-cruise-on");
-    if (window.__captionOverlay) window.__captionOverlay("entrance_drive_cruise_active", {
+    if (window.__captionOverlay) window.__captionOverlay(roadtripState.active ?
+      "entrance_drive_cruise_active_roadtrip" : "entrance_drive_cruise_active", {
       owner: "entrance-drive-cruise", scope: "lower:entrance", priority: 30,
       duration: 3200, clock: "attended", replacements: { speed: Math.round(driveState.cruiseTarget) }
     });
     paintPorscheDriveHud();
     ensurePorscheDriveFrame();
     return true;
+  }
+  function togglePorscheCruiseActive() {
+    return setPorscheCruiseActive(!driveState.cruiseActive);
   }
   function restorePorscheCruiseSnapshot(snapshot) {
     var target = snapshot && Number(snapshot.target);
@@ -49276,10 +49288,14 @@ window.__entranceRoomOpen = false;
   var driveHudPartyStopPending = false;
   function porscheDriveKeyboardOwnership() {
     var entranceOpen = !!window.__entranceRoomOpen;
+    var covered = entranceOpen && !!(window.__foregroundAmbienceCovered &&
+      window.__foregroundAmbienceCovered());
     return {
-      owned: entranceOpen && !!(driveState.hudOpen || driveHudPartyStopPending || roadtripState.active),
+      owned: entranceOpen && !covered &&
+        !!(driveState.hudOpen || driveHudPartyStopPending || roadtripState.active),
       hudOpen: entranceOpen && !!driveState.hudOpen,
-      partyStopPending: entranceOpen && !!driveHudPartyStopPending
+      partyStopPending: entranceOpen && !!driveHudPartyStopPending,
+      covered: covered
     };
   }
   function refreshEntranceWeatherAudio(stopFade) {
@@ -50181,6 +50197,8 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveKeyboardOwnership = porscheDriveKeyboardOwnership;
   window.__dismissEntrancePorscheDriveHud = dismissPorscheDriveHud;
   window.__exitEntranceRoadtrip = exitRoadtrip;
+  window.__backFromEntranceRoadtrip = backFromRoadtrip;
+  window.__toggleEntrancePorscheCruise = togglePorscheCruiseActive;
   window.__updatePorscheIdle = updatePorscheDriveLifecycle;
   window.__entranceDriveKey = handlePorscheDriveKey;
   window.__entranceDriveStep = porscheDriveStep;
@@ -51015,6 +51033,10 @@ document.addEventListener("keydown", function (event) {
 document.addEventListener("keydown", function (event) {
   if (!window.__entranceRoomOpen) return;
   if (window.__dropTermOpen && window.__dropTermOpen()) return;
+  var entranceKeyTarget = event.target;
+  if (entranceKeyTarget && (/^(INPUT|TEXTAREA|SELECT)$/.test(entranceKeyTarget.tagName || "") ||
+      entranceKeyTarget.isContentEditable)) return;
+  if (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) return;
   var entranceRoom = document.getElementById("entrance-room");
   var campSceneOpen = entranceRoom && entranceRoom.classList.contains("roadtrip-active") &&
     entranceRoom.classList.contains("roadtrip-route-camp");
@@ -51121,14 +51143,20 @@ document.addEventListener("keydown", function (event) {
           new MouseEvent("click", { bubbles: true, cancelable: true }));
       }
     } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
-      if (roadtripInviteVisible) document.getElementById("entrance-roadtrip-invite-later").dispatchEvent(
+      if (event.repeat) {
+        // Holding a back key must not satisfy both rungs of the pause-then-exit ladder.
+      } else if (roadtripInviteVisible) document.getElementById("entrance-roadtrip-invite-later").dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
-      else if (!(window.__exitEntranceRoadtrip && window.__exitEntranceRoadtrip()) &&
+      else if (!(window.__backFromEntranceRoadtrip && window.__backFromEntranceRoadtrip()) &&
           window.__dismissEntrancePorscheDriveHud) window.__dismissEntrancePorscheDriveHud();
     } else if (event.key === "Enter" &&
         !document.getElementById("entrance-drive-hud").classList.contains("drive-engine-on")) {
       if (window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
-    } else if ((event.key === "Enter" || event.key === " " || event.key === "Spacebar") &&
+    } else if ((event.key === " " || event.key === "Spacebar") &&
+        window.__toggleEntrancePorscheCruise &&
+        window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState().active) {
+      if (!event.repeat) window.__toggleEntrancePorscheCruise();
+    } else if (event.key === "Enter" &&
         window.__toggleEntranceRoadtripTransport &&
         window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState().active) {
       if (!event.repeat) window.__toggleEntranceRoadtripTransport();
@@ -52877,12 +52905,13 @@ var T = {
       entrance_drive_rev_shift_manual: "Shift into 1st to drive.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
       entrance_drive_cruise_active: "Cruising at {speed} km/h · tap Ctrl to reset the held speed · brake to cancel.",
-      entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 🍄, 💋, 🐸 & ∞.",
+      entrance_drive_cruise_active_roadtrip: "Cruising at {speed} km/h · Space turns cruise off · brake cancels.",
+      entrance_roadtrip_drive: "Highway · Space toggles cruise · Enter pauses · dodge traffic and collect ♥️, 🍄, 💋, 🐸 & ∞.",
       entrance_roadtrip_unlocked: "All 10 rooms explored · fancy a road trip?",
       entrance_roadtrip_resume: "Roadtrip paused · steer or press a pedal to resume.",
-      entrance_roadtrip_transport_paused: "Road Trip paused · steer, use a pedal, Space, Enter or Play to resume.",
+      entrance_roadtrip_transport_paused: "Road Trip paused · resume with Enter, Play, steering or a pedal · Esc again exits.",
       entrance_roadtrip_pause_title: "PAUSED",
-      entrance_roadtrip_pause_line: "Steer, use a pedal, Space, Enter or Play to resume.",
+      entrance_roadtrip_pause_line: "Resume with Enter, Play, steering or a pedal · Esc again exits.",
       entrance_roadtrip_invite_title: "Let’s road trip!",
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_route_title: "Choose a starting segment",
@@ -53721,8 +53750,8 @@ var T = {
     browser_noframe: "if it stays blank, that site refuses to live in a picture frame — most big ones do",
     eq_off_note: "This browser plays the songs directly — there's no audio pipeline for the equalizer to pull on. Try it on another device 🎚",
     kbd_title: "Keyboard shortcuts",
-    kbd_space: "game action, or play / pause media",
-    kbd_esc: "dismiss / go back",
+    kbd_space: "game / media action · Road Trip cruise",
+    kbd_esc: "dismiss / go back · Road Trip pause, then exit",
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
     kbd_tab: "open / close the whole-loft view",
@@ -53736,7 +53765,7 @@ var T = {
     kbd_digits: "upstairs room",
     kbd_lower_digits: "downstairs room",
     kbd_devices: "monitor / laptop / cellphone",
-    kbd_enter: "advance the room puzzle",
+    kbd_enter: "advance the room puzzle · Road Trip pause",
     kbd_d: "day ↔ night",
     kbd_roadtrip: "unlock every room for Road Trip",
     kbd_kitten: "toggle the kitten",
@@ -54253,12 +54282,13 @@ var T = {
       entrance_drive_rev_shift_manual: "Zařaď jedničku a rozjeď se.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       entrance_drive_cruise_active: "Tempomat drží {speed} km/h · Ctrl nastaví novou rychlost · brzda ho zruší.",
-      entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 🍄, 💋, 🐸 a ∞.",
+      entrance_drive_cruise_active_roadtrip: "Tempomat drží {speed} km/h · mezerník ho vypne · brzda ho zruší.",
+      entrance_roadtrip_drive: "Dálnice · mezerník přepíná tempomat · Enter pozastaví · vyhýbej se provozu a sbírej ♥️, 🍄, 💋, 🐸 a ∞.",
       entrance_roadtrip_unlocked: "Všech 10 pokojů je prozkoumaných · dáme si výlet?",
       entrance_roadtrip_resume: "Jízda pozastavena · pokračuj volantem nebo pedálem.",
-      entrance_roadtrip_transport_paused: "Jízda pozastavena · pokračuj řízením, pedálem, mezerníkem, Enterem nebo tlačítkem přehrávání.",
+      entrance_roadtrip_transport_paused: "Jízda pozastavena · pokračuj Enterem, přehráním, řízením nebo pedálem · dalším Esc odejdeš.",
       entrance_roadtrip_pause_title: "POZASTAVENO",
-      entrance_roadtrip_pause_line: "Pokračuj řízením, pedálem, mezerníkem, Enterem nebo tlačítkem přehrávání.",
+      entrance_roadtrip_pause_line: "Pokračuj Enterem, přehráním, řízením nebo pedálem · dalším Esc odejdeš.",
       entrance_roadtrip_invite_title: "Jedeme na výlet!",
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_route_title: "Vyber výchozí úsek",
@@ -55093,8 +55123,8 @@ var T = {
     browser_noframe: "když zůstane prázdná, ten web se odmítá nastěhovat do obrázkového rámečku — většina velkých to tak má",
     eq_off_note: "Tenhle prohlížeč přehrává písničky napřímo — ekvalizér tu nemá za co tahat. Zkus to na jiném zařízení 🎚",
     kbd_title: "Klávesové zkratky",
-    kbd_space: "akce ve hře nebo přehrát / pozastavit média",
-    kbd_esc: "zavřít / zpět",
+    kbd_space: "akce ve hře / média · tempomat na výletě",
+    kbd_esc: "zavřít / zpět · výlet nejdřív pozastaví",
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
     kbd_tab: "otevřít / zavřít pohled na celý loft",
@@ -55108,7 +55138,7 @@ var T = {
     kbd_digits: "místnost nahoře",
     kbd_lower_digits: "místnost dole",
     kbd_devices: "monitor / notebook / telefon",
-    kbd_enter: "pokračovat v hádance místnosti",
+    kbd_enter: "pokračovat v hádance · pozastavit výlet",
     kbd_d: "den ↔ noc",
     kbd_roadtrip: "odemknout všechny místnosti pro výlet",
     kbd_kitten: "přepnout kotě",
@@ -86724,7 +86754,8 @@ async def localfont(name):
     return transportSources().some(function (s) { return s.isPlaying(); });
   }
   function toggleMusicPlayback() {
-    if (window.__toggleEntranceRoadtripTransport && window.__toggleEntranceRoadtripTransport()) return;
+    if (!(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) &&
+        window.__toggleEntranceRoadtripTransport && window.__toggleEntranceRoadtripTransport()) return;
     var sources = transportSources();
     var playing = sources.filter(function (s) { return s.isPlaying(); });
     if (playing.length) {

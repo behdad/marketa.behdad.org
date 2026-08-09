@@ -1116,23 +1116,27 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       visible: checkpointVisible
     };
     startRoadtripInLane();
+    window.__entranceDriveSetMotion(90, 3);
     var transportButton = document.getElementById("hunt-playpause-btn");
     var transport = { before: copy(state()) };
     pressDocumentKey(" ");
-    transport.spacePaused = copy(state());
-    transport.spacePausedButton = transportButton.classList.contains("paused");
+    transport.spaceCruiseOn = copy(state());
+    pressDocumentKey(" ");
+    transport.spaceCruiseOff = copy(state());
+    pressDocumentKey("Enter");
+    transport.enterPaused = copy(state());
     step(1000);
-    transport.spaceHeld = copy(state());
+    transport.enterHeld = copy(state());
     window.__entranceDriveControl("throttle", true);
     transport.pedalResumed = copy(state());
     window.__entranceDriveControl("throttle", false);
-    pressDocumentKey(" ");
+    pressDocumentKey("Enter");
     transport.steeringPaused = copy(state());
     window.__entranceDriveControl("steerLeft", true);
     transport.steeringResumed = copy(state());
     window.__entranceDriveControl("steerLeft", false);
     pressDocumentKey("Enter");
-    transport.enterPaused = copy(state());
+    transport.enterPausedAgain = copy(state());
     pressDocumentKey("Enter");
     transport.enterResumed = copy(state());
     transportButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
@@ -1362,14 +1366,16 @@ check(normalHudEnter && !normalHudEnter.before.car.engineOn &&
   "without the compact mark, document Enter starts but never stops the engine", normalHudEnter);
 var transport = s.transport;
 check(transport && transport.before.drive.roadtrip.active && !transport.before.drive.roadtrip.resumePending &&
-  transport.spacePaused.drive.roadtrip.active && transport.spacePaused.drive.roadtrip.resumePending &&
-  transport.spacePaused.car.engineOn && transport.spacePausedButton &&
-  transport.spaceHeld.drive.roadtrip.elapsedSeconds === transport.spacePaused.drive.roadtrip.elapsedSeconds &&
+  transport.spaceCruiseOn.drive.roadtrip.active && !transport.spaceCruiseOn.drive.roadtrip.resumePending &&
+  transport.spaceCruiseOn.drive.cruise.active && transport.spaceCruiseOn.car.engineOn &&
+  !transport.spaceCruiseOff.drive.cruise.active && !transport.spaceCruiseOff.drive.roadtrip.resumePending &&
+  transport.enterPaused.drive.roadtrip.resumePending &&
+  transport.enterHeld.drive.roadtrip.elapsedSeconds === transport.enterPaused.drive.roadtrip.elapsedSeconds &&
   !transport.pedalResumed.drive.roadtrip.resumePending && transport.pedalResumed.car.engineOn &&
   transport.steeringPaused.drive.roadtrip.resumePending &&
   !transport.steeringResumed.drive.roadtrip.resumePending && transport.steeringResumed.car.engineOn,
-  "Space pauses Road Trip in place; a fresh pedal or steering input resumes without stopping the engine", transport);
-check(transport && transport.enterPaused.drive.roadtrip.resumePending &&
+  "Space toggles Road Trip cruise while Enter pauses in place; pedals and steering still resume", transport);
+check(transport && transport.enterPausedAgain.drive.roadtrip.resumePending &&
   !transport.enterResumed.drive.roadtrip.resumePending && transport.enterResumed.car.engineOn,
   "Enter pauses and resumes Road Trip instead of toggling the engine", transport);
 check(transport && transport.buttonPaused.drive.roadtrip.resumePending && transport.buttonPausedClass &&
@@ -1467,7 +1473,7 @@ check(focusPause &&
   focusPause.waitingPresentation.panelFill === "#8e3a4a" &&
   focusPause.waitingPresentation.panelOpacity === ".5" &&
   focusPause.waitingPresentation.title === "PAUSED" &&
-  /Space, Enter or Play/.test(focusPause.waitingPresentation.line) &&
+  /Enter, Play/.test(focusPause.waitingPresentation.line) &&
   focusPause.waitingPresentation.captionVisibility === "hidden" &&
   focusPause.waitingStep.drive.roadtrip.elapsedSeconds === focusPause.end.drive.roadtrip.elapsedSeconds &&
   focusPause.waitingStep.drive.roadtrip.distance === focusPause.end.drive.roadtrip.distance &&
@@ -1847,14 +1853,14 @@ check(exitLadder && exitLadder.streetAfterExit && !exitLadder.streetAfterExit.dr
   "block driving remains available after stopping until the highway is deliberately accepted again",
   exitLadder && exitLadder.streetAfterExit);
 check(exitLadder && exitLadder.first.open && exitLadder.first.drive.hud && exitLadder.first.car.engineOn &&
-  !exitLadder.first.drive.roadtrip.active && exitLadder.first.drive.roadtrip.paused &&
-  exitLadder.first.drive.roadtrip.exitUntilStop &&
-  exitLadder.first.drive.roadtrip.reentryVisible &&
-  exitLadder.second.open && !exitLadder.second.drive.hud && !exitLadder.second.car.engineOn &&
-  exitLadder.second.drive.roadtrip.paused && !exitLadder.second.drive.roadtrip.reentryVisible &&
+  exitLadder.first.drive.roadtrip.active && exitLadder.first.drive.roadtrip.resumePending &&
+  !exitLadder.first.drive.roadtrip.exitUntilStop && !exitLadder.first.drive.roadtrip.reentryVisible &&
+  exitLadder.second.open && exitLadder.second.drive.hud && exitLadder.second.car.engineOn &&
+  !exitLadder.second.drive.roadtrip.active && exitLadder.second.drive.roadtrip.paused &&
+  exitLadder.second.drive.roadtrip.exitUntilStop && exitLadder.second.drive.roadtrip.reentryVisible &&
   exitLadder.third.open && !exitLadder.third.drive.hud && !exitLadder.third.car.engineOn &&
   exitLadder.third.drive.roadtrip.paused,
-  "successive Escapes pause the highway, dismiss the HUD, then stay inert downstairs without clearing the run",
+  "successive Escapes pause the highway, exit it, then dismiss the HUD without clearing the run",
   exitLadder);
 var checkpoint = s.checkpoint;
 var checkpointContract = checkpoint && {

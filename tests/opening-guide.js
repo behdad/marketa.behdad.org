@@ -83,6 +83,31 @@ var harness = String.raw`<script>
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
+
+  var dollhouseButton = document.getElementById("hunt-dollhouse-btn");
+  var dollhouseRect = dollhouseButton.getBoundingClientRect();
+  var dollhouseHit = document.elementFromPoint(dollhouseRect.left + dollhouseRect.width / 2,
+    dollhouseRect.top + dollhouseRect.height / 2);
+  click(dollhouseHit);
+  check("the highlighted navigation row stays live and opens the dollhouse without acknowledging the coach",
+    dollhouseHit && dollhouseHit.closest("#hunt-dollhouse-btn") &&
+      !document.getElementById("loft-dollhouse").hidden &&
+      window.__openingGuideShowing() && window.__openingGuideStep() === "nav",
+    JSON.stringify({ hit: dollhouseHit && (dollhouseHit.id || String(dollhouseHit.className)),
+      hidden: document.getElementById("loft-dollhouse").hidden, step: window.__openingGuideStep() }));
+  click(document.getElementById("loft-dollhouse-close"));
+  var gardenDot = document.querySelectorAll("#hunt-dots .hunt-dot")[1];
+  var gardenRect = gardenDot.getBoundingClientRect();
+  var gardenHit = document.elementFromPoint(gardenRect.left + gardenRect.width / 2,
+    gardenRect.top + gardenRect.height / 2);
+  if (gardenHit) gardenHit.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+  await sleep(40);
+  check("double-clicking a locked room dot unlocks and navigates while the coach remains",
+    gardenHit && gardenHit.closest(".hunt-dot") && window.currentStageName === "garden" &&
+      !gardenDot.classList.contains("locked") && window.__openingGuideShowing() &&
+      window.__openingGuideStep() === "nav",
+    JSON.stringify({ room: window.currentStageName, locked: gardenDot.classList.contains("locked"),
+      showing: window.__openingGuideShowing(), step: window.__openingGuideStep() }));
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
   await sleep(50); window.dispatchEvent(new Event("resize")); await sleep(30);
   check("Escape advances to the English caption coach above its target",
@@ -97,6 +122,7 @@ var harness = String.raw`<script>
   window.__kitchenDoNext = realKitchenDoNext;
   check("room-level Escape and Backspace never advance the morning routine", solveCalls === 0 && !machine.classList.contains("powered-on"), String(solveCalls));
 
+  window.goToStage("kitchen");
   await showGuide("cs");
   check("Czech nav coach is concise and localized", copy.textContent === "Navigace je tady." && !/pokračuj/i.test(copy.textContent));
   click(x); await sleep(50);

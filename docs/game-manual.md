@@ -47,6 +47,9 @@ visited; blurred cards are still waiting. Before the Party begins, a locked card
 double-click or double-tap to open. Once the Party has begun, one selection unlocks and opens any
 remaining room. The map is therefore both a shortcut and the simplest way to see what is left.
 
+The first navigation coach leaves this whole row live: you can open The Loft or deliberately unlock
+a room while the coach stays in place until you dismiss it.
+
 During a Road Trip or at Camping, the Entrance card represents that live scene. Opening the map from
 an active drive pauses it. Choosing Entrance returns to the paused dashboard; resume it yourself.
 

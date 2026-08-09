@@ -3327,8 +3327,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   }
 }
 /* First-play handoff: a shared coach card establishes the top controls, then the subtitle.
-   Its transparent full-shell layer swallows background input; only × or Enter advances. */
-#hunt-bottom-nav.intro-guide-nav{z-index:24}
+   Its transparent full-shell layer swallows scene input, while the highlighted navigation row
+   stays live without acknowledging the coach. Only × or Enter advances the lesson itself. */
+#hunt-bottom-nav.intro-guide-nav{z-index:65}
 #hunt-caption.intro-guide{color:var(--wine);z-index:8}
 #opening-guide-coach.show{pointer-events:auto}
 #opening-guide-coach .hunt-coach-card{cursor:default}
@@ -112874,19 +112875,27 @@ function spawnDustMote(container) {
   function chooseDollhouseRoom(spec) {
     if (!spec || !dollhouseEligible() || !roomSeen(spec.room)) return false;
     closeDollhouse();
-    if (spec.floor === "main") return !!goToStage(spec.stage, { rosterNavigation: true });
+    if (spec.floor === "main") return !!goToStage(spec.stage, {
+      rosterNavigation: true, openingGuideNavigation: true
+    });
     if (lowerRoomOwnsViewport()) return !!navigateLowerRoom(spec.stage);
     if (window.currentStageName !== spec.stage &&
-        !goToStage(spec.stage, { rosterNavigation: true, recordVisit: false })) return false;
+        !goToStage(spec.stage, {
+          rosterNavigation: true, recordVisit: false, openingGuideNavigation: true
+        })) return false;
     var target = lowerRoomForStage(spec.stage);
     return !!(target && target.open());
   }
   function unlockDollhouseRoom(spec) {
     if (!spec || !dollhouseEligible() || roomSeen(spec.room)) return false;
     closeDollhouse();
-    if (spec.floor === "main") return !!goToStage(spec.stage, { rosterNavigation: true });
+    if (spec.floor === "main") return !!goToStage(spec.stage, {
+      rosterNavigation: true, openingGuideNavigation: true
+    });
     markLowerRoomDiscovered();
-    if (!goToStage(spec.stage, { rosterNavigation: true, recordVisit: false })) return false;
+    if (!goToStage(spec.stage, {
+      rosterNavigation: true, recordVisit: false, openingGuideNavigation: true
+    })) return false;
     var target = lowerRoomForStage(spec.stage);
     return !!(target && target.open());
   }
@@ -113657,12 +113666,12 @@ function spawnDustMote(container) {
       d.addEventListener("click", function () {
         var fromLowerRoom = lowerRoomOwnsViewport();
         if (fromLowerRoom) navigateLowerRoom(STAGES[i], d);
-        else if (i <= maxUnlocked) navigateWithRoster(STAGES[i]);
+        else if (i <= maxUnlocked) navigateWithRoster(STAGES[i], { openingGuideNavigation: true });
       });
       // cheat: double-click a locked dot to unlock up to that room and jump there
       d.addEventListener("dblclick", function () {
         if (lowerRoomOwnsViewport()) navigateLowerRoom(STAGES[i], d, { unlockLocked: true });
-        else navigateWithRoster(STAGES[i]);
+        else navigateWithRoster(STAGES[i], { openingGuideNavigation: true });
       });
       dotsWrap.appendChild(d);
       dots.push(d);
@@ -114574,7 +114583,10 @@ function spawnDustMote(container) {
     if (window.__syncTripBloomLoop) window.__syncTripBloomLoop(); // garden-only fractal blooms pause without losing their trip state
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
-    clearOpeningGuide(); // ...and skips the eight-second caption tutorial if the player has already moved on
+    // The first lesson points at real navigation: using that row (including a locked-dot
+    // double-click or the dollhouse) must demonstrate it without dismissing the lesson.
+    if (!openingGuideShowing || openingGuideStep !== "nav" ||
+        !(opts && opts.openingGuideNavigation)) clearOpeningGuide();
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it
     setCaption(name);
     if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
@@ -114700,8 +114712,8 @@ function spawnDustMote(container) {
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
     return true;
   }
-  function navigateWithRoster(name) {
-    return goToStage(name, { rosterNavigation: true });
+  function navigateWithRoster(name, opts) {
+    return goToStage(name, Object.assign({ rosterNavigation: true }, opts || {}));
   }
   window.goToStage = goToStage;
   // A solve animation may finish after the player has already navigated elsewhere. Its

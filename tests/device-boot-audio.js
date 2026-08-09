@@ -47,10 +47,11 @@ check([pc, laptop, call].every(function (body) {
     /document\.hidden[\s\S]*document\.hasFocus\(\)/.test(body) &&
     !/new\s+(?:AudioContext|webkitAudioContext)/.test(body);
 }), "all three cues are unattended-safe consumers of the shared SFX context");
-check(new Set([pc, laptop, call]).size === 3 && /46[\s\S]*164\.81[\s\S]*293\.66/.test(pc) &&
+check(new Set([pc, laptop, call]).size === 3 && /146\.83[\s\S]*220/.test(pc) &&
+  !/164\.81|246\.94|293\.66|440/.test(pc) &&
   /1318\.51[\s\S]*880[\s\S]*1108\.73/.test(laptop) &&
   /523\.25[\s\S]*659\.25[\s\S]*783\.99[\s\S]*1046\.5/.test(call),
-  "the three helpers retain separate low-handshake, glass-contour, and rising-call patterns");
+  "the three helpers retain separate two-note, glass-contour, and rising-call patterns");
 check(/document\.hidden[\s\S]*document\.hasFocus\(\)[\s\S]*__monitorAttention/.test(laptopAllowed),
   "the delayed laptop update click and cue are re-gated at callback time");
 check(/playLaptopBootSound\("office-laptop"\)/.test(laptopFlow) &&

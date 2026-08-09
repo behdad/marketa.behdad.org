@@ -110209,8 +110209,8 @@ function playCallConnectSound(panId) {
     });
   } catch (e) {}
 }
-// The desktop PC wakes with a little three-packet handshake, then resolves into
-// a warm open fifth over its power-supply swell: compact, sturdy, slightly nerdy.
+// The desktop PC wakes with two short, low notes: enough of a signature without
+// turning a routine power toggle into a melody.
 function playPcBootSound(panId) {
   try {
     if (document.hidden || !document.hasFocus()) return;
@@ -110218,42 +110218,19 @@ function playPcBootSound(panId) {
     if (!ctx) return;
     var t = ctx.currentTime;
     var master = ctx.createGain();
-    master.gain.value = 0.52;
+    master.gain.value = 0.5;
     master.connect(pannedOut(ctx, panId == null ? "office-monitor" : panId));
-
-    var power = ctx.createOscillator();
-    power.type = "sine";
-    power.frequency.setValueAtTime(46, t);
-    power.frequency.exponentialRampToValueAtTime(92, t + 0.34);
-    var powerGain = ctx.createGain();
-    powerGain.gain.setValueAtTime(0.0001, t);
-    powerGain.gain.exponentialRampToValueAtTime(0.085, t + 0.045);
-    powerGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.48);
-    power.connect(powerGain); powerGain.connect(master);
-    power.start(t); power.stop(t + 0.5);
-
-    [{ f: 164.81, at: 0.08 }, { f: 246.94, at: 0.17 }, { f: 196, at: 0.26 }].forEach(function (note) {
+    [{ f: 146.83, at: 0, level: 0.07, duration: 0.24 },
+      { f: 220, at: 0.13, level: 0.09, duration: 0.36 }].forEach(function (note) {
       var osc = ctx.createOscillator(); osc.type = "triangle";
       var tt = t + note.at;
-      osc.frequency.setValueAtTime(note.f * 0.97, tt);
-      osc.frequency.exponentialRampToValueAtTime(note.f, tt + 0.035);
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, tt);
-      gain.gain.exponentialRampToValueAtTime(0.052, tt + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, tt + 0.105);
-      osc.connect(gain); gain.connect(master);
-      osc.start(tt); osc.stop(tt + 0.12);
-    });
-    [{ f: 293.66, level: 0.065 }, { f: 440, level: 0.045 }].forEach(function (note) {
-      var osc = ctx.createOscillator(); osc.type = "sine";
-      var tt = t + 0.34;
       osc.frequency.setValueAtTime(note.f, tt);
       var gain = ctx.createGain();
       gain.gain.setValueAtTime(0.0001, tt);
-      gain.gain.exponentialRampToValueAtTime(note.level, tt + 0.025);
-      gain.gain.exponentialRampToValueAtTime(0.0001, tt + 0.56);
+      gain.gain.exponentialRampToValueAtTime(note.level, tt + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, tt + note.duration);
       osc.connect(gain); gain.connect(master);
-      osc.start(tt); osc.stop(tt + 0.6);
+      osc.start(tt); osc.stop(tt + note.duration + 0.02);
     });
   } catch (e) {}
 }

@@ -464,10 +464,25 @@ footer{margin-top:2.6rem}
 #cinema-room .cinema-prop.reacting[data-cinema-action="sofa"]{animation:cinema-sofa .48s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="pipe"]{animation:cinema-pipe .42s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="beam"]{animation:cinema-beam .5s ease}
-#cinema-room .cinema-prop.reacting[data-cinema-action="window"]{animation:cinema-window .48s ease}
 #cinema-party-spill,#bedroom-party-spill{opacity:0;pointer-events:none;transition:opacity 1.8s ease}
 html.mir-uv-live #cinema-party-spill{opacity:.24}
 html.mir-uv-live #bedroom-party-spill{opacity:.16}
+html.mir-party-bass-live:not(.party-foreground-suspended) .hunt-viewport.cinema-room-open #cinema-window,
+html.mir-party-bass-live:not(.party-foreground-suspended) .hunt-viewport.bedroom-room-open #bedroom-stained-glass{
+  transform-box:fill-box;transform-origin:center;
+  animation:lower-room-party-bass var(--party-window-beat,.533s) linear infinite;
+}
+@keyframes lower-room-party-bass{
+  0%,42%,100%{translate:0 0;rotate:0deg}
+  8%{translate:.32px -.18px;rotate:.035deg}
+  17%{translate:-.2px .12px;rotate:-.025deg}
+  28%{translate:.1px -.04px;rotate:.012deg}
+}
+@media (prefers-reduced-motion:reduce){
+  html.mir-party-bass-live #cinema-window,
+  html.mir-party-bass-live #bedroom-stained-glass{animation:none}
+}
+#cinema-room #cinema-window.reacting[data-cinema-action="window"]{animation:cinema-window .48s ease}
 #entrance-home-uv{opacity:0;pointer-events:none;transition:opacity 1.8s ease}
 html.mir-uv-live #entrance-home-uv{opacity:.72}
 @keyframes cinema-bike{35%{transform:rotate(-2deg)}70%{transform:rotate(1.5deg)}}
@@ -117317,6 +117332,9 @@ function spawnDustMote(container) {
     var on = !!window.__gardenPartyOn;
     var id = on ? window.__partyDance : "";
     var dance = danceById(id), formation = dance ? dance.formation : "";
+    var period = on ? dancePeriod(id) : 0;
+    if (period) document.documentElement.style.setProperty("--party-window-beat", period.toFixed(3) + "s");
+    else document.documentElement.style.removeProperty("--party-window-beat");
     pd.setAttribute("data-dance", id); // "" when the party's off — clears every per-dance CSS gate
     var sg = document.getElementById("stage-garden"); if (sg) sg.setAttribute("data-partydance", id); // mirror onto the garden stage so scene-wide fx (e.g. the disco UV pulse) can gate on the active song
     pd.classList.toggle("couple-mode", formation === "couple");
@@ -134444,6 +134462,7 @@ function spawnDustMote(container) {
     classList.toggle("mir-shrooms", s.contains("shrooms"));
     classList.toggle("mir-iboga", s.contains("iboga"));
     classList.toggle("mir-garden-party", has(sources.garden, "garden-party"));
+    classList.toggle("mir-party-bass-live", has(sources.garden, "garden-party") && !window.__musicPaused);
     classList.toggle("mir-minigame", has(sources.kitchen, "flair-on") || has(sources.office, "arcade") ||
       has(sources.balcony, "tetris-on"));
     classList.toggle("mir-invite", has(sources.invite, "show"));

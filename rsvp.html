@@ -71293,7 +71293,7 @@ setOfficeProgress("pc", false);
   function togglePc() {
     if (window.__monitorShorted) { playDryClickSound("office-pc-desk-trio"); return; } // wet — the PC won't power up until the monitor dries out
     pcTower.classList.toggle("on");
-    playSparkSound("office-pc-desk-trio");
+    if (!pcTower.classList.contains("on")) playPcShutdownSound("office-pc-desk-trio");
     window.__updatePcFan();
   }
   pcTower.addEventListener("click", togglePc);
@@ -74118,7 +74118,6 @@ setOfficeProgress("pc", false);
     }
     if (action === "shutdown") {
       beginMonitorPowerVisual("shutdown");
-      playMonitorShutdownSound("office-monitor");
       if (window.__captionOverlay)
         window.__captionOverlay("mon_shutdown_gag", { owner: "monitor-power", scope: "stage:office",
           priority: 30, duration: 5000, clock: "attended" });
@@ -108644,25 +108643,6 @@ function playMonitorWindowCloseSound(panId) {
     osc.start(t); osc.stop(t + 0.065);
   } catch (e) {}
 }
-function playMonitorShutdownSound(panId) {
-  try {
-    var ctx = getSfxCtx();
-    if (!ctx) return;
-    var t = ctx.currentTime;
-    var out = pannedOut(ctx, panId || "office-monitor");
-    var osc = ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(392, t);
-    osc.frequency.exponentialRampToValueAtTime(110, t + 1.15);
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.045, t + 0.03);
-    gain.gain.setValueAtTime(0.035, t + 0.65);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.18);
-    osc.connect(gain); gain.connect(out);
-    osc.start(t); osc.stop(t + 1.2);
-  } catch (e) {}
-}
 function playMonitorSleepSound(panId) {
   try {
     var ctx = getSfxCtx();
@@ -110283,6 +110263,31 @@ function playPcBootSound(panId) {
       var gain = ctx.createGain();
       gain.gain.setValueAtTime(0.0001, tt);
       gain.gain.exponentialRampToValueAtTime(note.level, tt + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, tt + note.duration);
+      osc.connect(gain); gain.connect(master);
+      osc.start(tt); osc.stop(tt + note.duration + 0.02);
+    });
+  } catch (e) {}
+}
+// Power-off answers the boot pair in reverse; direct tower clicks and the OS
+// shutdown path both land here when the hardware actually switches off.
+function playPcShutdownSound(panId) {
+  try {
+    if (document.hidden || !document.hasFocus()) return;
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var master = ctx.createGain();
+    master.gain.value = 0.5;
+    master.connect(pannedOut(ctx, panId == null ? "office-pc-desk-trio" : panId));
+    [{ f: 220, at: 0, level: 0.08, duration: 0.22 },
+      { f: 146.83, at: 0.12, level: 0.07, duration: 0.3 }].forEach(function (note) {
+      var osc = ctx.createOscillator(); osc.type = "triangle";
+      var tt = t + note.at;
+      osc.frequency.setValueAtTime(note.f, tt);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, tt);
+      gain.gain.exponentialRampToValueAtTime(note.level, tt + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, tt + note.duration);
       osc.connect(gain); gain.connect(master);
       osc.start(tt); osc.stop(tt + note.duration + 0.02);

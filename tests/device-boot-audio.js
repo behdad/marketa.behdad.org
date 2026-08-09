@@ -23,6 +23,7 @@ function functionBody(name) {
 }
 
 var pc = functionBody("playPcBootSound");
+var pcOff = functionBody("playPcShutdownSound");
 var laptop = functionBody("playLaptopBootSound");
 var call = functionBody("playCallConnectSound");
 var laptopAllowed = functionBody("laptopUpdateSoundAllowed");
@@ -32,26 +33,34 @@ var laptopFlow = source.slice(updateStart, source.indexOf("function endCall(", u
 var screenStart = source.indexOf("function updateScreen()");
 var screenEnd = source.indexOf("window.__shortOutMonitor", screenStart);
 var screenFlow = source.slice(screenStart, screenEnd);
+var togglePc = functionBody("togglePc");
+var monitorPower = functionBody("monitorSystemAction");
 var helpersParse = true;
 try {
-  [pc, laptop, call].forEach(function (body) { Function("panId", body); });
+  [pc, pcOff, laptop, call].forEach(function (body) { Function("panId", body); });
 } catch (error) {
   helpersParse = false;
 }
 
-check(!!pc && !!laptop && !!call,
-  "PC, laptop, and call connection each own a named cue helper");
-check(helpersParse, "all three cue helpers parse as JavaScript");
-check([pc, laptop, call].every(function (body) {
+check(!!pc && !!pcOff && !!laptop && !!call,
+  "PC power-up, PC power-off, laptop, and call connection own named cue helpers");
+check(helpersParse, "all four cue helpers parse as JavaScript");
+check([pc, pcOff, laptop, call].every(function (body) {
   return body.indexOf("getSfxCtx()") >= 0 &&
     /document\.hidden[\s\S]*document\.hasFocus\(\)/.test(body) &&
     !/new\s+(?:AudioContext|webkitAudioContext)/.test(body);
-}), "all three cues are unattended-safe consumers of the shared SFX context");
-check(new Set([pc, laptop, call]).size === 3 && /146\.83[\s\S]*220/.test(pc) &&
+}), "all four cues are unattended-safe consumers of the shared SFX context");
+check(new Set([pc, pcOff, laptop, call]).size === 4 && /146\.83[\s\S]*220/.test(pc) &&
   !/164\.81|246\.94|293\.66|440/.test(pc) &&
   /1318\.51[\s\S]*880[\s\S]*1108\.73/.test(laptop) &&
   /523\.25[\s\S]*659\.25[\s\S]*783\.99[\s\S]*1046\.5/.test(call),
-  "the three helpers retain separate two-note, glass-contour, and rising-call patterns");
+  "the four helpers retain separate power-pair, glass-contour, and rising-call patterns");
+check(/220[\s\S]*146\.83/.test(pcOff) &&
+  /document\.hidden[\s\S]*document\.hasFocus\(\)/.test(pcOff) &&
+  /playPcShutdownSound\("office-pc-desk-trio"\)/.test(togglePc) &&
+  !/playSparkSound/.test(togglePc) && !/playMonitorShutdownSound/.test(source) &&
+  !/playPcShutdownSound/.test(monitorPower),
+  "PC off reverses the same two notes without a legacy spark or shutdown melody");
 check(/document\.hidden[\s\S]*document\.hasFocus\(\)[\s\S]*__monitorAttention/.test(laptopAllowed),
   "the delayed laptop update click and cue are re-gated at callback time");
 check(/playLaptopBootSound\("office-laptop"\)/.test(laptopFlow) &&

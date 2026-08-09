@@ -120,8 +120,8 @@ is reset, or is interrupted, leaving the shared context and every other consumer
 The campsite mushroom replaces the ordinary shrooms melody with six seconds of scheduled,
 stereo birdsong; interruption fades and stops only those chirp oscillators.
 The monitor power menu also stays on this bus: reboot's three window-close clicks align
-with its closing cards, shutdown uses one descending tone, and sleep uses a short filtered
-noise exhale. Reboot's delayed clicks re-check focus and visibility at playback time.
+with its closing cards, PC shutdown answers its two-note boot cue in reverse, and sleep uses
+a short filtered noise exhale. Reboot's delayed clicks re-check focus and visibility at playback time.
 
 ## Per-consumer lifecycle maps to NODES, not the context
 
@@ -354,7 +354,7 @@ do not compete with traffic, tire, pursuit, or collision cues.
   explicit projector-channel change. Party start/stop does not release voices, because
   playing along is supported during the party.
 - **Office device signatures** are separate one-shots on the shared SFX bus: the PC uses
-  two short low notes; the laptop uses
+  two short low notes, rising on boot and descending on power-off; the laptop uses
   three glassy high-low-rise tones; video-call connection keeps its low swell and rising
   C-major arpeggio. Their helpers all re-check focus and visibility before scheduling.
 - **The office laptop's automatic update** keeps animating while the desktop monitor is

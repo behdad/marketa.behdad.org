@@ -527,10 +527,10 @@ check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
 check(result && result.backdropAfter && result.backdropTarget === "entrance-roadtrip-camp-wisdom-hit" &&
   !result.backdropAfter.state.wisdomDismissed && result.backdropAfter.wisdomShown && !result.backdropAfter.tentOpen &&
   result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
-  result.dismissed.state.sleepPhase === "prompt" &&
+  result.dismissed.state.sleepPhase === "fire-out" && !result.dismissed.fireLit &&
   result.dismissed.caption === "entrance_roadtrip_camp_sleep_prompt" && result.dismissed.outerDismiss === "grid" &&
   result.dismissTarget === "entrance-roadtrip-camp-wisdom-continue" && !result.dismissed.tentOpen,
-  "the backdrop stays inert and only the visible Continue control dismisses the exchange",
+  "the backdrop stays inert while Continue dismisses the exchange and puts out the fire",
   result && { backdrop: result.backdropAfter, dismissed: result.dismissed });
 check(result && result.completeRestored && result.completeRestored.state.complete &&
   !result.completeRestored.state.wisdomDismissed && result.completeRestored.wisdomShown &&

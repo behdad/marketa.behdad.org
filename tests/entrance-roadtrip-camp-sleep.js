@@ -419,25 +419,25 @@ check(result && result.errors.length === 0, "the sleep finale has no uncaught er
 check(result && result.exchange && result.exchange.wisdomShown && !result.exchange.wisdomClose &&
   result.exchange.outerDismiss === "grid",
   "the exchange has no private close button and keeps the standard campsite exit", result && result.exchange);
-check(result && result.prompt && result.prompt.phase === "prompt" && !result.prompt.wisdomShown &&
-  result.prompt.caption === "entrance_roadtrip_camp_sleep_prompt" && result.prompt.fireLit &&
-  result.prompt.savedPhase === "prompt" && result.prompt.liveConstellationOpacity === 1 &&
-  result.prompt.fireGlow === .34 && result.prompt.moonlight === .12 && result.prompt.lakeLight === .16 &&
-  result.prompt.liveConstellationTransform === "none" && result.prompt.liveConstellationPointer === "all" &&
+check(result && result.prompt && result.prompt.phase === "fire-out" && !result.prompt.wisdomShown &&
+  result.prompt.caption === "entrance_roadtrip_camp_sleep_prompt" && !result.prompt.fireLit &&
+  result.prompt.savedPhase === "fire-out" && result.prompt.liveConstellationOpacity === .72 &&
+  result.prompt.fireGlow === 0 && result.prompt.darkness === .08 && result.prompt.nightSky === .1 &&
+  result.prompt.liveConstellationTransform !== "none" && result.prompt.liveConstellationPointer === "none" &&
   /put out the fire/i.test(result.prompt.captionText),
-  "dismissing the exchange suggests sleep and putting out the fire", result && result.prompt);
+  "Continue dismisses the exchange and immediately starts putting out the fire", result && result.prompt);
 check(result && /Uhasme oheň/.test(result.czechPrompt || ""),
   "the sleep suggestion switches to Czech", result && result.czechPrompt);
 check(result && result.promptExit && !result.promptExit.campActive && result.promptReturn &&
-  result.promptReturn.campActive && result.promptReturn.phase === "prompt" &&
-  result.promptReturn.fireBuilt && result.promptReturn.fireLit && result.promptReturn.stew,
-  "leaving at the prompt preserves the completed campsite", { exit: result && result.promptExit, back: result && result.promptReturn });
+  result.promptReturn.campActive && result.promptReturn.phase === "fire-out" &&
+  result.promptReturn.fireBuilt && !result.promptReturn.fireLit && result.promptReturn.stew,
+  "leaving after Continue preserves the running fire-out handoff", { exit: result && result.promptExit, back: result && result.promptReturn });
 check(result && result.fireOut && result.fireOut.phase === "fire-out" && !result.fireOut.fireLit &&
   result.fireOut.fireOpacity === 0 && result.fireOut.classes.indexOf("fire-out") >= 0 &&
   result.fireOut.fireGlow === 0 && result.fireOut.darkness === .08 && result.fireOut.nightSky === .1 &&
   result.fireOut.liveConstellationOpacity === .72 && result.fireOut.liveConstellationTransform !== "none" &&
   result.fireOut.liveConstellationPointer === "none",
-  "clicking the fire extinguishes its glow and starts the gradual sky handoff", result && result.fireOut);
+  "the extinguished fire stays inert while the gradual sky handoff runs", result && result.fireOut);
 check(result && result.fireOutSounds && result.fireOutSounds.join("|") === "embers",
   "putting out the fire adds one quiet ember-breath cue", result && result.fireOutSounds);
 check(result && result.runningExit && !result.runningExit.campActive && result.runningReturn &&

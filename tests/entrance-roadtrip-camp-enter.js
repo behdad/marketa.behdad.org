@@ -207,7 +207,7 @@ check(result && result.handoffReady.active && result.handoffReady.wisdomShown &&
   result.handoffAdvanced.active && !result.handoffAdvanced.wisdomShown &&
   result.handoffAdvanced.stargazing.wisdomDismissed &&
   !result.handoffAdvanced.stargazing.wisdomHandoffReady &&
-  result.handoffAdvanced.stargazing.sleepPhase === "prompt" &&
+  result.handoffAdvanced.stargazing.sleepPhase === "fire-out" && !result.handoffAdvanced.fireLit &&
   result.handoffAdvanced.caption === "entrance_roadtrip_camp_sleep_prompt" &&
   result.sleepStarted.active && result.sleepStarted.stargazing.sleepPhase === "fire-out" &&
   !result.sleepStarted.fireLit &&
@@ -216,11 +216,11 @@ check(result && result.handoffReady.active && result.handoffReady.wisdomShown &&
   result.handoffClickBaseline.caption === result.handoffAdvanced.caption &&
   result.handoffClickBaseline.tentOpen === result.handoffAdvanced.tentOpen &&
   JSON.stringify(result.handoffClickBaseline.stargazing) === JSON.stringify(result.handoffAdvanced.stargazing),
-  "ready wisdom Enter exactly matches the click handoff without leaving Camping or activating its tent",
+  "ready wisdom Enter exactly matches Continue and starts the fire-out handoff",
   result && { ready: result.handoffReady, enter: result.handoffAdvanced, click: result.handoffClickBaseline });
 check(result && result.sleepStarted.active && result.sleepStarted.stargazing.sleepPhase === "fire-out" &&
   !result.sleepStarted.fireLit && result.sleepStarted.caption === "entrance_roadtrip_camp_sleep_prompt",
-  "the next Enter accepts the sleep prompt and puts out the fire", result && result.sleepStarted);
+  "another Enter leaves the running sleep handoff alone", result && result.sleepStarted);
 check(result && result.prevented.every(Boolean), "every campsite-owned Enter is consumed before global navigation", result && result.prevented);
 
 if (failures) process.exit(1);

@@ -50,7 +50,12 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
-assert(/id="loft-console-tools"[\s\S]*?id="dropterm-fps"[^>]*>FPS --</.test(html), "outer game chrome includes the FPS readout beside the console tab");
+assert(/class="hunt-left"[\s\S]*?id="loft-console-tools"[\s\S]*?id="dropterm-fps"[^>]*>--<[\s\S]*?id="hunt-prev"/.test(html), "the console tab and FPS readout occupy the top of the left scene rail");
+assert(/\.loft-console-hint\{[^}]*background:var\(--wine/.test(html) &&
+  /\.loft-console-hint \.ct-mark\{[^}]*transform:rotate\(45deg\)/.test(html) &&
+  /\.loft-console-hint\.open \.ct-mark\{transform:rotate\(135deg\)/.test(html),
+  "the discovered console button is burgundy and turns its chevron right-to-down");
+assert(/#dropterm-fps::after\{content:"FPS";[^}]*font-size:7px/.test(html), "the FPS meter stacks a small label below its numeric line");
 assert(/id="dropterm-resize"/.test(html), "drop-down panel includes a lower-edge resize handle");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");
 assert(/#dropterm\.open\{transform:translateY\(0\)/.test(html), "#dropterm.open slides down into view");
@@ -181,7 +186,7 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
     var ids = Object.keys(rafs), id = ids[0], fn = rafs[id]; delete rafs[id];
     fn(frame * 16.67);
   }
-  assert(/^FPS (59|60|61)$/.test(dFps._text), "the rolling sampler reports rendered-frame FPS", dFps._text);
+  assert(/^(59|60|61)$/.test(dFps._text), "the rolling sampler reports rendered-frame FPS", dFps._text);
   var welcomedInDrop = dOut.childNodes.length === 1 && dOut.childNodes[0]._text === "welcome to the loft console";
   assert(welcomedInDrop, "opening prints the welcome into the DROP-DOWN scrollback (not the monitor)", "monitor lines=" + monOut.childNodes.length);
   var pev = function (id, y) { return { pointerId:id, button:0, clientY:y, preventDefault:function(){}, stopPropagation:function(){} }; };

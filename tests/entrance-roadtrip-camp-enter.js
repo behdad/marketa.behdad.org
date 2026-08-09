@@ -67,6 +67,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.fireGuarded = snap();
     await sleep(1150);
     report.fireReady = snap();
+    enter(false);
+    report.fireRevealGuarded = snap();
+    await sleep(1050);
+    report.stewAvailable = snap();
 
     enter(false);
     report.stewCooking = snap();
@@ -158,10 +162,15 @@ check(result && result.fireStarting.active && result.fireStarting.igniting &&
   "one Enter immediately acknowledges ignition while keeping the canonical builder closed",
   result && result.fireStarting);
 check(result && result.fireGuarded.igniting && !result.fireGuarded.fireBuilt &&
-  !result.fireGuarded.stewCrateAvailable && result.fireReady.fireBuilt && result.fireReady.fireLit &&
-  result.fireReady.stewCrateAvailable && result.fireReady.caption === "entrance_roadtrip_stew_invite",
-  "repeat and double Enter cannot skip the one-second fire beat before the stew invitation",
-  result && { guarded: result.fireGuarded, ready: result.fireReady });
+  !result.fireGuarded.stewCrateAvailable && result.fireReady.igniting &&
+  result.fireReady.fireBuilt && result.fireReady.fireLit && !result.fireReady.stewCrateAvailable &&
+  result.fireReady.caption === "entrance_roadtrip_camp_fire_igniting" &&
+  result.fireRevealGuarded.igniting && !result.fireRevealGuarded.stewCrateAvailable &&
+  result.stewAvailable.fireBuilt && result.stewAvailable.fireLit && !result.stewAvailable.igniting &&
+  result.stewAvailable.stewCrateAvailable && result.stewAvailable.caption === "entrance_roadtrip_stew_invite",
+  "Enter cannot skip the separate fire reveal and stew invitation beats",
+  result && { guarded: result.fireGuarded, fire: result.fireReady,
+    fireGuarded: result.fireRevealGuarded, stew: result.stewAvailable });
 var cooking = result && result.stewCooking && result.stewCooking.stew;
 var extras = cooking && ["onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "tomato", "curry", "salt", "pepper", "chilies", "coriander"]
   .filter(function (name) { return cooking[name]; }).length;

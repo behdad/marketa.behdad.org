@@ -41775,6 +41775,7 @@ window.__entranceRoomOpen = false;
       campFireScene.classList.toggle("stew-cooking", campStewState.status === "cooking" ||
         campStewState.status === "overcooked");
       campFireScene.classList.toggle("stew-crate-available", campFireState.complete && campFireState.lit &&
+        !campFireState.igniting &&
         campStewState.status === "assembling");
     }
     if (campPot) {
@@ -41892,7 +41893,8 @@ window.__entranceRoomOpen = false;
     return campStewSnapshot();
   }
   function openCampStew() {
-    if (roadtripState.route !== "camp" || !campFireState.complete || !campFireState.lit) return false;
+    if (roadtripState.route !== "camp" || !campFireState.complete || !campFireState.lit ||
+        campFireState.igniting) return false;
     campFireState.open = false;
     resetCampStew(true);
     paintRoadtripCampFire();
@@ -42754,16 +42756,21 @@ window.__entranceRoomOpen = false;
     syncRoadtripCampFireCaption(false);
     clearTimeout(campFireTimer);
     campFireTimer = setTimeout(function () {
-      campFireTimer = null;
       campFireState.complete = true;
       campFireState.lit = true;
       campFireState.open = false;
-      campFireState.igniting = false;
       paintRoadtripCampFire();
       paintRoadtripCampStew();
-      clearRoadtripFeedbackCaptions();
-      syncRoadtripCampFireCaption(true);
       if (window.__checkpointChanged) window.__checkpointChanged();
+      campFireTimer = setTimeout(function () {
+        campFireTimer = null;
+        campFireState.igniting = false;
+        paintRoadtripCampFire();
+        paintRoadtripCampStew();
+        clearRoadtripFeedbackCaptions();
+        syncRoadtripCampFireCaption(true);
+        if (window.__checkpointChanged) window.__checkpointChanged();
+      }, 1000);
     }, 1000);
     return "success";
   }

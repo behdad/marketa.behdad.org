@@ -132,7 +132,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           report.errors = (window.__errs || []).concat(report.errors);
           document.getElementById("__report").textContent = JSON.stringify(report);
-        }, 1750);
+        }, 2250);
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
         document.getElementById("__report").textContent = JSON.stringify(report);
@@ -152,7 +152,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite fire:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
   forceMotion: true,
   urlSuffix: "?date=2026-07-15&time=12:00#play",
   chromeFlags: "--window-size=1100,900"

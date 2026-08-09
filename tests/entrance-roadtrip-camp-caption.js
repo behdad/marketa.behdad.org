@@ -74,7 +74,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                   }, 400);
                 }, 400);
               }, 2400);
-            }, 1650);
+            }, 2150);
           } catch (error) {
             report.errors.push(String(error && error.stack || error));
             document.getElementById("__report").textContent = JSON.stringify(report);
@@ -99,7 +99,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html Camping RSVP caption:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 7000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 7600, {
   forceMotion: true,
   urlSuffix: "?date=2026-07-15&time=12:00#play",
   chromeFlags: "--window-size=1100,900"

@@ -51,6 +51,24 @@ var harness = String.raw`<script>
     setLang("en");
 
     window.__clearFlashCaption("room-progress");
+    window.__setSeenRooms([
+      "kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom"
+    ]);
+    window.__gardenPartyOn = true;
+    window.__markRoomSeen("entrance");
+    var partyComplete = snapshot();
+    check("completion points toward the street even while the party remains optional",
+      partyComplete.key === "room_visit_entrance_complete_party" &&
+      partyComplete.caption === "You’ve seen the whole loft. The road is right outside.", partyComplete);
+    setLang("cs");
+    var partyCompleteCzech = snapshot();
+    check("party-on completion keeps the same street direction in Czech",
+      partyCompleteCzech.caption === "Celý loft je prozkoumaný. Silnice čeká hned venku.", partyCompleteCzech);
+    setLang("en");
+    window.__gardenPartyOn = false;
+
+    window.__clearFlashCaption("room-progress");
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony", "dungeon"]);
     window.__markRoomSeen("bathroom");
     var bathroom = snapshot();

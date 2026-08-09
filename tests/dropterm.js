@@ -51,10 +51,10 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
 assert(/class="hunt-left"[\s\S]*?id="loft-console-tools"[\s\S]*?id="dropterm-fps"[^>]*>--<[\s\S]*?id="hunt-prev"/.test(html), "the console tab and FPS readout occupy the top of the left scene rail");
-assert(/\.loft-console-hint\{[^}]*background:var\(--wine/.test(html) &&
+assert(/\.loft-console-hint\{[^}]*color:var\(--wine[^}]*background:transparent[^}]*border:0[^}]*box-shadow:none/.test(html) &&
   /\.loft-console-hint \.ct-mark\{[^}]*transform:rotate\(45deg\)/.test(html) &&
   /\.loft-console-hint\.open \.ct-mark\{transform:rotate\(135deg\)/.test(html),
-  "the discovered console button is burgundy and turns its chevron right-to-down");
+  "the discovered console button is backgroundless and turns its burgundy chevron right-to-down");
 assert(/#dropterm-fps::after\{content:"FPS";[^}]*font-size:7px/.test(html), "the FPS meter stacks a small label below its numeric line");
 assert(/id="dropterm-resize"/.test(html), "drop-down panel includes a lower-edge resize handle");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");

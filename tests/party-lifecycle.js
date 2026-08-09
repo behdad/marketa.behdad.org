@@ -90,6 +90,15 @@ var harness = String.raw`<script>
   window.dispatchEvent(new Event("resize"));
   var switchCoachPopup = switchCoach.querySelector(".hunt-coach-card");
   var switchCoachArrow = switchCoach.querySelector(".hunt-coach-arrow");
+  var switchPlate = document.querySelector("#garden-lightswitch > rect:first-child");
+  var switchArrowBox = switchCoachArrow.getBBox();
+  var switchViewport = document.querySelector(".hunt-viewport");
+  var expectedSwitchTip = switchViewport.clientHeight * 185 / 340 - 3;
+  check("the wall switch and its coach target move up together by fifteen pixels",
+    switchPlate && Number(switchPlate.getAttribute("y")) === 185 &&
+      Math.abs(switchArrowBox.y + switchArrowBox.height - expectedSwitchTip) < 1,
+    JSON.stringify({ switchY: switchPlate && switchPlate.getAttribute("y"),
+      arrowTip: switchArrowBox.y + switchArrowBox.height, expectedTip: expectedSwitchTip }));
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
       switchCoach.classList.contains("show") &&
       switchCoachPopup.querySelector(".hunt-coach-copy").textContent === "When the time comes, end the party here." &&

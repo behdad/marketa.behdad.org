@@ -43,11 +43,11 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html mobile Road Trip distance:");
 check(desktop && desktop.errors.length === 0 && desktop.scale === 1 &&
-  distancesEqual(desktop.distances, [75, 6, 90, 6, 75], desktop.pace),
+  distancesEqual(desktop.distances, [75, 6, 75, 6, 75], desktop.pace),
   "fine-pointer desktop keeps the authored route lengths", desktop);
-check(mobile && mobile.errors.length === 0 && mobile.scale === .72 &&
-  distancesEqual(mobile.distances, [54, 4.32, 64.8, 4.32, 54], mobile.pace),
-  "touch-first mobile uses 72% of every route length", mobile);
+check(mobile && mobile.errors.length === 0 && mobile.scale === .6 &&
+  distancesEqual(mobile.distances, [45, 3.6, 45, 3.6, 45], mobile.pace),
+  "touch-first mobile uses 60% of every route length", mobile);
 
 if (failures) process.exit(1);
 console.log("Mobile Road Trip distance checks passed.");

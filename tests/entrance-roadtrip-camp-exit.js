@@ -217,6 +217,8 @@ function connectedSpur(visual) {
     visual.junctionOverlap <= 18.1 &&
     Math.abs(visual.junctionRoadRightX - visual.shoulderMouthInnerX -
       visual.junctionOverlap) <= .03 &&
+    visual.junctionOuterX - visual.junctionRoadRightX > .02 &&
+    visual.junctionOuterX - visual.junctionRoadRightX < 5.1 &&
     visual.innerEdgeStartT >= .35 && visual.innerEdgeStartT <= .42 &&
     visual.bendInnerX < visual.bendOuterX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
@@ -257,7 +259,7 @@ function laneCentredApproach(visual) {
   var nearGap = visual.junctionX - visual.junctionLaneCenterX;
   var farGap = visual.destinationX - visual.destinationLaneCenterX;
   return Number.isFinite(nearGap) && Number.isFinite(farGap) && nearGap > 12 && farGap > 5 &&
-    farGap < nearGap * .55;
+    farGap < nearGap * .62;
 }
 function smoothJoin(visual) {
   if (!Number.isFinite(visual.joinTangentDx) || !Number.isFinite(visual.joinTangentDy) ||
@@ -275,8 +277,20 @@ function smoothJoin(visual) {
     }) && startWidth > 0 && Math.abs(controlWidth - startWidth) <= .03;
   });
 }
+function edgePaintFollowsAsphalt(visual) {
+  var asphalt = cubicBand(visual && visual.asphalt);
+  var innerEdge = cubicBand(visual && visual.innerEdge);
+  var outerEdge = cubicBand(visual && visual.outerEdge);
+  var amount = visual && visual.innerEdgeStartT;
+  if (!asphalt || !innerEdge || !outerEdge || !Number.isFinite(amount)) return false;
+  return Math.abs(innerEdge.inner[0].x - cubicValue(asphalt.inner, amount, "x")) <= .04 &&
+    Math.abs(innerEdge.inner[0].y - cubicValue(asphalt.inner, amount, "y")) <= .04 &&
+    Math.abs(outerEdge.outer[0].x - asphalt.outer[0].x) <= .04 &&
+    Math.abs(outerEdge.outer[0].y - asphalt.outer[0].y) <= .04;
+}
 function coherentSpurTopology(visual) {
-  if (!connectedSpur(visual) || !laneCentredApproach(visual) || !smoothJoin(visual)) return false;
+  if (!connectedSpur(visual) || !laneCentredApproach(visual) || !smoothJoin(visual) ||
+      !edgePaintFollowsAsphalt(visual)) return false;
   var asphalt = cubicBand(visual.asphalt);
   var shoulder = cubicBand(visual.shoulder);
   var innerEdge = cubicBand(visual.innerEdge);

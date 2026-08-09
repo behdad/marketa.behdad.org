@@ -44491,13 +44491,13 @@ window.__entranceRoomOpen = false;
   }
   function paintRoadtripCampSpur(point) {
     if (!roadtripCampSpurNode) return null;
-    var junctionPoint = roadtripProject(Math.max(1, point.remaining - 36));
+    var junctionPoint = roadtripProject(Math.max(20, point.remaining - 36));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 32));
     var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
     var junctionOverlap = 7 + junctionPoint.perspective * 11;
     var junctionInner = junctionRoadRight - junctionOverlap;
-    var junctionOuterWidth = 9 + junctionPoint.perspective * 17;
-    var junctionOuter = junctionRoadRight + junctionOuterWidth;
+    var junctionOuter = roadtripProjectLateral(junctionPoint, 1.015);
+    var junctionOuterWidth = junctionOuter - junctionRoadRight;
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationY = destinationPoint.y;
@@ -44588,10 +44588,8 @@ window.__entranceRoomOpen = false;
     // Asphalt reaches just inside the live highway edge to make an open merge
     // throat. Its inner paint stripe starts later, where the two roads have
     // separated; carrying that stripe to the mouth makes the ramp look detached.
-    var innerEdgeOrigin = junctionRoadRight;
-    var innerEdgeLineControls = curveControls(innerEdgeOrigin, destinationInner, false);
-    innerEdgeLineControls.c1 = innerEdgeOrigin + joinControlDx;
-    innerEdgeLineControls.c2 = innerControls.c2;
+    var innerEdgeOrigin = junctionInner;
+    var innerEdgeLineControls = innerControls;
     function cubicTail(start, c1, c2, end, t) {
       var p01 = start + (c1 - start) * t;
       var p12 = c1 + (c2 - c1) * t;

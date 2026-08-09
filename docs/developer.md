@@ -193,7 +193,9 @@ Keep these ownership boundaries intact:
 - Entrance practice laps and the highway share presentation but have different progress/state.
 - `roadtripExplorationComplete()` answers whether the story prerequisites are met;
   `roadtripAuthorized()` additionally requires Party to be stopped.
-- `roadtripState` owns route selection, saved run, accepted trip, pause, and Camping availability.
+- `roadtripState` owns route selection, saved run, accepted trip, pause, Camping availability, and
+  the signed per-leg distances painted by the three-part route ribbon; paused-run snapshots retain
+  those display distances.
 - The transmission preference survives ordinary room changes and Continue, while the Entrance
   checkpoint adapter's Fresh Game reset clears it and restores AUTO/P with fresh controller latches.
 - Driving input belongs to the HUD/controller only while `__entranceDriveKeyboardOwnership` says it

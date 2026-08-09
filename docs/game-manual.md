@@ -192,7 +192,8 @@ mode.
 
 The choices move progressively west from Calgary through Banff to Abraham Lake. Start at the
 beginning for the whole drive, or choose a later segment to shorten it. The Camping turnoff appears
-on the Abraham Lake segment and returns if you miss it.
+on the Abraham Lake segment and returns if you miss it. The three-part ribbon in the driving HUD
+tracks each leg; earlier legs are hatched when a journey starts farther west.
 
 Leaving or unfocusing a highway pauses it. Open **Road Trip** again to **Continue** the saved run,
 start **New**, or return to **Camping** after the campsite has been reached.

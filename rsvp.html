@@ -40951,6 +40951,16 @@ window.__entranceRoomOpen = false;
     var highSpeedWeight = Math.max(0, Math.min(1, (kmh - 105) / 120));
     return moving * (1 - highSpeedWeight * .16);
   }
+  function roadtripCurveDriftScale() {
+    if (porscheTransmission.mode !== "auto") return 1;
+    // The final Banff bend leads into a scripted right-hand turnoff. AUTO holds
+    // the driver's chosen lane until that turnoff owns the lateral transition.
+    if (roadtripState.route === "banff" &&
+        ROADTRIP_BANFF_DISTANCE - roadtripState.banffDistance <= ROADTRIP_LAKE_TURNOFF_DISTANCE) {
+      return 0;
+    }
+    return .42;
+  }
   function stepRoadtripHandling(routeTravel, seconds) {
     seconds = Math.max(0, Number(seconds) || 0);
     if (!seconds) return;
@@ -40976,8 +40986,8 @@ window.__entranceRoomOpen = false;
     if (Math.abs(roadtripState.lateralVelocity) < .001 && Math.abs(targetVelocity) < .001) {
       roadtripState.lateralVelocity = 0;
     }
-    var curveAssist = porscheTransmission.mode === "auto" ? .42 : 1;
-    var curveDrift = roadtripCurvatureAt(roadtripState.distance) * routeTravel * curveAssist *
+    var curveDrift = roadtripCurvatureAt(roadtripState.distance) * routeTravel *
+      roadtripCurveDriftScale() *
       roadtripCurveWeight(driveState.speed) * (1 + roughness * .12);
     var previousLane = roadtripState.playerLane;
     roadtripState.playerLane = Math.max(-roadtripMaxLane(), Math.min(roadtripMaxLane(),

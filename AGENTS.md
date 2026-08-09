@@ -322,9 +322,9 @@ the "best in desktop Chrome" nudge only helps desktop.
 - Desktop (≥760px): the two party sections sit side by side (`.parties` flex row) with a
   thin `.divider` (vertical rule + small ∞, itself clickable — see easter eggs) between
   them; mobile stacks them and hides the divider.
-- `art/og-image.png` (1200×630) and `art/apple-touch-icon.png` (180×180) are generated
-  (small standalone HTML rendered via headless Chrome, not hand-drawn) — regenerate if
-  the palette/names/tagline change materially.
+- `art/og-egg-hunt.png` and `art/og-loft-day.png` (1200×630) are generated from
+  `tests/social-card-render.html`; `art/apple-touch-icon.png` (180×180) is generated too.
+  Regenerate them if the palette or game titles change materially.
 
 ## i18n
 

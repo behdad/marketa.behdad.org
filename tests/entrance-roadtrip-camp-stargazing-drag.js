@@ -71,7 +71,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceRoadtripCampFirePlace("twigs");
     window.__entranceRoadtripCampFirePlace("teepee");
     window.__entranceRoadtripCampFireLight(true);
-    await sleep(1650);
+    await sleep(2150);
     window.__entranceRoadtripCampStewOpen();
     window.__entranceRoadtripCampStewSelect("beef");
     window.__entranceRoadtripCampStewSelect("barley");

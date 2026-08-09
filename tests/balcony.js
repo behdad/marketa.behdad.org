@@ -53,11 +53,11 @@ assert(/function placeLane/.test(body), "slice missing placeLane() — wrong reg
 
 // ── the roster the SVG actually declares (ids + which are smokers) ────────────
 // (mirrors the authored #balcony-hangout figures; the harness builds fake nodes for these)
-var CROWD = ["bh-patricia-son", "bh-patricia-daughter", "bh-elisabeth", "bh-mahzad", "bh-jay"];
+var CROWD = ["bh-bahareh", "bh-patricia", "bh-elisabeth", "bh-mahzad", "bh-jay"];
 var SMOKERS = ["bh-farhang", "bh-alireza", "bh-dj", "bh-behdad", "bh-marketa"];
 // figure id → garden .g-<name> key used by the one-room exclusion
 var NAME = {
-  "bh-patricia-son": "bahareh", "bh-patricia-daughter": "patricia", "bh-elisabeth": "lauren",
+  "bh-bahareh": "bahareh", "bh-patricia": "patricia", "bh-elisabeth": "lauren",
   "bh-mahzad": "mahzad", "bh-jay": "jay",
   "bh-farhang": "farhang", "bh-alireza": "alireza", "bh-dj": "dj",
   "bh-behdad": "behdad", "bh-marketa": "marketa"
@@ -303,28 +303,28 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   win.__barCoupleNowValue = null;
   setArrived("farhang", true);
   setArrived("bahareh", true);
-  var everFarhang = false, everPatriciaSon = false;
+  var everFarhang = false, everBahareh = false;
   for (var k = 0; k < 120; k++) {
     leave(); activate();
     var ids = shownIds();
     if (ids.indexOf("bh-farhang") !== -1) everFarhang = true;
-    if (ids.indexOf("bh-patricia-son") !== -1) everPatriciaSon = true;
+    if (ids.indexOf("bh-bahareh") !== -1) everBahareh = true;
   }
   ok("a smoker on the garden floor (Farhang) is NEVER shown on the balcony", !everFarhang);
-  ok("a crowd guest on the garden floor (Patricia’s son) is NEVER shown on the balcony", !everPatriciaSon);
+  ok("a crowd guest on the garden floor (Bahareh) is NEVER shown on the balcony", !everBahareh);
   setArrived("farhang", false); setArrived("bahareh", false);
 
   // (b) at the bar (via __barCoupleNow) → never shown on the balcony
   win.__barCoupleNowValue = ["alireza", "patricia"];
-  var everAlireza = false, everPatriciaDaughter = false;
+  var everAlireza = false, everPatricia = false;
   for (var j = 0; j < 120; j++) {
     leave(); activate();
     var ids2 = shownIds();
     if (ids2.indexOf("bh-alireza") !== -1) everAlireza = true;
-    if (ids2.indexOf("bh-patricia-daughter") !== -1) everPatriciaDaughter = true;
+    if (ids2.indexOf("bh-patricia") !== -1) everPatricia = true;
   }
   ok("a smoker at the bar (Alireza) is NEVER shown on the balcony", !everAlireza);
-  ok("a crowd guest at the bar (Patricia’s daughter) is NEVER shown on the balcony", !everPatriciaDaughter);
+  ok("a crowd guest at the bar (Patricia) is NEVER shown on the balcony", !everPatricia);
   win.__barCoupleNowValue = null;
 
   // (c) a thrown __barCoupleNow degrades gracefully (no crash, still shows people)
@@ -410,7 +410,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
       // never BOTH at once
       if (beerOn && fluteOn) wrongDrink = true;
       if (beerOn || fluteOn) { withDrink++; everDrink = true; } else { everNoDrink = true; }
-      if (id === "bh-patricia-son" && (beerOn || fluteOn)) {
+      if (id === "bh-bahareh" && (beerOn || fluteOn)) {
         if (!fluteOn || !fig.querySelector(".bh-flute").classList.contains("wine")) wrongDrink = true;
         else sawBaharehWine = true;
       }
@@ -440,7 +440,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
 // Tapping a figure pops the shared white card (window.__whoPop). It must carry the same
 // name · role · relationship · fun-fact the garden/cuddly/bar cast get — not a bare
 // "name · role" — and must read the RIGHT key: the roster's `name` is the one-room
-// exclusion key (bh-patricia-son wears Bahareh), and the DJ slot resolves to whoever's off duty.
+// exclusion key (bh-bahareh wears Bahareh), and the DJ slot resolves to whoever's off duty.
 (function () {
   ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
@@ -458,9 +458,9 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   ok("a deck figure's card carries the relationship line", /tip-rel">REL:farhang/.test(card || ""), card);
   ok("a deck figure's card carries the fun fact", /tip-fun">FUN:farhang/.test(card || ""), card);
 
-  // bh-patricia-son wears Bahareh: the visible name and BOTH lookups must be hers, never "patricia-son"
-  card = tapCard("bh-patricia-son");
-  ok("a re-skinned figure shows the face's name, not its slot id", /<em>Bahareh<\/em>/.test(card || "") && !/patricia-son/i.test(card || ""), card);
+  // bh-bahareh wears Bahareh: the visible name and BOTH lookups must be hers, never the slot id
+  card = tapCard("bh-bahareh");
+  ok("a re-skinned figure shows the face's name, not its slot id", /<em>Bahareh<\/em>/.test(card || ""), card);
   ok("a re-skinned figure looks its lines up by the face's key", /REL:bahareh/.test(card || "") && /FUN:bahareh/.test(card || ""), card);
 
   // the DJ slot is live: the card names whoever is OFF duty and uses that name as the key

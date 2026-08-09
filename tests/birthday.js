@@ -31,10 +31,10 @@ var HARNESS = [
   "    await sleep(150);",
   "    report.steps.first.crownVisible = vis('.bd-crown-marketa');",
   "    report.steps.first.plainHat = (document.querySelector('.bd-hat-marketa') ? vis('.bd-hat-marketa') : 'none');",
-  "    // console jump to Ali (holiday decor) with the party ON — a garden stop: garden floor",
+  "    // Dateless people stay outside the birthday ring; their dormant art remains hidden.",
+  "    var birthdayList = window.birthday('list');",
+  "    report.steps.dateless = { ali: window.birthday('ali'), goli: window.birthday('goli'), son: window.birthday('patricia-son'), daughter: window.birthday('patricia-daughter'), list: birthdayList, bdAli: hasCls('bd-ali'), bdGoli: hasCls('bd-goli'), bdSon: hasCls('bd-patricia-son'), bdDaughter: hasCls('bd-patricia-daughter'), aliHat: vis('.bd-hat-ali'), goliHat: vis('.bd-hat-goli'), sonHat: vis('.bd-hat-patricia-son'), daughterHat: vis('.bd-hat-patricia-daughter') };",
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
-  "    var ret = window.birthday('ali'); await sleep(200);",
-  "    report.steps.ali = { ret: ret, bdAli: hasCls('bd-ali'), holiday: hasCls('season-holiday'), party: !!window.__gardenPartyOn, room: window.currentStageName, hatVisible: vis('.bd-hat-ali') };",
   "    // REGRESSION (the Madla floating-crown bug): start from an exact small floor where Madla has",
   "    // not arrived. Her birthday must force her visible under the crown, temporarily summon the",
   "    // wider crowd, then release only those temporary arrivals back to this seeded floor.",
@@ -61,13 +61,9 @@ var HARNESS = [
   "    var trimStarted={ leaving:document.querySelectorAll('#garden-guests .guest.leaving').length, staying:document.querySelectorAll('#garden-guests .guest.arrived:not(.leaving)').length, animation:firstLeaver?getComputedStyle(firstLeaver).animationName:'' };",
   "    await sleep(3400);",
   "    report.steps.madlaTrim = { calls: releaseCalls, before: fullFloorBeforeTrim, started: trimStarted, after: floorCount(), leavingAfter:document.querySelectorAll('#garden-guests .guest.leaving').length };",
-  "    // Any birthday person with a real dance-floor model goes to the party cake, regardless of age.",
+  "    // Any datable birthday person with a real dance-floor model goes to the party cake.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(300);",
-  "    window.birthday('goli'); await sleep(700);",
-  "    var pFig=document.querySelector('#garden-guests .g-goli');",
-  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(pFig&&pFig.classList.contains('bd-cutter')), hatVisible: vis('#garden-guests .g-goli .bd-hat-goli') };",
-  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
-  "    // Elisabeth also has a dance-floor model, so her crown belongs at the cake.",
+  "    // Elisabeth has a dance-floor model, so her crown belongs at the cake.",
   "    window.birthday('elisabeth'); await sleep(450);",
   "    var eFig=document.querySelector('#garden-guests .g-elisabeth');",
   "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(eFig&&eFig.classList.contains('bd-cutter')), crownVisible: vis('#garden-guests .g-elisabeth .bd-crown-elisabeth') };",
@@ -127,13 +123,12 @@ else {
   if (s.first && s.first.sd && s.first.sd.m === 0 && s.first.sd.d === 20) pass("Markéta's stop time-travels to Jan 20"); else fail("Markéta date = Jan 20", JSON.stringify(s.first && s.first.sd));
   if (s.first && /Mark/.test(s.first.toast)) pass("birthday toast names the person (" + (s.first && s.first.toast) + ")"); else fail("toast names the person", JSON.stringify(s.first && s.first.toast));
   if (s.first && s.first.crownVisible === "visible" && s.first.plainHat === "none") pass("Markéta wears a CROWN (bd-crown, no bd-hat)"); else fail("Markéta crown visible / no hat", JSON.stringify(s.first && { crown: s.first.crownVisible, hat: s.first.plainHat }));
-  // Historical dateless-guest birthday detail removed.
-  if (s.ali && s.ali.party && s.ali.room === "garden" && s.ali.hatVisible === "visible") pass("party-ON garden stop pans to the garden floor, hat visible"); else fail("Ali garden reveal", JSON.stringify(s.ali));
+  if (s.dateless && [s.dateless.ali, s.dateless.goli, s.dateless.son, s.dateless.daughter].every(function (v) { return /^no birthday/.test(v); }) && !/\"ali\"|\"goli\"|patricia-son|patricia-daughter/.test(s.dateless.list)) pass("dateless people stay outside birthday() and its ring"); else fail("dateless people have no birthday records", JSON.stringify(s.dateless));
+  if (s.dateless && !s.dateless.bdAli && !s.dateless.bdGoli && !s.dateless.bdSon && !s.dateless.bdDaughter && [s.dateless.aliHat, s.dateless.goliHat, s.dateless.sonHat, s.dateless.daughterHat].every(function (v) { return v === "hidden"; })) pass("their retained birthday props remain dormant without active birthday classes"); else fail("retained birthday props dormant", JSON.stringify(s.dateless));
   if (s.madlaPre && s.madlaPre.guestsIn && s.madlaPre.madlaHidden === "hidden") pass("bug precondition set: floor populated (guests-in) with Madla still hidden off-floor"); else fail("Madla precondition (guests-in + madla hidden)", JSON.stringify(s.madlaPre));
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
   if (s.madlaHold && s.madlaHold.balanceSame && !s.madlaHold.leaving && s.madlaHold.stillCutter && s.madlaHold.stillVis === "visible") pass("Madla HOLDS at the cake through a rebalance — the cutter isn't glided off to a slot/corner"); else fail("Madla holds at cake through rebalance (no drift to corner)", JSON.stringify(s.madlaHold));
   if (s.madlaTrim && s.madlaTrim.calls === 1 && s.madlaTrim.started.leaving > 0 && s.madlaTrim.after <= 8) pass("ending the birthday cake releases its temporary crowd and rebalances the retained floor"); else fail("birthday cake end releases forced crowd", JSON.stringify(s.madlaTrim));
-  if (s.goli && s.goli.bd && s.goli.room === "garden" && s.goli.party && s.goli.cakeOn && s.goli.cutter && s.goli.hatVisible === "visible") pass("Goli's dance-floor model routes her birthday to the cake"); else fail("Goli floor-model birthday", JSON.stringify(s.goli));
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.room === "garden" && s.elisabeth.party && s.elisabeth.cakeOn && s.elisabeth.cutter && s.elisabeth.crownVisible === "visible") pass("Elisabeth's dance-floor model routes her birthday to the cake"); else fail("Elisabeth floor-model birthday", JSON.stringify(s.elisabeth));
   if (s.madlaCall && s.madlaCall.bd && s.madlaCall.room === "garden" && s.madlaCall.cakeOn && s.madlaCall.cutter && s.madlaCall.crownVis === "visible") pass("Madla's dance-floor model routes her birthday to the cake"); else fail("Madla floor-model birthday", JSON.stringify(s.madlaCall));
   if (s.patriciaCall && s.patriciaCall.bd && s.patriciaCall.room === "garden" && s.patriciaCall.cakeOn && s.patriciaCall.cutter && s.patriciaCall.hatVis === "visible") pass("Patricia's dance-floor model routes her birthday to the cake"); else fail("Patricia floor-model birthday", JSON.stringify(s.patriciaCall));
@@ -170,6 +165,15 @@ if (reduced && reduced.hat === "hidden") pass("reduced-motion suppression cannot
 if (reduced && reduced.errors && reduced.errors.length === 0) pass("no uncaught JS errors in reduced-motion runner probe"); else fail("reduced-motion probe errors", JSON.stringify(reduced && reduced.errors));
 
 var source = require("fs").readFileSync(require("path").join(__dirname, "..", "rsvp.html"), "utf8");
+var retainedPropMinimums = { ali: 1, goli: 1, "patricia-son": 3, "patricia-daughter": 3 };
+if (Object.keys(retainedPropMinimums).every(function (who) {
+  var matches = source.match(new RegExp('class="[^"]*bd-hat-' + who + '(?:\\s|"|$)', "g")) || [];
+  return matches.length >= retainedPropMinimums[who];
+})) {
+  pass("dateless people retain their authored floor, runner, and call birthday props for future reuse");
+} else {
+  fail("retained birthday prop inventory");
+}
 if (source.indexOf('#stage-garden > [id^="garden-kid-"]:not(.chasing) .bd-adorn') >= 0 &&
     source.indexOf('#loft-game-strip [id^="garden-kid-"]:not(.chasing) .bd-adorn') < 0) {
   pass("parked-runner gate targets outer runners without catching their *-body descendants");

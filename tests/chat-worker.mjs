@@ -287,9 +287,9 @@ check(actionCase.reply.action?.id === "call.incoming.trigger" && actionCase.repl
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "I can connect you with Patricia's family.", action: null }),
   { actions_available: ["call.video.start"] },
-  "call Patricia",
+  "call Patricia's son",
 );
-check(actionCase.reply.action?.id === "call.video.start" && actionCase.reply.action.args.contact === "california", "named California family members resolve to California", actionCase);
+check(actionCase.reply.action?.id === "call.video.start" && actionCase.reply.action.args.contact === "california", "relationship-only California family members resolve to California", actionCase);
 
 const fullActionList = [
   "app.open", "bar.cocktail.make", "bar.mixer.start", "bbq.set", "call.hangup", "call.incoming.trigger", "call.video.start",

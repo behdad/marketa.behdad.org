@@ -96,6 +96,11 @@ function buildScene() {
 /* ── shim document/window + captured __whoPop calls ─────────────────────────── */
 var whoPopCalls = [];
 var T_EN = extractRoles(html);
+var namePairs = Array.from(html.matchAll(/name_patricia_son:\s*"([^"]*)", name_patricia_daughter:\s*"([^"]*)"/g));
+var T_NAMES = {
+  en: { "patricia-son": namePairs[0] && namePairs[0][1], "patricia-daughter": namePairs[0] && namePairs[0][2] },
+  cs: { "patricia-son": namePairs[1] && namePairs[1][1], "patricia-daughter": namePairs[1] && namePairs[1][2] }
+};
 function extractRoles(src) {
   // pull the role_* map values from T.en so tipText resolves the real strings
   var out = {};
@@ -123,6 +128,7 @@ var winShim = {
   __whoPop: function (anchor, html) { whoPopCalls.push({ anchor: anchor, html: html }); }
 };
 function tipText(key) { return T_EN[key] || ""; }
+function personDisplayName(key, fallback) { return (T_NAMES[docShim.documentElement.lang] || {})[key] || fallback || ""; }
 // kid popups append a live age line via the global kidAgeLine(); stub it here (defined outside the sliced IIFE)
 function kidAgeLine() { return ""; }
 // kid popups also append a relationship line via the global relLine(); stub it here (defined outside the sliced IIFE)
@@ -156,9 +162,9 @@ ok(/window\.__updateKidGames\s*=\s*apply/.test(iife), "sliced the real __updateK
 
 /* run it inside a Function with our shims in scope */
 function runIIFE() {
-  var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine", "relLine", "funFact", "showDirectPersonCard",
+  var fn = new Function("document", "window", "tipText", "personDisplayName", "hoverTooltip", "kidAgeLine", "relLine", "funFact", "showDirectPersonCard",
     iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow, now: window.__kidGamesNow };");
-  return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine, relLine, funFact, showDirectPersonCard);
+  return fn(docShim, winShim, tipText, personDisplayName, hoverTooltip, kidAgeLine, relLine, funFact, showDirectPersonCard);
 }
 
 /* ══ TEST 1: name-card taps ═════════════════════════════════════════════════ */
@@ -188,6 +194,12 @@ NAMES.forEach(function (n) {
   ok(call && call.html === want, n + " tap → whoPop \"" + (call ? call.html : "(none)") + "\"");
   ok(call && call.anchor === rock, n + " whoPop anchored on the kid's .kg-rock");
 });
+docShim.documentElement.lang = "cs";
+whoPopCalls.length = 0;
+kg.querySelector(".kg-patricia-son").querySelector(".kg-tilt")._fireClick();
+kg.querySelector(".kg-patricia-daughter").querySelector(".kg-tilt")._fireClick();
+ok(whoPopCalls.length === 2 && /<em>Patriciin syn<\/em>/.test(whoPopCalls[0].html) && /<em>Patriciina dcera<\/em>/.test(whoPopCalls[1].html), "relationship-only child names switch to Czech");
+docShim.documentElement.lang = "en";
 // a tap while NOT playing must NOT pop
 kg.classList.remove("playing");
 whoPopCalls.length = 0;

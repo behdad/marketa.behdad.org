@@ -811,7 +811,7 @@ function callRequestIntent(value) {
   const groups = [
     { contact: "lubeck", names: ["madla", "robert", "elisabeth", "felix", "lubeck", "lubek", "lueb"] },
     { contact: "prague", names: ["prague", "praha", "daniel", "marie", "baka", "parents", "mom", "dad"] },
-    { contact: "california", names: ["california", "patricia", "patricia-son", "patricia-daughter"] },
+    { contact: "california", names: ["california", "patricia", "patricia son", "patricia daughter"] },
     { contact: "tehran", names: ["tehran", "iran", "ashraf", "mohsen", "baharak", "payman", "hannah"] },
   ];
   for (const group of groups) {

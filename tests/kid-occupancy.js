@@ -63,13 +63,13 @@ var harness = String.raw`<script>
     window.goToStage("cuddly");
     window.__updateKidGames();
 
-    var gameNames = window.__kidGamesNow().map(function (p) { return p.name.toLowerCase(); });
+    var gameKeys = window.__kidGamesNow().map(function (p) { return p.key; });
     var moved = kids.filter(function (name) {
       var floor = document.querySelector("#garden-guests .g-" + name);
       return floor && floor.classList.contains("off-at-games");
     });
     var audit = window.__peopleManager.audit();
-    check("Cuddly can seat all eight named children", kids.every(function (name) { return gameNames.indexOf(name) !== -1; }), gameNames.join(","));
+    check("Cuddly can seat all eight children", kids.every(function (name) { return gameKeys.indexOf(name) !== -1; }), gameKeys.join(","));
     check("the same eight children leave the garden floor", moved.length === kids.length, moved.join(","));
     check("no child duplicates across garden and Cuddly", audit.ok && !(audit.duplicates || []).some(function (d) { return kids.indexOf(d.key) !== -1; }), JSON.stringify(audit.duplicates));
     var placement = window.__partyKidPlacement;

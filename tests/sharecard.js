@@ -42,7 +42,7 @@ var HARNESS = [
   "    setTimeout(function () {",
   "      make('default', null)",
   "        .then(function () { return make('season', function () { window.season('spooky'); }); })",
-  "        .then(function () { return make('birthday', function () { window.birthday('ali'); }); })",
+  "        .then(function () { return make('birthday', function () { window.birthday('jay'); }); })",
   "        .then(async function () {",
   "          var prior = window.__summonCurrentFestivity;",
   "          window.__summonCurrentFestivity = function () { report.autoBirthdayActivations++; return true; };",
@@ -81,7 +81,7 @@ if (!r) {
     else fail(n + ": Download anchor wired", JSON.stringify(c));
   });
   var bd = byName.birthday;
-  if (bd && bd.download === "marketa-behdad-ali.png") pass("birthday badges the person (filename marketa-behdad-ali.png)");
+  if (bd && bd.download === "marketa-behdad-jay.png") pass("birthday badges the person (filename marketa-behdad-jay.png)");
   else fail("birthday badges the person", bd ? bd.download : "no card");
   var se = byName.season;
   if (se && se.download === "marketa-behdad-spooky.png") pass("season badges the occasion (filename marketa-behdad-spooky.png)");

@@ -39770,6 +39770,7 @@ window.__entranceRoomOpen = false;
       window.__cancelCaption("roadtrip-score");
       window.__cancelCaption("roadtrip-story");
       window.__cancelCaption("camp-progress");
+      window.__cancelCaption("roadtrip-police");
     }
     lastDriveInstruction = porscheDriveInstructionKey();
     if (!window.__captionBase) return false;
@@ -39959,6 +39960,13 @@ window.__entranceRoomOpen = false;
   });
   function enforceRoadtripSuspensionStop() {
     if (roadtripSuspensionStopActive || roadtripSuspensionRemainingMs() <= 0) return false;
+    var controlsHeld = Object.keys(driveState.holds).some(function (key) { return driveState.holds[key]; });
+    var needsStop = roadtripState.active || porscheState.engineOn || porscheState.headlightOn ||
+      porscheState.taillightOn || driveState.stalled || Math.abs(driveState.speed) > .001 ||
+      driveState.rpm > 0 || driveState.gear !== 0 || porscheTransmission.range !== "P" ||
+      driveState.cruiseActive || controlsHeld || driveFrame || driveTimer || porscheIdleNodes ||
+      porscheDriveAudioNodes;
+    if (!needsStop) return false;
     roadtripSuspensionStopActive = true;
     var wasRoadtripActive = roadtripState.active;
     try {
@@ -43943,6 +43951,7 @@ window.__entranceRoomOpen = false;
         "entrance_roadtrip_police_centerline_ticket" : "entrance_roadtrip_police_ticket") :
       (police.courtRequired ? "entrance_roadtrip_police_court_refused" :
         "entrance_roadtrip_police_refused")));
+    paintPorscheDriveHud();
     roadtripPoliceOutcomeFeedback(outcomeKey, {
       over: police.overLimit,
       fine: police.courtRequired ? roadtripPoliceText("entrance_roadtrip_court_fine") : "$" + police.fine,
@@ -43950,7 +43959,6 @@ window.__entranceRoomOpen = false;
       total: citation.total,
       status: roadtripDemeritStatusText()
     });
-    paintPorscheDriveHud();
     return true;
   }
   function settleRoadtripPoliceStop() {

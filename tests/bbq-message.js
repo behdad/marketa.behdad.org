@@ -60,7 +60,8 @@ var harness = String.raw`<script>
       heldPlate.getAttribute("data-kind") === firstKind && heldPlate.getAttribute("data-recipient") === handoff.recipient,
       JSON.stringify({ kind: firstKind, handoff: handoff, hangout: document.getElementById("balcony-hangout").getAttribute("class"), present: document.querySelectorAll("#balcony-hangout .bh-fig.bh-present").length }));
     window.goToStage("cuddly"); // keep Hamid's ambient serve loop from racing this inventory probe
-    check("leaving the balcony clears brief held plates", !document.querySelector("#balcony-hangout .bh-served-plate"));
+    check("leaving the balcony preserves the party assignment and its brief held plate",
+      !!document.querySelector("#balcony-hangout .bh-served-plate"));
     for (var first = 1; first < 3; first++) window.__balconyServeReadyBurger();
   }, 7600);
   setTimeout(function () {

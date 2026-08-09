@@ -58,7 +58,7 @@ if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.notification_open.app && s.notification_open.room === "garden" && s.notification_open.row && s.notification_open.visible && s.notification_open.unread && s.notification_open.action, "an actionable notification shows its arrow; tapping the card still opens and positions the unread message without running it", s.notification_open);
-check(!s.notification_escape.phone && s.notification_backspace_one.phone && s.notification_backspace_one.active === "pm-msg-input" && !s.notification_backspace_two.phone, "Escape closes directly opened Messages; empty search then takes two Backspaces (composer, close)", {escape:s.notification_escape,one:s.notification_backspace_one,two:s.notification_backspace_two});
+check(!s.notification_escape.phone && s.notification_backspace_one.phone && s.notification_backspace_one.active === "pm-ms-input" && s.notification_backspace_two.phone, "Escape closes directly opened Messages while repeated Backspace leaves its empty search open and focused", {escape:s.notification_escape,one:s.notification_backspace_one,two:s.notification_backspace_two});
 check(s.notification_read.room === "garden" && s.notification_read.phone && !s.notification_read.unread && s.notification_read.action && !s.notification_read.bubbleAction, "tapping row chrome marks it read while only the action arrow remains actionable", s.notification_read);
 check(s.notification_bubble_inert.room === "garden" && s.notification_bubble_inert.phone &&
   s.notification_action.room === "office" && !s.notification_action.phone,

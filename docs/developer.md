@@ -225,9 +225,11 @@ Preserve the `activeControlFocused` checks and the capture-phase ordering around
 independent bubble-phase key listener for a room action; it will eventually race a phone field,
 projector, lower-room game, or car HUD.
 
-Escape and Backspace are dismissal/back actions. Backspace is normalized through the Escape path.
-They must not solve a first-run room puzzle. Within a lower room they dismiss its currently playing
-activity or overlay; they do not substitute for the explicit up-room navigation.
+Escape and Backspace are dismissal/back actions. Backspace is normalized through the Escape path,
+except while a search input owns the key: it edits the query and remains inert at the empty boundary.
+Only Escape leaves a search surface. Neither key may solve a first-run room puzzle. Within a lower
+room they dismiss its currently playing activity or overlay; they do not substitute for the explicit
+up-room navigation.
 
 Pointer and touch are first-class controls. If a keyboard shortcut changes gameplay, the depicted
 object or visible control still needs an equivalent click/tap path. Mobile drag prevention belongs

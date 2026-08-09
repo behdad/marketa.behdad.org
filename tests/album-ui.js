@@ -21,7 +21,7 @@ var HARNESS = [
   ' var shell=document.querySelector(".phone-shell"),card=document.querySelector(".pm-pol-selfie"),view=document.querySelector(".pm-album-view");',
   ' view.click();S("compact",{active:view.classList.contains("active"),grid:document.querySelector(".pm-album-grid").classList.contains("compact"),cards:document.querySelectorAll(".pm-polaroid").length,deleteButtons:document.querySelectorAll(".pm-pol-delete").length,selfie:!!card});',
   ' shell.dispatchEvent(new KeyboardEvent("keydown",{key:"/",bubbles:true,cancelable:true}));await sleep(20);var search=document.activeElement;S("slash",{active:search&&search.className});',
-  ' search.dispatchEvent(new KeyboardEvent("keydown",{key:"Backspace",bubbles:true,cancelable:true}));await sleep(40);S("back",{phone:!!document.querySelector(".phone-backdrop.show"),home:shell.classList.contains("pm-home")});',
+  ' search.dispatchEvent(new KeyboardEvent("keydown",{key:"Backspace",bubbles:true,cancelable:true}));await sleep(40);S("back",{phone:!!document.querySelector(".phone-backdrop.show"),home:shell.classList.contains("pm-home"),album:!!document.querySelector(".pm-album"),active:document.activeElement&&document.activeElement.className});',
   ' window.__openPhoneAppHere("album",true);await sleep(40);shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));await sleep(260);S("directEscape",{phone:!!document.querySelector(".phone-backdrop.show")});',
   ' window.__openPhoneAppHere("album",true);await sleep(40);shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Backspace",bubbles:true,cancelable:true}));await sleep(260);S("directBackspace",{phone:!!document.querySelector(".phone-backdrop.show")});',
   ' window.phone("album");await sleep(80);card=document.querySelector(".pm-pol-selfie");var del=card&&card.querySelector(".pm-pol-delete");if(del)del.click();await sleep(80);S("remove",{count:window.__albumList().length,selfie:!!document.querySelector(".pm-pol-selfie"),stillAlbum:!!document.querySelector(".pm-album")});',
@@ -48,7 +48,7 @@ check(s.store.count === s.store.initial + 1 && s.store.id === s.store.updatedId 
 check(s.store.kind === "selfie" && !s.store.leaks, "chat receives only selfie metadata, never pixels, blobs, or object URLs", s.store);
 check(s.compact.active && s.compact.grid && s.compact.cards === s.compact.deleteButtons && s.compact.selfie, "compact mode makes a two-column roll and every picture has a remove button", s.compact);
 check(s.slash.active === "pm-as-input", "/ focuses the Album search field", s.slash);
-check(s.back.phone && s.back.home, "Backspace in an empty Album search performs the app's normal back navigation", s.back);
+check(s.back.phone && !s.back.home && s.back.album && s.back.active === "pm-as-input", "Backspace leaves an empty Album search open and focused", s.back);
 check(!s.directEscape.phone && !s.directBackspace.phone, "Escape and Backspace close a directly opened Aspen Album", { escape: s.directEscape, backspace: s.directBackspace });
 check(s.remove.count === s.store.initial && !s.remove.selfie && s.remove.stillAlbum, "removing a selfie updates the open Album without leaving it", s.remove);
 check(s.recap.available && s.recap.portrait && s.recap.group && s.recap.open && s.recap.cards === s.recap.live, "after the party, the recap groups every live keepsake and excludes pre-wedding seed photos", s.recap);

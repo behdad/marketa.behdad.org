@@ -133,8 +133,9 @@ opens the complete keyboard-shortcut card.
 - `Tab`: open or close **The Loft** room map. Its arrow-key selection follows the room layout;
   `Enter` opens the selected room. A locked room takes two quick `Enter` presses before the Party and
   one after it begins.
-- `Escape` / `Backspace`: dismiss the current activity or layer. In an idle lower room they leave you
-  there; use `↑` when you want to go upstairs.
+- `Escape` / `Backspace`: dismiss the current activity or layer. In a search field, Backspace only
+  edits the query and stays put even when it is empty; use `Escape` to leave. In an idle lower room
+  both keys leave you there; use `↑` when you want to go upstairs.
 
 ### Actions and tools
 

@@ -74125,9 +74125,6 @@ setOfficeProgress("pc", false);
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopPropagation(); clearDockSearch(); return;
       }
-      if (e.key === "Backspace" && !dockSearchInput.value) {
-        e.preventDefault(); e.stopPropagation(); clearDockSearch(); return;
-      }
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault(); e.stopPropagation();
         stepDockSearch(e.key === "ArrowDown" ? 1 : -1);
@@ -75039,8 +75036,10 @@ setOfficeProgress("pc", false);
     if (e.key === "Backspace") {
       if (!active) return;
       e.preventDefault(); e.stopImmediatePropagation();
-      if (!dockSearchQuery) { clearDockSearch(); return; }
-      dockSearchQuery = dockSearchQuery.slice(0, -1); dockSearchIndex = -1; paintDockSearch(); return;
+      if (dockSearchQuery) {
+        dockSearchQuery = dockSearchQuery.slice(0, -1); dockSearchIndex = -1; paintDockSearch();
+      }
+      return;
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       if (!active) return;
@@ -91893,7 +91892,6 @@ async def localfont(name):
       input.addEventListener("keydown", function (e) {
         if (input.value) return;
         if (e.key === "/") { e.preventDefault(); e.stopPropagation(); close(); return; }
-        if (e.key === "Backspace") { e.preventDefault(); appAutoFocusTextControl(messageInput); }
       });
       unreadChk.addEventListener("change", function () { msgUnreadOnly = unreadChk.checked; applyFilter(); });
       readAll.addEventListener("click", function () {
@@ -92749,11 +92747,6 @@ async def localfont(name):
         nomatch.style.display = shown ? "none" : "";
       }
       input.addEventListener("input", function () { albumSearchQ = input.value; applyFilter(); });
-      input.addEventListener("keydown", function (e) {
-        if (e.key !== "Backspace" || input.value || e.ctrlKey || e.metaKey || e.altKey) return;
-        e.preventDefault(); e.stopPropagation();
-        input.blur(); navBack();
-      });
       clr.addEventListener("click", function () { input.value = ""; albumSearchQ = ""; applyFilter(); appAutoFocusTextControl(input); });
       view.addEventListener("click", function () {
         albumCompact = !albumCompact;
@@ -97025,7 +97018,8 @@ async def localfont(name):
       }
       if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey && phoneAppReturnsByClosing()) {
         var backTarget = e.target;
-        if (backTarget && backTarget.classList && backTarget.classList.contains("pm-ms-input")) return; // empty search returns to the composer in its own field handler; a second Backspace closes
+        // An empty search still owns Backspace; only Escape navigates away from it.
+        if (backTarget && backTarget.matches && backTarget.matches('input[type="search"]')) return;
         if (backTarget && (/^(INPUT|TEXTAREA)$/.test(backTarget.tagName) || backTarget.isContentEditable) && !backTarget.value && !backTarget.textContent) {
           e.preventDefault(); e.stopImmediatePropagation(); close(); return;
         }
@@ -125830,12 +125824,6 @@ function spawnDustMote(container) {
       none.style.display = shown ? "none" : ""; // "no events match" only surfaces on a non-matching query (empty query lists all)
     }
     input.addEventListener("input", apply);
-    input.addEventListener("keydown", function (e) {
-      if (e.key !== "Backspace" || input.value || e.ctrlKey || e.metaKey || e.altKey) return;
-      e.preventDefault(); e.stopPropagation();
-      calSearchOn = false; calSearchQ = "";
-      window.__calendarRender(container, surface);
-    });
     clr.addEventListener("click", function () { input.value = ""; apply(); appAutoFocusTextControl(input); });
     apply();
     return { bar: bar, body: body, input: input };

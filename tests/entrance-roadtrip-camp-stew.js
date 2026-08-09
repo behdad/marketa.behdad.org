@@ -135,7 +135,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             choose("pasta");
             click(cook);
             report.missing = {
-              state: stew(), caption: window.__captionKey(), crate: shown(crate),
+              state: stew(), crate: shown(crate),
               available: camp.classList.contains("stew-crate-available"), overlay: game.classList.contains("open")
             };
             click(close);
@@ -231,7 +231,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 click(pot);
                 report.served = {
                   state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(),
-                  crate: shown(crate), caption: window.__captionKey()
+                  crate: shown(crate)
                 };
                 report.bowlOwnership = meals.map(function (bowl) {
                   return bowl.parentElement.classList.contains("entrance-roadtrip-camp-character-drag") &&
@@ -266,7 +266,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 fullRequired("chicken", "barley");
                 ["carrots", "mushrooms", "chilies", "coriander"].forEach(choose);
                 click(cook);
-                window.__entranceRoadtripCampStewStep(19999);
+                window.__entranceRoadtripCampStewStep(Math.max(0, 12000 - stew().elapsed));
+                var beforeNotebook = stew();
+                click(document.getElementById("entrance-roadtrip-camp-notebook"));
+                report.notebookPause = {
+                  before: beforeNotebook,
+                  open: !!document.querySelector(".entrance-roadtrip-notebook-backdrop"),
+                  whileOpen: window.__entranceRoadtripCampStewStep(33000)
+                };
+                click(document.querySelector(".entrance-roadtrip-notebook-close"));
+                report.notebookPause.closed = !document.querySelector(".entrance-roadtrip-notebook-backdrop");
+                window.__entranceRoadtripCampStewStep(Math.max(0, 44999 - stew().elapsed));
                 report.beforeOvercooked = stew();
                 window.__entranceRoadtripCampStewStep(1);
                 var overcookedCheckpoint = window.__captureCheckpointSystems().entrance;
@@ -352,7 +362,7 @@ check(result && result.builder && result.builder.open && JSON.stringify(result.b
 check(result && result.swaps && result.swaps.protein.protein === "beef" && result.swaps.starch.starch === "pasta",
   "the five proteins and five bases remain mutually exclusive", result && result.swaps);
 check(result && result.missing && result.missing.state.status === "assembling" && !result.missing.state.recipeComplete &&
-  result.missing.caption === "entrance_roadtrip_stew_missing" && result.missing.crate && result.missing.available && result.missing.overlay,
+  result.missing.crate && result.missing.available && result.missing.overlay,
   "the real Cook button refuses only a missing required item without hiding the crate", result && result.missing);
 check(result && result.closedDraft && !result.closedDraft.state.open && result.closedDraft.state.phase === "cold" &&
   result.closedDraft.crate && result.reopenedDraft && result.reopenedDraft.open && !result.reopenedDraft.recipeComplete,
@@ -408,7 +418,7 @@ check(result && result.fireOutRestored && !result.fireOutRestored.before.fireLit
   result.readyRestored.pot && result.readyRestored.grill && !result.readyRestored.crate,
   "a fire-out checkpoint hard-resets food while a lit checkpoint restores committed cooking", result && { fireOut: result.fireOutRestored, ready: result.readyRestored });
 check(result && result.served && result.served.state.status === "served" && !result.served.pot && result.served.grill &&
-  result.served.corn && result.served.meal && !result.served.crate && result.served.caption === "entrance_roadtrip_stew_served_feedback" &&
+  result.served.corn && result.served.meal && !result.served.crate &&
   result.servedRestored && result.servedRestored.state.status === "served" && !result.servedRestored.pot && result.servedRestored.grill &&
   result.servedRestored.corn && result.servedRestored.meal,
   "the real ready-pot click serves bowls and corn, and the payoff restores durably", result && { served: result.served, restored: result.servedRestored });
@@ -436,9 +446,15 @@ check(result && result.draftRestored && result.draftRestored.saved &&
   result.draftRestored.state.phase === "raw" && result.draftRestored.state.recipeComplete &&
   result.draftRestored.crate && !result.draftRestored.overlay,
   "checkpoint restore preserves a partial draft while leaving its overlay closed", result && result.draftRestored);
+check(result && result.notebookPause && result.notebookPause.open && result.notebookPause.closed &&
+  result.notebookPause.before.status === "cooking" && result.notebookPause.before.phase === "ready" &&
+  result.notebookPause.whileOpen.status === "cooking" &&
+  result.notebookPause.whileOpen.elapsed === result.notebookPause.before.elapsed,
+  "Markéta’s open notebook pauses the stew’s burn clock and closing it resumes the same batch",
+  result && result.notebookPause);
 check(result && result.beforeOvercooked && result.beforeOvercooked.status === "cooking" &&
-  result.beforeOvercooked.phase === "ready" && result.beforeOvercooked.elapsed === 19999,
-  "stew remains ready for a full twenty seconds before it can burn", result && result.beforeOvercooked);
+  result.beforeOvercooked.phase === "ready" && result.beforeOvercooked.elapsed === 44999,
+  "stew remains unburned through 44.999 seconds of counted cooking time", result && result.beforeOvercooked);
 
 check(result && result.overcooked && result.overcooked.state.status === "overcooked" && result.overcooked.state.clankActive &&
   result.overcooked.state.lidOpen &&

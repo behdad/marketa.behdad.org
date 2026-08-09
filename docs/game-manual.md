@@ -187,9 +187,11 @@ on the Abraham Lake segment and returns if you miss it.
 Leaving or unfocusing a highway pauses it. Open **Road Trip** again to **Continue** the saved run,
 start **New**, or return to **Camping** after the campsite has been reached.
 
-At Camping, follow the caption through the fire, stew, stargazing, and sleep. The fire cannot be put
-out until the later sleep prompt, so an early click cannot skip the evening. The finale caption
-includes the time spent in loft and invites you to share it in the RSVP.
+At Camping, follow the caption through the fire, stew, stargazing, and sleep. Once cooking starts,
+the stew burns after 45 seconds of counted cooking time; opening Markéta’s notebook pauses that
+clock until the notebook closes. The fire cannot be put out until the later sleep prompt, so an
+early click cannot skip the evening. The finale caption includes the time spent in loft and invites
+you to share it in the RSVP.
 
 ## Saves and browser notes
 

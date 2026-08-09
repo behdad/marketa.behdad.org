@@ -204,6 +204,11 @@ split across `campFireState`, `campStewState`, `campStargazingState`, and `campS
 is fire, stew, stargazing, sleep/finale. Restore and replay must project the appropriate scene before
 it becomes visible, so an old finale or unfinished road frame never flashes on entry.
 
+The stew’s elapsed cooking time is checkpointed, but the notebook modal is not. Its animation-frame
+clock advances only while Camping is attended and Markéta’s notebook is closed; opening the notebook
+must pause elapsed time without stopping or resetting the batch, and closing it resumes from the same
+value.
+
 Do not duplicate route geometry, traffic constants, finale timing, or the Camping audio graph in
 this guide. Work from the controller itself, add a focused regression test for the behavior being
 changed, and use [the audio guide](audio.md) for `__updateRoadtripCampAudio` and cabin exposure.

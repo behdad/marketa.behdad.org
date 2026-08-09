@@ -22,12 +22,22 @@ function fail(label, detail) {
 }
 
 function extractScript(html) {
-  // Concatenate EVERY inline <script> block, not a greedy first-open..last-close span
+  // Concatenate EVERY authored <script> block in document order, not a greedy
+  // first-open..last-close span. Local src files are included too: Loft Day keeps
+  // its language dictionaries reviewable outside the otherwise single-file game.
   // (that swallowed all the HTML in between once a second <script>, e.g. the head
-  // #reveal toggle, was added). Joined so node --check validates them all and the
-  // dictionary/i18n scans still see the main T-dictionary script.
-  var re = /<script\b[^>]*>([\s\S]*?)<\/script>/g, m, parts = [];
-  while ((m = re.exec(html))) if (m[1].trim()) parts.push(m[1]);
+  // #reveal toggle, was added). Joined so node --check validates the same ordered
+  // program the browser loads and dictionary/i18n scans see external messages.
+  var re = /<script\b([^>]*)>([\s\S]*?)<\/script>/g, m, parts = [];
+  while ((m = re.exec(html))) {
+    var src = /\bsrc=["']([^"']+)["']/.exec(m[1]);
+    if (src && !/^[a-z]+:/i.test(src[1])) {
+      var external = path.join(ROOT, src[1]);
+      if (fs.existsSync(external)) parts.push(fs.readFileSync(external, "utf8"));
+    } else if (m[2].trim()) {
+      parts.push(m[2]);
+    }
+  }
   return parts.length ? parts.join("\n;\n") : null;
 }
 
@@ -222,7 +232,78 @@ function extractDictKeys(script, label) {
   return keys;
 }
 
-function checkDictParity(file, script) {
+function sortedDictionary(value) {
+  if (Array.isArray(value)) return value.map(sortedDictionary);
+  if (!value || typeof value !== "object") return value;
+  var out = {};
+  Object.keys(value).sort().forEach(function (key) {
+    out[key] = sortedDictionary(value[key]);
+  });
+  return out;
+}
+
+function parseLoftDictionary(lang) {
+  var name = "loft-day." + lang + ".js";
+  var source = fs.readFileSync(path.join(ROOT, name), "utf8");
+  var prefix = 'T["' + lang + '"] = ';
+  if (source.slice(0, prefix.length) !== prefix || source.slice(-2) !== ";\n") {
+    throw new Error(name + ' must contain only `T["' + lang + '"] = { ... };`');
+  }
+  var value = JSON.parse(source.slice(prefix.length, -2));
+  var canonical = prefix + JSON.stringify(sortedDictionary(value), null, 2) + ";\n";
+  if (source !== canonical) {
+    throw new Error(name + " must use canonical JSON formatting with alphabetically sorted object keys (arrays retain authored order)");
+  }
+  return value;
+}
+
+function dictionaryKeyPaths(value, prefix, paths) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  Object.keys(value).forEach(function (key) {
+    var pathName = prefix ? prefix + "." + key : key;
+    paths.push(pathName);
+    dictionaryKeyPaths(value[key], pathName, paths);
+  });
+}
+
+function checkLoftDictParity(file, html) {
+  var init = html.indexOf("<script>var T = {};</script>");
+  var enLoad = html.indexOf('<script src="loft-day.en.js"></script>');
+  var csLoad = html.indexOf('<script src="loft-day.cs.js"></script>');
+  if (!(init !== -1 && init < enLoad && enLoad < csLoad)) {
+    fail(file + ": external dictionaries initialize and load EN before CS");
+  } else {
+    pass(file + ": external dictionaries initialize and load EN before CS");
+  }
+  var en, cs;
+  try {
+    en = parseLoftDictionary("en");
+    cs = parseLoftDictionary("cs");
+    pass(file + ": external dictionaries are canonical and alphabetically sorted");
+  } catch (error) {
+    fail(file + ": external dictionaries are canonical and alphabetically sorted", error.message);
+    return;
+  }
+  var enPaths = [], csPaths = [];
+  dictionaryKeyPaths(en, "", enPaths);
+  dictionaryKeyPaths(cs, "", csPaths);
+  var enSet = new Set(enPaths), csSet = new Set(csPaths);
+  var enOnly = enPaths.filter(function (key) { return !csSet.has(key); });
+  var csOnly = csPaths.filter(function (key) { return !enSet.has(key); });
+  if (!enOnly.length && !csOnly.length) {
+    pass(file + ": EN/CS dictionary keys match recursively (" + enPaths.length + " paths)");
+  } else {
+    fail(file + ": EN/CS dictionary key mismatch",
+      (enOnly.length ? "EN only: " + enOnly.join(", ") + "\n" : "") +
+      (csOnly.length ? "CS only: " + csOnly.join(", ") : ""));
+  }
+}
+
+function checkDictParity(file, script, html) {
+  if (file === "rsvp.html") {
+    checkLoftDictParity(file, html);
+    return;
+  }
   var enKeys = extractDictKeys(script, "en");
   var csKeys = extractDictKeys(script, "cs");
   if (!enKeys || !csKeys) {
@@ -882,16 +963,28 @@ function checkAudioFadeCloseRace(file, script) {
 // Verify each referenced key exists in the en dictionary (cs parity is checked above).
 function checkI18nKeys(file, script, html) {
   if (!script) return;
+  var loftEn = null;
+  if (file === "rsvp.html") {
+    try { loftEn = parseLoftDictionary("en"); }
+    catch (_error) { return; } // the dictionary check reports the parse failure
+  }
   var attrRe = /\bdata-(?:i|href-i|aria-i|title-i|note-key)="([^"]+)"/g;
   var m, seen = new Set(), missing = [];
   while ((m = attrRe.exec(html))) {
     var key = m[1];
     if (seen.has(key)) continue;
     seen.add(key);
-    // a key is defined iff it appears as `key:` in the inline script's T dictionaries
-    // (matched directly, so keys sharing a line with another key still resolve)
-    var keyRe = new RegExp("\\b" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:");
-    if (!keyRe.test(script)) missing.push(key);
+    if (loftEn) {
+      if (!Object.prototype.hasOwnProperty.call(loftEn, key) &&
+          !(loftEn.hunt && Object.prototype.hasOwnProperty.call(loftEn.hunt, key))) {
+        missing.push(key);
+      }
+    } else {
+      // Save-the-date copy remains inline. A key is defined iff it appears as
+      // `key:` in that page's T dictionaries.
+      var keyRe = new RegExp("\\b" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:");
+      if (!keyRe.test(script)) missing.push(key);
+    }
   }
   if (missing.length === 0) {
     pass(file + ": all data-i/data-note-key attributes resolve to a dictionary key");
@@ -1403,7 +1496,7 @@ FILES.forEach(function (file) {
   checkMetadataFreeGame(file, html);
   checkSyntax(file, script);
   if (script) {
-    checkDictParity(file, script);
+    checkDictParity(file, script, html);
     checkEggTotal(html, script);
     checkParticleTransformOrigin(file, script);
     checkAnimationClassCleanup(file, style, script, html);

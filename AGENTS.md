@@ -6,9 +6,10 @@ loft on the same block as their loft home apartment) and **July 10, 2027, Prague
 (Markéta's parents' summerhouse) garden party. Message: come to one or both; all loved
 ones welcome, small or big.
 
-Pages (each a single self-contained file, no build step, no framework — keep it that way):
-`save-the-dates.html` is the save-the-date page (it *was* `index.html`; renamed 2026-07 for
-the frozen-archive drops model), and `rsvp.html` is the interactive game. A landing
+Pages have no build step or framework. `save-the-dates.html` remains self-contained;
+`rsvp.html` is the interactive game, with only its review-friendly English and Czech message
+dictionaries split into `loft-day.en.js` and `loft-day.cs.js`. Keep that boundary narrow. The
+save-the-date page *was* `index.html`; it was renamed 2026-07 for the frozen-archive drops model. A landing
 `index.html` at the root — a hub linking every drop — is planned but not yet built; until it
 exists, `.htaccess` `DirectoryIndex` serves `save-the-dates.html` at `/`. New save-the-date
 features go inside `save-the-dates.html` unless there's a strong reason not to. (`rsvp.html`
@@ -50,8 +51,10 @@ allowed exception, owner-confirmed.)
   long — deliberate, no purge step. `Cache-Control` request headers won't bypass it; to
   verify a fresh deploy, append a throwaway query string (`?fresh=1` — distinct cache key)
   or wait out the TTL.
-- **Always mirror English copy edits into Czech in the same commit.** Never let `T.en`/
-  `T.cs` (or a static HTML fallback) drift out of sync, even for a one-word tweak.
+- **Always mirror English copy edits into Czech in the same commit.** Never let `T["en"]` in
+  `loft-day.en.js` / `T["cs"]` in `loft-day.cs.js` (or a static HTML fallback) drift out of sync,
+  even for a one-word tweak. Keep dictionary keys alphabetically sorted; `check.js` enforces
+  recursive key parity and sorting while leaving array order authored.
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
   on proposing/editing CS text — she'll correct anything off.
 - **Write printable Unicode characters directly as UTF-8.** Do not encode letters,
@@ -65,8 +68,9 @@ allowed exception, owner-confirmed.)
   Keep the two public documentation links in `README.md` accurate. Documentation changes belong in
   the same discrete commit as the behavior they describe whenever practical.
 - **Run `node tests/check.js` AND `node tests/state.js` before every commit that
-  touches `save-the-dates.html` or `rsvp.html`.** Zero-dependency script — `node --check` on each file's inline
-  `<script>`, EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
+  touches `save-the-dates.html`, `rsvp.html`, or either `loft-day.*.js` message dictionary.**
+  Zero-dependency script — `node --check` on each page's authored scripts,
+  EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
   count, `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip, and the JS-console
   Tab-autocomplete roster (`CONSOLE_CMDS`) vs. `CONSOLE_HELP` keys parity (so a new
   `window.<cmd>` console command must be added to BOTH, or check.js fails naming the

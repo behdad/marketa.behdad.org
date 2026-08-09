@@ -82,10 +82,22 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
 function makeScratch(file, harness, hookHtml) {
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
   var patched = html.replace("<head>", "<head>" + hookHtml).replace("</body>", harness + "\n</body>");
-  // Keep hyphens so route-sensitive aliases such as loft-day can be exercised from a scratch copy.
-  var scratch = path.join(os.tmpdir(), "wedding-" + file.replace(/[^\w-]/g, "") + "-" + Date.now() + "-" + Math.random().toString(36).slice(2) + ".html");
+  // Each page gets a private directory so relative authored assets remain relative.
+  // Keep hyphens in the HTML basename so route-sensitive aliases such as loft-day
+  // can still be exercised from the scratch copy.
+  var scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-page-"));
+  var scratch = path.join(scratchDir, "wedding-" + file.replace(/[^\w-]/g, "") + ".html");
+  ["loft-day.en.js", "loft-day.cs.js"].forEach(function (name) {
+    if (html.indexOf('src="' + name + '"') !== -1) {
+      fs.copyFileSync(path.join(ROOT, name), path.join(scratchDir, name));
+    }
+  });
   fs.writeFileSync(scratch, patched);
   return scratch;
+}
+
+function removeScratch(scratch) {
+  fs.rmSync(path.dirname(scratch), { recursive: true, force: true });
 }
 
 function parseReport(dom) {
@@ -116,7 +128,7 @@ function runPageSync(file, harness, budgetMs, opts) {
     } catch (error) {
       lastError = error;
     } finally {
-      fs.unlinkSync(scratch);
+      removeScratch(scratch);
       fs.rmSync(profile, { recursive: true, force: true });
     }
   }
@@ -135,7 +147,7 @@ function runPage(file, harness, budgetMs, opts) {
         maxBuffer: 64 * 1024 * 1024,
         timeout: budgetMs + 30000
       }, function (err, stdout) {
-        try { fs.unlinkSync(scratch); } catch (e) {}
+        try { removeScratch(scratch); } catch (e) {}
         try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
         var report = null;
         var parseError = null;

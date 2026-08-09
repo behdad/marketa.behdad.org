@@ -23,11 +23,13 @@ or the full workflow and browser incident log in [`AGENTS.md`](../AGENTS.md).
 
 ## Repository and serving model
 
-The site deliberately has no application build step or framework. Its two maintained pages are
-self-contained HTML files:
+The site deliberately has no application build step or framework. Its two maintained experiences
+remain page-owned:
 
 - `save-the-dates.html` is the invitation/save-the-date drop.
-- `rsvp.html` is the game. The `loft-day`, `loft-day.html`, and `rsvp` aliases are symlinks to it.
+- `rsvp.html` is the game. Its only external authored runtime files are the review-friendly
+  `loft-day.en.js` and `loft-day.cs.js` message dictionaries. The `loft-day`, `loft-day.html`, and
+  `rsvp` aliases are symlinks to it.
 
 The root `index.html` hub is planned but does not yet exist. Until then, `.htaccess` serves
 `save-the-dates.html` for `/`. Keep a new invitation feature in `save-the-dates.html` and a new game
@@ -55,10 +57,12 @@ of the web root or add an explicit denial rule. Never assume an unlinked file is
 
 ## Runtime architecture
 
-`rsvp.html` contains the markup, SVG strip, styles, translations, and JavaScript for the whole game.
-Most logic lives in the final large inline script as a sequence of closures. Those closures expose a
-small number of coordination hooks on `window`; there is intentionally no module bundler and no
-single central store.
+`rsvp.html` contains the markup, SVG strip, styles, and JavaScript for the whole game. English and
+Czech messages live beside it in `loft-day.en.js` and `loft-day.cs.js`; this deliberate exception to
+the single-file layout keeps translation review independent of the large game source. Most logic
+lives in the final large inline script as a sequence of closures. Those closures expose a small
+number of coordination hooks on `window`; there is intentionally no module bundler and no single
+central store.
 
 This makes source order part of the architecture:
 
@@ -417,10 +421,12 @@ under headless virtual time.
 
 ## Localization and UI contracts
 
-Player-visible English and Czech copy lives in `T.en` and `T.cs`. Add both keys in the same change;
-`tests/check.js` enforces parity. Write printable Unicode directly as UTF-8. `setLang()` assigns
-authored translation HTML, so preserve intentional markup and use the established `brk-sm` /
-`brk-lg` breaks when the two viewport classes need different wrapping.
+Player-visible English and Czech copy lives in `loft-day.en.js` and `loft-day.cs.js` as `T["en"]`
+and `T["cs"]`. Keys are alphabetically ordered, including nested message objects; arrays retain
+their authored order. Add both keys in the same change. `tests/check.js` enforces canonical sorting,
+syntax, and recursive parity. Write printable Unicode directly as UTF-8. `setLang()` assigns authored
+translation HTML, so preserve intentional markup and use the established `brk-sm` / `brk-lg` breaks
+when the two viewport classes need different wrapping.
 
 After changing copy or layout, inspect both languages at mobile and desktop widths. Czech strings
 are often longer, and a clean English coach or caption can overlap its target in Czech.

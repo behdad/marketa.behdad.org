@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Zero-dependency sanity checks for save-the-dates.html and loft-day.html.
+// Zero-dependency sanity checks for egg-hunt.html and loft-day.html.
 // Run with: node tests/check.js
 "use strict";
 
@@ -9,7 +9,7 @@ var os = require("os");
 var execSync = require("child_process").execSync;
 
 var ROOT = path.join(__dirname, "..");
-var FILES = ["save-the-dates.html", "loft-day.html"];
+var FILES = ["egg-hunt.html", "loft-day.html"];
 var failures = 0;
 
 function pass(label) {
@@ -66,7 +66,7 @@ function checkSyntax(file, script) {
 
 function checkSvgTagBalance(file, html) {
   var start = html.indexOf('<svg id="loft-game-strip"');
-  if (start === -1) return; // not applicable (save-the-dates.html)
+  if (start === -1) return; // not applicable (egg-hunt.html)
   // the strip may contain nested <svg> icons (foreignObject HTML) — find ITS closing
   // tag by depth, not the first </svg>
   var depth = 0, end = -1, re = /<svg[\s>]|<\/svg>/g;
@@ -357,9 +357,9 @@ function checkEggTotal(html, script) {
   var missingCheat = Array.from(foundSet).filter(function (id) { return !cheatSet.has(id); });
   var duplicateCheats = cheatIds.filter(function (id, i) { return cheatIds.indexOf(id) !== i; });
   if (declared === cheatSet.size && !missingCall.length && !missingCheat.length && !duplicateCheats.length) {
-    pass("save-the-dates.html: EGG_TOTAL, cheatsheet, and literal markFound ids match (" + declared + ")");
+    pass("egg-hunt.html: EGG_TOTAL, cheatsheet, and literal markFound ids match (" + declared + ")");
   } else {
-    fail("save-the-dates.html: EGG_TOTAL / cheatsheet / markFound identity mismatch",
+    fail("egg-hunt.html: EGG_TOTAL / cheatsheet / markFound identity mismatch",
       "EGG_TOTAL: " + declared + "; unique cheats: " + cheatSet.size +
       (duplicateCheats.length ? "\nduplicate cheats: " + Array.from(new Set(duplicateCheats)).join(", ") : "") +
       (missingCall.length ? "\ncheats never passed literally to markFound: " + missingCall.join(", ") : "") +
@@ -402,6 +402,24 @@ function checkLoftAliases() {
   });
   if (issues.length) fail("Loft Day canonical file and public aliases agree", issues.join("\n"));
   else pass("Loft Day canonical file and public aliases agree");
+}
+
+function checkEggHuntAliases() {
+  var canonical = path.join(ROOT, "egg-hunt.html");
+  var issues = [];
+  if (!fs.existsSync(canonical) || !fs.lstatSync(canonical).isFile()) {
+    issues.push("egg-hunt.html is not the canonical regular file");
+  }
+  ["egg-hunt", "save-the-dates", "save-the-dates.html"].forEach(function (name) {
+    var alias = path.join(ROOT, name);
+    if (!fs.existsSync(alias) || !fs.lstatSync(alias).isSymbolicLink()) {
+      issues.push(name + " is not a symlink");
+    } else if (fs.readlinkSync(alias) !== "egg-hunt.html") {
+      issues.push(name + " points to " + fs.readlinkSync(alias) + " instead of egg-hunt.html");
+    }
+  });
+  if (issues.length) fail("Egg Hunt canonical file and public aliases agree", issues.join("\n"));
+  else pass("Egg Hunt canonical file and public aliases agree");
 }
 
 function checkLiteralLocalAssets() {
@@ -1382,7 +1400,7 @@ function checkNoConflictMarkers(file, html) {
 
 // Loft Day deliberately teaches through visible copy and authored coaches instead of
 // invisible accessibility metadata. Keep that game-specific boundary from regressing
-// when new controls are added; save-the-dates.html follows a different policy.
+// when new controls are added; egg-hunt.html follows a different policy.
 function checkMetadataFreeGame(file, html) {
   if (file !== "loft-day.html") return;
   var issues = [];
@@ -1503,6 +1521,7 @@ function checkNoUnicodeEscapes() {
 checkNoUnicodeEscapes();
 checkTrackedSymlinks();
 checkLoftAliases();
+checkEggHuntAliases();
 checkLiteralLocalAssets();
 console.log("");
 

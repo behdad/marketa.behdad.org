@@ -6,13 +6,14 @@ loft on the same block as their loft home apartment) and **July 10, 2027, Prague
 (Markéta's parents' summerhouse) garden party. Message: come to one or both; all loved
 ones welcome, small or big.
 
-Pages have no build step or framework. `save-the-dates.html` remains self-contained;
-`loft-day.html` is the canonical interactive game source, with only its review-friendly English and Czech message
-dictionaries split into `loft-day.en.js` and `loft-day.cs.js`. Keep that boundary narrow. The
+Pages have no build step or framework. `egg-hunt.html` remains self-contained and is the canonical
+save-the-date/Egg Hunt source. `loft-day.html` is the canonical interactive game source, with only
+its review-friendly English and Czech message dictionaries split into `loft-day.en.js` and
+`loft-day.cs.js`. Keep that boundary narrow. The
 save-the-date page *was* `index.html`; it was renamed 2026-07 for the frozen-archive drops model. A landing
 `index.html` at the root — a hub linking every drop — is planned but not yet built; until it
-exists, `.htaccess` `DirectoryIndex` serves `save-the-dates.html` at `/`. New save-the-date
-features go inside `save-the-dates.html` unless there's a strong reason not to. (`loft-day.html`
+exists, `.htaccess` `DirectoryIndex` serves the `save-the-dates.html` alias at `/`. New save-the-date
+features go inside `egg-hunt.html` unless there's a strong reason not to. (`loft-day.html`
 follows the same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
 `linux/` — v86 + a repacked ISO carrying hb-shape/Fraunces/emoji; provenance in each
 dir's README. Both are pinned deliverables, not build outputs: don't regenerate or
@@ -68,7 +69,7 @@ allowed exception, owner-confirmed.)
   Keep the two public documentation links in `README.md` accurate. Documentation changes belong in
   the same discrete commit as the behavior they describe whenever practical.
 - **Run `node tests/check.js` AND `node tests/state.js` before every commit that
-  touches `save-the-dates.html`, `loft-day.html`, or either `loft-day.*.js` message dictionary.**
+  touches `egg-hunt.html`, `loft-day.html`, or either `loft-day.*.js` message dictionary.**
   Zero-dependency script — `node --check` on each page's authored scripts,
   EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
   count, `<g>`/`</g>` tag balance in loft-day.html's shared SVG strip, and the JS-console

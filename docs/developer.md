@@ -26,14 +26,16 @@ or the full workflow and browser incident log in [`AGENTS.md`](../AGENTS.md).
 The site deliberately has no application build step or framework. Its two maintained experiences
 remain page-owned:
 
-- `save-the-dates.html` is the invitation/save-the-date drop.
+- `egg-hunt.html` is the canonical invitation/Egg Hunt source. The `egg-hunt`,
+  `save-the-dates`, and `save-the-dates.html` names are symlinks to it; only a
+  save-the-dates-named URL or the directory root reveals the surrounding invitation.
 - `loft-day.html` is the canonical game source. Its only external authored runtime files are the
   review-friendly `loft-day.en.js` and `loft-day.cs.js` message dictionaries. The `loft-day`,
   `rsvp`, and `rsvp.html` names are symlinks to it; only an RSVP-named URL reveals the surrounding
   invitation content.
 
-The root `index.html` hub is planned but does not yet exist. Until then, `.htaccess` serves
-`save-the-dates.html` for `/`. Keep a new invitation feature in `save-the-dates.html` and a new game
+The root `index.html` hub is planned but does not yet exist. Until then, `.htaccess` serves the
+`save-the-dates.html` alias for `/`. Keep a new invitation feature in `egg-hunt.html` and a new game
 feature in `loft-day.html` unless there is a strong architectural reason to create another public file.
 
 Supporting boundaries are:

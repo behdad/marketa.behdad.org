@@ -16,8 +16,9 @@ part:
   little hidden things to find.
 
 New drops land every so often; each is kept as a frozen archive under its own name so
-older ones never disappear. `rsvp.html` remains an alias that reveals Loft Day inside
-the RSVP page; `loft-day.html` is the canonical game source.
+older ones never disappear. `rsvp.html` reveals Loft Day inside the RSVP page and
+`save-the-dates.html` reveals Egg Hunt inside the invitation; `loft-day.html` and
+`egg-hunt.html` are the canonical sources.
 
 ## Documentation
 

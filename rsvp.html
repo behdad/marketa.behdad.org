@@ -44394,23 +44394,32 @@ window.__entranceRoomOpen = false;
     roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " +
       point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
-  function paintRoadtripCampSpur(point, signScale, signHalfWidth) {
+  function paintRoadtripCampSpur(point) {
     if (!roadtripCampSpurNode) return null;
     var junctionPoint = roadtripProject(Math.max(8, point.remaining - 36));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 32));
     var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
     var junctionOverlap = 12 + junctionPoint.perspective * 19;
     var junctionInner = junctionRoadRight - junctionOverlap;
-    var junctionOuter = junctionRoadRight + 9 + junctionPoint.perspective * 17;
+    var junctionOuterWidth = 9 + junctionPoint.perspective * 17;
+    var junctionOuter = junctionRoadRight + junctionOuterWidth;
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
-    var destinationLimit = 680 - signHalfWidth * signScale * 2 - 12;
     var destinationY = destinationPoint.y;
     var farHalfWidth = 2.5 + destinationPoint.perspective * 4.5;
-    var destinationRoadRight = roadtripProjectLateral(destinationPoint, 1);
-    var destinationX = Math.min(destinationLimit, Math.max(
-      junctionOuter + 14 + point.perspective * 55,
-      destinationRoadRight + 18 + destinationPoint.perspective * 38));
+    // Keep the pleasant parked-shoulder divergence at every camera lane. If the
+    // far endpoint follows its own projected road edge, moving left shifts the
+    // nearer mouth farther than that endpoint and folds the branch back over itself.
+    var referenceRoadFraction = roadtripLaneRoadFraction(ROADTRIP_ABRAHAM_START_LANE);
+    function referenceRoadRight(projected) {
+      return 340 + roadtripCurveOffset(projected.remaining) +
+        (1 - referenceRoadFraction) * projected.halfWidth;
+    }
+    var referenceJunctionOuter = referenceRoadRight(junctionPoint) + junctionOuterWidth;
+    var referenceDestinationX = Math.max(
+      referenceJunctionOuter + 14 + point.perspective * 55,
+      referenceRoadRight(destinationPoint) + 18 + destinationPoint.perspective * 38);
+    var destinationX = junctionOuter + referenceDestinationX - referenceJunctionOuter;
     var shoulderInset = 1.3 + junctionPoint.perspective * 2.2;
     var edgeNearWidth = 1 + junctionPoint.perspective * 1.8;
     var edgeMidWidth = .85 + point.perspective * 1.4;
@@ -44744,8 +44753,7 @@ window.__entranceRoomOpen = false;
         var campSignRemaining = 106 - campSignProgress * 86;
         var campSignPoint = roadtripProject(campSignRemaining);
         var campSignScale = .19 + campSignPoint.perspective * .98;
-        var campSpur = campTiming.spurVisible ?
-          paintRoadtripCampSpur(campSignPoint, campSignScale, 56) : null;
+        var campSpur = campTiming.spurVisible ? paintRoadtripCampSpur(campSignPoint) : null;
         if (!campTiming.spurVisible) roadtripSetAttribute(roadtripCampSpurNode, "visibility", "hidden");
         positionRoadtripCampExitSign(roadtripCampExitNode, campSignPoint, campSignScale, 56, campSpur);
         roadtripSetAttribute(roadtripCampExitNode, "data-roadtrip-takeable", campTiming.takeable ? "true" : "false");

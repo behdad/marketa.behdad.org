@@ -117,6 +117,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceDriveStep(500);
         report.repeatApproachFeedback = flashed.slice();
 
+        window.__entranceRoadtripSetDistance(0);
+        report.laneViews = {};
+        [["left", -.5], ["centre", .5], ["right", 1], ["shoulder", 1.32]].forEach(function (row) {
+          setAbraham(first - nominalSecond, row[1], 50);
+          report.laneViews[row[0]] = visual();
+        });
+
         setAbraham(first + 13 * nominalSecond, .5, 42);
         window.__exitEntranceRoadtrip();
         var checkpoint = window.__captureCheckpointSystems().entrance;
@@ -248,6 +255,18 @@ var mobile = run(true);
     connectedSpur(result && result.curvedExitLeft) && signsClear(result.curvedExitLeft),
     device + " keeps the exit lane continuous through both highway bends", result && {
       right: result.curvedExitRight, left: result.curvedExitLeft
+    });
+  var laneViews = result && result.laneViews || {};
+  var laneShapes = [laneViews.left, laneViews.centre, laneViews.right, laneViews.shoulder];
+  var laneDivergences = laneShapes.map(function (view) {
+    return view && view.destinationX - view.junctionOuterX;
+  });
+  check(laneShapes.every(function (view) {
+    return view && view.sign === "visible" && view.spur === "visible" && connectedSpur(view);
+  }) && laneDivergences.every(Number.isFinite) &&
+    Math.max.apply(Math, laneDivergences) - Math.min.apply(Math, laneDivergences) <= .05,
+    device + " preserves the shoulder-composed exit divergence in every player lane", {
+      divergences: laneDivergences, views: laneViews
     });
 
   var missed = result && result.missed || {};

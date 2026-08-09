@@ -35,6 +35,8 @@ var screenEnd = source.indexOf("window.__shortOutMonitor", screenStart);
 var screenFlow = source.slice(screenStart, screenEnd);
 var togglePc = functionBody("togglePc");
 var monitorPower = functionBody("monitorSystemAction");
+var swap = functionBody("swap");
+var onPcToggled = functionBody("onPcToggled");
 var helpersParse = true;
 try {
   [pc, pcOff, laptop, call].forEach(function (body) { Function("panId", body); });
@@ -61,6 +63,10 @@ check(/220[\s\S]*146\.83/.test(pcOff) &&
   !/playSparkSound/.test(togglePc) && !/playMonitorShutdownSound/.test(source) &&
   !/playPcShutdownSound/.test(monitorPower),
   "PC off reverses the same two notes without a legacy spark or shutdown melody");
+check(/if\s*\(!suppressPoof\)\s*playGeniePoofSound/.test(swap) &&
+  /swap\(true,\s*true\)/.test(onPcToggled) && /swap\(false,\s*true\)/.test(onPcToggled) &&
+  /typewriter\.addEventListener\("dblclick",\s*function\s*\(\)\s*\{\s*swap\(true\)/.test(source),
+  "PC-driven fixture swaps suppress the old poof while manual swaps retain it");
 check(/document\.hidden[\s\S]*document\.hasFocus\(\)[\s\S]*__monitorAttention/.test(laptopAllowed),
   "the delayed laptop update click and cue are re-gated at callback time");
 check(/playLaptopBootSound\("office-laptop"\)/.test(laptopFlow) &&

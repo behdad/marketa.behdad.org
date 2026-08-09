@@ -88084,13 +88084,13 @@ async def localfont(name):
     app.open(q);
     return "🖥 " + app.id + " — up on the monitor.";
   };
-  function swap(toMonitor) {
+  function swap(toMonitor, suppressPoof) {
     if (!toMonitor) closePhotobooth(); // swapping away to the typewriter (or PC power-off) must stop any live camera
     monitor.classList.toggle("here", toMonitor);
     typewriter.classList.toggle("away", toMonitor);
     var bubble = document.querySelector(".egg-bubble");
     if (bubble && bubble._anchor === typewriter) dismissEggBubble(bubble);
-    playGeniePoofSound(!toMonitor, toMonitor ? "office-monitor" : "office-typewriter"); // pan to whichever is becoming visible
+    if (!suppressPoof) playGeniePoofSound(!toMonitor, toMonitor ? "office-monitor" : "office-typewriter"); // pan to whichever is becoming visible
     updateScreen();
   }
   typewriter.addEventListener("dblclick", function () { swap(true); });
@@ -88207,8 +88207,8 @@ async def localfont(name):
     var on = pcTower.classList.contains("on");
     // powering the PC on summons the monitor; powering off dissolves it back to the
     // typewriter (the monitor is still the page-load default). Double-click overrides.
-    if (on && !monitor.classList.contains("here")) swap(true);
-    else if (!on && monitor.classList.contains("here")) swap(false);
+    if (on && !monitor.classList.contains("here")) swap(true, true);
+    else if (!on && monitor.classList.contains("here")) swap(false, true);
     else updateScreen();
     if (!on) {
       // powering off is a real shutdown, not a blank screen: the swap/updateScreen above only

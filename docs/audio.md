@@ -172,7 +172,10 @@ running under them → no clock jump → no burst.
 
 Wiring: `visibilitychange` + window `blur`/`focus` + a 2 s interval backstop
 (`updateFocusGatedAudio`) all call the manager (via `__updateEqCtxIdle`, which now just
-delegates to it). The pipeline's old song-only idle condition folded into this.
+delegates to it). The shared context also watches its own `statechange`: if the browser or
+OS suspends/interrupts the live device while a bed still owns it, the manager resumes that
+same context and connected graph in place. The pipeline's old song-only idle condition
+folded into this.
 
 ## Focus/visibility gating (the "crickets/crane rule") — preserved
 
@@ -207,6 +210,9 @@ adds a smaller brightness lift. Its master follows `__songVolume()` so the music
 session master scale it independently of the Porsche engine/drivetrain bed.
 During an active Road Trip, returning focus keeps the simulation and all Porsche driving
 audio paused until a fresh steering or pedal input resumes both from a clean frame boundary.
+A browser/OS audio-device interruption is different from attention loss: it leaves the
+Road Trip running and recovers the shared clock in place, so the existing engine/tire bed
+does not remain silently stranded until the next scene or SFX creates a new owner.
 
 Autonomous weather thunder keeps its lightning visuals across the loft, but its delayed rumble is
 owned only by an attended Balcony, Entrance, active Road Trip, or Camping scene. Indoor loft rooms,

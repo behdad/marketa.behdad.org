@@ -52590,6 +52590,15 @@ function getAudioCtx() {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) { __sharedACFailed = true; return null; }
     __sharedAC = new Ctx();
+    // The browser can suspend/interrupt a live context independently of our hidden-tab
+    // idle policy (audio-device changes and OS sleep do this in Safari and Chromium).
+    // Existing beds remain connected, so recover the one shared clock in place instead
+    // of waiting for some later SFX or a newly-created bed to call resume().
+    if (__sharedAC.addEventListener) __sharedAC.addEventListener("statechange", function () {
+      if (__sharedAC && __sharedAC.state !== "running" && !__sharedAudioIsIdle()) {
+        resumeSharedAudio();
+      }
+    });
   } catch (e) { __sharedACFailed = true; return null; }
   return __sharedAC;
 }
@@ -52667,7 +52676,7 @@ window.__updateSharedAudioIdle = function () {
       }
     } else {
       if (__idleSuspendTimer) { clearTimeout(__idleSuspendTimer); __idleSuspendTimer = null; }
-      if (ac.state === "suspended") { var r = ac.resume(); if (r && r.catch) r.catch(function () {}); }
+      if (ac.state !== "running") resumeSharedAudio();
     }
   } catch (e) {}
 };

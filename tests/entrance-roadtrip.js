@@ -1479,7 +1479,7 @@ check(focusPause &&
   focusPause.waitingPresentation.panelFill === "#8e3a4a" &&
   focusPause.waitingPresentation.panelOpacity === ".5" &&
   focusPause.waitingPresentation.title === "PAUSED" &&
-  /Enter, Play/.test(focusPause.waitingPresentation.line) &&
+  focusPause.waitingPresentation.line === "Play to resume · Esc to exit." &&
   focusPause.waitingPresentation.captionVisibility === "hidden" &&
   focusPause.waitingStep.drive.roadtrip.elapsedSeconds === focusPause.end.drive.roadtrip.elapsedSeconds &&
   focusPause.waitingStep.drive.roadtrip.distance === focusPause.end.drive.roadtrip.distance &&
@@ -1887,17 +1887,18 @@ check(checkpoint && checkpoint.before.drive.roadtrip.active && checkpoint.before
   checkpoint.before.drive.roadtrip.entityCount > 0 && checkpoint.row.drive.roadtrip.accepted === false &&
   checkpoint.row.drive.roadtrip.everAccepted === true && checkpoint.row.drive.roadtrip.pausedRun &&
   checkpoint.after.drive.roadtrip.unlocked && checkpoint.after.drive.hud &&
-  !checkpoint.after.drive.roadtrip.active && checkpoint.after.drive.roadtrip.paused &&
-  !checkpoint.after.drive.roadtrip.resumePending && !checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
+  checkpoint.after.drive.roadtrip.active && !checkpoint.after.drive.roadtrip.paused &&
+  checkpoint.after.drive.roadtrip.resumePending && checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
   !checkpoint.after.drive.roadtrip.invitationReady && !checkpoint.after.drive.roadtrip.invitationVisible &&
-  checkpoint.after.drive.roadtrip.reentryVisible &&
+  !checkpoint.after.drive.roadtrip.reentryVisible &&
   checkpoint.after.drive.roadtrip.entityCount === checkpoint.before.drive.roadtrip.entityCount &&
-  checkpoint.visible === 0 && checkpoint.ready.drive.hud && checkpoint.ready.drive.roadtrip.reentryVisible &&
+  checkpoint.visible === checkpoint.after.drive.roadtrip.entityCount && checkpoint.ready.drive.hud &&
+  checkpoint.ready.drive.roadtrip.active && checkpoint.ready.drive.roadtrip.resumePending &&
   sameRetainedRun(checkpoint.before.drive.roadtrip, checkpoint.after.drive.roadtrip) &&
   checkpoint.paused.drive.roadtrip.active && checkpoint.paused.drive.roadtrip.resumePending &&
   checkpoint.resumed.drive.roadtrip.active && !checkpoint.resumed.drive.roadtrip.resumePending &&
   sameRetainedRun(checkpoint.after.drive.roadtrip, checkpoint.resumed.drive.roadtrip),
-  "checkpoint restore keeps the HUD but pauses the highway until Road Trip → Continue resumes it intact",
+  "checkpoint restore reopens the highway paused behind Play until fresh driving input resumes it intact",
   checkpointContract);
 var reset = s.reset && s.reset.roadtrip;
 check(reset && !reset.active && !reset.paused && !reset.unlocked && !reset.accepted && !reset.everAccepted &&

@@ -1400,7 +1400,7 @@ check(activation && activation.offer.before.practiceLaps === 1 && activation.off
   activation.offer.before.invitationReady && !activation.offer.before.accepted && !activation.offer.before.active &&
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
   activation.offer.metadata === 0 && activation.offer.title === "Let’s road trip!" &&
-  activation.offer.transform === "translate(426 0)" &&
+  activation.offer.transform === "translate(396 0)" &&
   activation.offer.czech.title === "Jedeme na výlet!" && activation.offer.czech.accept === "Vyjet na dálnici" &&
   activation.offer.czech.acceptMetadata === 0 && activation.offer.czech.laterMetadata === 0 &&
   activation.offer.viewBox === "0 -31 680 207" && activation.firstDismissed &&

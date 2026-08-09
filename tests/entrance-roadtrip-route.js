@@ -96,8 +96,8 @@ check(/ROADTRIP_CALGARY_SPEED_LIMIT = 110/.test(source) &&
   /ROADTRIP_POLICE_FIRST_DISTANCE = 1800/.test(source) &&
   /ROADTRIP_POLICE_REPEAT_DISTANCE = 2400/.test(source),
   "the route owns its posted limits and sparser police cadence");
-check(/if \(roadtripState\.route === "calgary"\) return 0;\s*if \(roadtripState\.route === "turnoff" \|\| roadtripState\.route === "lake-turnoff"\) return \.021;/.test(source),
-  "Calgary has no curves before the explicit exit turn");
+check(/if \(roadtripState\.route === "calgary" \|\| roadtripState\.route === "camp"\) return 0;[\s\S]*?if \(roadtripState\.route === "turnoff"\)[\s\S]*?return scenic \* banffProgress \+ \.021 \* Math\.sin\(Math\.PI \* banffProgress\);/.test(source),
+  "Calgary stays straight before smoothly entering the explicit exit turn");
 check(/ROADTRIP_CALGARY_MEDIAN_FRACTION = \.14/.test(source) &&
   /ROADTRIP_CALGARY_ROAD_FRACTION = 1\.2/.test(source) &&
   /var calgaryFirstBoundary = ROADTRIP_CALGARY_MEDIAN_FRACTION \+ ROADTRIP_CALGARY_LANE_FRACTION/.test(source),

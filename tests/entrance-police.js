@@ -1600,7 +1600,8 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   s.suspension.state.drive.rpm === 0 && s.suspension.state.drive.gear === 0 &&
   !s.suspension.state.drive.audioActive && !s.suspension.state.drive.musicActive &&
   s.suspension.buttonSuspended && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
-  /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
+  /No pull-over · fine \$560 · 9 pts · 15\/15 · licence suspended for/.test(s.suspension.caption) &&
+  /· −1,000 score\.$/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",
   s.suspension);
 var blockedIgnition = s.suspension && s.suspension.ignition;

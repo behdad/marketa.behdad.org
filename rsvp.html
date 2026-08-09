@@ -44494,6 +44494,13 @@ window.__entranceRoomOpen = false;
     var travelY = destinationY - junctionY;
     var control1Y = junctionY + travelY * .43;
     var control2Y = junctionY + travelY * .82;
+    var tangentPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE,
+      junctionPoint.remaining + 3));
+    var tangentDy = tangentPoint.y - junctionY;
+    var tangentDx = roadtripProjectLateral(tangentPoint, 1) - junctionRoadRight;
+    var joinControlDy = control1Y - junctionY;
+    var joinControlDx = Math.abs(tangentDy) > .001 ?
+      tangentDx * joinControlDy / tangentDy : 0;
     function curveControls(start, end, outer) {
       var distance = end - start;
       return {
@@ -44504,13 +44511,14 @@ window.__entranceRoomOpen = false;
     function curveBand(nearInner, nearOuter, farInner, farOuter) {
       var inner = curveControls(nearInner, farInner, false);
       var outer = curveControls(nearOuter, farOuter, true);
+      inner.c1 = nearInner + joinControlDx;
+      outer.c1 = nearOuter + joinControlDx;
       // A leftward screen-space turn is valid; crossed boundary controls are not.
-      ["c1", "c2"].forEach(function (key) {
-        if (outer[key] - inner[key] >= .8) return;
-        var center = (inner[key] + outer[key]) / 2;
-        inner[key] = center - .4;
-        outer[key] = center + .4;
-      });
+      if (outer.c2 - inner.c2 < .8) {
+        var control2Center = (inner.c2 + outer.c2) / 2;
+        inner.c2 = control2Center - .4;
+        outer.c2 = control2Center + .4;
+      }
       return { inner: inner, outer: outer };
     }
     var asphaltBand = curveBand(junctionInner, junctionOuter, destinationInner, destinationOuter);
@@ -44523,11 +44531,11 @@ window.__entranceRoomOpen = false;
       var farOuter = destinationOuter + inset * .4;
       var band = inset ? {
         inner: {
-          c1: innerControls.c1 - inset * .1,
+          c1: innerControls.c1,
           c2: innerControls.c2 - inset * .3
         },
         outer: {
-          c1: outerControls.c1 + inset * .8,
+          c1: outerControls.c1 + inset,
           c2: outerControls.c2 + inset * .54
         }
       } : asphaltBand;
@@ -44570,7 +44578,7 @@ window.__entranceRoomOpen = false;
     var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, innerEdgeStart);
     var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
     var edgeStartWidth = edgeNearWidth * .72;
-    var edgeTailWidth = edgeNearWidth * .88;
+    var edgeTailWidth = edgeStartWidth;
     if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset));
     if (asphalt) asphalt.setAttribute("d", spurPath(0));
     if (innerEdge) innerEdge.setAttribute("d", "M" + innerEdgeX.start.toFixed(2) + " " + innerEdgeY.start.toFixed(2) +
@@ -44618,6 +44626,8 @@ window.__entranceRoomOpen = false;
       roadtripProjectLateral(junctionPoint, .5).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-lane-center-x",
       roadtripProjectLateral(destinationPoint, .5).toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-join-tangent-dx", joinControlDx.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-join-tangent-dy", joinControlDy.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-near-width", (junctionOuter - junctionInner).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-geometry", "cubic-merge");

@@ -40,6 +40,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       destinationY: Number(spur.getAttribute("data-roadtrip-destination-y")),
       junctionLaneCenterX: Number(spur.getAttribute("data-roadtrip-junction-lane-center-x")),
       destinationLaneCenterX: Number(spur.getAttribute("data-roadtrip-destination-lane-center-x")),
+      joinTangentDx: Number(spur.getAttribute("data-roadtrip-join-tangent-dx")),
+      joinTangentDy: Number(spur.getAttribute("data-roadtrip-join-tangent-dy")),
       junctionInnerX: Number(spur.getAttribute("data-roadtrip-junction-inner-x")),
       junctionRoadRightX: Number(spur.getAttribute("data-roadtrip-junction-road-right-x")),
       junctionOuterX: Number(spur.getAttribute("data-roadtrip-junction-outer-x")),
@@ -251,8 +253,24 @@ function laneCentredApproach(visual) {
   return Number.isFinite(nearGap) && Number.isFinite(farGap) && nearGap > 12 && farGap > 5 &&
     farGap < nearGap * .55;
 }
+function smoothJoin(visual) {
+  if (!Number.isFinite(visual.joinTangentDx) || !Number.isFinite(visual.joinTangentDy) ||
+      visual.joinTangentDy >= -.1) return false;
+  return [visual.asphalt, visual.shoulder, visual.innerEdge, visual.outerEdge].every(function (path) {
+    var band = cubicBand(path);
+    if (!band) return false;
+    var startWidth = band.outer[0].x - band.inner[0].x;
+    var controlWidth = band.outer[1].x - band.inner[1].x;
+    return band.inner.concat(band.outer).every(function (point) {
+      return Number.isFinite(point.x) && Number.isFinite(point.y);
+    }) && [band.inner, band.outer].every(function (edge) {
+      return Math.abs(edge[1].x - edge[0].x - visual.joinTangentDx) <= .03 &&
+        Math.abs(edge[1].y - edge[0].y - visual.joinTangentDy) <= .03;
+    }) && startWidth > 0 && Math.abs(controlWidth - startWidth) <= .03;
+  });
+}
 function coherentSpurTopology(visual) {
-  if (!connectedSpur(visual) || !laneCentredApproach(visual)) return false;
+  if (!connectedSpur(visual) || !laneCentredApproach(visual) || !smoothJoin(visual)) return false;
   var asphalt = cubicBand(visual.asphalt);
   var shoulder = cubicBand(visual.shoulder);
   var innerEdge = cubicBand(visual.innerEdge);
@@ -355,6 +373,12 @@ var mobile = run(true);
   check(result && result.geometrySweep && result.geometrySweep.length === 144 && !brokenGeometry.length,
     device + " keeps every spur boundary nested and lane-centred across lane, approach, curve, and grade",
     brokenGeometry.slice(0, 4));
+  var brokenJoins = (result && result.geometrySweep || []).filter(function (sample) {
+    return !sample.visual || !smoothJoin(sample.visual);
+  });
+  check(result && result.geometrySweep && result.geometrySweep.length === 144 && !brokenJoins.length,
+    device + " matches the live road tangent and holds ribbon widths through every exit join",
+    brokenJoins.slice(0, 4));
 
   var missed = result && result.missed || {};
   check(missed.state && missed.state.route === "abraham" && missed.state.active &&

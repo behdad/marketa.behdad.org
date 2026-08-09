@@ -186,6 +186,8 @@ var harness = String.raw`<script>
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     window.__toggleEntrancePorscheEngine();
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     document.dispatchEvent(new KeyboardEvent("keydown", {
       key: "Shift", code: "ShiftLeft", shiftKey: true, bubbles: true, cancelable: true
     }));

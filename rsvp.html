@@ -40877,10 +40877,10 @@ window.__entranceRoomOpen = false;
     return roadtripIsCalgaryRoute() ? ROADTRIP_CALGARY_LANE_FRACTION :
       roadtripIsAbrahamRoute() ? ROADTRIP_ABRAHAM_LANE_FRACTION : ROADTRIP_BANFF_LANE_FRACTION;
   }
-  function roadtripLaneRoadFraction(lane) {
+  function roadtripLaneRoadFractionForRoute(lane, route) {
     lane = Number(lane) || 0;
-    if (roadtripIsAbrahamRoute()) return lane * ROADTRIP_ABRAHAM_LANE_FRACTION;
-    if (!roadtripIsCalgaryRoute()) return lane * ROADTRIP_BANFF_LANE_FRACTION;
+    if (route === "abraham") return lane * ROADTRIP_ABRAHAM_LANE_FRACTION;
+    if (route === "banff") return lane * ROADTRIP_BANFF_LANE_FRACTION;
     var magnitude = Math.abs(lane);
     if (!magnitude) return 0;
     var firstCenter = ROADTRIP_CALGARY_MEDIAN_FRACTION + ROADTRIP_CALGARY_LANE_FRACTION / 2;
@@ -40888,8 +40888,36 @@ window.__entranceRoomOpen = false;
       firstCenter + (magnitude - .5) * ROADTRIP_CALGARY_LANE_FRACTION;
     return Math.sign(lane) * roadMagnitude;
   }
+  function roadtripLaneRoadFraction(lane) {
+    return roadtripLaneRoadFractionForRoute(lane,
+      roadtripIsCalgaryRoute() ? "calgary" : roadtripIsAbrahamRoute() ? "abraham" : "banff");
+  }
+  function roadtripHandoffLane(lane, limit) {
+    lane = Number(lane) || 0;
+    return Math.max(-limit, Math.min(limit, Math.round(lane - .5) + .5));
+  }
+  function roadtripVisualLaneRoadFraction(lane, playerLane) {
+    if (roadtripState.route === "turnoff") {
+      var banffProgress = roadtripSmoothstep(
+        roadtripState.turnoffDistance / ROADTRIP_TURNOFF_DISTANCE);
+      var calgaryFraction = roadtripLaneRoadFractionForRoute(lane, "calgary");
+      var banffFraction = roadtripLaneRoadFractionForRoute(
+        roadtripHandoffLane(lane, 1.5), "banff");
+      return calgaryFraction + (banffFraction - calgaryFraction) * banffProgress;
+    }
+    if (roadtripState.route === "lake-turnoff") {
+      var abrahamProgress = roadtripSmoothstep(
+        roadtripState.lakeTurnoffDistance / ROADTRIP_LAKE_TURNOFF_DISTANCE);
+      var sourceFraction = roadtripLaneRoadFractionForRoute(lane, "banff");
+      var abrahamFraction = roadtripLaneRoadFractionForRoute(
+        playerLane ? (lane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE) :
+          roadtripHandoffLane(lane, .5), "abraham");
+      return sourceFraction + (abrahamFraction - sourceFraction) * abrahamProgress;
+    }
+    return roadtripLaneRoadFraction(lane);
+  }
   function roadtripEntityVisualRoadFraction(entity) {
-    return roadtripLaneRoadFraction(entity.lane) +
+    return roadtripVisualLaneRoadFraction(entity.lane, false) +
       (entity.type === "rv" && entity.direction === "forward" ? ROADTRIP_FORWARD_RV_LANE_NUDGE : 0);
   }
   function roadtripMaxLane() {
@@ -43219,15 +43247,13 @@ window.__entranceRoomOpen = false;
       ROADTRIP_TERRAIN_CYCLE;
     return wrapped / ROADTRIP_TERRAIN_CYCLE * Math.PI * 2;
   }
-  function roadtripTerrainElevationAt(distance) {
-    if (roadtripIsCalgaryRoute()) return 0;
+  function roadtripTerrainBaseElevationAt(distance) {
     var phase = roadtripTerrainPhase(distance);
     return ROADTRIP_TERRAIN_WAVES.reduce(function (elevation, wave) {
       return elevation + wave.amplitude * Math.sin(phase * wave.harmonic + wave.phase);
     }, 0);
   }
-  function roadtripTerrainGradeAt(distance) {
-    if (roadtripIsCalgaryRoute()) return 0;
+  function roadtripTerrainBaseGradeAt(distance) {
     var phase = roadtripTerrainPhase(distance);
     var radiansPerMetre = Math.PI * 2 / ROADTRIP_TERRAIN_CYCLE;
     return ROADTRIP_TERRAIN_WAVES.reduce(function (grade, wave) {
@@ -43235,16 +43261,29 @@ window.__entranceRoomOpen = false;
         Math.cos(phase * wave.harmonic + wave.phase);
     }, 0);
   }
+  function roadtripTerrainElevationAt(distance) {
+    return roadtripIsCalgaryRoute() ? 0 : roadtripTerrainBaseElevationAt(distance);
+  }
+  function roadtripTerrainGradeAt(distance) {
+    return roadtripIsCalgaryRoute() ? 0 : roadtripTerrainBaseGradeAt(distance);
+  }
+  function roadtripVisualTerrainMix() {
+    if (roadtripState.route === "turnoff") {
+      return roadtripSmoothstep(roadtripState.turnoffDistance / ROADTRIP_TURNOFF_DISTANCE);
+    }
+    return roadtripIsCalgaryRoute() ? 0 : 1;
+  }
   function roadtripTerrainGravityAt(distance) {
     return -9.81 * roadtripTerrainGradeAt(distance) * ROADTRIP_GRADE_GRAVITY_SCALE;
   }
   function roadtripProjectionAt(distance, remaining, bodyPitch) {
     var progress = Math.max(0, Math.min(1, 1 - remaining / ROADTRIP_DRAW_DISTANCE));
     var perspective = Math.pow(progress, 1.72);
-    var currentElevation = roadtripTerrainElevationAt(distance);
-    var aheadElevation = roadtripTerrainElevationAt(distance + remaining);
+    var terrainMix = roadtripVisualTerrainMix();
+    var currentElevation = roadtripTerrainBaseElevationAt(distance) * terrainMix;
+    var aheadElevation = roadtripTerrainBaseElevationAt(distance + remaining) * terrainMix;
     var elevationDelta = aheadElevation - currentElevation;
-    var grade = roadtripTerrainGradeAt(distance);
+    var grade = roadtripTerrainBaseGradeAt(distance) * terrainMix;
     var cameraGradeY = grade * ROADTRIP_GRADE_CAMERA_TO_Y;
     var cameraWeightY = (Number(bodyPitch) || 0) * ROADTRIP_WEIGHT_CAMERA_TO_Y;
     var cameraPitchY = cameraGradeY + cameraWeightY;
@@ -43260,7 +43299,7 @@ window.__entranceRoomOpen = false;
       aheadElevation: aheadElevation,
       elevationDelta: elevationDelta,
       grade: grade,
-      aheadGrade: roadtripTerrainGradeAt(distance + remaining),
+      aheadGrade: roadtripTerrainBaseGradeAt(distance + remaining) * terrainMix,
       baseY: baseY,
       elevationY: elevationY,
       cameraGradeY: cameraGradeY,
@@ -43274,10 +43313,7 @@ window.__entranceRoomOpen = false;
     return roadtripProjectionAt(roadtripState.distance, remaining,
       driveState.noseLift - driveState.noseDive);
   }
-  function roadtripCurvatureAt(distance) {
-    if (roadtripState.route === "calgary") return 0;
-    if (roadtripState.route === "turnoff" || roadtripState.route === "lake-turnoff") return .021;
-    if (roadtripState.route === "camp") return 0;
+  function roadtripScenicCurvatureAt(distance) {
     var phase = ((distance % ROADTRIP_CURVE_CYCLE) + ROADTRIP_CURVE_CYCLE) % ROADTRIP_CURVE_CYCLE;
     var curvature = 0;
     ROADTRIP_CURVES.forEach(function (curve) {
@@ -43285,7 +43321,22 @@ window.__entranceRoomOpen = false;
       var progress = (phase - curve.start) / curve.length;
       curvature += curve.direction * curve.strength * Math.sin(progress * Math.PI);
     });
-    return roadtripIsAbrahamRoute() ? curvature * .72 : curvature;
+    return curvature;
+  }
+  function roadtripCurvatureAt(distance) {
+    if (roadtripState.route === "calgary" || roadtripState.route === "camp") return 0;
+    var scenic = roadtripScenicCurvatureAt(distance);
+    if (roadtripState.route === "turnoff") {
+      var banffProgress = roadtripSmoothstep(
+        roadtripState.turnoffDistance / ROADTRIP_TURNOFF_DISTANCE);
+      return scenic * banffProgress + .021 * Math.sin(Math.PI * banffProgress);
+    }
+    if (roadtripState.route === "lake-turnoff") {
+      var abrahamProgress = roadtripSmoothstep(
+        roadtripState.lakeTurnoffDistance / ROADTRIP_LAKE_TURNOFF_DISTANCE);
+      return scenic * (1 - .28 * abrahamProgress) + .021 * Math.sin(Math.PI * abrahamProgress);
+    }
+    return roadtripIsAbrahamRoute() ? scenic * .72 : scenic;
   }
   function roadtripCurveOffset(remaining) {
     remaining = Math.max(0, Math.min(ROADTRIP_DRAW_DISTANCE, Number(remaining) || 0));
@@ -43319,8 +43370,9 @@ window.__entranceRoomOpen = false;
     var nearness = Math.max(0, Math.min(1, 1 - behind / 62));
     var perspective = Math.pow(nearness, 1.62);
     var halfWidth = 3 + perspective * 55;
-    var currentElevation = roadtripTerrainElevationAt(distance);
-    var behindElevation = roadtripTerrainElevationAt(distance - behind);
+    var terrainMix = roadtripVisualTerrainMix();
+    var currentElevation = roadtripTerrainBaseElevationAt(distance) * terrainMix;
+    var behindElevation = roadtripTerrainBaseElevationAt(distance - behind) * terrainMix;
     var elevationDelta = behindElevation - currentElevation;
     var baseY = -99 + perspective * 22;
     return {
@@ -43331,8 +43383,8 @@ window.__entranceRoomOpen = false;
       elevation: currentElevation,
       behindElevation: behindElevation,
       elevationDelta: elevationDelta,
-      grade: roadtripTerrainGradeAt(distance),
-      behindGrade: roadtripTerrainGradeAt(distance - behind),
+      grade: roadtripTerrainBaseGradeAt(distance) * terrainMix,
+      behindGrade: roadtripTerrainBaseGradeAt(distance - behind) * terrainMix,
       baseY: baseY,
       elevationY: -elevationDelta * ROADTRIP_MIRROR_ELEVATION_TO_Y,
       y: baseY - elevationDelta * ROADTRIP_MIRROR_ELEVATION_TO_Y,
@@ -43409,7 +43461,7 @@ window.__entranceRoomOpen = false;
   }
   function roadtripProjectLateral(point, roadFraction) {
     return 340 + roadtripCurveOffset(point.remaining) +
-      (roadFraction - roadtripLaneRoadFraction(roadtripPlayerLane())) * point.halfWidth;
+      (roadFraction - roadtripVisualLaneRoadFraction(roadtripPlayerLane(), true)) * point.halfWidth;
   }
   function roadtripLinePath(samples, roadFraction) {
     return samples.map(function (point, index) {
@@ -44368,7 +44420,7 @@ window.__entranceRoomOpen = false;
     if (!roadtripHeadlightGroup || !roadtripHeadlightLeft || !roadtripHeadlightRight) return;
     roadtripSetAttribute(roadtripHeadlightGroup, "visibility", roadtripState.active ? "visible" : "hidden");
     if (!roadtripState.active) return;
-    var playerRoadFraction = roadtripLaneRoadFraction(roadtripState.playerLane);
+    var playerRoadFraction = roadtripVisualLaneRoadFraction(roadtripState.playerLane, true);
     var far = roadtripProject(64);
     var middle = roadtripProject(28);
     var farCenter = roadtripProjectLateral(far, playerRoadFraction);
@@ -46892,7 +46944,7 @@ window.__entranceRoomOpen = false;
     if (!isFinite(remaining)) remaining = 0;
     var point = roadtripProject(Math.max(0, remaining));
     var lane = Number(entity.lane) || 0;
-    var projectedX = roadtripProjectLateral(point, roadtripLaneRoadFraction(lane));
+    var projectedX = roadtripProjectLateral(point, roadtripVisualLaneRoadFraction(lane, false));
     var pan = Math.max(-.68, Math.min(.68, (projectedX - 340) / 340 * 1.12));
     var playerMps = driveState.speed * driveState.facing / 3.6;
     var relativeKmh = Math.abs(playerMps - (Number(entity.velocity) || 0)) * 3.6;

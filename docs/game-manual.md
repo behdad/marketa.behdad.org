@@ -63,6 +63,8 @@ opens the loft for free exploration.
 Return to the Garden and start the party. The loft changes with it, the room map becomes easier to
 use, and the story asks you to visit all ten rooms. Room introductions and the map keep count, so you
 do not need to remember the total yourself. Visiting is enough; the lower-room games remain optional.
+Guests keep circulating while you explore: the dance floor, bar, office, and balcony stay populated,
+and the balcony includes the wider social crowd as well as smokers.
 
 A coach eventually points to the Garden wall switch that ends the party. You may use it then, dismiss
 the coach and keep dancing, or leave the party running while you explore. Once the party has started

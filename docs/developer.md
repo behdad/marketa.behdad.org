@@ -494,7 +494,7 @@ references.
 | --- | --- |
 | Upper/lower navigation | `STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
 | First-run solves and replay | `__finishSolveAdvance`, `__kitchenDoNext`, `__gardenDoNext`, `__cuddlyDoNext`, `__officeDoNext` |
-| Party/free exploration | `setGardenParty`, `setSecondRound`, `__secondRound`, `seenRooms` |
+| Party/free exploration | `setGardenParty`, `__partyGuestAssignedElsewhere`, `__barCoupleNow`, `__officeCoupleNow`, `__balconyHangoutNow`, `setSecondRound`, `seenRooms` |
 | Entrance and Road Trip | `porscheDrive`, `roadtripState`, `roadtripAuthorized`, `__entranceDriveStep` |
 | Camping | `campFireState`, `campStewState`, `campStargazingState`, `campSleepState` |
 | Keyboard routing | `activeControlFocused`, `activateCurrentRoom`, `__entranceDriveKeyboardOwnership` |

@@ -48,6 +48,16 @@ var harness = String.raw`<script>
       return x > 255 && x < 405 ? { className: guest.getAttribute("class"), x: x } : null;
     }).filter(Boolean);
   }
+  function bareIds(rows) {
+    return (rows || []).map(function (row) { return row && typeof row === "object" ? row.key : row; }).filter(Boolean);
+  }
+  function occupancy() {
+    return {
+      bar: bareIds(window.__barCoupleNow && window.__barCoupleNow()),
+      office: bareIds(window.__officeCoupleNow && window.__officeCoupleNow()),
+      balcony: bareIds(window.__balconyHangoutNow && window.__balconyHangoutNow())
+    };
+  }
 
   var focused = false;
   document.hasFocus = function () { return focused; };
@@ -55,6 +65,32 @@ var harness = String.raw`<script>
     setTimeout(function () {
       (async function () {
         window.party(true);
+        await sleep(20); // deferred room coordination settles without nesting inside party startup
+        var firstRooms = occupancy();
+        var balconySocial = firstRooms.balcony.filter(function (name) {
+          return ["farhang", "alireza", "sina", "danesh", "behdad", "marketa"].indexOf(name) === -1;
+        });
+        check("bar and office populate immediately without waiting for a garden-floor turn",
+          firstRooms.bar.length > 0 && firstRooms.office.length > 0, JSON.stringify(firstRooms));
+        check("the ordinary balcony starts with a mixed social crowd, not smokers alone",
+          firstRooms.balcony.length >= 3 && balconySocial.length >= 2, JSON.stringify(firstRooms));
+        window.dispatchEvent(new Event("blur"));
+        await sleep(100);
+        var afterBlurRooms = occupancy();
+        check("room occupancy survives an unfocused-tab lifecycle update",
+          afterBlurRooms.bar.length > 0 && afterBlurRooms.office.length > 0 && afterBlurRooms.balcony.length >= 3,
+          JSON.stringify({ before: firstRooms, after: afterBlurRooms }));
+        window.couples(true);
+        window.officefolks(true);
+        window.__rotateBalconyHangout();
+        var rotatedRooms = occupancy();
+        var earlyAudit = window.__peopleManager.audit();
+        check("bar and office rotations advance while unfocused",
+          rotatedRooms.bar.join(",") !== firstRooms.bar.join(",") &&
+            rotatedRooms.office.join(",") !== firstRooms.office.join(","),
+          JSON.stringify({ before: firstRooms, after: rotatedRooms }));
+        check("silent room rotations remain mutually exclusive while unfocused",
+          earlyAudit.ok, JSON.stringify({ rooms: rotatedRooms, duplicates: earlyAudit.duplicates }));
         var handoffGuest = document.querySelector("#garden-guests .g-irene");
         handoffGuest.classList.add("off-at-games");
         var awayTransitions = getComputedStyle(handoffGuest).transitionProperty;
@@ -81,6 +117,9 @@ var harness = String.raw`<script>
         }
         check("the unattended initial fill reaches the four-family floor capacity",
           before.length === 4, JSON.stringify({ count: beforeCount, units: before }));
+        var settledAudit = window.__peopleManager.audit();
+        check("settled party occupancy has one person in one room",
+          settledAudit.ok, JSON.stringify(settledAudit.duplicates));
         var centerGuests = ordinaryGuestInCenter();
         check("ordinary guests leave the couple's center lane clear",
           centerGuests.length === 0, JSON.stringify(centerGuests));

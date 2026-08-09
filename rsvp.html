@@ -117275,6 +117275,33 @@ function spawnDustMote(container) {
     });
   }
   window.__partyGuestAttended = function (name) { return attendedGuestNames.has(String(name || "").toLowerCase()); };
+  // Room assignments are party state, not a projection of whichever room happens to be on
+  // screen. These hooks let the garden allocator leave whole arrival units available to the
+  // bar, office, balcony and Cuddly without ever drawing the same person in two rooms.
+  function partyHookHasGuest(fn, name) {
+    try {
+      var rows = typeof fn === "function" ? (fn() || []) : [];
+      if (!Array.isArray(rows)) rows = [rows];
+      return rows.some(function (row) {
+        var key = row && typeof row === "object" ? row.key : row;
+        return String(key || "").toLowerCase() === name;
+      });
+    } catch (e) { return false; }
+  }
+  function partyGuestAssignedElsewhere(name) {
+    name = String(name || "").toLowerCase();
+    return partyHookHasGuest(window.__barCoupleNow, name) ||
+      partyHookHasGuest(window.__officeCoupleNow, name) ||
+      partyHookHasGuest(window.__balconyHangoutNow, name) ||
+      partyHookHasGuest(window.__cuddlyVisitorsNow, name);
+  }
+  window.__partyGuestAssignedElsewhere = partyGuestAssignedElsewhere;
+  window.__openPartyAttendance = function () {
+    var before = attendedGuestNames.size;
+    fullArrivals().forEach(markEntryAttended);
+    if (window.__syncPartyKidFormation) window.__syncPartyKidFormation();
+    return attendedGuestNames.size - before;
+  };
   var trickleTimer = null, trickleDeadline = 0, trickleRemaining = 0;
   // ── DYNAMIC FLOOR BALANCE ────────────────────────────────────────────────────
   // Each present guest is nudged from its fixed home x to an evenly-spread SLOT so the floor reads
@@ -117403,8 +117430,17 @@ function spawnDustMote(container) {
   var guestHandoffTimer = null, guestHandoffDeadline = 0, guestHandoffRemaining = 0, guestHandoffLeaving = null;
   var recentArrivals = []; // unit keys that JUST walked in — don't send them straight back out
   function unitKey(u) { return u.id || u.sels[0]; }
-  function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
-  function unitIsWaiting(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && !el.classList.contains("arrived")); }
+  function unitAssignedElsewhere(u) {
+    return u.sels.some(function (sel) { return partyGuestAssignedElsewhere(guestNameFromSel(sel)); });
+  }
+  function unitIsPresent(g, u) {
+    var el = g.querySelector(u.sels[0]);
+    return !unitAssignedElsewhere(u) && !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving"));
+  }
+  function unitIsWaiting(g, u) {
+    var el = g.querySelector(u.sels[0]);
+    return !unitAssignedElsewhere(u) && !!(el && !el.classList.contains("arrived"));
+  }
   function unitIsBirthdayHeld(g, u) { for (var i = 0; i < u.sels.length; i++) { var el = g.querySelector(u.sels[i]); if (el && (el.classList.contains("bd-cutter") || el.classList.contains("bd-honoree"))) return true; } return false; }
   function presentUnits(g, list) { return list.filter(function (u) { return unitIsPresent(g, u); }); }
   function waitingUnits(g, list) { return list.filter(function (u) { return unitIsWaiting(g, u); }); }
@@ -117514,9 +117550,10 @@ function spawnDustMote(container) {
     var g = document.getElementById("garden-guests");
     return (arrivalOrder || ARRIVALS).map(function (entry) { return resolveArrival(entry, g); });
   }
-  function everyoneArrived(g) { // has the whole current roster landed? (drops .trickle when so)
+  function everyoneArrived(g) { // has the whole current roster landed or settled into another room?
     var list = fullArrivals();
     for (var i = 0; i < list.length; i++) {
+      if (unitAssignedElsewhere(list[i])) continue;
       for (var j = 0; j < list[i].sels.length; j++) {
         var el = g.querySelector(list[i].sels[j]);
         if (el && !el.classList.contains("arrived")) return false;
@@ -117561,6 +117598,13 @@ function spawnDustMote(container) {
       armTrickle(10000 + Math.random() * 6000); // ~10–16s between rotations; the floor visibly keeps changing
     }, ms);
   }
+  window.__partyRoomAssignmentsChanged = function () {
+    var g = document.getElementById("garden-guests");
+    if (!g || !window.__gardenPartyOn || window.__bbqSplitOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    g.classList.add("trickle");
+    armTrickle(600);
+  };
   function stopTrickle() { clearTrickleTimer(); var g = document.getElementById("garden-guests"); if (g) g.classList.remove("trickle"); }
   // grant EVERYONE .arrived at once + drop .trickle (the instant-fill path: summon / already-full
   // re-entry / reduced-motion catch-up). No walk — a full floor appears together.
@@ -120768,29 +120812,23 @@ function spawnDustMote(container) {
     return person ? person.drink : "any";
   };
   // ── BAR GROOVING GROUPS driver (named cast cameos) ───────────────────────────
-  // A random NAMED guest group grooves in the bar's left-front corner MOST of the party,
-  // rotating who it is (only occasionally is nobody there). The seated regulars
+  // A random NAMED guest group grooves in the bar's left-front corner throughout the party,
+  // rotating silently even while another room or window has attention. The seated regulars
   // (#kitchen-bar-patrons) belong to the calm night bar and are absent here.
   // Pure CSS grooving on the pre-drawn couple nodes (#kitchen-bar-couples .bar-couple.bc-*):
   // NOTHING is spawned, so nothing can pile up — the only accumulation risk is the timer,
   // handled below. A single self-rescheduling timer flips .present on exactly one eligible
-  // group for a stretch, then swaps to another (usually with no gap, so somebody's there
-  // most of the time), occasionally leaving a short empty beat.
+  // group for a stretch, then swaps directly to another so the authored spot stays occupied.
   //
   // ONE-ROOM RULE: a person can only be in one place. A group is eligible for the bar only
   // if NO member is currently on the garden dance floor (#garden-guests .g-<name> with
-  // .arrived and not .leaving), smoking on the balcony, or visiting the cuddly nook.
-  // Re-checked every swap; if a current guest walks ONTO the floor mid-song, the next swap drops them. Also
-  // exposes window.__barCoupleNow() → the member ids currently grooving at the bar (or null),
-  // so the floor↔bar↔balcony mutual-exclusion can be wired end-to-end in a later pass.
+  // .arrived and not .leaving), in the office/balcony, or visiting the cuddly nook.
+  // Re-checked every swap; window.__barCoupleNow() publishes the current member ids so the
+  // floor, office, balcony and Cuddly all share the same one-room exclusion.
   //
-  // Gates (crickets rule + room/party truth), re-checked at fire time so a timer landing after
-  // party-off / a room change / a tab hide is a no-op:
-  //   party on ∧ viewing the kitchen ∧ ¬document.hidden ∧ document.hasFocus()
-  // Idempotent under storm-clicks (one timer only). Torn down on party-off / room-leave / reset
-  // via __updateBarGroovers(), which clears .present + cancels the timer when the gate is false
-  // and re-arms when it turns true. Reduced motion: the group still appears but holds a static
-  // pose (the CSS @media disables the sway/arm swing).
+  // Assignment is independent of current room, visibility and focus: it is silent class state,
+  // so it can keep rotating without accumulating work. Foreground story suspension pauses the
+  // timer in place; party-off, BBQ and reset clear it. Reduced motion holds the pose still.
   (function barGroovers() {
     var layer = document.getElementById("kitchen-bar-couples");
     if (!layer) return;
@@ -120824,11 +120862,10 @@ function spawnDustMote(container) {
         });
       });
     });
-    function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
       return !!window.__gardenPartyOn &&
         (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
-        !window.__bbqSplitOn && window.currentStageName === "kitchen" && attended();
+        !window.__bbqSplitOn;
     }
     // is this person on the garden dance floor right now? (revolving-door presence)
     function onFloor(name) {
@@ -120836,15 +120873,17 @@ function spawnDustMote(container) {
       var el = guests.querySelector(".g-" + name);
       return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving"));
     }
-    // is this person smoking on the balcony? (optional cross-agent hook; degrade gracefully)
+    function inOffice(name) {
+      try {
+        var who = typeof window.__officeCoupleNow === "function" ? window.__officeCoupleNow() : null;
+        return !!(who && who.indexOf && who.indexOf(name) !== -1);
+      } catch (e) { return false; }
+    }
+    // is this person anywhere on the balcony? (optional cross-controller hook)
     function onBalcony(name) {
       try {
-        if (typeof window.__balconySmokerNow === "function") {
-          var who = window.__balconySmokerNow();
-          if (!who) return false;
-          if (Array.isArray(who)) return who.indexOf(name) !== -1;
-          return who === name;
-        }
+        var who = typeof window.__balconyHangoutNow === "function" ? window.__balconyHangoutNow() : [];
+        return Array.isArray(who) && who.some(function (person) { return person && person.key === name; });
       } catch (e) {}
       return false;
     }
@@ -120860,7 +120899,7 @@ function spawnDustMote(container) {
     function eligible(c) {
       for (var i = 0; i < c.members.length; i++) {
         if (!window.__partyGuestAttended || !window.__partyGuestAttended(c.members[i])) return false;
-        if (onFloor(c.members[i]) || onBalcony(c.members[i]) || inCuddly(c.members[i])) return false;
+        if (onFloor(c.members[i]) || inOffice(c.members[i]) || onBalcony(c.members[i]) || inCuddly(c.members[i])) return false;
       }
       return true;
     }
@@ -120870,6 +120909,7 @@ function spawnDustMote(container) {
         if (el) el.classList.remove("present");
         current = null;
         if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+        if (window.__partyRoomAssignmentsChanged) window.__partyRoomAssignmentsChanged();
       }
     }
     function stop() {
@@ -120890,41 +120930,40 @@ function spawnDustMote(container) {
       el.classList.add("present");
       current = c;
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+      if (window.__partyRoomAssignmentsChanged) setTimeout(window.__partyRoomAssignmentsChanged, 0);
       return true;
     }
-    // swap: retire the current couple, bring on a fresh eligible one (or, rarely / when none
-    // free, take a short empty beat), then reschedule. High frequency: mostly no gap.
+    // Swap directly to a fresh eligible group. If every group is temporarily owned elsewhere,
+    // keep the current group and retry shortly rather than manufacturing an empty beat.
     function swap() {
       timer = null;
-      if (rosterHoldsOccupants() && window.currentStageName === "kitchen") { timer = setTimeout(swap, 1000); return; }
-      if (!shouldRun()) { clearCurrent(); return; } // gate closed while waiting → stay empty (re-armed by __updateBarGroovers)
+      if (rosterHoldsOccupants()) { timer = setTimeout(swap, 1000); return; }
+      if (!shouldRun()) return;
       var prev = current;
       var next = pickCouple(prev);
-      var emptyBeat = Math.random() < 0.14; // occasionally the corner's briefly empty
-      if (!next || emptyBeat) {
-        clearCurrent();
-        timer = setTimeout(swap, 6000 + Math.random() * 8000); // short quiet stretch, then try again
-        return;
-      }
-      show(next);
+      if (next) show(next);
       timer = setTimeout(swap, 20000 + Math.random() * 16000); // this couple grooves ~20-36s, then rotates
     }
     function schedule() {
       if (timer) return; // one timer only — idempotent under storm-clicks
       if (!shouldRun()) return;
+      var opened = window.__openPartyAttendance ? window.__openPartyAttendance() : 0;
       if (!current) {
         // bring the first group on promptly (bar should feel alive right away), then rotate
         var first = pickCouple(null);
         if (first) show(first);
       }
+      if (opened && window.__partyAdultAttendanceOpened) setTimeout(window.__partyAdultAttendanceOpened, 0);
       timer = setTimeout(swap, current ? (20000 + Math.random() * 16000) : (4000 + Math.random() * 6000));
     }
-    // start/stop entry point — pinged on party toggle (setGardenParty), room change (goToStage),
-    // and visibility/focus flips. Re-arms when the gate turns true, tears down when false.
+    // Reconcile party lifecycle without treating room/focus changes as attendance changes.
     window.__updateBarGroovers = function () {
-      if (rosterHoldsOccupants() && window.currentStageName === "kitchen") return;
-      if (shouldRun()) schedule();
-      else stop();
+      if (!window.__gardenPartyOn || window.__bbqSplitOn) { stop(); return; }
+      if (window.__partyForegroundActive && !window.__partyForegroundActive()) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        return;
+      }
+      schedule();
     };
     window.__pauseBarGroovers = function () {
       if (timer) { clearTimeout(timer); timer = null; }
@@ -121738,9 +121777,9 @@ function spawnDustMote(container) {
     }, delay);
   })();
   // ═══ BALCONY HANGOUT controller ═══════════════════════════════════════════════════
-  // Shows the deck crowd + smokers while the party's lit and you're on the balcony, rolls
-  // the couple's ~20% appearance + resolves the off-duty DJ, and drives the cigarette /
-  // ashtray smoke. The smoke is timer-spawned particles, so it obeys the anti-accumulation
+  // Keeps a mixed deck crowd assigned throughout the party, whether or not the balcony or tab
+  // is attended, and drives the cigarette / ashtray smoke only while the room is actually watched.
+  // The smoke is timer-spawned particles, so it obeys the anti-accumulation
   // rules: the spawner self-reschedules but re-gates at fire time on party+balcony AND
   // !document.hidden AND document.hasFocus() (the crickets rule — a visible-but-unfocused
   // window still throttles frames and would pile wisps up), skips under reduced-motion, and
@@ -121770,9 +121809,9 @@ function spawnDustMote(container) {
     // the getBBox/coordinate-system bug class). `op` scales the wisp's peak opacity.
     //   • crowd (non-smokers) live in the LEFT lane, clear of the grill/firepit.
     //   • smokers live in the RIGHT lane, clear of the BBQ/firepit and the sky.
-    // The couple (bh-behdad/bh-marketa) only join on the ~20% couple-out roll; the off-duty DJ
-    // (bh-dj) shows one of two CSS-gated faces (resolveDj). Everyone else is a candidate every
-    // showing — a random SUBSET, order + spacing is rolled fresh each genuine appearance.
+    // The hosts stay on the garden floor during an ordinary party and move here only through
+    // BBQ's explicit split. The off-duty DJ (bh-dj) shows one of two CSS-gated faces (resolveDj).
+    // Everyone else rotates through a mixed subset with fresh order and spacing.
     // `label`/`role` name the figure in the shared white popup (click-to-reveal); the DJ
     // names itself live (Sina/Danesh, whichever is off-duty). +30% bigger than the authored scale,
     // laid out below with a touch more lane room + wider lanes so the fuller figures don't crowd.
@@ -121822,12 +121861,12 @@ function spawnDustMote(container) {
     var CROWD_LANE = { lo: 88, hi: 288 };
     var SMOKER_LANE = { lo: 508, hi: 648 };
     function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
-    function onScreen() {
-      if (window.__gardenPartyOn) {
-        return window.__partyAutonomyAllowed ? window.__partyAutonomyAllowed("balcony") :
-          window.currentStageName === "balcony";
-      }
-      return window.currentStageName === "balcony" && bbqCrowdOn;
+    function assignmentActive() {
+      return !!bbqCrowdOn || (!!window.__gardenPartyOn && !window.__bbqSplitOn);
+    }
+    function roomAttended() {
+      if (window.currentStageName !== "balcony" || document.hidden || !document.hasFocus()) return false;
+      return !window.__gardenPartyOn || !window.__partyAutonomyAllowed || window.__partyAutonomyAllowed("balcony");
     }
     function smokingPolicy() {
       return window.__balconySmokingPolicy ? window.__balconySmokingPolicy() : "all";
@@ -121837,7 +121876,7 @@ function spawnDustMote(container) {
       return policy === "all" || (policy === "dj-only" && !!r.dj);
     }
     // the smoke may only puff when the room is actually being watched AND focused (crickets rule)
-    function smokeOk() { return onScreen() && !document.hidden && document.hasFocus() && !reduceMotion(); }
+    function smokeOk() { return roomAttended() && !reduceMotion(); }
     function coupleOut() { return hangout.classList.contains("couple-out"); }
     // whichever DJ is NOT spinning is the one out here: booth .dj-b (window.__djB) = Danesh spins,
     // so Sina is off-duty; otherwise Danesh is off-duty. Mirror that onto the hangout classes.
@@ -121847,9 +121886,9 @@ function spawnDustMote(container) {
       hangout.classList.toggle("dj-off-danesh", !daneshSpinning); // Sina spins   -> Danesh's out here
     }
     window.__balconyHangoutDjSwap = resolveDj; // pinged from applyDjBooth when the decks change hands
-    // Roll the couple's presence. ~20% of refresh windows they're out smoking too. Re-rolled
-    // only on a genuinely fresh show (not every re-gate), so they don't flicker in/out.
-    function rollCouple() { hangout.classList.toggle("couple-out", Math.random() < 0.20); }
+    // The hosts stay on the garden floor during an ordinary party. BBQ owns their explicit
+    // garden/balcony split; ordinary deck rotations are for the wider social crowd.
+    function rollCouple() { hangout.classList.remove("couple-out"); }
     // ── one-room exclusion (a balcony patron can't also be dancing or at the bar) ─────────
     var guests = document.getElementById("garden-guests");
     // on the garden dance floor right now? (revolving-door presence; same read the bar uses)
@@ -121868,7 +121907,19 @@ function spawnDustMote(container) {
       } catch (e) {}
       return false;
     }
-    function elsewhere(name) { return onFloor(name) || atBar(name); }
+    function atOffice(name) {
+      try {
+        var who = typeof window.__officeCoupleNow === "function" ? window.__officeCoupleNow() : null;
+        return !!(who && who.indexOf && who.indexOf(name) !== -1);
+      } catch (e) { return false; }
+    }
+    function inCuddly(name) {
+      try {
+        var who = typeof window.__cuddlyVisitorsNow === "function" ? window.__cuddlyVisitorsNow() : [];
+        return Array.isArray(who) && who.some(function (person) { return person && person.key === name; });
+      } catch (e) { return false; }
+    }
+    function elsewhere(name) { return onFloor(name) || atBar(name) || atOffice(name) || inCuddly(name); }
     // Fisher-Yates shuffle (in place); Math.random is fine in-app (same call the bar/kids use)
     function shuffle(a) {
       for (var i = a.length - 1; i > 0; i--) {
@@ -121994,15 +122045,17 @@ function spawnDustMote(container) {
       var incoming = shuffle(pool.filter(function (r) { return !figurePresent(r); }));
       return staying.concat(incoming).slice(0, count);
     }
-    // roll a fresh crowd + smoker layout: which faces, their order, their spacing. Called only
-    // on a genuine fresh show (not on every re-gate), so the crowd doesn't reshuffle on a blur.
+    // Roll a fresh crowd + smoker layout: which faces, their order, their spacing. Ordinary
+    // party rotations keep at least two eligible non-smokers socializing instead of reducing
+    // the balcony to a smoking area.
     function layout(preserve) {
       shownSmokerNames = [];
-      // ── crowd: a random subset (1–all) of the eligible non-smokers, shuffled + spaced ──
+      // ── crowd: two to four eligible non-smokers, shuffled + spaced ──
       var crowdPool = ROSTER.filter(function (r) {
         return !r.smoker && window.__partyGuestAttended && window.__partyGuestAttended(r.name) && !elsewhere(r.name);
       });
-      var crowdCount = (Math.random() * (crowdPool.length + 1)) | 0; // 0..all — sometimes an empty crowd (just smokers), sometimes a full deck
+      var minCrowd = Math.min(2, crowdPool.length), maxCrowd = Math.min(4, crowdPool.length);
+      var crowdCount = minCrowd + ((Math.random() * (maxCrowd - minCrowd + 1)) | 0);
       var crowd = preserve ? preferPresent(crowdPool, crowdCount) : shuffle(crowdPool.slice()).slice(0, crowdCount);
       placeLane(shuffle(crowd.slice()), CROWD_LANE);
       // ── smokers: Farhang + Alireza + the off-duty DJ are steady (excluded only if they've
@@ -122030,6 +122083,7 @@ function spawnDustMote(container) {
       ROSTER.forEach(function (r) { rollDeckDrink(r, shown.indexOf(r) !== -1); });
       // publish the smokers now on the deck (dj → the off-duty face's real name, for the hooks)
       shownSmokerNames = smokerPool.map(figKey);
+      if (window.__partyRoomAssignmentsChanged) setTimeout(window.__partyRoomAssignmentsChanged, 0);
     }
     function rosterByName(name) {
       for (var i = 0; i < ROSTER.length; i++) if (ROSTER[i].name === name) return ROSTER[i];
@@ -122058,6 +122112,7 @@ function spawnDustMote(container) {
       placeLane(shuffle(smokers.slice()), SMOKER_LANE);
       ROSTER.forEach(function (r) { rollDeckDrink(r, shown.indexOf(r) !== -1); });
       shownSmokerNames = smokers.map(figKey); // hosts are socializing, so neither is published as smoking
+      if (window.__partyRoomAssignmentsChanged) window.__partyRoomAssignmentsChanged();
     }
     function gardenFigure(name) { return guests && guests.querySelector(".g-" + name); }
     function gardenArrived(name) {
@@ -122106,7 +122161,6 @@ function spawnDustMote(container) {
     function rotateBBQSplit(force) {
       if (!bbqCrowdOn || bbqSelected.length !== 4) return false;
       if (rosterHoldsOccupants()) return false;
-      if (!force && (document.hidden || !document.hasFocus())) return false;
       var incoming = BBQ_CANDIDATES.filter(function (name) { return bbqSelected.indexOf(name) === -1; });
       if (!incoming.length) return false;
       var outAt = (Math.random() * bbqSelected.length) | 0;
@@ -122122,7 +122176,7 @@ function spawnDustMote(container) {
       bbqRotationTimer = setTimeout(function () {
         bbqRotationTimer = null;
         if (!bbqCrowdOn) return;
-        if (rosterHoldsOccupants() || document.hidden || !document.hasFocus()) { armBBQRotation(1000); return; }
+        if (rosterHoldsOccupants()) { armBBQRotation(1000); return; }
         rotateBBQSplit(false);
         armBBQRotation(20000 + Math.random() * 10000);
       }, ms);
@@ -122190,6 +122244,11 @@ function spawnDustMote(container) {
     // opposite. The facade controller calls this only while its watcher cameo is visible.
     var audienceCommented = false;
     window.__balconyAudienceNoticed = function (force) {
+      if (force && audienceCommented) {
+        var prior = document.querySelector(".egg-bubble.balcony-audience-callout");
+        if (prior) prior.remove();
+        audienceCommented = false;
+      }
       if (audienceCommented || !hangout.classList.contains("on") ||
           (window.__partyAutonomyAllowed && !window.__partyAutonomyAllowed("balcony")) ||
           document.hidden || !document.hasFocus() || document.querySelector(".egg-bubble")) return null;
@@ -122238,6 +122297,7 @@ function spawnDustMote(container) {
       perch.addEventListener("animationend", function () { perch.classList.remove("spinning"); });
     }
     var shownOnce = false, preserveNextLayout = false, shownSmokingPolicy = null;
+    var ordinaryRotationTimer = null;
     function show() {
       var wasOn = hangout.classList.contains("on");
       if (!shownOnce) {
@@ -122258,7 +122318,32 @@ function spawnDustMote(container) {
       if (perch) { perch.classList.add("up", "hunt-hit"); perch.style.opacity = "1"; perch.style.pointerEvents = "auto"; perch.setAttribute("tabindex", "0"); perch; perch; }
       if (tableAshtray) tableAshtray.style.display = "none"; // the deck ashtray has moved onto the covered grill
     }
+    function clearOrdinaryRotation() {
+      if (ordinaryRotationTimer) { clearTimeout(ordinaryRotationTimer); ordinaryRotationTimer = null; }
+    }
+    function armOrdinaryRotation(ms) {
+      if (ordinaryRotationTimer || bbqCrowdOn || !window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+      ordinaryRotationTimer = setTimeout(function () {
+        ordinaryRotationTimer = null;
+        if (!window.__gardenPartyOn || bbqCrowdOn ||
+            (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+        if (rosterHoldsOccupants()) { armOrdinaryRotation(1000); return; }
+        rollCouple();
+        layout(false);
+        resolveDj();
+        armOrdinaryRotation(24000 + Math.random() * 16000);
+      }, ms);
+    }
+    window.__rotateBalconyHangout = function () {
+      if (!window.__gardenPartyOn || bbqCrowdOn) return [];
+      rollCouple();
+      layout(false);
+      resolveDj();
+      return window.__balconyHangoutNow ? window.__balconyHangoutNow() : [];
+    };
     function hide() {
+      clearOrdinaryRotation();
       clearAuroraLookUp();
       hangout.classList.remove("on");
       clearGuestFoodPlates();
@@ -122274,11 +122359,22 @@ function spawnDustMote(container) {
       if (perch) { perch.classList.remove("up", "spinning", "hunt-hit"); perch.style.opacity = "0"; perch.style.pointerEvents = "none"; perch.removeAttribute("tabindex"); perch; perch; }
       if (tableAshtray) tableAshtray.style.display = ""; // it's back on the table
       // drain nothing by hand — in-flight wisps self-finish; just stop counting them as ours
+      if (window.__partyRoomAssignmentsChanged) window.__partyRoomAssignmentsChanged();
     }
-    // The single re-gate: called on party on/off (setGardenParty tail) and room change (goToStage).
-    function update() { if (onScreen()) show(); else hide(); }
+    // Occupancy follows party lifecycle, never the viewport. Only particle/audio/one-shot gates
+    // care whether the balcony is the attended room.
+    function update() {
+      if (!assignmentActive()) { hide(); return; }
+      show();
+      if (!bbqCrowdOn) armOrdinaryRotation(24000 + Math.random() * 16000);
+    }
     window.__updateBalconyHangout = update;
     window.__balconyHangoutAttendanceChanged = update;
+    window.__partyAdultAttendanceOpened = function () {
+      if (!window.__gardenPartyOn || bbqCrowdOn) return;
+      shownOnce = false;
+      update();
+    };
     function setBBQSplit(on) {
       on = !!on;
       window.__balconyBBQOn = on;
@@ -122288,6 +122384,7 @@ function spawnDustMote(container) {
         update(); return;
       }
       clearBBQRotation();
+      clearOrdinaryRotation();
       bbqCrowdOn = on;
       hangout.classList.toggle("bbq-day", on);
       hangout.classList.toggle("couple-out", on);
@@ -122327,7 +122424,7 @@ function spawnDustMote(container) {
       if (hangout.classList.contains("on")) layoutBBQ();
       if (window.__updateBalconyPhotog) window.__updateBalconyPhotog();
     };
-    window.__resetBalconyHangout = function () { setBBQSplit(false); hide(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // global reset (room-leave uses update()/hide() directly, keeping the BBQ assignment)
+    window.__resetBalconyHangout = function () { setBBQSplit(false); hide(); if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); }; // global reset; ordinary room-leaves keep the assignment
     window.__balconyBBQCrowdOn = function () { return bbqCrowdOn; }; // read by the balcony photographer's gate
     // ── the smoke spawner: one self-rescheduling timer, re-gated every fire ──────────────
     var smokeTimer = null;
@@ -122374,6 +122471,7 @@ function spawnDustMote(container) {
     window.__pauseBalconyPartyRuntime = function () {
       stopSmoke();
       clearBBQRotation();
+      clearOrdinaryRotation();
       clearAuroraLookUp();
       window.__dismissBalconyAudienceCallout();
     };
@@ -122381,10 +122479,11 @@ function spawnDustMote(container) {
       if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
       scheduleSmoke();
       if (bbqCrowdOn) armBBQRotation(20000 + Math.random() * 10000);
+      else if (window.__gardenPartyOn) armOrdinaryRotation(24000 + Math.random() * 16000);
     };
     scheduleSmoke(); // the timer runs for the page's life but only PUFFS when smokeOk() (crickets-gated)
-    // re-gate on the same signals the other balcony ambients use, so a tab hidden/unfocused
-    // while on the balcony stops puffing immediately (belt-and-suspenders with puffOnce's gate)
+    // Focus/visibility events leave occupancy alone; they only re-check lifecycle and the
+    // smoke spawner's own attended-room gate blocks particles immediately.
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);
     window.addEventListener("focus", update);
@@ -122762,26 +122861,20 @@ function spawnDustMote(container) {
     update();
   })();
   // ── OFFICE HANGOUT GUESTS ──────────────────────────────────────────────────────────────
-  // During the garden party the office is a quiet spot, so SOMETIMES a named cast group
-  // slips in to hang out and chat, drinks in hand. Modeled on barGroovers() (occasional
-  // rotation + the one-room exclusion rule + a console hook) and balconyHangout() (crickets
-  // gate + reduced-motion + a reset hook). One group at a time; for pairs, whether they
+  // During the garden party the office is a quiet spot where a named cast group hangs out
+  // and chats, drinks in hand. Its silent assignment persists and rotates independently of
+  // the viewed room, focus and visibility. One group at a time; for pairs, whether they
   // hold drinks, and which drink (beer / wine / cocktail) are rolled per showing.
   //
   // ONE-ROOM RULE ("who's not anywhere else"): a group is eligible only if NO member
   // is currently on the garden dance floor (#garden-guests .g-<name> .arrived, not .leaving),
-  // at the BAR (window.__barCoupleNow()), OR smoking on the BALCONY (window.__balconySmokerNow?.()).
-  // All three cross-agent reads feature-detect + catch throws + degrade gracefully. We PUBLISH
+  // at the BAR (window.__barCoupleNow()), on the BALCONY, or visiting Cuddly.
+  // Cross-controller reads feature-detect and degrade gracefully. We publish
   // window.__officeCoupleNow() → the member ids in the office (or null) so the floor/bar/balcony
   // agents can reciprocally exclude these people from their own rosters.
   //
-  // Gates (crickets rule + room/party truth), re-checked at fire time so a timer landing after
-  // party-off / a room change / a tab hide/blur is a no-op:
-  //   party on ∧ viewing the office ∧ ¬document.hidden ∧ document.hasFocus()
-  // Idempotent under storm-clicks (one timer only). Torn down on party-off / room-leave / reset
-  // via __updateOfficeHangout(), which clears .present + cancels the timer when the gate is false
-  // and re-arms when it turns true. Nothing is spawned (pure CSS idle on persistent nodes), so
-  // teardown strands nothing. Reduced motion: they stand still with drinks (CSS @media).
+  // Foreground story suspension pauses its one timer in place; party-off, BBQ and reset clear it.
+  // Nothing is spawned (pure CSS idle on persistent nodes), so background rotation is safe.
   (function officeHangout() {
     var layer = document.getElementById("office-hangout");
     if (!layer) return;
@@ -122815,11 +122908,10 @@ function spawnDustMote(container) {
         });
       });
     });
-    function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
       return !!window.__gardenPartyOn &&
         (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
-        !window.__bbqSplitOn && window.currentStageName === "office" && attended();
+        !window.__bbqSplitOn;
     }
     // is this person on the garden dance floor right now? (revolving-door presence)
     function onFloor(name) {
@@ -122839,15 +122931,11 @@ function spawnDustMote(container) {
       } catch (e) {}
       return false;
     }
-    // is this person smoking on the balcony right now? (optional cross-agent hook)
+    // is this person anywhere on the balcony? (optional cross-controller hook)
     function onBalcony(name) {
       try {
-        if (typeof window.__balconySmokerNow === "function") {
-          var who = window.__balconySmokerNow();
-          if (!who) return false;
-          if (Array.isArray(who)) return who.indexOf(name) !== -1;
-          return who === name;
-        }
+        var who = typeof window.__balconyHangoutNow === "function" ? window.__balconyHangoutNow() : [];
+        return Array.isArray(who) && who.some(function (person) { return person && person.key === name; });
       } catch (e) {}
       return false;
     }
@@ -122863,11 +122951,7 @@ function spawnDustMote(container) {
     function eligible(c) {
       for (var i = 0; i < c.members.length; i++) {
         if (!window.__partyGuestAttended || !window.__partyGuestAttended(c.members[i])) return false;
-        // NOT excluded for being on the garden dance floor — the floor is off-screen while you're in
-        // the office, and the floor(8)+bar+balcony would otherwise consume all eight couples and leave
-        // the office permanently EMPTY. Still exclude the bar/balcony so a couple isn't in two
-        // ambient spots at once. (onFloor kept for reference; intentionally not applied here.)
-        if (atBar(c.members[i]) || onBalcony(c.members[i]) || inCuddly(c.members[i])) return false;
+        if (onFloor(c.members[i]) || atBar(c.members[i]) || onBalcony(c.members[i]) || inCuddly(c.members[i])) return false;
       }
       return true;
     }
@@ -122902,6 +122986,7 @@ function spawnDustMote(container) {
       }
       layer.classList.remove("on"); // no one present → hide the office-hangout layer
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+      if (window.__partyRoomAssignmentsChanged) window.__partyRoomAssignmentsChanged();
     }
     function stop() {
       if (timer) { clearTimeout(timer); timer = null; }
@@ -122923,25 +123008,18 @@ function spawnDustMote(container) {
       layer.classList.add("on"); // reveal the layer — #office-hangout is opacity:0/hidden without .on
       current = c;
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+      if (window.__partyRoomAssignmentsChanged) window.__partyRoomAssignmentsChanged();
       return true;
     }
-    // swap: retire the current couple, occasionally bring on a fresh eligible one (this is a
-    // QUIET room — most windows the office is empty; a couple only drifts in now and then),
-    // then reschedule. Long empty beats between the occasional visit.
+    // Swap directly to a fresh eligible group. If everyone else is temporarily occupied, keep
+    // the current group and retry on the next beat instead of emptying the room.
     function swap() {
       timer = null;
-      if (rosterHoldsOccupants() && window.currentStageName === "office") { timer = setTimeout(swap, 1000); return; }
-      if (!shouldRun()) { clearCurrent(); return; } // gate closed while waiting → stay empty (re-armed by __updateOfficeHangout)
+      if (rosterHoldsOccupants()) { timer = setTimeout(swap, 1000); return; }
+      if (!shouldRun()) return;
       var prev = current;
-      // the office should usually have somebody chatting; only a short empty beat now and then
-      var visit = Math.random() < 0.85;
-      var next = visit ? pickCouple(prev) : null;
-      if (!next) {
-        clearCurrent();
-        timer = setTimeout(swap, 8000 + Math.random() * 8000); // a brief quiet stretch, then someone drifts back in
-        return;
-      }
-      show(next);
+      var next = pickCouple(prev);
+      if (next) show(next);
       timer = setTimeout(swap, 26000 + Math.random() * 22000); // this pair hangs out ~26-48s, then rotates
     }
     function schedule() {
@@ -122950,12 +123028,14 @@ function spawnDustMote(container) {
       if (!current) { var first = pickCouple(null); if (first) show(first); } // bring guests on promptly so the office feels occupied when you walk in
       timer = setTimeout(swap, current ? (26000 + Math.random() * 22000) : (3000 + Math.random() * 4000));
     }
-    // start/stop entry point — pinged on party toggle (setGardenParty), room change (goToStage),
-    // and visibility/focus flips. Re-arms when the gate turns true, tears down when false.
+    // Reconcile party lifecycle without treating room/focus changes as attendance changes.
     window.__updateOfficeHangout = function () {
-      if (rosterHoldsOccupants() && window.currentStageName === "office") return;
-      if (shouldRun()) schedule();
-      else stop();
+      if (!window.__gardenPartyOn || window.__bbqSplitOn) { stop(); return; }
+      if (window.__partyForegroundActive && !window.__partyForegroundActive()) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        return;
+      }
+      schedule();
     };
     window.__pauseOfficeHangout = function () {
       if (timer) { clearTimeout(timer); timer = null; }

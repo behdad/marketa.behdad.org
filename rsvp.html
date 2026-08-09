@@ -5319,6 +5319,10 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 :is(#garden-djpicker,#garden-trip-picker) .dj-pick-row.cur .dj-pick-cell{fill:#f500f5; fill-opacity:.2}
 :is(#garden-djpicker,#garden-trip-picker) .dj-pick-row.cur .dj-pick-label{fill:#ff8bff; font-weight:600}
 :is(#garden-djpicker,#garden-trip-picker) .dj-pick-row.cur:hover .dj-pick-cell{fill:#f500f5; fill-opacity:.3}
+#garden-djpicker .dj-pick-dismiss{cursor:pointer}
+#garden-djpicker .dj-pick-dismiss circle{fill:#f500f5; fill-opacity:.28; stroke:#ff8bff; stroke-width:1.2}
+#garden-djpicker .dj-pick-dismiss text{fill:#eafff6; font-weight:700; pointer-events:none}
+#garden-djpicker .dj-pick-dismiss:hover circle{fill-opacity:.5; stroke:#00f5a3}
 @media (prefers-reduced-motion: reduce){
   :is(#garden-djpicker,#garden-trip-picker).open .dj-pick-panel{animation:none}
   :is(#garden-djpicker,#garden-trip-picker) .dj-pick-row .dj-pick-cell,
@@ -68185,7 +68189,7 @@ function quickReversalGesture(action) {
   var built = false, open = false;
   // Panel geometry (garden view-box coords): keep the slab fully left of the booth's x=560
   // edge so an open picker never intercepts a follow-up tap on the DJ.
-  var PX = 402, PY = 40, PW = 150, ROW_H = 13, HEAD_H = 20, PAD = 6;
+  var PX = 402, PY = 40, PW = 150, ROW_H = 13, HEAD_H = 27, PAD = 6;
 
   function danceIds() {
     var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
@@ -68233,13 +68237,33 @@ function quickReversalGesture(action) {
     panel.appendChild(bg);
     // title
     var title = document.createElementNS(SVGNS, "text");
-    title.setAttribute("x", PX + PW / 2); title.setAttribute("y", PY + 14);
+    title.setAttribute("x", PX + PW / 2 - 8); title.setAttribute("y", PY + 16);
     title.setAttribute("text-anchor", "middle");
     title.setAttribute("font-family", "'Fraunces', Georgia, serif");
     title.setAttribute("font-size", "9.5"); title.setAttribute("font-weight", "600");
     title.setAttribute("fill", "#1ab2ff"); title.setAttribute("letter-spacing", "0.4");
     title.textContent = pickerTitle();
     panel.appendChild(title);
+    // A dedicated close target keeps dismissal visible inside the picker on every viewport.
+    // It occupies only the header, clear of both the title and the first song row.
+    var dismiss = document.createElementNS(SVGNS, "g");
+    dismiss.setAttribute("class", "dj-pick-dismiss");
+    var dismissCircle = document.createElementNS(SVGNS, "circle");
+    dismissCircle.setAttribute("cx", PX + PW - 13); dismissCircle.setAttribute("cy", PY + 13);
+    dismissCircle.setAttribute("r", "9");
+    dismiss.appendChild(dismissCircle);
+    var dismissMark = document.createElementNS(SVGNS, "text");
+    dismissMark.setAttribute("x", PX + PW - 13); dismissMark.setAttribute("y", PY + 17.5);
+    dismissMark.setAttribute("text-anchor", "middle");
+    dismissMark.setAttribute("font-family", "Arial, sans-serif"); dismissMark.setAttribute("font-size", "14");
+    dismissMark.textContent = "×";
+    dismiss.appendChild(dismissMark);
+    dismiss.addEventListener("pointerdown", function (e) { if (e) e.stopPropagation(); });
+    dismiss.addEventListener("click", function (e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      window.__closeDjPicker();
+    });
+    panel.appendChild(dismiss);
     // rows
     ids.forEach(function (id, i) {
       var top = PY + HEAD_H + i * ROW_H;

@@ -31,7 +31,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     }));
   }
   function openChooser() {
-    if (roadtrip().active) pressEscape();
+    if (roadtrip().active) {
+      pressEscape();
+      if (roadtrip().active) pressEscape();
+    }
     window.__entranceRoadtripOpenChooser();
   }
   function dirtyRun() {

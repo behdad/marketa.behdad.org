@@ -39776,7 +39776,7 @@ window.__entranceRoomOpen = false;
     if (!window.__captionBase) return false;
     var priorities = window.__captionPriorities || { mandatory: 80, terminal: 100 };
     var terminal = /^entrance_roadtrip_police_(?:capture|stopped|court_stopped|court_refused|arrest)/.test(key || "");
-    return !!window.__captionBase(key, {
+    return window.__captionBase(key, {
       owner: "roadtrip-police",
       scope: "lower:entrance",
       priority: terminal ? priorities.terminal : priorities.mandatory,
@@ -39940,7 +39940,9 @@ window.__entranceRoomOpen = false;
     });
   }
   function pulseRoadtripSuspensionIgnition() {
-    roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+    var captionToken = roadtripPoliceOutcomeFeedback(
+      "entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+    if (captionToken && window.__blinkCaptionClaim) window.__blinkCaptionClaim(captionToken, 700);
     paintRoadtripInvite();
     paintRoadtripScore();
     clearRoadtripSuspensionIgnitionPulse();
@@ -39964,8 +39966,7 @@ window.__entranceRoomOpen = false;
     var needsStop = roadtripState.active || porscheState.engineOn || porscheState.headlightOn ||
       porscheState.taillightOn || driveState.stalled || Math.abs(driveState.speed) > .001 ||
       driveState.rpm > 0 || driveState.gear !== 0 || porscheTransmission.range !== "P" ||
-      driveState.cruiseActive || controlsHeld || driveFrame || driveTimer || porscheIdleNodes ||
-      porscheDriveAudioNodes;
+      driveState.cruiseActive || controlsHeld || porscheIdleNodes || porscheDriveAudioNodes;
     if (!needsStop) return false;
     roadtripSuspensionStopActive = true;
     var wasRoadtripActive = roadtripState.active;
@@ -46094,8 +46095,7 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
     if (window.__finishOpeningGuide) window.__finishOpeningGuide();
     if (syncRoadtripDemeritState()) {
-      roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
-      paintRoadtripInvite();
+      pulseRoadtripSuspensionIgnition();
       return false;
     }
     if (!developerBypass && (!roadtripAuthorized() || !roadtripState.unlocked)) return false;

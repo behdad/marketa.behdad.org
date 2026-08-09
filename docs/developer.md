@@ -194,6 +194,8 @@ Keep these ownership boundaries intact:
 - `roadtripExplorationComplete()` answers whether the story prerequisites are met;
   `roadtripAuthorized()` additionally requires Party to be stopped.
 - `roadtripState` owns route selection, saved run, accepted trip, pause, and Camping availability.
+- The transmission preference survives ordinary room changes and Continue, while the Entrance
+  checkpoint adapter's Fresh Game reset clears it and restores AUTO/P with fresh controller latches.
 - Driving input belongs to the HUD/controller only while `__entranceDriveKeyboardOwnership` says it
   does. A CSS class or visible dashboard is not sufficient keyboard authority.
 - Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases

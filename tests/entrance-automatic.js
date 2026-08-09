@@ -352,9 +352,16 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       window.__entranceRoadtripSetDemerits(15, Date.now() + 90000);
       report.steps.suspensionStop = copy(drive());
 
-      window.__entranceDriveTransmissionMode("auto", true);
+      window.__entranceDriveTransmissionMode("manual", true);
+      report.steps.beforeReset = { drive: copy(drive()), stored: localStorage.getItem("entranceTransmission:v1") };
       window.__resetCheckpointSystems();
-      report.steps.reset = { drive: copy(drive()), stored: localStorage.getItem("entranceTransmission:v1") };
+      report.steps.reset = {
+        room: copy(state()),
+        drive: copy(drive()),
+        stored: localStorage.getItem("entranceTransmission:v1")
+      };
+      window.__entranceDriveTransmissionMode("manual", true);
+      report.steps.afterResetModeCaption = window.__captionKey && window.__captionKey();
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -520,9 +527,22 @@ check(s.suspensionStop && !s.suspensionStop.roadtrip.active &&
   s.suspensionStop.gear === 0 && s.suspensionStop.transmission.mode === "auto" &&
   s.suspensionStop.transmission.range === "P",
   "licence suspension stops the car and forces AUTO to P", s.suspensionStop);
-check(s.reset && s.reset.drive.transmission.mode === "auto" &&
-  s.reset.drive.transmission.range === "P" && s.reset.drive.gear === 0 && s.reset.stored === "auto",
-  "full reset clears AUTO runtime state but retains the explicit preference", s.reset);
+check(s.beforeReset && s.beforeReset.drive.transmission.mode === "manual" &&
+  s.beforeReset.drive.transmission.explicit && s.beforeReset.stored === "manual" &&
+  s.reset && s.reset.drive.transmission.mode === "auto" &&
+  s.reset.drive.transmission.range === "P" && s.reset.drive.gear === 0 &&
+  !s.reset.drive.transmission.explicit && s.reset.drive.transmission.preference === null &&
+  s.reset.drive.transmission.shiftDwellMs === 0 && s.reset.drive.transmission.offThrottleMs === 0 &&
+  s.reset.drive.transmission.kickdownArmed && s.reset.drive.transmission.launchEngagement === 0 &&
+  s.reset.stored === null,
+  "Fresh Game clears the explicit preference and returns the parked controller to AUTO defaults",
+  { before: s.beforeReset, after: s.reset });
+check(s.reset && s.reset.room && s.reset.room.car.indicatorFlashes === 0 &&
+  s.reset.room.car.indicatorSounds === 0 && !Object.keys(s.reset.room.car.activations).length &&
+  s.reset.room.intercomResponses === 0 && s.reset.drive.brakeScreeches === 0,
+  "Fresh Game clears the car's transient interaction counters", s.reset);
+check(s.afterResetModeCaption === "entrance_drive_mode_manual",
+  "Fresh Game re-arms the one-shot transmission-mode caption", s.afterResetModeCaption);
 
 console.log("");
 if (failures) {

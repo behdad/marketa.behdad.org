@@ -1,6 +1,6 @@
 # Loft game developer guide
 
-This guide is the architectural map for `rsvp.html`, the interactive Loft game. It explains where
+This guide is the architectural map for `loft-day.html`, the interactive Loft game. It explains where
 state lives, which functions own transitions, how the major game modes fit together, and how to
 change the file without reviving recurring bugs. It intentionally does not duplicate the player
 instructions in [the game manual](game-manual.md), the signal graph in [the audio guide](audio.md),
@@ -27,13 +27,14 @@ The site deliberately has no application build step or framework. Its two mainta
 remain page-owned:
 
 - `save-the-dates.html` is the invitation/save-the-date drop.
-- `rsvp.html` is the game. Its only external authored runtime files are the review-friendly
-  `loft-day.en.js` and `loft-day.cs.js` message dictionaries. The `loft-day`, `loft-day.html`, and
-  `rsvp` aliases are symlinks to it.
+- `loft-day.html` is the canonical game source. Its only external authored runtime files are the
+  review-friendly `loft-day.en.js` and `loft-day.cs.js` message dictionaries. The `loft-day`,
+  `rsvp`, and `rsvp.html` names are symlinks to it; only an RSVP-named URL reveals the surrounding
+  invitation content.
 
 The root `index.html` hub is planned but does not yet exist. Until then, `.htaccess` serves
 `save-the-dates.html` for `/`. Keep a new invitation feature in `save-the-dates.html` and a new game
-feature in `rsvp.html` unless there is a strong architectural reason to create another public file.
+feature in `loft-day.html` unless there is a strong architectural reason to create another public file.
 
 Supporting boundaries are:
 
@@ -47,7 +48,7 @@ Supporting boundaries are:
   deliverables. Treat each as vendored product data, not generated output or an upgrade target.
 - `princejs/`: the same kind of pinned runtime, but untracked — `./fetch-princejs.sh` restores it
   from upstream at a pinned SHA and applies `princejs-shim.patch` (provenance in the script
-  header). `rsvp.html` probes for it and falls back to the upstream GitHub Pages build when the
+  header). `loft-day.html` probes for it and falls back to the upstream GitHub Pages build when the
   directory is absent.
 
 The web server exposes the git working tree directly. `.htaccess` is therefore a security boundary,
@@ -57,7 +58,7 @@ of the web root or add an explicit denial rule. Never assume an unlinked file is
 
 ## Runtime architecture
 
-`rsvp.html` contains the markup, SVG strip, styles, and JavaScript for the whole game. English and
+`loft-day.html` contains the markup, SVG strip, styles, and JavaScript for the whole game. English and
 Czech messages live beside it in `loft-day.en.js` and `loft-day.cs.js`; this deliberate exception to
 the single-file layout keeps translation review independent of the large game source. Most logic
 lives in the final large inline script as a sequence of closures. Those closures expose a small
@@ -499,7 +500,7 @@ The normal confirmed path is:
    The directory is untracked, so `git pull` never creates or updates it; until it exists the
    Prince app serves from the upstream GitHub Pages fallback.
 
-The live web root is the git checkout. A visitor can fetch `rsvp.html` while `git pull` is rewriting
+The live web root is the git checkout. A visitor can fetch `loft-day.html` while `git pull` is rewriting
 the multi-megabyte file and briefly receive truncated HTML. If a post-deploy report shows the entire
 page stacked or unstyled, compare local/live hashes and reproduce at the reported viewport before
 attributing it to the latest feature.
@@ -511,7 +512,7 @@ path—pulling the static checkout does not publish `chat.js`.
 
 ## Source search map
 
-Search symbols rather than relying on line numbers; `rsvp.html` changes too quickly for stable line
+Search symbols rather than relying on line numbers; `loft-day.html` changes too quickly for stable line
 references.
 
 | Concern | Search terms |

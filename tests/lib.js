@@ -83,10 +83,10 @@ function makeScratch(file, harness, hookHtml) {
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
   var patched = html.replace("<head>", "<head>" + hookHtml).replace("</body>", harness + "\n</body>");
   // Each page gets a private directory so relative authored assets remain relative.
-  // Keep hyphens in the HTML basename so route-sensitive aliases such as loft-day
-  // can still be exercised from the scratch copy.
+  // Preserve the exact HTML basename: Loft Day's outer RSVP scaffolding is selected
+  // positively by an rsvp/rsvp.html pathname, while every other name is game-only.
   var scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-page-"));
-  var scratch = path.join(scratchDir, "wedding-" + file.replace(/[^\w-]/g, "") + ".html");
+  var scratch = path.join(scratchDir, path.basename(file));
   ["loft-day.en.js", "loft-day.cs.js"].forEach(function (name) {
     if (html.indexOf('src="' + name + '"') !== -1) {
       fs.copyFileSync(path.join(ROOT, name), path.join(scratchDir, name));

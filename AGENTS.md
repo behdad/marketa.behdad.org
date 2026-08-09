@@ -7,12 +7,12 @@ loft on the same block as their loft home apartment) and **July 10, 2027, Prague
 ones welcome, small or big.
 
 Pages have no build step or framework. `save-the-dates.html` remains self-contained;
-`rsvp.html` is the interactive game, with only its review-friendly English and Czech message
+`loft-day.html` is the canonical interactive game source, with only its review-friendly English and Czech message
 dictionaries split into `loft-day.en.js` and `loft-day.cs.js`. Keep that boundary narrow. The
 save-the-date page *was* `index.html`; it was renamed 2026-07 for the frozen-archive drops model. A landing
 `index.html` at the root — a hub linking every drop — is planned but not yet built; until it
 exists, `.htaccess` `DirectoryIndex` serves `save-the-dates.html` at `/`. New save-the-date
-features go inside `save-the-dates.html` unless there's a strong reason not to. (`rsvp.html`
+features go inside `save-the-dates.html` unless there's a strong reason not to. (`loft-day.html`
 follows the same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
 `linux/` — v86 + a repacked ISO carrying hb-shape/Fraunces/emoji; provenance in each
 dir's README. Both are pinned deliverables, not build outputs: don't regenerate or
@@ -68,10 +68,10 @@ allowed exception, owner-confirmed.)
   Keep the two public documentation links in `README.md` accurate. Documentation changes belong in
   the same discrete commit as the behavior they describe whenever practical.
 - **Run `node tests/check.js` AND `node tests/state.js` before every commit that
-  touches `save-the-dates.html`, `rsvp.html`, or either `loft-day.*.js` message dictionary.**
+  touches `save-the-dates.html`, `loft-day.html`, or either `loft-day.*.js` message dictionary.**
   Zero-dependency script — `node --check` on each page's authored scripts,
   EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
-  count, `<g>`/`</g>` tag balance in rsvp.html's shared SVG strip, and the JS-console
+  count, `<g>`/`</g>` tag balance in loft-day.html's shared SVG strip, and the JS-console
   Tab-autocomplete roster (`CONSOLE_CMDS`) vs. `CONSOLE_HELP` keys parity (so a new
   `window.<cmd>` console command must be added to BOTH, or check.js fails naming the
   drift). It's cheap
@@ -114,7 +114,7 @@ allowed exception, owner-confirmed.)
   Always check both language versions and both the mobile (~390px) and desktop (≥760px)
   layouts before shipping copy or layout changes.
 - **A visitor loading mid-`git pull` gets a TRUNCATED page.** The web root *is* the git working
-  tree, so a pull rewrites `rsvp.html` (3.3MB, one file) **in place** — a fetch landing during the
+  tree, so a pull rewrites `loft-day.html` (a multi-megabyte file) **in place** — a fetch landing during the
   write returns partial HTML: no CSS, so every scene stacks vertically and unstyled regions paint
   as black bands. It looks catastrophic and is nothing. **Before believing a "you broke it
   REALLY badly" report, `md5sum` local vs live and try to reproduce at the reporter's viewport** —
@@ -231,7 +231,7 @@ allowed exception, owner-confirmed.)
   to the real date's decor, silently zeroing anything you were counting.
 - **Chrome serves a STALE `file://` page and your whole test run is fiction.** Two separate agents
   hit this: `Network.setCacheDisabled` does **not** defeat it, and reusing a headless Chrome on a
-  fixed port can serve the pre-edit `rsvp.html` — producing a full page of confident, meaningless
+  fixed port can serve the pre-edit `loft-day.html` — producing a full page of confident, meaningless
   PASS/FAIL. Also `Page.navigate` to an identical URL is a *same-document* navigation and never
   reloads (this faked a "bug already present on load"). Fixes: a `?t=<timestamp>` cache-buster, a
   unique port **and profile** per run, and an **`assertFresh` gate** — evaluate something that

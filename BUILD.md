@@ -1,13 +1,13 @@
 # BUILD.md — rebuilding the self-hosted runtimes (index)
 
-This site self-hosts several WebAssembly / emulated runtimes so `rsvp.html`'s consoles
+This site self-hosts several WebAssembly / emulated runtimes so `loft-day.html`'s consoles
 have **zero third-party origin** in their load path (Google Fonts CSS is the site's one
 allowed runtime CDN; none of these use it). Every blob is pinned and content-versioned —
 `.htaccess` serves the runtime directories as `immutable`, and a rebuild
 ships under a new path rather than overwriting in place. These runtimes are the only
 compiled/packed deliverables; they are **pinned deliverables, not build outputs** — don't
 regenerate or "upgrade" them casually. When you do rebuild one, ship it under a new
-content-versioned path and update the reference in `rsvp.html` (and the size figures in
+content-versioned path and update the reference in `loft-day.html` (and the size figures in
 its loading copy, EN + CS).
 
 These per-directory `BUILD.md` files document how the **built** artifacts were produced,

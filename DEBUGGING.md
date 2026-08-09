@@ -8,7 +8,7 @@ pages offline in Chrome and in **real WebKit** (Safari engine) for cross-browser
 ```bash
 google-chrome --headless --disable-gpu --no-sandbox \
   --window-size=1000,760 --virtual-time-budget=2500 \
-  --screenshot=out.png "file:///home/behdad/wedding/rsvp.html#play"
+  --screenshot=out.png "file:///home/behdad/wedding/loft-day.html#play"
 ```
 
 - `#play` = game-only view; no hash = full page (hero + game); `#reveal` also full.
@@ -26,7 +26,7 @@ google-chrome --headless --disable-gpu --no-sandbox \
 
 ```bash
 google-chrome --headless --disable-gpu --no-sandbox --remote-debugging-port=9222 \
-  --hide-scrollbars "file:///home/behdad/wedding/rsvp.html#play" >/dev/null 2>&1 &
+  --hide-scrollbars "file:///home/behdad/wedding/loft-day.html#play" >/dev/null 2>&1 &
 ```
 
 Then Node (v22 has a global `WebSocket` — no `ws` module needed):
@@ -105,7 +105,7 @@ PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 node render.mjs
 ```js
 import { webkit, chromium } from 'playwright';
 const engine = process.argv[2] === 'chromium' ? chromium : webkit;
-const url = 'file:///home/behdad/wedding/rsvp.html#play';
+const url = 'file:///home/behdad/wedding/loft-day.html#play';
 const b = await engine.launch();
 const p = await b.newPage({ viewport: { width: 1000, height: 760 } });
 p.on('pageerror', e => console.log('PAGEERROR:', e.message));
@@ -116,7 +116,7 @@ await p.screenshot({ path: process.argv[3] });
 await b.close();
 ```
 
-Run against the REAL `/home/behdad/wedding/rsvp.html` (not a copy) so `art/` assets load.
+Run against the REAL `/home/behdad/wedding/loft-day.html` (not a copy) so `art/` assets load.
 Benign `Not allowed to load local resource` console lines for audio/manifest are expected
 under `file://`. Use `page.evaluate` to drive game hooks (`window.__startCinematic`,
 `goToStage`, `blacklight`, etc.) and reproduce interactive states.

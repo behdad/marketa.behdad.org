@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Zero-dependency sanity checks for save-the-dates.html and rsvp.html.
+// Zero-dependency sanity checks for save-the-dates.html and loft-day.html.
 // Run with: node tests/check.js
 "use strict";
 
@@ -9,7 +9,7 @@ var os = require("os");
 var execSync = require("child_process").execSync;
 
 var ROOT = path.join(__dirname, "..");
-var FILES = ["save-the-dates.html", "rsvp.html"];
+var FILES = ["save-the-dates.html", "loft-day.html"];
 var failures = 0;
 
 function pass(label) {
@@ -90,7 +90,7 @@ function checkSvgTagBalance(file, html) {
 // Roadtrip weather is shared by every route, but campsite builder dialogs are modal.
 // Keep those dialogs in their late-painted host instead of suppressing the weather.
 function checkCampBuilderOverlayOrder(file, html) {
-  if (file !== "rsvp.html") return;
+  if (file !== "loft-day.html") return;
   function groupRange(id) {
     var start = html.indexOf('<g id="' + id + '"');
     if (start === -1) return null;
@@ -151,7 +151,7 @@ function checkStaticDomIds(file, html) {
 // the midpoint. This keeps Back/Fullscreen/Dismiss visually consistent without one
 // control stealing the edge of its neighbour's touch target.
 function checkMonitorControlSpacing(file, html) {
-  if (file !== "rsvp.html") return;
+  if (file !== "loft-day.html") return;
   function attr(tag, name) {
     var match = new RegExp("\\b" + name + '="([-\\d.]+)"').exec(tag);
     return match ? Number(match[1]) : null;
@@ -300,7 +300,7 @@ function checkLoftDictParity(file, html) {
 }
 
 function checkDictParity(file, script, html) {
-  if (file === "rsvp.html") {
+  if (file === "loft-day.html") {
     checkLoftDictParity(file, html);
     return;
   }
@@ -342,7 +342,7 @@ function checkDictParity(file, script, html) {
 
 function checkEggTotal(html, script) {
   var totalMatch = script.match(/EGG_TOTAL\s*=\s*(\d+)/);
-  if (!totalMatch) return; // not applicable (rsvp.html)
+  if (!totalMatch) return; // not applicable (loft-day.html)
   var declared = parseInt(totalMatch[1], 10);
   var cheatIds = [], cheatMatch, cheatRe = /<li[^>]*data-egg=["']([^"']+)["']/g;
   while ((cheatMatch = cheatRe.exec(html))) cheatIds.push(cheatMatch[1]);
@@ -384,6 +384,24 @@ function checkTrackedSymlinks() {
   });
   if (issues.length) fail("tracked symlink targets exist and are tracked", issues.join("\n"));
   else pass("tracked symlink targets exist and are tracked (" + links.length + ")");
+}
+
+function checkLoftAliases() {
+  var canonical = path.join(ROOT, "loft-day.html");
+  var issues = [];
+  if (!fs.existsSync(canonical) || !fs.lstatSync(canonical).isFile()) {
+    issues.push("loft-day.html is not the canonical regular file");
+  }
+  ["loft-day", "rsvp", "rsvp.html"].forEach(function (name) {
+    var alias = path.join(ROOT, name);
+    if (!fs.existsSync(alias) || !fs.lstatSync(alias).isSymbolicLink()) {
+      issues.push(name + " is not a symlink");
+    } else if (fs.readlinkSync(alias) !== "loft-day.html") {
+      issues.push(name + " points to " + fs.readlinkSync(alias) + " instead of loft-day.html");
+    }
+  });
+  if (issues.length) fail("Loft Day canonical file and public aliases agree", issues.join("\n"));
+  else pass("Loft Day canonical file and public aliases agree");
 }
 
 function checkLiteralLocalAssets() {
@@ -754,7 +772,7 @@ function checkTransformClobber(file, style, html) {
 // drift, but a future edit can bump one side and not the other.
 //
 // Two tiers:
-//  - FADE_STOP_FNS (the room-gated stops in rsvp.html) are checked strictly:
+//  - FADE_STOP_FNS (the room-gated stops in loft-day.html) are checked strictly:
 //    every silence-ramp end and close delay must parse in terms of ONE shared
 //    fade variable, the variable must appear on BOTH sides (a stop that
 //    ignores its fadeSecs silently breaks goToStage's ROOM_FADE), and the
@@ -815,7 +833,7 @@ function checkAudioFadeCloseRace(file, script) {
   var strictChecked = 0, constChecked = 0;
   fns.forEach(function (fn) {
     var body = fn.body;
-    var strict = file === "rsvp.html" && FADE_STOP_FNS.indexOf(fn.name) !== -1;
+    var strict = file === "loft-day.html" && FADE_STOP_FNS.indexOf(fn.name) !== -1;
     if (strict) strictSeen[fn.name] = true;
     // fade-to-silence ramps: RampToValueAtTime(<target ~0>, <time>)
     var rampTimes = [];
@@ -922,7 +940,7 @@ function checkAudioFadeCloseRace(file, script) {
       }
     }
   });
-  if (file === "rsvp.html") {
+  if (file === "loft-day.html") {
     FADE_STOP_FNS.forEach(function (name) {
       if (!strictSeen[name]) {
         issues.push(name + ": no such function found — renamed? update FADE_STOP_FNS so the room-gated stops stay covered");
@@ -964,7 +982,7 @@ function checkAudioFadeCloseRace(file, script) {
 function checkI18nKeys(file, script, html) {
   if (!script) return;
   var loftEn = null;
-  if (file === "rsvp.html") {
+  if (file === "loft-day.html") {
     try { loftEn = parseLoftDictionary("en"); }
     catch (_error) { return; } // the dictionary check reports the parse failure
   }
@@ -1008,7 +1026,7 @@ function checkI18nKeys(file, script, html) {
 // creep back in; (2) every mir-* class the CSS keys on is one syncScopeMirrors actually sets
 // (and vice versa), so the mirror can't silently drift from the stylesheet.
 function checkScopeMirrorHygiene(file, style, script) {
-  if (file !== "rsvp.html" || !style || !script) return;
+  if (file !== "loft-day.html" || !style || !script) return;
   var broad = [];
   style.split("\n").forEach(function (line, i) {
     if (/(?:^|[\s,{}])(?:body|html|\.hunt-viewport|#hunt-fullscreen-area|#loft-game-strip|#entrance-room|#entrance-drive-hud)[^\s,{]*:has\(/.test(line)) {
@@ -1031,7 +1049,7 @@ function checkScopeMirrorHygiene(file, style, script) {
   }
 }
 function checkConsoleOutClipSlack(file, style) {
-  if (file !== "rsvp.html" || !style) return;
+  if (file !== "loft-day.html" || !style) return;
   var m = style.match(/\.console-out\{([^}]*)\}/);
   if (!m) { fail(file + ": .console-out rule not found for clip-slack check"); return; }
   var decl = m[1];
@@ -1063,7 +1081,7 @@ function checkConsoleOutClipSlack(file, style) {
 // autocomplete reads it to decide whether to append "(" on insert) is a real command, so a
 // typo'd bareword can't slip a "(" onto a paren-less command (or vice-versa).
 function checkConsoleCmdRoster(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var helpM = script.match(/var CONSOLE_HELP = \{([\s\S]*?)\n\s*\};/);
   if (!helpM) { fail(file + ": CONSOLE_HELP object not found for autocomplete-roster parity check"); return; }
   var helpKeys = [];
@@ -1104,7 +1122,7 @@ function checkConsoleCmdRoster(file, script) {
 // runtime; this fails the build fast if a refactor strips it. Add any future shared
 // spawner that gets an autonomous interval caller here.
 function checkParticleSpawnerCaps(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var GUARDED = [
     { fn: "spawnSteamWisps", cls: "steam-wisp" },
     { fn: "spawnMusicNotes", cls: "music-note" },
@@ -1137,7 +1155,7 @@ function checkParticleSpawnerCaps(file, script) {
 // does): no error, no visual clue, and it only shows on a date nobody previews. There is no
 // other coverage for either festival, so pin the two bodies byte-identical.
 function checkFireFestParity(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var re = /function fireFest\(\)\s*\{[\s\S]*?\n  \}/g, found = [], m;
   while ((m = re.exec(script)) !== null) found.push(m[0]);
   if (found.length !== 2) {
@@ -1163,7 +1181,7 @@ function checkFireFestParity(file, script) {
 // console with no other symptom. Every season must also name itself (SEASON_SAID) and be
 // reachable by its own name (an alias self-key), or it exists in the ring and nowhere else.
 function checkSeasonRosters(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   function list(re) {
     var m = script.match(re);
     return m ? m[1].split(",").map(function (x) { return x.trim().replace(/^"|"$/g, ""); })
@@ -1217,7 +1235,7 @@ function checkSeasonRosters(file, script) {
 // would drift off-tempo; one without a mood would silently lose its amplitude character. A bpm/mood
 // key with no registered dance is dead weight that hides a rename. Fails loudly naming the drift.
 function checkDanceParity(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   function mapKeys(name) {
     var m = script.match(new RegExp("var " + name + " = \\{([^}]*)\\}"));
     if (!m) return null;
@@ -1267,7 +1285,7 @@ function checkDanceParity(file, script) {
 // text -- the bar reads isNight and only shifts one shade deeper -- so tests/album-axis.mjs
 // rasterises the frames and asserts that, both ways round.
 function checkAlbumSkySig(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var decl = script.match(/var ALBUM_SKY_SIG = \{([\s\S]*?)\n  \};/);
   if (!decl) { fail(file + ": ALBUM_SKY_SIG not found (the room-shot signature's light projection)"); return; }
   var proj = {}, pm, pre = /(\w+):\s*function\s*\([^)]*\)\s*\{([^}]*)\}/g;
@@ -1297,7 +1315,7 @@ function checkAlbumSkySig(file, script) {
 // literal assignment site inside its named owner; a second write is almost always a teardown/reset
 // path bypassing lifecycle cleanup. Party moments deliberately share one keyed setter.
 function checkSharedStateOwners(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var scalarOwners = {
     tripActive: "setTripActiveState",
     secondRound: "setSecondRound",
@@ -1333,7 +1351,7 @@ function checkSharedStateOwners(file, script) {
 // zoomed monitor it must not chirp over that session. Keep the two delayed one-shots
 // behind the same callback-time gate so a timer armed before zoom cannot leak later.
 function checkLaptopUpdateSoundGate(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var start = script.indexOf("function runLaptopUpdate()");
   var end = script.indexOf("// Call the Prague garden:", start);
   var body = start >= 0 && end > start ? script.slice(start, end) : "";
@@ -1366,7 +1384,7 @@ function checkNoConflictMarkers(file, html) {
 // invisible accessibility metadata. Keep that game-specific boundary from regressing
 // when new controls are added; save-the-dates.html follows a different policy.
 function checkMetadataFreeGame(file, html) {
-  if (file !== "rsvp.html") return;
+  if (file !== "loft-day.html") return;
   var issues = [];
   var aria = html.match(/\baria-[a-z0-9_-]+/gi) || [];
   if (aria.length) issues.push("ARIA tokens: " + Array.from(new Set(aria)).join(", "));
@@ -1419,7 +1437,7 @@ function captionDomWriteHits(script) {
 }
 
 function checkCaptionDomOwnership(file, script) {
-  if (file !== "rsvp.html" || !script) return;
+  if (file !== "loft-day.html" || !script) return;
   var start = script.indexOf("function createCaptionArbiter(element)");
   var end = script.indexOf("var captionArbiter = createCaptionArbiter(caption);", start);
   if (start < 0 || end <= start) {
@@ -1484,6 +1502,7 @@ function checkNoUnicodeEscapes() {
 
 checkNoUnicodeEscapes();
 checkTrackedSymlinks();
+checkLoftAliases();
 checkLiteralLocalAssets();
 console.log("");
 

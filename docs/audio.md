@@ -1,6 +1,6 @@
-# rsvp.html audio architecture
+# Loft Day audio architecture
 
-All sound owned by `rsvp.html` is Web Audio built on **one shared `AudioContext`**. This doc explains the
+All sound owned by `loft-day.html` is Web Audio built on **one shared `AudioContext`**. This doc explains the
 graph, the lifecycle rules, and the gotchas — read it before touching any `start*/stop*`
 sound function, `getSfxCtx`, the song pipeline, or the idle/focus gating.
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 # fetch-princejs.sh — restore the untracked princejs/ runtime (the Prince of Persia
-# app on rsvp.html's monitor and in the garden dungeon).
+# app on loft-day.html's monitor and in the garden dungeon).
 #
 # Provenance (carried here since princejs/ left the repo and its README with it):
 #   Upstream   https://github.com/oklemenz/PrinceJS — HTML5/JS reimplementation of the
@@ -18,7 +18,7 @@
 #              forwarding, and tap-highlight suppression; assets/web/game.css is refit
 #              to center the canvas at its native aspect inside the app iframe.
 #
-# rsvp.html HEAD-probes princejs/index.html and falls back to the upstream GitHub
+# loft-day.html HEAD-probes princejs/index.html and falls back to the upstream GitHub
 # Pages build when this directory is absent, so the app works either way — the local
 # copy keeps it zero-third-party with the full touch/pause/exit integration. Deploy:
 # after the first git pull into a web root, run ./fetch-princejs.sh once.

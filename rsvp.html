@@ -44491,10 +44491,11 @@ window.__entranceRoomOpen = false;
   }
   function paintRoadtripCampSpur(point) {
     if (!roadtripCampSpurNode) return null;
-    var junctionPoint = roadtripProject(Math.max(8, point.remaining - 36));
+    var junctionPoint = roadtripProject(Math.max(1, point.remaining - 36));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 32));
     var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
-    var junctionInner = junctionRoadRight - .25;
+    var junctionOverlap = 7 + junctionPoint.perspective * 11;
+    var junctionInner = junctionRoadRight - junctionOverlap;
     var junctionOuterWidth = 9 + junctionPoint.perspective * 17;
     var junctionOuter = junctionRoadRight + junctionOuterWidth;
     var junctionY = junctionPoint.y;
@@ -44584,10 +44585,13 @@ window.__entranceRoomOpen = false;
         pathOuter.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
         nearOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z";
     }
-    // All four branch layers share the live highway edge at the mouth. A wider
-    // asphalt overlap hides that edge before the branch stripe can meet it.
-    var innerEdgeOrigin = junctionRoadRight - .25;
-    var innerEdgeLineControls = innerControls;
+    // Asphalt reaches just inside the live highway edge to make an open merge
+    // throat. Its inner paint stripe starts later, where the two roads have
+    // separated; carrying that stripe to the mouth makes the ramp look detached.
+    var innerEdgeOrigin = junctionRoadRight;
+    var innerEdgeLineControls = curveControls(innerEdgeOrigin, destinationInner, false);
+    innerEdgeLineControls.c1 = innerEdgeOrigin + joinControlDx;
+    innerEdgeLineControls.c2 = innerControls.c2;
     function cubicTail(start, c1, c2, end, t) {
       var p01 = start + (c1 - start) * t;
       var p12 = c1 + (c2 - c1) * t;
@@ -44604,7 +44608,7 @@ window.__entranceRoomOpen = false;
       var tail = cubicTail(start, c1, c2, end, t);
       return tail.start;
     }
-    var innerEdgeStart = 0;
+    var innerEdgeStart = .38;
     var innerEdgeX = cubicTail(innerEdgeOrigin, innerEdgeLineControls.c1,
       innerEdgeLineControls.c2, destinationInner, innerEdgeStart);
     var outerEdgeX = cubicTail(junctionOuter, outerControls.c1, outerControls.c2,
@@ -44648,7 +44652,9 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-outer-edge-start-x", outerEdgeX.start.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-outer-edge-start-y", outerEdgeY.start.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-shoulder-mouth-inner-x",
-      (junctionRoadRight - .25).toFixed(2));
+      junctionInner.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-overlap", junctionOverlap.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-inner-edge-start-t", innerEdgeStart.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-inner-x", destinationInner.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-outer-x", destinationOuter.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-x",

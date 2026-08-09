@@ -152,8 +152,9 @@ check(result && result.pointerFireBuilder.fireBuilderOpen && result.pointerFireB
   result && result.pointerFireBuilder);
 check(result && result.fireStarting.active && result.fireStarting.igniting &&
   !result.fireStarting.fireBuilt && !result.fireStarting.fireLit &&
-  !result.fireStarting.fireBuilderOpen && !result.fireStarting.fireBuilderFocused,
-  "one Enter assembles and lights through the canonical builder while keeping it closed",
+  !result.fireStarting.fireBuilderOpen && !result.fireStarting.fireBuilderFocused &&
+  result.fireStarting.caption === "entrance_roadtrip_camp_fire_igniting",
+  "one Enter immediately acknowledges ignition while keeping the canonical builder closed",
   result && result.fireStarting);
 check(result && result.fireGuarded.igniting && !result.fireGuarded.fireBuilt && result.fireReady.fireBuilt && result.fireReady.fireLit,
   "repeat and double Enter cannot skip the asynchronous ignition", result && { guarded: result.fireGuarded, ready: result.fireReady });

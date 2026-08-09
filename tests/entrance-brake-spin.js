@@ -14,6 +14,8 @@ window.addEventListener("load", function () {
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       window.__toggleEntrancePorscheEngine();
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       var room = document.getElementById("entrance-room");
       function state() { return window.__entranceRoomState().drive; }
       function weather(name) {

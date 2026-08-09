@@ -8,7 +8,7 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:window.__errs||[]};',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
-  'window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();',
+  'window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
   'window.__entranceDriveSetMotion(30,2);var before=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var streetState=window.__entranceRoomState().drive;',
   'var started=window.__entranceRoadtripDevStart();window.__entranceRoadtripSetLane(.5);window.__entranceDriveSetMotion(30,2);var highwayBefore=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var highwayState=window.__entranceRoomState().drive;',
   'report.before=before;report.street=streetState.position;report.streetSpeed=Math.abs(streetState.speed);report.started=started;report.highwayBefore=highwayBefore;report.highway=highwayState.position;report.highwaySpeed=Math.abs(highwayState.speed);',

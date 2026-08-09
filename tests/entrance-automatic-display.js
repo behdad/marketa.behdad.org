@@ -35,6 +35,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.park = snap();
 
       window.__toggleEntrancePorscheEngine();
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       ["R", "N", "D"].forEach(function (range) {
         window.__entranceDriveSetMotion(0, 0);
         window.__entranceDriveRange(range);

@@ -20,6 +20,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntrancePorscheDriveHud();
       window.__toggleEntrancePorscheEngine();
       report.afterIgnition = copy(report.pulses);
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
 
       window.__entranceDriveTransmissionMode("manual", true);
       window.__entranceDriveShift(1, true);

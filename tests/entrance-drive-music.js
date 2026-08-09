@@ -19,6 +19,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
       if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       await sleep(80);
       report.steps.stopped = copy(drive());
 

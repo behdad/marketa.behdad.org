@@ -22,6 +22,8 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     window.__toggleEntrancePorscheEngine();
     window.__entranceDriveTransmissionMode("auto", true);
     window.__entranceDriveSetMotion(.49, 0);

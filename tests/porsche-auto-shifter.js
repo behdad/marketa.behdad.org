@@ -38,6 +38,8 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.goToStage("balcony");
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
+      document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       window.__toggleEntrancePorscheEngine();
       window.__entranceDriveTransmissionMode("auto", true);
       var shifter = document.getElementById("entrance-drive-shifter");

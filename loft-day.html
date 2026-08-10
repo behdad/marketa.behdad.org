@@ -6696,8 +6696,8 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-item.unsaved{font-style:italic; color:#8aa88a}
 .code-item.unsaved.active{color:#a7e08a}
 .code-item.builtin{color:#9bb899}
-.code-item.builtin::before{content:"◆";flex:none;margin-right:.45px;color:#82b884;font-size:1.35px}
-.code-item.builtin.edited::before{content:"*"}
+.code-item.builtin::before{content:"";flex:none;width:0;height:0;margin-right:.45px;border:.9px solid #82b884;box-sizing:content-box}
+.code-item.builtin.edited::before{border-color:#d7bd70 #d7bd70 #ad7c48 #ad7c48}
 .code-item.user-file::before{content:"";flex:none;width:1.8px;height:1.8px;margin-right:.45px;border:.25px solid #6d8579;border-radius:.25px;box-sizing:border-box}
 .code-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
 .code-main{position:relative; flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
@@ -76119,7 +76119,7 @@ setOfficeProgress("pc", false);
     catch (e) { return {}; }
   }
   function writeCodeBuiltinOverrides(overrides) {
-    try { localStorage.setItem(CODE_BUILTIN_OVERRIDE_KEY, JSON.stringify(overrides)); } catch (e) {}
+    try { localStorage.setItem(CODE_BUILTIN_OVERRIDE_KEY, JSON.stringify(overrides)); return true; } catch (e) { return false; }
   }
   function codeBuiltinHasOverride(entry) { return codeHasOwn(readCodeBuiltinOverrides(), entry.filename); }
   function codeFindBuiltin(filename, language) {
@@ -76205,6 +76205,31 @@ setOfficeProgress("pc", false);
     var lang = language === "python" ? "python" : "js";
     try { localStorage.setItem(CODE_STORE_KEYS[lang], JSON.stringify(o)); } catch (e) {}
   }
+  // The basename-only canonical identity supersedes old visitor-file properties with the same
+  // name. Preserve their exact text as an override before removing only those redundant keys;
+  // an explicit override (including "") remains authoritative.
+  function codeCollapseBuiltinCollisions() {
+    var overrides = readCodeBuiltinOverrides(), pending = [], stores = { js: readScripts("js"), python: readScripts("python") };
+    CODE_BUILTINS.forEach(function (entry) {
+      var store = stores[entry.language];
+      if (!codeHasOwn(store, entry.filename)) return;
+      if (!codeHasOwn(overrides, entry.filename)) {
+        overrides[entry.filename] = String(store[entry.filename]);
+        pending.push(entry.filename);
+      }
+    });
+    if (pending.length && !writeCodeBuiltinOverrides(overrides)) return;
+    ["js", "python"].forEach(function (language) {
+      var store = stores[language], changed = false;
+      CODE_BUILTINS.forEach(function (entry) {
+        if (entry.language !== language || !codeHasOwn(store, entry.filename)) return;
+        delete store[entry.filename];
+        changed = true;
+      });
+      if (changed) writeScripts(store, language);
+    });
+  }
+  codeCollapseBuiltinCollisions();
   function codeNameExistsElsewhere(name, currentName, currentLanguage) {
     if (codeFindBuiltin(name)) return true;
     return ["js", "python"].some(function (language) {
@@ -76264,7 +76289,7 @@ setOfficeProgress("pc", false);
       !!a.builtin !== !!b.builtin ? (a.builtin ? -1 : 1) :
       String(a.language || "") < String(b.language || "") ? -1 : String(a.language || "") > String(b.language || "") ? 1 : 0;
   }
-  function scriptNames(language) { return Object.keys(readScripts(language || codeLanguage)); }
+  function scriptNames(language) { return Object.keys(readScripts(language || codeLanguage)).filter(function (name) { return !codeFindBuiltin(name); }); }
   function codeRunnableNames(language) {
     var lang = language === "python" ? "python" : "js", names = scriptNames(lang);
     CODE_BUILTINS.forEach(function (entry) { if (entry.language === lang) names.push(entry.filename); });

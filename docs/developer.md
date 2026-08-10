@@ -406,7 +406,9 @@ stays fresh until an own property with its filename exists in
 `localStorage["deskCodeBuiltinOverrides"]`; an empty-string property is a valid override. Reset
 removes that property and reveals the current canonical source. Visitor-created files remain
 separately owned by `deskScripts` / `deskPythonScripts`, and an exact canonical filename is an edit
-of that canonical file rather than a second colliding identity. Do not reintroduce sample versions,
+of that canonical file rather than a second colliding identity. At initialization, a legacy
+same-name visitor property moves to the override map before that redundant property is removed;
+an already-present override, including an empty one, wins. Do not reintroduce sample versions,
 migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository bytes through
 a test-only resource hook because `file://` cannot fetch siblings.
 

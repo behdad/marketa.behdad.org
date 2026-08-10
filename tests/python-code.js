@@ -60,7 +60,7 @@ check(Array.isArray(snippets) && snippets.length === 8 &&
 check(/src="code-snippets\/manifest\.js"/.test(html) &&
       (html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 1 &&
       !/CODE_STARTER|CODE_PY_STARTER|CODE_PY_HELLO|CODE_PY_LOFT_API|CODE_PY_SPACE_FILLER|CODE_PY_FRAUNCES|CODE_JS_FRAUNCES|deskCodeExamples|deskCodeHelloSync/.test(html),
-  "Code and the Trailer load canonical external files without inline samples or migrations");
+  "Code and the Trailer load canonical external files without inline samples or migration keys");
 var helloJs = snippet("hello.js"), helloPy = snippet("hello.py"), squarePy = snippet("square.py");
 check(/loft\.party\.set\(true\)/.test(helloJs) && /await loft\.room\.go\("garden"\)/.test(helloJs) && /await loft\.caption\.show\("hello from the loft 👋"\)/.test(helloJs) &&
       /import loft/.test(helloPy) && /loft\.party\.set\(True\)/.test(helloPy) && /await loft\.room\.go\("garden"\)/.test(helloPy) &&
@@ -80,6 +80,9 @@ check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),
   "the sidebar lists both language stores and opening a file selects its stored runtime");
+check(/\.code-item\.builtin::before\{content:"";flex:none;width:0;height:0;margin-right:\.45px;border:\.9px solid/.test(html) &&
+      /\.code-item\.user-file::before\{content:"";flex:none;width:1\.8px;height:1\.8px;margin-right:\.45px;border:\.25px solid/.test(html),
+  "canonical and visitor ownership marks use aligned CSS geometry instead of font glyph metrics");
 check(/error:\s*codeGetRunError\(codeLanguage\)/.test(html) &&
       /codeSetRunError\("python",\s*msg\)/.test(html) &&
       /codeSetRunError\("js",\s*msg\)/.test(html),
@@ -155,6 +158,38 @@ if (turtleMatch) {
     "the embedded module compiles and its instance/module APIs reach the JS bridge",
     py.stderr);
 }
+
+var collisionHarness = [
+  '<script>',
+  '(async function(){',
+  '  if (!location.search) {',
+  '    localStorage.setItem("deskScripts",JSON.stringify({"loft-type.js":"window.migrated = true;","keep.js":"window.keep = true;"}));',
+  '    localStorage.setItem("deskPythonScripts",JSON.stringify({"space-filler.py":"","square.py":"legacy square","keep.py":"print(\\"keep\\")"}));',
+  '    localStorage.setItem("deskCodeBuiltinOverrides",JSON.stringify({"square.py":""}));',
+  '    location.replace(location.href+"?canonical-collision=1"); return;',
+  '  }',
+  '  await new Promise(function(r){setTimeout(r,40)});',
+  '  function own(o,k){return Object.prototype.hasOwnProperty.call(o,k);}',
+  '  function items(label){return Array.from(document.querySelectorAll("#monitor-code-list .code-item")).filter(function(item){return item.textContent===label;});}',
+  '  function builtin(label){return items(label).find(function(item){return item.classList.contains("builtin");});}',
+  '  var code=document.getElementById("monitor-code-code"),del=document.getElementById("monitor-code-del");',
+  '  var js=JSON.parse(localStorage.getItem("deskScripts")||"{}"),py=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}"),overrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");',
+  '  var out={oneRow:items("loft-type.js").length===1&&items("space-filler.py").length===1&&items("square.py").length===1,storesClean:!own(js,"loft-type.js")&&!own(py,"space-filler.py")&&!own(py,"square.py"),unrelated:js["keep.js"]==="window.keep = true;"&&py["keep.py"]===\'print("keep")\',migrated:overrides["loft-type.js"]==="window.migrated = true;"&&own(overrides,"space-filler.py")&&overrides["space-filler.py"]==="",explicitEmpty:own(overrides,"square.py")&&overrides["square.py"]===""};',
+  '  builtin("loft-type.js").click();out.migratedLoads=code.value==="window.migrated = true;";del.click();out.resetLoadsCanonical=code.value===window.__codeSnippetResourceLoader("code-snippets/loft-type.js")&&!own(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"loft-type.js");',
+  '  builtin("space-filler.py").click();out.emptyLoads=code.value===""&&!del.disabled;del.click();out.emptyReset=code.value===window.__codeSnippetResourceLoader("code-snippets/space-filler.py");',
+  '  builtin("square.py").click();out.explicitEmptyLoads=code.value===""&&!del.disabled;del.click();out.explicitReset=code.value===window.__codeSnippetResourceLoader("code-snippets/square.py");',
+  '  js=JSON.parse(localStorage.getItem("deskScripts")||"{}");py=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}");out.afterReset=items("loft-type.js").length===1&&items("space-filler.py").length===1&&items("square.py").length===1&&js["keep.js"]==="window.keep = true;"&&py["keep.py"]===\'print("keep")\';',
+  '  document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify(out);',
+  '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
+  '<\/script>',
+].join("\n");
+
+var collisionState = lib.runPageSync("rsvp.html", collisionHarness, 2400, { patchRaf: true });
+check(collisionState && !collisionState.error && collisionState.oneRow && collisionState.storesClean && collisionState.unrelated &&
+      collisionState.migrated && collisionState.explicitEmpty && collisionState.migratedLoads && collisionState.resetLoadsCanonical &&
+      collisionState.emptyLoads && collisionState.emptyReset && collisionState.explicitEmptyLoads && collisionState.explicitReset && collisionState.afterReset,
+  "same-name saved files collapse into one canonical row without losing content, empty overrides, reset behavior, or unrelated files",
+  collisionState && (collisionState.error || JSON.stringify(collisionState)));
 
 var harness = [
   '<script>',

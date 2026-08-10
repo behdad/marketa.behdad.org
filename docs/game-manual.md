@@ -172,7 +172,10 @@ Weather/environment controls also accept
 The typed room API covers all ten rooms; `loft.bar` is the Kitchen alias and `loft.party` is the
 Garden alias. State commands leave the current view alone; navigate explicitly with, for example,
 `await loft.room.go("garden")`. The JavaScript console and Code app preload `loft`; no import is
-needed. `await loft.caption.show("hello")` writes a literal scene caption without moving the view.
+needed. Scripts may visit any room and start a Road Trip independently of story progress. Actions
+on physical room objects still require that room to be open, and an action remains unavailable
+while a conflicting or prerequisite activity is active. `await loft.caption.show("hello")` writes
+a literal scene caption without moving the view.
 Code lists canonical examples under `examples/` alongside visitor-created files. Editing a built-in
 stores a local override; its reset control reveals the current canonical example again. The exact
 authored Trailer is also visible as the read-only `source/trailer.js`. It can be played through

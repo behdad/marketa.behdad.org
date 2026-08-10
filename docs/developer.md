@@ -355,6 +355,13 @@ namespace help drills down one level at a time, and callable help prints one exa
 Legacy console prose remains available only through direct string lookup, such as `help("dance")`.
 `capabilities()` remains the complete structured machine discovery surface.
 
+Typed availability describes runtime safety, not story permission. Scripts may navigate to any of
+the ten rooms and open the Entrance car or start Road Trip before those surfaces are unlocked by the
+normal clue trail; the ordinary UI progression gates remain unchanged. Physical room actions still
+require their owning room to be open, and active-surface, finite-action, media-controller,
+transaction, and mutually exclusive activity gates remain real. Cross a story frontier through its
+canonical room or Road Trip controller rather than forging DOM classes or checkpoint fields.
+
 Every manifest row has a stable `id`, `kind`, ordered `args`/`argOrder`, mechanically derived
 `aliases`, result-envelope schema, and `completion: "instant"|"finite"`. Instant setters apply synchronously even though
 `api.perform()` returns a uniform Promise envelope; finite room pans and lifecycles are awaitable.
@@ -364,9 +371,10 @@ automatic clock/weather/Party owner, `status()` reports the effective boolean, a
 only booleans.
 
 Changing state does not implicitly move the visitor. Use `loft.room.go("garden")` for navigation;
-only actions whose purpose is to open a room, device, app, call, Road Trip, or minigame may change
-the view. This makes scripts composable and prevents background weather, UV, Party, trip, and prop
-changes from stealing the camera.
+only actions whose purpose is to open a room, device, app, or Road Trip may change the view. Outgoing
+calls, minigames, physical room activities, and Party moments require their owning surface to be open.
+This makes scripts composable and prevents background weather, UV, Party, trip, and prop changes
+from stealing the camera.
 
 Successful owner transitions call `__loftStateChanged`, which increments `stateVersion` and emits
 `loft:statechange`. If an API action changes the game but subscribers do not hear about it, fix the
@@ -560,6 +568,7 @@ port nor another developer's server process.
 | Full solve | End-to-end first-run solve and interaction storm | `node tests/play.js` |
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
+| Typed API | Catalogue shape, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/api-gating.js` |
 | Rendering | Album signatures and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, screenshots or real CDP Chrome |
 
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the

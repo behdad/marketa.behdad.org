@@ -39012,7 +39012,7 @@ window.__entranceRoomOpen = false;
     spawnSerial: 0,
     entities: []
   };
-  var roadtripCampResumeRun = null;
+  var roadtripCampResumeRun = null, roadtripApiChooserOpen = false;
   function roadtripExplorationComplete() {
     return !!(window.__secondRound && window.__seenRooms && window.__seenRooms().length >= 10);
   }
@@ -40614,7 +40614,7 @@ window.__entranceRoomOpen = false;
       roadtripReenterText.setAttribute("y", suspended ? "15" : "14");
     }
     var chooserVisible = !!(window.__entranceRoomOpen && driveState.hudOpen &&
-      roadtripAuthorized() && roadtripState.unlocked && roadtripState.routeChooserOpen &&
+      (roadtripAuthorized() || roadtripApiChooserOpen) && roadtripState.unlocked && roadtripState.routeChooserOpen &&
       !roadtripState.active && !suspended);
     if (roadtripRouteChooser) roadtripRouteChooser.classList.toggle("show", chooserVisible);
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
@@ -40660,18 +40660,24 @@ window.__entranceRoomOpen = false;
     return setRoadtripRouteChoice(routes[(index + direction + routes.length) % routes.length], true);
   }
   window.__entranceRoadtripMoveRouteChoice = moveRoadtripRouteChoice;
-  function openRoadtripRouteChooser(event) {
+  function openRoadtripRouteChooser(event, apiBypass) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (syncRoadtripDemeritState()) {
       roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
       paintRoadtripInvite();
       return false;
     }
-    if (!roadtripAuthorized() || !roadtripState.unlocked ||
+    if ((!apiBypass && (!roadtripAuthorized() || !roadtripState.unlocked)) ||
         roadtripState.active || roadtripState.accepted) return false;
-    if (!roadtripState.everAccepted && !driveCoachComplete && !driveCoachDismissed) return false;
-    if (!roadtripState.invitationReady && !roadtripState.invitationDismissed &&
+    if (!apiBypass && !roadtripState.everAccepted && !driveCoachComplete && !driveCoachDismissed) return false;
+    if (!apiBypass && !roadtripState.invitationReady && !roadtripState.invitationDismissed &&
         !roadtripState.everAccepted) return false;
+    if (apiBypass) {
+      roadtripApiChooserOpen = true;
+      roadtripState.unlocked = true;
+      roadtripState.invitationReady = false;
+      roadtripState.invitationDismissed = true;
+    }
     roadtripReentryMenuOpen = false;
     roadtripState.routeChooserOpen = true;
     paintRoadtripInvite();
@@ -40701,7 +40707,7 @@ window.__entranceRoomOpen = false;
     driveState.redlineMs = 0;
     clearPorscheClutchEngagement(true);
   }
-  function launchRoadtripRoute(route, event, forceShortcut) {
+  function launchRoadtripRoute(route, event, forceShortcut, apiBypass) {
     var routeLength = route === "calgary" ? ROADTRIP_CALGARY_DISTANCE :
       route === "banff" ? ROADTRIP_BANFF_DISTANCE : ROADTRIP_ABRAHAM_DISTANCE;
     var shortcutDistance = forceShortcut || event && event.shiftKey ?
@@ -40710,7 +40716,8 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.routeChooserOpen || !setRoadtripRouteChoice(route, false)) return false;
     roadtripState.routeChooserOpen = false;
     resetPorscheForFreshRoadtrip(true);
-    var started = startRoadtrip(true, route, shortcutDistance);
+    var started = startRoadtrip(true, route, shortcutDistance, false, !!apiBypass || roadtripApiChooserOpen);
+    roadtripApiChooserOpen = false;
     if (started) roadtripCampResumeRun = null;
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;
@@ -40723,9 +40730,14 @@ window.__entranceRoomOpen = false;
   }
   function dismissRoadtripInvite(event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
-    if (!roadtripAuthorized() || !roadtripState.unlocked ||
+    if ((!roadtripApiChooserOpen && (!roadtripAuthorized() || !roadtripState.unlocked)) ||
         roadtripState.accepted || roadtripState.active) return false;
     roadtripState.routeChooserOpen = false;
+    if (roadtripApiChooserOpen) {
+      roadtripApiChooserOpen = false;
+      paintRoadtripInvite();
+      return true;
+    }
     if (!roadtripState.everAccepted) {
       if (!roadtripState.invitationReady) return false;
       roadtripState.invitationReady = false;
@@ -40921,6 +40933,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripInvite();
   };
   function resetRoadtripInvitationSession() {
+    roadtripApiChooserOpen = false;
     roadtripState.accepted = false;
     roadtripState.invitationDistance = 0;
     // The ten-room Phase 2 visit is the durable unlock. Closing Entrance/HUD must not
@@ -51058,8 +51071,16 @@ window.__entranceRoomOpen = false;
     if (started) roadtripCampResumeRun = null;
     return started;
   };
+  window.__entranceRoadtripApiStart = function (route) {
+    var started = startRoadtrip(true, route || "calgary", 0, false, true);
+    if (started) roadtripCampResumeRun = null;
+    return started;
+  };
   window.__entranceRoadtripOpenChooser = function () {
     return openRoadtripRouteChooser();
+  };
+  window.__entranceRoadtripApiOpenChooser = function () {
+    return openRoadtripRouteChooser(null, true);
   };
   window.__entranceRoadtripChooseRoute = function (route) {
     if (!roadtripState.routeChooserOpen) return false;
@@ -73638,7 +73659,7 @@ setOfficeProgress("pc", false);
       return !!((arcade && arcade.active) || (flair && flair.active));
     }
     function bartenderAvailable() {
-      return !!window.__secondRound && !minigameRunning() && !(window.__ambientMaking && window.__ambientMaking()) &&
+      return currentRoom() === "kitchen" && !minigameRunning() && !(window.__ambientMaking && window.__ambientMaking()) &&
         !(window.__userMixing && window.__userMixing()) && !(window.__bartenderDragging && window.__bartenderDragging());
     }
     function peopleLocations() {
@@ -73686,14 +73707,6 @@ setOfficeProgress("pc", false);
       return new Promise(function (resolve) { setTimeout(function () { resolve(value); }, 760); });
     }
     function canonicalRoom(name) { return ROOM_ALIASES[name] || name; }
-    function roomUnlocked(name) {
-      if (window.__loftSessionPreviewActive) return true;
-      name = canonicalRoom(name);
-      var upper = UPPER_FOR_LOWER[name] || name;
-      var index = UPPER_ROOMS.indexOf(upper);
-      var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
-      return index >= 0 && index <= max;
-    }
     function monitorAppState() {
       var monitor = document.getElementById("office-monitor"), classes = [
         ["show-chat", "chat"], ["show-weather", "weather"], ["show-calendar", "calendar"], ["show-clock", "clock"], ["show-mail", "mail"],
@@ -73895,7 +73908,8 @@ setOfficeProgress("pc", false);
     function registerLowerRoom(name, group, stateReader) {
       register({ id: name + ".status", group: group, kind: "query", run: stateReader });
       register({ id: name + ".set", group: group, kind: "action", risk: "scene", completion: "finite",
-        args: { open: { type: "boolean", required: true } }, available: function () { return roomUnlocked(name); },
+        description: "Open or close the " + group + " through its room controller.",
+        args: { open: { type: "boolean", required: true } },
         run: function (args) {
           var before = currentRoom() === name;
           if (args.open) lowerRoomOpen(name); else if (before) lowerRoomClose(name);
@@ -74050,7 +74064,9 @@ setOfficeProgress("pc", false);
       return !!(document.fullscreenElement || document.webkitFullscreenElement);
     } });
 
-    register({ id: "room.go", group: "Rooms", kind: "action", risk: "ambient", completion: "finite", args: { room: { type: "string", enum: ROOM_SELECTORS, required: true } }, available: function (args) { return roomUnlocked(args.room); }, run: function (args) {
+    register({ id: "room.go", group: "Rooms", kind: "action", risk: "ambient", completion: "finite",
+      description: "Navigate directly to any upper or lower room, independent of story progress.",
+      args: { room: { type: "string", enum: ROOM_SELECTORS, required: true } }, run: function (args) {
       var room = canonicalRoom(args.room), before = currentRoom();
       if (UPPER_FOR_LOWER[room]) lowerRoomOpen(room);
       else {
@@ -74089,11 +74105,15 @@ setOfficeProgress("pc", false);
         return { changed: before !== after, candle: args.candle, on: after };
       } });
     register({ id: "garden.instrument.play", group: "Garden / Party", kind: "action", risk: "ambient",
-      args: { instrument: { type: "string", enum: ["guitar", "ukulele"], required: true } }, run: function (args) {
+      description: "Play the selected physical instrument while the Garden is open.",
+      args: { instrument: { type: "string", enum: ["guitar", "ukulele"], required: true } },
+      available: function () { return currentRoom() === "garden"; }, run: function (args) {
         var fn = window[args.instrument]; if (typeof fn !== "function") throw new Error("The instrument is not ready.");
         return { instrument: args.instrument, result: fn() };
       } });
-    register({ id: "cuddly.octi.squeeze", group: "Cuddly", kind: "action", risk: "ambient", run: function () {
+    register({ id: "cuddly.octi.squeeze", group: "Cuddly", kind: "action", risk: "ambient",
+      description: "Squeeze Octi while the Cuddly room is open.",
+      available: function () { return currentRoom() === "cuddly"; }, run: function () {
       if (typeof window.octi !== "function") throw new Error("Octi is not ready.");
       return { result: window.octi() };
     } });
@@ -74110,8 +74130,10 @@ setOfficeProgress("pc", false);
         return { changed: before !== after, closed: after };
       } });
     register({ id: "cuddly.visitor.start", group: "Cuddly", kind: "action", risk: "scene",
+      description: "Invite a Cuddly visitor while that room is open, or send only their text from anywhere.",
       args: { visitor: { type: "string", enum: ["ali", "spencer", "alireza", "bahareh", "ayushi"], required: true },
-        mode: { type: "string", enum: ["visit", "text"] } }, run: function (args) {
+        mode: { type: "string", enum: ["visit", "text"] } },
+      available: function (args) { return args.mode === "text" || currentRoom() === "cuddly"; }, run: function (args) {
         if (typeof window.visitors !== "function") throw new Error("Visitors are not ready.");
         return { visitor: args.visitor, mode: args.mode || "visit", result: window.visitors(args.visitor, args.mode === "text" ? "text" : undefined) };
       } });
@@ -74164,7 +74186,8 @@ setOfficeProgress("pc", false);
         car: state.car || {}, drive: state.drive || {} };
     } });
     register({ id: "car.dashboard.set", group: "Entrance / Car", kind: "action", risk: "scene",
-      args: { open: { type: "boolean", required: true } }, available: function () { return roomUnlocked("entrance"); }, run: function (args) {
+      description: "Open or close the car dashboard, navigating to the Entrance when opening it.",
+      args: { open: { type: "boolean", required: true } }, run: function (args) {
         var state = entranceState(), before = !!(state.drive && state.drive.hud);
         if (args.open) {
           if (!state.open) lowerRoomOpen("entrance");
@@ -74221,20 +74244,31 @@ setOfficeProgress("pc", false);
         var state = entranceState().drive.cruise;
         return { changed: before !== !!state.active, on: !!state.active, speed: Number(state.target) || 0 };
       } });
+    function prepareRoadtripSurface() {
+      if (currentRoom() !== "entrance") lowerRoomOpen("entrance");
+      var state = entranceState();
+      if (!(state.drive && state.drive.hud) && window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
+      state = entranceState();
+      return !!(state.open && state.drive && state.drive.hud);
+    }
     register({ id: "roadtrip.start", group: "Road Trip", kind: "action", risk: "scene",
-      available: function () { var s = roadtripState(); return !s.active && !!s.authorized && !!s.unlocked; }, run: function () {
-        return { started: !!(window.__entranceRoadtripStart && window.__entranceRoadtripStart()), roadtrip: roadtripState() };
+      description: "Navigate to the car and start a fresh Calgary Road Trip independent of story progress.",
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; }, run: function () {
+        if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
+        return { started: !!window.__entranceRoadtripApiStart("calgary"), roadtrip: roadtripState() };
       } });
     register({ id: "roadtrip.chooser.open", group: "Road Trip", kind: "action", risk: "ambient",
-      available: function () { var s = roadtripState(); return !s.active && !!s.authorized && !!s.unlocked; }, run: function () {
-        return { opened: !!(window.__entranceRoadtripOpenChooser && window.__entranceRoadtripOpenChooser()), roadtrip: roadtripState() };
+      description: "Navigate to the car and open the route chooser independent of story progress.",
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiOpenChooser === "function"; }, run: function () {
+        if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
+        return { opened: !!window.__entranceRoadtripApiOpenChooser(), roadtrip: roadtripState() };
       } });
     register({ id: "roadtrip.route.start", group: "Road Trip", kind: "action", risk: "scene",
+      description: "Navigate to the car and start the selected route independent of story progress.",
       args: { route: { type: "string", enum: ["calgary", "banff", "abraham"], required: true } },
-      available: function () { var s = roadtripState(); return !s.active && !!s.authorized && !!s.unlocked; }, run: function (args) {
-        var s = roadtripState();
-        if (!s.routeChooserOpen && window.__entranceRoadtripOpenChooser) window.__entranceRoadtripOpenChooser();
-        var started = !!(window.__entranceRoadtripChooseRoute && window.__entranceRoadtripChooseRoute(args.route));
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; }, run: function (args) {
+        if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
+        var started = !!window.__entranceRoadtripApiStart(args.route);
         return { started: started, route: roadtripState().route, requested: args.route };
       } });
     register({ id: "roadtrip.pause.set", group: "Road Trip", kind: "action", risk: "ambient",
@@ -74351,7 +74385,10 @@ setOfficeProgress("pc", false);
       var after = typeof window.__audioMaster === "number" ? window.__audioMaster : args.level;
       return { changed: before !== after, level: after };
     } });
-    register({ id: "roster.set", kind: "action", risk: "ambient", args: { open: { type: "boolean", required: true } }, available: function () { return !!window.__secondRound; }, run: function (args) { return { open: window.roster ? window.roster.set(args.open) : false }; } });
+    register({ id: "roster.set", kind: "action", risk: "ambient",
+      description: "Open or close the current roster, independent of game phase.",
+      args: { open: { type: "boolean", required: true } },
+      run: function (args) { return { open: window.roster ? window.roster.set(args.open) : false }; } });
     register({ id: "music.play", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (!before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
     register({ id: "music.pause", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
     register({ id: "video.pause", kind: "action", risk: "ambient", available: function () { return !!(window.__videoPlaying && window.__videoPlaying()); }, run: function () {
@@ -74438,13 +74475,19 @@ setOfficeProgress("pc", false);
         value: function () { return { active: false, variant: args.variant, room: window.currentStageName || null }; }
       });
     } });
-    register({ id: "garden.dance.request", group: "Garden / Party", kind: "action", risk: "ambient", args: { style: { type: "string", enum: DANCES, required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) {
+    register({ id: "garden.dance.request", group: "Garden / Party", kind: "action", risk: "ambient",
+      description: "Request a Party dance; the room-owned slow dance also requires the Garden to be open.",
+      args: { style: { type: "string", enum: DANCES, required: true } },
+      available: function (args) { return !!window.__gardenPartyOn && (args.style !== "slow" || currentRoom() === "garden"); }, run: function (args) {
       if (args.style === "slow") { if (window.slowdance) window.slowdance(); }
       else if (args.style === "fast") { if (window.__requestDance) window.__requestDance("techno"); }
       else if (window.__requestDance) window.__requestDance(args.style);
       return { style: args.style, dance: window.__partyDance || null };
     } });
-    register({ id: "garden.dj.set", group: "Garden / Party", kind: "action", risk: "ambient", args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
+    register({ id: "garden.dj.set", group: "Garden / Party", kind: "action", risk: "ambient",
+      description: "Swap the DJ at the live Party booth while the Garden is open.",
+      args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } },
+      available: function () { return !!window.__gardenPartyOn && currentRoom() === "garden"; }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
     register({ id: "cuddly.projector.set", group: "Cuddly", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"], required: true } }, run: function (args) { var before = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; if (window.__cuddlyProjector) window.__cuddlyProjector.set(args.mode); var after = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { changed: before !== after, mode: after }; } });
     register({ id: "weather.scene.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["clear", "rain", "snow", "thunderstorm", "overcast"], required: true } }, run: function (args) {
       var rain = args.mode === "rain" || args.mode === "thunderstorm", snow = args.mode === "snow", storm = args.mode === "thunderstorm", overcast = args.mode === "overcast";
@@ -74459,7 +74502,10 @@ setOfficeProgress("pc", false);
       if (window.twilight && window.twilight.set) window.twilight.set(args.effect === "twilight");
       return { effect: args.effect, aurora: window.__auroraStatus ? window.__auroraStatus() : null, twilight: window.__setTwilight ? !!window.__setTwilight() : false };
     } });
-    register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene", args: { moment: { type: "string", enum: Object.keys(PARTY_MOMENTS), required: true } }, available: function () { return !!window.__secondRound && !anyPartyMoment(); }, run: function (args) {
+    register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene",
+      description: "Start a finite Party moment while the Garden is open, independent of game phase.",
+      args: { moment: { type: "string", enum: Object.keys(PARTY_MOMENTS), required: true } },
+      available: function () { return currentRoom() === "garden" && !anyPartyMoment(); }, run: function (args) {
       var fn = window[PARTY_MOMENTS[args.moment]];
       if (typeof fn !== "function") throw new Error("Party moment is not ready.");
       return Promise.resolve(fn()).then(function () { return { moment: args.moment, completed: true }; });
@@ -74487,15 +74533,15 @@ setOfficeProgress("pc", false);
         value: { caller: args.caller, completed: true }
       });
     } });
-    register({ id: "call.video.start", kind: "action", risk: "scene", args: { contact: { type: "string", enum: ["tehran", "california", "prague", "lubeck"], required: true } }, available: function () {
-      var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
-      return max >= ROOMS.indexOf("office") && !callBusy() && (typeof window.__laptopCall === "function" || typeof window.__openMonitorApp === "function");
+    register({ id: "call.video.start", kind: "action", risk: "scene",
+      description: "Start an Office video call while the Office is open, independent of story progress.",
+      args: { contact: { type: "string", enum: ["tehran", "california", "prague", "lubeck"], required: true } }, available: function () {
+      return currentRoom() === "office" && !callBusy() && (typeof window.__laptopCall === "function" || typeof window.__openMonitorApp === "function");
     }, run: function (args) {
       var live;
       if (args.contact === "tehran" || args.contact === "california") {
         live = !!(window.__openMonitorApp && window.__openMonitorApp(args.contact));
       } else {
-        if (window.goToStage) window.goToStage("office");
         live = !!(window.__laptopCall && window.__laptopCall(args.contact === "lubeck" ? "lueb" : "prague"));
       }
       if (live) syncCallState("outgoing", "ui");
@@ -74515,7 +74561,9 @@ setOfficeProgress("pc", false);
       var after = callBusy();
       return { changed: before && !after, scheduled: before && after };
     } });
-    register({ id: "kitchen.cocktail.make", group: "Kitchen / Bar", kind: "action", risk: "scene", args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: bartenderAvailable, run: function (args) {
+    register({ id: "kitchen.cocktail.make", group: "Kitchen / Bar", kind: "action", risk: "scene",
+      description: "Have Pouria make a cocktail at the open Kitchen bar, independent of game phase.",
+      args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: bartenderAvailable, run: function (args) {
       if (typeof window.__makeCocktail !== "function") throw new Error("The bar is not ready.");
       var message = window.__makeCocktail(COCKTAILS[args.drink], true);
       if (!(window.__ambientMaking && window.__ambientMaking())) throw new Error(String(message));
@@ -74524,24 +74572,26 @@ setOfficeProgress("pc", false);
         value: { drink: args.drink, completed: true }
       });
     } });
-    register({ id: "kitchen.mixer.start", group: "Kitchen / Bar", kind: "action", risk: "scene", args: { recipe: { type: "string", enum: ["negroni", "yale"], required: true } }, available: bartenderAvailable, run: function (args) {
+    register({ id: "kitchen.mixer.start", group: "Kitchen / Bar", kind: "action", risk: "scene",
+      description: "Run the hands-on mixer at the open Kitchen bar, independent of game phase.",
+      args: { recipe: { type: "string", enum: ["negroni", "yale"], required: true } }, available: bartenderAvailable, run: function (args) {
       if (typeof window.mixer !== "function") throw new Error("The mixer is not ready.");
       return Promise.resolve(window.mixer(args.recipe)).then(function () {
         return { recipe: args.recipe, completed: true };
       });
     } });
-    register({ id: "minigame.start", kind: "action", risk: "scene", args: { game: { type: "string", enum: ["invaders", "flair-catch"], required: true } }, available: function (args) {
-      if (!window.__secondRound || minigameRunning()) return false;
-      if (args.game === "flair-catch") return typeof window.__startFlairCatch === "function";
-      if (args.game === "invaders") return typeof window.__startArcade === "function";
+    register({ id: "minigame.start", kind: "action", risk: "scene",
+      description: "Start a room-owned minigame in its open room, independent of game phase.",
+      args: { game: { type: "string", enum: ["invaders", "flair-catch"], required: true } }, available: function (args) {
+      if (minigameRunning()) return false;
+      if (args.game === "flair-catch") return currentRoom() === "kitchen" && typeof window.__startFlairCatch === "function";
+      if (args.game === "invaders") return currentRoom() === "office" && typeof window.__startArcade === "function";
       return typeof window.__startArcade === "function" || typeof window.__startFlairCatch === "function";
     }, run: function (args) {
       if (args.game === "invaders") {
-        if (window.goToStage) window.goToStage("office");
         window.__startArcade();
       } else {
         if (window.__setDayNight && !(window.__barUpNow && window.__barUpNow())) window.__setDayNight(true);
-        if (window.goToStage) window.goToStage("kitchen");
         window.__startFlairCatch();
       }
       return { game: args.game, started: true };
@@ -74557,7 +74607,12 @@ setOfficeProgress("pc", false);
       var removed = window.__albumRemove(args.id);
       return { changed: !!removed, removed: !!removed, id: args.id };
     } });
-    register({ id: "scene.activity.start", kind: "action", risk: "scene", completion: "finite", args: { activity: { type: "string", enum: ["kids-chase", "butterfly", "rainbow"], required: true } }, available: function () { return !!window.__secondRound; }, run: function (args) {
+    register({ id: "scene.activity.start", kind: "action", risk: "scene", completion: "finite",
+      description: "Start a finite room activity in its open room, independent of game phase.",
+      args: { activity: { type: "string", enum: ["kids-chase", "butterfly", "rainbow"], required: true } },
+      available: function (args) {
+        return currentRoom() === (args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony");
+      }, run: function (args) {
       var fn = args.activity === "kids-chase" ? window.chase : args.activity === "butterfly" ? window.butterfly : window.rainbow;
       if (typeof fn !== "function") throw new Error("Scene activity is not ready.");
       return Promise.resolve(fn()).then(function (completion) {

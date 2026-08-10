@@ -2716,8 +2716,19 @@ html.mir-garden-party #bedroom-party-window-reflection{opacity:.72}
   62%{transform:rotate(-4deg)} 100%{transform:rotate(0)}
 }
 #bedroom-bed.made .bedroom-duvet-crease{opacity:.14}
-#bedroom-party-coats{opacity:0;pointer-events:none;transition:opacity .35s ease}
+#bedroom-party-coats{
+  opacity:0;pointer-events:none;transition:opacity .35s ease;
+  transform-box:fill-box;transform-origin:center;
+}
 html.mir-party #bedroom-party-coats{opacity:1}
+html.mir-party .hunt-viewport.bedroom-room-open #bedroom-party-coats{pointer-events:auto;cursor:pointer}
+#bedroom-party-coats.rustling{animation:bedroom-party-coats-rustle .72s ease-out}
+@keyframes bedroom-party-coats-rustle{
+  0%,100%{transform:translateY(0) rotate(0)}
+  24%{transform:translateY(-2px) rotate(-1deg)}
+  52%{transform:translateY(.7px) rotate(.7deg)}
+  76%{transform:translateY(-.4px) rotate(-.3deg)}
+}
 .bedroom-sprinkler-water{opacity:0;transition:opacity .14s ease}
 #bedroom-room.spraying .bedroom-sprinkler-water{opacity:.82}
 .bedroom-bed-wet{opacity:0;transition:opacity 1.5s ease}
@@ -2737,6 +2748,7 @@ html.mir-party #bedroom-party-coats{opacity:1}
   #bedroom-room.bedroom-sleeping .bedroom-sleep-z.z1{opacity:.7}
   #bedroom-room .bedroom-suit.swinging{animation:none}
   #bedroom-room .bedroom-wedding-shoes.shining .bedroom-shoe-sparkle{animation:none;opacity:.85}
+  #bedroom-party-coats.rustling{animation:none}
   .hunt-viewport.bedroom-room-open #loft-game-strip{transition:none}
 }
 #hunt-wipe{
@@ -36487,7 +36499,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path class="bedroom-bed-wet" d="M171 247Q241 226 305 244Q356 229 415 244Q466 231 516 250L506 304Q417 286 337 300Q252 283 165 300Z" fill="#7f9ec0" pointer-events="none"/>
             <path class="bedroom-duvet-crease" d="M130 252Q210 240 279 253M287 232Q323 270 311 324M417 231Q394 272 410 325M480 239Q517 274 508 323M154 294Q241 280 332 298Q418 282 535 303" fill="none" stroke="#f0c779" stroke-width="3" opacity=".43"/>
           </g>
-          <g id="bedroom-party-coats" pointer-events="none">
+          <g id="bedroom-party-coats" tabindex="-1">
             <!-- Three subdued, tossed coats read as party overflow without taking over the bed. -->
             <g class="bedroom-party-coat bedroom-party-coat-green" transform="rotate(-7 248 268)">
               <path d="M235 251Q218 250 205 262L188 280Q185 286 192 289L203 288L226 270Z" fill="#52665b" stroke="#34493e" stroke-width="1.8" stroke-linejoin="round"/>
@@ -52163,11 +52175,13 @@ window.__bedroomRoomOpen = false;
   var viewport = document.querySelector(".hunt-viewport");
   var officeStage = document.getElementById("stage-office");
   var partyWindowReflection = document.getElementById("bedroom-party-window-reflection");
+  var gameStrip = document.getElementById("loft-game-strip");
   var closeTimer = null;
   var closing = false;
   var propTimers = [];
   var glass = document.getElementById("bedroom-stained-glass");
   var bed = document.getElementById("bedroom-bed");
+  var partyCoats = document.getElementById("bedroom-party-coats");
   var bedroomPillowLeft = room.querySelector(".bedroom-pillow-left");
   var bedroomPillowRight = room.querySelector(".bedroom-pillow-right");
   var bedroomPillowLeftMotion = room.querySelector(".bedroom-pillow-motion-left");
@@ -52226,6 +52240,18 @@ window.__bedroomRoomOpen = false;
     reflection.setAttribute("transform", "translate(82 278) scale(-1.95 1.95)");
     partyWindowReflection.appendChild(reflection);
   }
+  function partyCoatsActive() {
+    return !!(partyCoats && gameStrip && window.__bedroomRoomOpen &&
+      gameStrip.classList.contains("party-on"));
+  }
+  function syncPartyCoats() {
+    if (!partyCoats) return;
+    var active = partyCoatsActive();
+    if (!active) {
+      partyCoats.classList.remove("rustling");
+      if (document.activeElement === partyCoats && window.__bedroomRoomOpen) focusViewport();
+    }
+  }
   syncNight();
   new MutationObserver(syncNight).observe(officeStage, { attributes: true, attributeFilter: ["class"] });
   syncPartyWindowReflection();
@@ -52235,6 +52261,8 @@ window.__bedroomRoomOpen = false;
   if (officeHangout) new MutationObserver(syncPartyWindowReflection).observe(officeHangout, {
     attributes: true, subtree: true, attributeFilter: ["class"]
   });
+  window.__syncBedroomPartyCoats = syncPartyCoats;
+  syncPartyCoats();
 
   function clearPropTimers() {
     propTimers.forEach(clearTimeout);
@@ -52452,6 +52480,7 @@ window.__bedroomRoomOpen = false;
     room.classList.remove("spraying");
     suits.forEach(function (suit) { suit.classList.remove("swinging"); });
     weddingShoes.forEach(function (shoes) { shoes.classList.remove("shining"); });
+    if (partyCoats) partyCoats.classList.remove("rustling");
     room.querySelectorAll(".bedroom-prop").forEach(function (prop) {
       prop.classList.remove("glinting", "wiggling", "tidied", "made", "open",
         "wet", "game-over", "game-draw");
@@ -52646,10 +52675,19 @@ window.__bedroomRoomOpen = false;
       if (typeof playSparkSound === "function") playSparkSound(shoes.id);
     });
   });
+  if (partyCoats) partyCoats.addEventListener("click", function (event) {
+    event.stopPropagation();
+    if (!partyCoatsActive()) return;
+    try { partyCoats.focus({ preventScroll: true }); }
+    catch (_error) { try { partyCoats.focus(); } catch (_error2) {} }
+    replayClass(partyCoats, "rustling", 760);
+    if (typeof playSwishSound === "function") playSwishSound(partyCoats.id);
+  });
 
   function closeBedroom() {
     if (!window.__bedroomRoomOpen) return false;
     window.__bedroomRoomOpen = false;
+    syncPartyCoats();
     if (window.__syncFloorNavigation) window.__syncFloorNavigation();
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
     if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption();
@@ -52679,6 +52717,7 @@ window.__bedroomRoomOpen = false;
     syncSleep();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     window.__bedroomRoomOpen = true;
+    syncPartyCoats();
     if (window.__hideCallRing) window.__hideCallRing();
     if (window.__homeCatLower) window.__homeCatLower("bedroom");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
@@ -52759,7 +52798,7 @@ document.addEventListener("keydown", function (event) {
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   if (handleLowerRoomNumberShortcut(event)) return;
   var bedroomProp = event.target && event.target.closest &&
-    event.target.closest("#bedroom-room .bedroom-prop");
+    event.target.closest("#bedroom-room .bedroom-prop, #bedroom-party-coats");
   if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -134553,6 +134592,7 @@ function spawnDustMote(container) {
     classList.toggle("mir-chooser", has(sources.chooser, "show"));
     classList.toggle("mir-resume-pending", has(sources.entrance, "roadtrip-active") &&
       has(sources.entrance, "roadtrip-resume-pending"));
+    if (window.__syncBedroomPartyCoats) window.__syncBedroomPartyCoats();
   }
   var observer = new MutationObserver(syncScopeMirrors);
   observer.observe(strip, { attributes: true, attributeFilter: ["class"] });

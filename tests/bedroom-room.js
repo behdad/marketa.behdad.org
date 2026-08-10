@@ -34,6 +34,7 @@ var HARNESS = [
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(40);key("ArrowRight");await sleep(780);report.steps.right={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__entranceRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);var dot=document.querySelectorAll(".hunt-dot")[0];dot.focus();click(dot);await sleep(780);report.steps.dot={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__bathroomRoomState(),hidden:room.hidden,focus:document.activeElement===dot};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);wardrobe=document.getElementById("bedroom-wardrobe");pinkSuit=document.getElementById("bedroom-suit-pink");burgundyShoes=document.getElementById("bedroom-shoes-burgundy");click(wardrobe);click(pinkSuit);click(burgundyShoes);report.steps.suitClose={before:pinkSuit.getAttribute("class"),shoeBefore:burgundyShoes.getAttribute("class")};window.__closeBedroomRoom();report.steps.suitClose.after=pinkSuit.getAttribute("class");report.steps.suitClose.shoeAfter=burgundyShoes.getAttribute("class");await sleep(780);',
+  ' window.goToStage("office");window.__openBedroomRoom();await sleep(50);var pillowLeft=room.querySelector(".bedroom-pillow-motion-left"),pillowRight=room.querySelector(".bedroom-pillow-motion-right");window.__restoreCheckpointSystems({"bedroom-lamps":{leftOff:true,rightOff:true,pillowLeft:20,pillowRight:-20}},"afterStage");var pillowSaved=window.__captureCheckpointSystems()["bedroom-lamps"];var pillowRestored={state:window.__bedroomRoomState(),transforms:[pillowLeft.getAttribute("transform"),pillowRight.getAttribute("transform")]};window.__closeBedroomRoom();var pillowClosed={state:window.__bedroomRoomState(),transforms:[pillowLeft.getAttribute("transform"),pillowRight.getAttribute("transform")]};window.__openBedroomRoom();report.steps.pillowRecovery={saved:pillowSaved,restored:pillowRestored,closed:pillowClosed,reopened:window.__bedroomRoomState(),transforms:[pillowLeft.getAttribute("transform"),pillowRight.getAttribute("transform")]};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -163,6 +164,13 @@ check(s.suitClose && /\bswinging\b/.test(s.suitClose.before) &&
   /\bshining\b/.test(s.suitClose.shoeBefore) &&
   !/\bswinging\b/.test(s.suitClose.after) && !/\bshining\b/.test(s.suitClose.shoeAfter),
   "closing Bedroom clears suit and shoe one-shots whose cleanup timers were canceled", s.suitClose);
+check(s.pillowRecovery && s.pillowRecovery.saved.pillowLeft === 20 && s.pillowRecovery.saved.pillowRight === -20 &&
+  s.pillowRecovery.restored.state.pillows.left === 20 && s.pillowRecovery.restored.state.pillows.right === -20 &&
+  s.pillowRecovery.restored.transforms.join("|") === "translate(20.00 0)|translate(-20.00 0)" &&
+  s.pillowRecovery.closed.transforms.join("|") === "translate(20.00 0)|translate(-20.00 0)" &&
+  s.pillowRecovery.reopened.pillows.left === 20 && s.pillowRecovery.reopened.pillows.right === -20 &&
+  s.pillowRecovery.transforms.join("|") === "translate(20.00 0)|translate(-20.00 0)",
+  "pillow positions survive checkpoint restore, room exit, and reopening", s.pillowRecovery);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-wall-gear-left", "bedroom-wall-gear-middle", "bedroom-wall-gear-right", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {

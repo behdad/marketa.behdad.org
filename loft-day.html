@@ -52150,7 +52150,7 @@ window.__bedroomRoomOpen = false;
     else queueTttComputer();
     return true;
   }
-  function resetProps(preserveLights) {
+  function resetProps(preserveLights, preservePillows) {
     clearPropTimers();
     resetTtt();
     room.classList.remove("spraying");
@@ -52162,9 +52162,11 @@ window.__bedroomRoomOpen = false;
       if (!preserveLights) prop.classList.remove("off");
     });
     bedroomPillowDrag = null;
-    bedroomPillowOffset = { left: 0, right: 0 };
     bedroomPillowsKissing = false;
-    [bedroomPillowLeftMotion, bedroomPillowRightMotion].forEach(function (pillow) { if (pillow) pillow.removeAttribute("transform"); });
+    if (!preservePillows) {
+      bedroomPillowOffset = { left: 0, right: 0 };
+      [bedroomPillowLeftMotion, bedroomPillowRightMotion].forEach(function (pillow) { if (pillow) pillow.removeAttribute("transform"); });
+    }
     syncSleep();
   }
   function bedroomPillowPoint(event) {
@@ -52196,7 +52198,7 @@ window.__bedroomRoomOpen = false;
     });
     setTimeout(function () { bedroomPillowsKissing = false; }, 1100);
   }
-  function updateBedroomPillow(side, offset) {
+  function updateBedroomPillow(side, offset, quiet) {
     var center = (side === "left" ? 264 : 419) + offset;
     if (side === "left") {
       center = Math.max(204, Math.min(bedroomPillowCenter("right") - 112, center));
@@ -52207,7 +52209,7 @@ window.__bedroomRoomOpen = false;
     }
     var motion = side === "left" ? bedroomPillowLeftMotion : bedroomPillowRightMotion;
     if (motion) motion.setAttribute("transform", "translate(" + bedroomPillowOffset[side].toFixed(2) + " 0)");
-    if (Math.abs(bedroomPillowCenter("left") - bedroomPillowCenter("right")) <= 112) spawnBedroomKisses();
+    if (!quiet && Math.abs(bedroomPillowCenter("left") - bedroomPillowCenter("right")) <= 112) spawnBedroomKisses();
     else bedroomPillowsKissing = false;
   }
   function beginBedroomPillowDrag(event) {
@@ -52236,7 +52238,10 @@ window.__bedroomRoomOpen = false;
     if (target) target.classList.remove("dragging");
     try { art.releasePointerCapture(event.pointerId); } catch (_error) {}
     event.preventDefault(); event.stopPropagation();
-    if (moved && typeof playPlushSquishSound === "function") playPlushSquishSound("bedroom-pillow");
+    if (moved) {
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      if (typeof playPlushSquishSound === "function") playPlushSquishSound("bedroom-pillow");
+    }
   }
   function sprayBedroom() {
     clearTimeout(sprinklerTimer);
@@ -52354,7 +52359,7 @@ window.__bedroomRoomOpen = false;
     if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption();
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     closing = true;
-    resetProps(true);
+    resetProps(true, true);
     viewport.classList.remove("bedroom-room-open");
     focusViewport();
     clearTimeout(closeTimer);
@@ -52401,6 +52406,7 @@ window.__bedroomRoomOpen = false;
       sleeping: room.classList.contains("bedroom-sleeping"),
       spraying: room.classList.contains("spraying"),
       bedWet: bed.classList.contains("wet"),
+      pillows: { left: bedroomPillowOffset.left, right: bedroomPillowOffset.right },
       props: Array.prototype.map.call(room.querySelectorAll(".bedroom-prop"), function (prop) {
         return { id: prop.id, state: prop.getAttribute("class") || "" };
       }) };
@@ -52428,13 +52434,20 @@ window.__bedroomRoomOpen = false;
       capture: function () {
         return {
           leftOff: leftLamp.classList.contains("off"),
-          rightOff: rightLamp.classList.contains("off")
+          rightOff: rightLamp.classList.contains("off"),
+          pillowLeft: bedroomPillowOffset.left,
+          pillowRight: bedroomPillowOffset.right
         };
       },
       restore: function (row, phase) {
         if (phase !== "afterStage") return;
         leftLamp.classList.toggle("off", !!(row && row.leftOff));
         rightLamp.classList.toggle("off", !!(row && row.rightOff));
+        bedroomPillowOffset = { left: 0, right: 0 };
+        [bedroomPillowLeftMotion, bedroomPillowRightMotion].forEach(function (pillow) { if (pillow) pillow.removeAttribute("transform"); });
+        var left = Number(row && row.pillowLeft), right = Number(row && row.pillowRight);
+        updateBedroomPillow("left", Number.isFinite(left) ? left : 0, true);
+        updateBedroomPillow("right", Number.isFinite(right) ? right : 0, true);
         syncSleep();
       },
       reset: function () { resetProps(false); }

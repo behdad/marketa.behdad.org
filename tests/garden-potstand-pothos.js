@@ -15,6 +15,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       try {
         window.goToStage("garden");
         var plant = document.getElementById("garden-potstand");
+        var home = plant.parentNode;
         var lift = document.getElementById("garden-potstand-lift");
         var offset = lift.parentNode;
         var hit = plant.querySelector(":scope > rect");
@@ -22,7 +23,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         var pot = planter.querySelector(":scope > rect");
         var foliage = plant.querySelector(".garden-potstand-foliage");
         report.structure = {
-          parent: plant.parentNode && plant.parentNode.id,
+          parentClass: home && home.getAttribute("class"),
+          homeTransform: home && home.getAttribute("transform"),
+          liftParent: home && home.parentNode && home.parentNode.id,
           liftClass: lift && lift.getAttribute("class"),
           offsetClass: offset && offset.getAttribute("class"),
           offsetTransform: offset && offset.getAttribute("transform"),
@@ -87,9 +90,10 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 3200, { patchRaf: true });
 var s = (result && result.structure) || {};
 var w = (result && result.water) || {};
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
-check(s.parent === "garden-potstand-lift" && /\btrip-plant-lift\b/.test(s.liftClass || "") &&
+check(s.parentClass === "garden-potstand-home" && s.homeTransform === "translate(3,0)" &&
+  s.liftParent === "garden-potstand-lift" && /\btrip-plant-lift\b/.test(s.liftClass || "") &&
   s.offsetClass === "garden-potstand-offset" && s.offsetTransform === "translate(10,0)" &&
-  s.transform === "translate(3,0)" && JSON.stringify(s.hit) === JSON.stringify(["106", "196", "68", "98"]) &&
+  s.transform === null && JSON.stringify(s.hit) === JSON.stringify(["106", "196", "68", "98"]) &&
   s.waterSpot && s.waterSpot.x === 830 && s.waterSpot.y === 180,
   "the outer offset moves the complete plant and water effect ten units without changing internals", s);
 check(JSON.stringify(s.pot) === JSON.stringify(["126", "204", "28", "24", "4"]) &&
@@ -106,7 +110,7 @@ check(w.drains === 1 && w.afterClick === 1 && w.count === 3 && w.timestamp > 0 &
   "a real plant click and two more waterings still trigger and recover owned overwater state", w);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
-check(/class="garden-potstand-offset" transform="translate\(10,0\)">\s*<g class="trip-plant-lift" id="garden-potstand-lift"><g id="garden-potstand" class="hunt-hit" transform="translate\(3,0\)">\s*<rect x="106" y="196" width="68" height="98" fill="transparent"\/>/.test(source) &&
+check(/class="garden-potstand-offset" transform="translate\(10,0\)">\s*<g class="trip-plant-lift" id="garden-potstand-lift"><g class="garden-potstand-home" transform="translate\(3,0\)"><g id="garden-potstand" class="hunt-hit">\s*<rect x="106" y="196" width="68" height="98" fill="transparent"\/>/.test(source) &&
   /class="garden-potstand-variegation"/.test(source) && /class="garden-potstand-midribs"/.test(source),
   "the code-native SVG keeps the established interaction owner and pothos anatomy");
 

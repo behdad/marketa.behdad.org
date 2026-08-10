@@ -39,7 +39,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.caption("<b>literal & untouched</b>", { html: true });
         report.literal = { en: snap() };
         setLang("cs"); report.literal.cs = snap();
-        setLang("en"); window.setCaption("kitchen", true); report.literal.reclaimed = snap();
+        setLang("en");
+        report.literal.partyAccepted = !!window.__captionOverlay("party_exit_hint", {
+          owner: "party-story", scope: "stage:kitchen", priority: 60, duration: 500, clock: "wall"
+        });
+        window.setCaption("party_exit_hint", true); report.literal.overStory = snap();
+        window.__cancelCaption("console"); window.setCaption("kitchen", true); report.literal.reclaimed = snap();
 
         window.__captionOverlay("trip_caption_molly", { owner: "stale", scope: "stage:kitchen",
           priority: 30, duration: 180, clock: "wall" });
@@ -195,8 +200,10 @@ if (result) {
     "keyed overlays rerender in EN/CS with raw replacements intact", result.replacements);
   check(result.literal.en.text === "<b>literal & untouched</b>" &&
     !result.literal.en.bold && result.literal.cs.text === result.literal.en.text &&
+    !result.literal.partyAccepted && result.literal.overStory.text === result.literal.en.text &&
+    result.literal.overStory.state.overlay && result.literal.overStory.state.overlay.priority === 110 &&
     result.literal.reclaimed.key === "kitchen",
-    "console captions remain verbatim across language changes and yield to semantic base updates", result.literal);
+    "scripted captions stay verbatim, outrank story feedback, and can be explicitly released", result.literal);
   check(result.stale.afterOldExpiry.key === "trip_caption_acid" &&
     result.stale.afterNewExpiry.key === "kitchen" && !result.stale.afterNewExpiry.state.overlay,
     "a stale same-owner expiry cannot clear its replacement", result.stale);
@@ -239,10 +246,14 @@ if (result) {
     result.malformed.after.key === result.malformed.before.key && result.malformed.scheduler.jobs.every(function (job) {
       return Number.isFinite(job.duration) && Number.isFinite(job.remaining);
     }), "malformed public claims and non-finite durations are rejected without scheduling", result.malformed);
-  check(result.rejectedEffects.immediate.key === "rsvp_exit" && result.rejectedEffects.immediate.rsvp &&
-    !result.rejectedEffects.immediate.blink && result.rejectedEffects.after.key === "rsvp_exit" &&
+  check(result.rejectedEffects.immediate.text === "must not displace RSVP" &&
+    result.rejectedEffects.immediate.state.overlay &&
+    result.rejectedEffects.immediate.state.overlay.owner === "console" &&
+    result.rejectedEffects.immediate.state.overlay.priority === 110 &&
+    !result.rejectedEffects.immediate.rsvp && result.rejectedEffects.immediate.blink &&
+    result.rejectedEffects.after.key === "rsvp_exit" &&
     result.rejectedEffects.after.rsvp && !result.rejectedEffects.after.blink,
-    "rejected console claims cannot strip RSVP or leave an unowned blink timer", result.rejectedEffects);
+    "a held scripted caption temporarily owns terminal feedback, then restores it cleanly", result.rejectedEffects);
   check(/^attention-/.test(result.resetScheduler.token) && !result.resetScheduler.fired &&
     !result.resetScheduler.jobs.some(function (job) { return job.owner === "reset-handoff-probe"; }),
     "a real Start over cancels attended producer handoffs", result.resetScheduler);

@@ -74362,7 +74362,7 @@ setOfficeProgress("pc", false);
       });
     } });
     register({ id: "caption.show", group: "Utilities / Scripting", kind: "action", risk: "ambient",
-      description: "Show literal text in the current scene caption without changing rooms.",
+      description: "Show literal text that takes priority over gameplay feedback in the current scene.",
       args: { text: { type: "string", minLength: 1, maxLength: 500, required: true } }, run: function (args) {
         if (typeof window.caption !== "function") throw new Error("Caption is not ready.");
         var previous = window.caption(args.text);
@@ -74809,7 +74809,7 @@ setOfficeProgress("pc", false);
     couples: "couples(true) — bring a random guest group to the bar; couples(\"madla\") chooses by member or group name, and couples(\"ayushi\") brings Ayushi solo; couples(false) clears them; couples() reports who is there",
     officefolks: "officefolks(true) — bring a random guest group to the office; officefolks(\"madla\") chooses by member or group name, and officefolks(\"ayushi\") brings Ayushi solo; officefolks(false) clears them; officefolks() reports who is there",
     lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
-    caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
+    caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — take priority over gameplay feedback in the current scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). changing rooms clears it",
     volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
     volumebutton: "volumebutton(v) — the on-screen speaker button's MUSIC level (songs + music beds, no sound effects), snapped to its four steps (0 · 0.1 · 0.35 · 1); moves the button and PERSISTS across reloads. volumebutton() reports the current step; volumebutton(v) sets it and returns the OLD level. rides under volume() (the all-audio session master)",
     candle: "candle() — both garden candles' lit states; candle(1) or candle(2) reads one; candle(1,true)/candle(2,false) lights or snuffs one and returns its previous state",
@@ -112530,6 +112530,7 @@ function spawnDustMote(container) {
     story: 60,
     mandatory: 80,
     terminal: 100,
+    scripted: 110,
     exclusive: 120
   });
   var captionReturningUpstairs = false;
@@ -112767,7 +112768,7 @@ function spawnDustMote(container) {
       // A viewport move consumes its old transient. Within one viewport the semantic base may
       // keep updating under feedback, but a strictly stronger base preempts that feedback.
       if (transient && (changedScope && transient.scope !== "global" ||
-          transient.owner === "console" || claim.priority > transient.priority)) {
+          claim.priority > transient.priority)) {
         dispose(transient); transient = null;
       }
       requestPaint();
@@ -112928,7 +112929,8 @@ function spawnDustMote(container) {
   };
   // console toy: caption() reads the line above the scene; caption("text") overwrites it with
   // literal text and returns the previous line (same no-arg-reads / setter-returns-previous idiom
-  // as dance() and other value commands. A room change or hint update reclaims it afterwards.
+  // as dance() and other value commands. Explicit scripting owns the current viewport's caption
+  // over gameplay feedback; navigating to another viewport clears it.
   // Options (2nd arg): a dict {blink:ms, hold:ms}, OR positional caption(text, blinkMs, holdMs), OR
   // a bare number = blinkMs. blink → pulse the line to draw the eye for that long (reuses the
   // hint-blink attract animation; reduced-motion shows it solid). hold → after that long, RESTORE the
@@ -112942,7 +112944,7 @@ function spawnDustMote(container) {
     else if (opts && typeof opts === "object") { blinkMs = +opts.blink || 0; holdMs = +opts.hold || +opts.resume || 0; }
     if (typeof arguments[2] === "number") holdMs = arguments[2];                    // caption(text, blinkMs, holdMs)
     var token = captionArbiter.overlay({ literal: String(text), owner: "console", scope: captionViewportScope(),
-      priority: CAPTION_PRIORITY.feedback, duration: holdMs, clock: "wall" });
+      priority: CAPTION_PRIORITY.scripted, duration: holdMs, clock: "wall" });
     if (window.echo) window.echo(caption.textContent); // print through the echo side-channel (respects echo(true/false)) — rendered, so markup never reaches the console
     if (token && Number.isFinite(blinkMs) && blinkMs > 0) captionArbiter.blink(token, blinkMs);
     return prev;

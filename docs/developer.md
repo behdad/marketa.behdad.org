@@ -415,6 +415,10 @@ generated drafts use the `loft.*` namespaces and completion metadata.
 
 Code's canonical virtual files are the filenames in `code-snippets/manifest.js`; language and
 same-origin path derive from each extension/name, and the public file remains the only source body.
+IONOS otherwise treats `.py` as CGI, so `code-snippets/.htaccess` removes that inherited handler
+inside this source-only directory and serves Python files as `text/x-python`; do not remove or
+broaden that override. `tests/check.js` keeps every manifest filename present and this static-file
+contract intact.
 The sidebar always puts the unsaved buffer first, then sorts canonical and visitor-created basenames
 only while rendering. Unsaved and untouched canonical filenames are italic; edited canonical and
 visitor-created filenames are upright, with exact ownership tooltips and no path prefixes. A

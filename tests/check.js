@@ -476,6 +476,35 @@ function checkLiteralLocalAssets() {
   else pass("literal local asset references resolve (" + refs.size + ")");
 }
 
+// IONOS treats .py as CGI unless the closest directory opts out. Code built-ins are public
+// source assets fetched by their canonical filenames, so every manifest row must exist and the
+// directory must keep Python source on Apache's static-file path.
+function checkCodeSnippetDelivery() {
+  var dir = path.join(ROOT, "code-snippets");
+  var manifest = fs.readFileSync(path.join(dir, "manifest.js"), "utf8");
+  var list = /LOFT_CODE_SNIPPETS\s*=\s*Object\.freeze\(\s*(\[[\s\S]*?\])\s*\)/.exec(manifest);
+  var names = [];
+  try { names = list ? JSON.parse(list[1]) : []; } catch (_error) {}
+  var issues = [];
+  if (!names.length) issues.push("manifest has no parseable filenames");
+  if (new Set(names).size !== names.length) issues.push("manifest repeats a filename");
+  names.forEach(function (name) {
+    if (typeof name !== "string" || path.basename(name) !== name || !/\.(?:js|py)$/.test(name)) {
+      issues.push("invalid canonical filename: " + JSON.stringify(name));
+    } else if (!fs.existsSync(path.join(dir, name)) || !fs.statSync(path.join(dir, name)).isFile()) {
+      issues.push("missing canonical file: " + name);
+    }
+  });
+  var htaccess = fs.readFileSync(path.join(dir, ".htaccess"), "utf8");
+  if (!/^\s*RemoveHandler\s+\.py\s*$/mi.test(htaccess) ||
+      !/^\s*RemoveType\s+\.py\s*$/mi.test(htaccess) ||
+      !/^\s*AddType\s+text\/x-python\s+\.py\s*$/mi.test(htaccess)) {
+    issues.push("code-snippets/.htaccess must force .py onto the static text path");
+  }
+  if (issues.length) fail("canonical Code files have a public static-delivery contract", issues.join("\n"));
+  else pass("canonical Code files have a public static-delivery contract (" + names.length + " files)");
+}
+
 // Recurring historical bug (fixed 3x: 4886f92, dd525fe, 6650508): an SVG element
 // animated via .animate() with a `transform` keyframe, without transformBox set to
 // "fill-box" first, pivots around the SVG viewport origin instead of its own center —
@@ -1564,6 +1593,7 @@ checkTrackedSymlinks();
 checkLoftAliases();
 checkEggHuntAliases();
 checkLiteralLocalAssets();
+checkCodeSnippetDelivery();
 console.log("");
 
 FILES.forEach(function (file) {

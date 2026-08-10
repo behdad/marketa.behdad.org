@@ -36,7 +36,7 @@ async function main() {
   var manifest = [
     { id: "api.capabilities", kind: "query", description: "catalogue", args: {} },
     { id: "broken.run", kind: "action", description: "validated failure", args: {} },
-    { id: "denied.status", kind: "query", description: "validated failure", args: {} },
+    { id: "denied.status", kind: "query", description: "validated failure", args: {}, available: false, availability: { available: false, reason: "The Garden is not open.", remedy: { id: "room.go", args: { room: "garden" } } } },
     { id: "echo.values", kind: "query", description: "conversion probe", args: { items: { type: "object", required: true } } },
     { id: "game.status", kind: "query", description: "game status", args: {} },
     { id: "party.first-dance.status", kind: "query", description: "hyphen probe", args: {} },
@@ -53,7 +53,7 @@ async function main() {
       if (id === "echo.values") return { ok: true, value: args.items };
       if (id === "party.first-dance.status") return { ok: true, value: true };
       if (id === "future.status") return { ok: true, value: { ready: true } };
-      if (id === "denied.status") return { ok: false, code: "NOT_AVAILABLE", message: "Not here yet." };
+      if (id === "denied.status") return { ok: false, code: "NOT_AVAILABLE", message: "The Garden is not open.", availability: { available: false, reason: "The Garden is not open.", remedy: { id: "room.go", args: { room: "garden" } } } };
       if (id === "api.capabilities") return { ok: true, value: manifest };
       return { ok: false, code: "UNKNOWN_CAPABILITY", message: "Unknown query." };
     },
@@ -147,6 +147,9 @@ async function main() {
     "    loft.denied.status()",
     "except loft.LoftError as error:",
     "    assert error.code == 'NOT_AVAILABLE' and error.capability == 'denied.status'",
+    "    assert error.reason == 'The Garden is not open.'",
+    "    assert error.remedy == {'id': 'room.go', 'args': {'room': 'garden'}}",
+    "    assert error.availability['available'] is False",
     "else:",
     "    raise AssertionError('failed query did not raise LoftError')",
     "",
@@ -161,6 +164,7 @@ async function main() {
     "js.__loftBridgeAddCapability()",
     "assert loft.future.status() == {'ready': True}",
     "assert any(item['id'] == 'future.status' for item in loft.capabilities())",
+    "assert next(item for item in loft.capabilities() if item['id'] == 'denied.status')['availability']['remedy']['id'] == 'room.go'",
   ].join("\n");
 
   try {

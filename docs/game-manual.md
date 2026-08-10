@@ -155,7 +155,8 @@ report `mode()` as `"auto"`, `"on"`, or `"off"`. The room API covers all ten roo
 aliases Kitchen; `loft.party` aliases Garden). State changes do not move the view: navigate with
 `await loft.room.go("garden")`. Scripts may enter any room or start Road Trip outside story
 progression, but room-owned, conflicting, or prerequisite actions remain gated. Use
-`await loft.caption.show("hello")` for a literal caption.
+`loft.api.describe(...)` or typed help to see the current reason and, when one direct API step can
+honestly enable it, a structured remedy. Use `await loft.caption.show("hello")` for a literal caption.
 
 Code lists the unsaved buffer first, then default and user files by basename. Unsaved and untouched
 defaults are italic; overridden defaults and user files are upright. Tooltips—not icons or colors—
@@ -197,7 +198,8 @@ await loft.room.go("garden") # wait for a finite action to finish
 ```
 
 Queries return ordinary Python values. Actions start when called and may be awaited; failures raise
-`loft.LoftError`. Use `None`, not `"auto"`, to restore automatic environment control. `help()` and
+`loft.LoftError`; availability failures expose `.reason` and an optional `.remedy`. Use `None`, not
+`"auto"`, to restore automatic environment control. `help()` and
 `help(loft.weather)` browse Loft; normal Python help still works, for example `help(str)`.
 
 ### Driving

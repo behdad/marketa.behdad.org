@@ -361,7 +361,13 @@ as `loft.api.info()` are installed and documented by the same namespace builder.
 Its groups, namespaces, and capability rows use one fixed code-unit comparator, keeping JavaScript
 and Python help identical across browser locales.
 Legacy console prose remains available only through direct string lookup, such as `help("dance")`.
-`capabilities()` remains the complete structured machine discovery surface.
+`capabilities()` remains the complete structured machine discovery surface. Every row carries both
+the compatibility `available` boolean and an `availability` object. An unavailable row or
+`describe(id, args)` result includes the exact current `reason` and only includes a structured
+`remedy: {id, args}` when that one typed action genuinely clears the gate. `NOT_AVAILABLE` and
+preview-isolation failure envelopes carry the same object; Python exposes it through
+`LoftError.availability`, `.reason`, and `.remedy`. Typed leaf help renders the current reason and
+remedy locally.
 
 Typed availability describes runtime safety, not story permission. Scripts may navigate to any of
 the ten rooms and open the Entrance car or start Road Trip before those surfaces are unlocked by the

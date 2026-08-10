@@ -73608,7 +73608,11 @@ setOfficeProgress("pc", false);
       Object.keys(extra || {}).forEach(function (key) { out[key] = copy(extra[key]); });
       return out;
     }
-    function fail(code, message) { return result(false, "failed", { code: code, message: message }); }
+    function fail(code, message, extra) {
+      var detail = { code: code, message: message };
+      Object.keys(extra || {}).forEach(function (key) { detail[key] = extra[key]; });
+      return result(false, "failed", detail);
+    }
     function validate(def, args) {
       args = args == null ? {} : args;
       if (!args || typeof args !== "object" || Array.isArray(args)) return { error: fail("INVALID_ARGUMENT", "Arguments must be an object.") };
@@ -73632,8 +73636,21 @@ setOfficeProgress("pc", false);
       return { value: clean };
     }
     function available(def, args) { try { return !def.available || !!def.available(args || {}); } catch (_error) { return false; } }
-    function manifestAvailable(def) {
-      if (!def.available || available(def, {})) return true;
+    function availability(def, args) {
+      var detail = { available: available(def, args) };
+      if (detail.available || !def.unavailable) return detail;
+      var metadata;
+      try { metadata = typeof def.unavailable === "function" ? def.unavailable(args || {}) : def.unavailable; }
+      catch (_error) { metadata = null; }
+      if (metadata && metadata.reason) detail.reason = String(metadata.reason);
+      if (metadata && metadata.remedy && metadata.remedy.id) detail.remedy = {
+        id: String(metadata.remedy.id), args: copy(metadata.remedy.args || {})
+      };
+      return detail;
+    }
+    function manifestAvailability(def) {
+      var first = availability(def, {}), fallback = first.reason ? first : null;
+      if (!def.available || first.available) return first;
       var schema = def.args || {}, keys = Object.keys(schema), base = {};
       keys.forEach(function (key) {
         var rule = schema[key];
@@ -73643,15 +73660,19 @@ setOfficeProgress("pc", false);
         else if (rule.type === "integer" || rule.type === "number") base[key] = rule.min == null ? 0 : rule.min;
         else if (rule.type === "string") base[key] = "x";
       });
-      if (available(def, base)) return true;
+      var baseDetail = availability(def, base);
+      if (baseDetail.available) return baseDetail;
+      if (!fallback && baseDetail.reason) fallback = baseDetail;
       for (var i = 0; i < keys.length; i++) {
         var key = keys[i], rule = schema[key], values = rule.enum || (rule.type === "boolean" ? [true, false] : []);
         for (var j = 0; j < values.length; j++) {
           var probe = Object.assign({}, base); probe[key] = values[j];
-          if (available(def, probe)) return true;
+          var probeDetail = availability(def, probe);
+          if (probeDetail.available) return probeDetail;
+          if (!fallback && probeDetail.reason) fallback = probeDetail;
         }
       }
-      return false;
+      return fallback || { available: false };
     }
     function register(def) {
       if (!def || !/^[a-z][a-z0-9_.-]+$/.test(def.id || "") || (def.kind !== "query" && def.kind !== "action") || typeof def.run !== "function") throw new Error("invalid loft capability");
@@ -73674,11 +73695,12 @@ setOfficeProgress("pc", false);
       var aliases = [];
       if (def.id.indexOf("garden.") === 0) aliases.push("party." + def.id.slice(7));
       if (def.id.indexOf("kitchen.") === 0) aliases.push("bar." + def.id.slice(8));
+      var availabilityDetail = manifestAvailability(def);
       return { id: def.id, group: capabilityGroup(def), kind: def.kind,
         risk: def.risk || "read", description: description, args: args,
         argOrder: Object.keys(def.args || {}), completion: def.completion || "instant",
         returns: { type: "envelope", value: "json", asynchronous: def.kind === "action" },
-        aliases: aliases, available: manifestAvailable(def) };
+        aliases: aliases, available: availabilityDetail.available, availability: availabilityDetail };
     }
     function recordChange(id, args, source) {
       var action = activeAction;
@@ -73700,7 +73722,7 @@ setOfficeProgress("pc", false);
       capabilities: function (options) {
         options = options || {};
         return Object.keys(definitions).sort().map(function (id) { return definitions[id]; }).filter(function (def) {
-          return (!options.kind || def.kind === options.kind) && (!options.available || manifestAvailable(def));
+          return (!options.kind || def.kind === options.kind) && (!options.available || manifestAvailability(def).available);
         }).map(manifest);
       },
       groups: function () {
@@ -73717,14 +73739,16 @@ setOfficeProgress("pc", false);
         var def = definitions[id];
         if (!def) return fail("UNKNOWN_CAPABILITY", "Unknown capability.");
         var checked = args === undefined ? { value: {} } : validate(def, args); if (checked.error) return checked.error;
-        var info = manifest(def); info.available = available(def, checked.value); info.args_checked = copy(checked.value);
+        var info = manifest(def), detail = availability(def, checked.value);
+        info.available = detail.available; info.availability = detail; info.args_checked = copy(checked.value);
         return result(true, "completed", { changed: false, value: info });
       },
       query: function (id, args) {
         var def = definitions[id];
         if (!def || def.kind !== "query") return fail("UNKNOWN_CAPABILITY", "Unknown query.");
         var checked = validate(def, args); if (checked.error) return checked.error;
-        if (!available(def, checked.value)) return fail("NOT_AVAILABLE", "Query is not currently available.");
+        var detail = availability(def, checked.value);
+        if (!detail.available) return fail("NOT_AVAILABLE", detail.reason || "Query is not currently available.", { availability: detail });
         try { return result(true, "completed", { changed: false, value: def.run(checked.value) }); }
         catch (error) { return fail("FAILED", String(error && error.message || error)); }
       },
@@ -73732,9 +73756,12 @@ setOfficeProgress("pc", false);
         var def = definitions[id];
         if (!def || def.kind !== "action") return Promise.resolve(fail("UNKNOWN_CAPABILITY", "Unknown action."));
         var checked = validate(def, args); if (checked.error) return Promise.resolve(checked.error);
-        if (!available(def, checked.value)) return Promise.resolve(fail("NOT_AVAILABLE", "Action is not available in the current game state."));
+        var detail = availability(def, checked.value);
+        if (!detail.available) return Promise.resolve(fail("NOT_AVAILABLE", detail.reason || "Action is not available in the current game state.", { availability: detail }));
         if (window.__loftSessionPreviewActive && (def.risk === "external" || (def.risk === "destructive" && id !== "game.reset"))) {
-          return Promise.resolve(fail("PREVIEW_ISOLATION", "That action is unavailable inside a preview transaction."));
+          detail = { available: false, reason: "External and destructive actions are blocked inside a preview transaction." };
+          if (typeof window.__loftPreviewEnd === "function") detail.remedy = { id: "session.preview.end", args: { disposition: "restore" } };
+          return Promise.resolve(fail("PREVIEW_ISOLATION", detail.reason, { availability: detail }));
         }
         options = options || {};
         var value, previousAction = activeAction;
@@ -73802,6 +73829,9 @@ setOfficeProgress("pc", false);
       return !!(window.__firstDanceOn || window.__slowDanceOn || window.__toastsOn || window.__groupPhotoOn ||
         window.__sparklersOn || window.__cakeOn || window.__bouquetOn || window.__chairLiftOn);
     }
+    function partySetReady() {
+      return typeof window.__setPartyMode === "function" || !!(window.party && typeof window.party.set === "function");
+    }
     function phoneState() { return window.__chatPhoneState ? window.__chatPhoneState() : { open: false, call: null }; }
     function callBusy() {
       var phone = phoneState(), laptop = document.getElementById("office-laptop"), monitor = document.getElementById("office-monitor");
@@ -73809,11 +73839,24 @@ setOfficeProgress("pc", false);
         (laptop && (laptop.classList.contains("calling") || laptop.classList.contains("connecting") || laptop.classList.contains("connected"))) ||
         (monitor && monitor.classList.contains("show-family")));
     }
+    function callHangupReady() {
+      return typeof window.__hideCallRing === "function" && typeof window.__hangupPhoneCall === "function" &&
+        typeof window.__endLaptopCall === "function" && typeof window.__closeMonitorFamily === "function";
+    }
+    function videoCallReady(contact) {
+      return contact === "tehran" || contact === "california" ? typeof window.__openMonitorApp === "function" : typeof window.__laptopCall === "function";
+    }
     window.__loftCallBusy = callBusy;
     function minigameRunning() {
       var arcade = window.__arcadeState ? window.__arcadeState() : null;
       var flair = window.__flairState ? window.__flairState() : null;
       return !!((arcade && arcade.active) || (flair && flair.active));
+    }
+    function minigameStopReady() {
+      var arcade = window.__arcadeState ? window.__arcadeState() : null;
+      var flair = window.__flairState ? window.__flairState() : null;
+      return !!(arcade && arcade.active && typeof window.__arcadeStop === "function") ||
+        !!(flair && flair.active && typeof window.__flairStop === "function");
     }
     function bartenderAvailable() {
       return currentRoom() === "kitchen" && !minigameRunning() && !(window.__ambientMaking && window.__ambientMaking()) &&
@@ -73840,6 +73883,20 @@ setOfficeProgress("pc", false);
       return null;
     }
     function currentRoom() { return activeLowerRoom() || window.currentStageName || null; }
+    function blocked(reason, id, args) {
+      var detail = { reason: reason };
+      if (id) detail.remedy = { id: id, args: args || {} };
+      return detail;
+    }
+    function blockedBy(reasons, remedy) {
+      reasons = reasons.filter(function (reason) { return !!reason; });
+      return blocked(reasons.join(" "), reasons.length === 1 && remedy ? remedy.id : null, remedy && remedy.args);
+    }
+    function staticBlocked(reason, id, args) { return function () { return blocked(reason, id, args); }; }
+    function roomBlocked(room) {
+      var labels = { bathroom: "Bathroom", bedroom: "Bedroom", cinema: "Cinema", cuddly: "Cuddly room", dungeon: "Dungeon", garden: "Garden", kitchen: "Kitchen", office: "Office", balcony: "Balcony", entrance: "Entrance" };
+      return staticBlocked("The " + labels[room] + " is not open.", "room.go", { room: room });
+    }
     function lowerRoomOpen(name) {
       var owner = UPPER_FOR_LOWER[name];
       if (!owner) return false;
@@ -74034,7 +74091,7 @@ setOfficeProgress("pc", false);
       register({ id: id + ".status", group: group, kind: "query", description: options.description || "Current on/off state.",
         run: function () { var on = !!read(); return options.snapshot ? options.snapshot(on) : { on: on }; } });
       register({ id: id + ".set", group: group, kind: "action", risk: options.risk || "ambient",
-        args: { on: { type: "boolean", required: true } }, available: options.available,
+        args: { on: { type: "boolean", required: true } }, available: options.available, unavailable: options.unavailable,
         run: function (args) { var before = !!read(); write(args.on); var after = !!read(); return { changed: before !== after, on: after }; } });
     }
     function registerOverride(id, group, name, options) {
@@ -74272,13 +74329,13 @@ setOfficeProgress("pc", false);
     register({ id: "garden.instrument.play", group: "Garden / Party", kind: "action", risk: "ambient",
       description: "Play the selected physical instrument while the Garden is open.",
       args: { instrument: { type: "string", enum: ["guitar", "ukulele"], required: true } },
-      available: function () { return currentRoom() === "garden"; }, run: function (args) {
+      available: function () { return currentRoom() === "garden"; }, unavailable: roomBlocked("garden"), run: function (args) {
         var fn = window[args.instrument]; if (typeof fn !== "function") throw new Error("The instrument is not ready.");
         return { instrument: args.instrument, result: fn() };
       } });
     register({ id: "cuddly.octi.squeeze", group: "Cuddly", kind: "action", risk: "ambient",
       description: "Squeeze Octi while the Cuddly room is open.",
-      available: function () { return currentRoom() === "cuddly"; }, run: function () {
+      available: function () { return currentRoom() === "cuddly"; }, unavailable: roomBlocked("cuddly"), run: function () {
       if (typeof window.octi !== "function") throw new Error("Octi is not ready.");
       return { result: window.octi() };
     } });
@@ -74298,51 +74355,53 @@ setOfficeProgress("pc", false);
       description: "Invite a Cuddly visitor while that room is open, or send only their text from anywhere.",
       args: { visitor: { type: "string", enum: ["ali", "spencer", "alireza", "bahareh", "ayushi"], required: true },
         mode: { type: "string", enum: ["visit", "text"] } },
-      available: function (args) { return args.mode === "text" || currentRoom() === "cuddly"; }, run: function (args) {
+      available: function (args) { return args.mode === "text" || currentRoom() === "cuddly"; }, unavailable: roomBlocked("cuddly"), run: function (args) {
         if (typeof window.visitors !== "function") throw new Error("Visitors are not ready.");
         return { visitor: args.visitor, mode: args.mode || "visit", result: window.visitors(args.visitor, args.mode === "text" ? "text" : undefined) };
       } });
     register({ id: "bathroom.fixture.activate", group: "Bathroom", kind: "action", risk: "ambient",
       args: { fixture: { type: "string", enum: ["sink", "mirror", "towel", "stool", "scale", "toilet", "paper", "book", "spare-paper", "espresso", "toothbrushes", "comb", "soap", "cabinet", "tub-fill", "tub-drain"], required: true } },
-      available: function () { return currentRoom() === "bathroom"; }, run: function (args) {
+      available: function () { return currentRoom() === "bathroom"; }, unavailable: roomBlocked("bathroom"), run: function (args) {
         if (!window.__activateBathroomProp) throw new Error("The bathroom controls are not ready.");
         return { fixture: args.fixture, activated: !!window.__activateBathroomProp(args.fixture) };
       } });
-    register({ id: "dungeon.game.start", group: "Dungeon", kind: "action", risk: "scene", available: function () { return currentRoom() === "dungeon"; }, run: function () {
+    register({ id: "dungeon.game.start", group: "Dungeon", kind: "action", risk: "scene", available: function () { return currentRoom() === "dungeon"; }, unavailable: roomBlocked("dungeon"), run: function () {
       return { started: !!(window.__activateGardenPrince && window.__activateGardenPrince()) };
     } });
-    register({ id: "dungeon.game.dismiss", group: "Dungeon", kind: "action", risk: "ambient", available: function () { var s = window.__princeState && window.__princeState(); return !!(s && s.playing); }, run: function () {
+    register({ id: "dungeon.game.dismiss", group: "Dungeon", kind: "action", risk: "ambient", available: function () { var s = window.__princeState && window.__princeState(); return !!(s && s.playing); }, unavailable: staticBlocked("The Dungeon game is not running."), run: function () {
       return { dismissed: !!(window.__dismissPrinceBasementGame && window.__dismissPrinceBasementGame()) };
     } });
     register({ id: "cinema.projector.set", group: "Cinema", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { return currentRoom() === "cinema"; }, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function () { return currentRoom() === "cinema"; }, unavailable: roomBlocked("cinema"), run: function (args) {
         var before = window.__cinemaRoomState ? !!window.__cinemaRoomState().powered : false;
         if (before !== args.on && window.__cinemaProjectorToggle) window.__cinemaProjectorToggle();
         var after = window.__cinemaRoomState ? !!window.__cinemaRoomState().powered : false;
         return { changed: before !== after, on: after };
       } });
     register({ id: "cinema.playback.set", group: "Cinema", kind: "action", risk: "ambient",
-      args: { playing: { type: "boolean", required: true } }, available: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(); return !!(s && s.open && s.video); }, run: function (args) {
+      args: { playing: { type: "boolean", required: true } }, available: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(); return !!(s && s.open && s.video); },
+      unavailable: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(), room = !!(s && s.open), video = !!(s && s.video);
+        return blockedBy([!room && "The Cinema is not open.", !video && "No Cinema film is loaded."], null); }, run: function (args) {
         var before = !!window.__cinemaRoomState().playing;
         if (before !== args.playing && window.__cinemaProjectorPlayPause) window.__cinemaProjectorPlayPause();
         var after = !!window.__cinemaRoomState().playing;
         return { changed: before !== after, playing: after };
       } });
-    register({ id: "cinema.film.next", group: "Cinema", kind: "action", risk: "ambient", available: function () { return currentRoom() === "cinema"; }, run: function () {
+    register({ id: "cinema.film.next", group: "Cinema", kind: "action", risk: "ambient", available: function () { return currentRoom() === "cinema"; }, unavailable: roomBlocked("cinema"), run: function () {
       return { advanced: !!(window.__cinemaProjectorNext && window.__cinemaProjectorNext()) };
     } });
-    register({ id: "cinema.sprinkler.start", group: "Cinema", kind: "action", risk: "ambient", available: function () { return currentRoom() === "cinema"; }, run: function () {
+    register({ id: "cinema.sprinkler.start", group: "Cinema", kind: "action", risk: "ambient", available: function () { return currentRoom() === "cinema"; }, unavailable: roomBlocked("cinema"), run: function () {
       return { started: !!(window.__cinemaSprinkler && window.__cinemaSprinkler()) };
     } });
     register({ id: "bedroom.prop.activate", group: "Bedroom", kind: "action", risk: "ambient",
       args: { prop: { type: "string", enum: ["sprinkler", "stained-glass", "gear-left", "gear-middle", "gear-right", "wardrobe", "bed", "left-table", "right-table", "left-lamp", "right-lamp"], required: true } },
-      available: function () { return currentRoom() === "bedroom"; }, run: function (args) {
+      available: function () { return currentRoom() === "bedroom"; }, unavailable: roomBlocked("bedroom"), run: function (args) {
         return { prop: args.prop, activated: !!(window.__activateBedroomProp && window.__activateBedroomProp("bedroom-" + args.prop)) };
       } });
-    register({ id: "bedroom.tic-tac-toe.start", group: "Bedroom", kind: "action", risk: "scene", available: function () { return currentRoom() === "bedroom"; }, run: function () {
+    register({ id: "bedroom.tic-tac-toe.start", group: "Bedroom", kind: "action", risk: "scene", available: function () { return currentRoom() === "bedroom"; }, unavailable: roomBlocked("bedroom"), run: function () {
       return { started: !!(window.__startBedroomTicTacToe && window.__startBedroomTicTacToe()) };
     } });
-    register({ id: "bedroom.tic-tac-toe.dismiss", group: "Bedroom", kind: "action", risk: "ambient", available: function () { var s = window.__bedroomTicTacToeState && window.__bedroomTicTacToeState(); return !!(s && s.phase !== "idle"); }, run: function () {
+    register({ id: "bedroom.tic-tac-toe.dismiss", group: "Bedroom", kind: "action", risk: "ambient", available: function () { var s = window.__bedroomTicTacToeState && window.__bedroomTicTacToeState(); return !!(s && s.phase !== "idle"); }, unavailable: staticBlocked("Tic-tac-toe is not running."), run: function () {
       return { dismissed: !!(window.__dismissBedroomTicTacToe && window.__dismissBedroomTicTacToe()) };
     } });
     register({ id: "car.status", group: "Entrance / Car", kind: "query", run: function () {
@@ -74363,7 +74422,8 @@ setOfficeProgress("pc", false);
         return { changed: before !== after, open: after };
       } });
     register({ id: "car.engine.set", group: "Entrance / Car", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); }, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
+      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
         var before = !!(entranceState().car || {}).engineOn;
         if (before !== args.on && window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
         var after = !!(entranceState().car || {}).engineOn;
@@ -74371,7 +74431,8 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "car.transmission.set", group: "Entrance / Car", kind: "action", risk: "ambient",
       args: { mode: { type: "string", enum: ["auto", "manual"], required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); }, run: function (args) {
+      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
+      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
         var before = entranceState().drive.transmission.mode;
         if (window.__entranceDriveTransmissionMode) window.__entranceDriveTransmissionMode(args.mode, true);
         var after = entranceState().drive.transmission.mode;
@@ -74379,7 +74440,12 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "car.range.set", group: "Entrance / Car", kind: "action", risk: "ambient",
       args: { range: { type: "string", enum: ["P", "R", "N", "D"], required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud && s.drive.transmission.mode === "auto"); }, run: function (args) {
+      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud && s.drive.transmission.mode === "auto"); },
+      unavailable: function () {
+        var s = entranceState(), dashboard = !!(s.open && s.drive && s.drive.hud), automatic = !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "auto");
+        return blockedBy([!dashboard && "The car dashboard is not open.", !automatic && "The automatic transmission is not selected."],
+          !dashboard ? { id: "car.dashboard.set", args: { open: true } } : { id: "car.transmission.set", args: { mode: "auto" } });
+      }, run: function (args) {
         var before = entranceState().drive.transmission.range;
         if (window.__entranceDriveRange) window.__entranceDriveRange(args.range);
         var after = entranceState().drive.transmission.range;
@@ -74387,7 +74453,12 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "car.gear.set", group: "Entrance / Car", kind: "action", risk: "ambient",
       args: { gear: { type: "integer", min: -1, max: 6, required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud && s.drive.transmission.mode === "manual"); }, run: function (args) {
+      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud && s.drive.transmission.mode === "manual"); },
+      unavailable: function () {
+        var s = entranceState(), dashboard = !!(s.open && s.drive && s.drive.hud), manual = !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "manual");
+        return blockedBy([!dashboard && "The car dashboard is not open.", !manual && "The manual transmission is not selected."],
+          !dashboard ? { id: "car.dashboard.set", args: { open: true } } : { id: "car.transmission.set", args: { mode: "manual" } });
+      }, run: function (args) {
         var before = entranceState().drive.gear;
         if (window.__entranceDriveShift) window.__entranceDriveShift(args.gear, true);
         var after = entranceState().drive.gear;
@@ -74396,14 +74467,16 @@ setOfficeProgress("pc", false);
     register({ id: "car.control.set", group: "Entrance / Car", kind: "action", risk: "ambient",
       args: { control: { type: "string", enum: ["throttle", "brake", "clutch", "steerLeft", "steerRight"], required: true },
         pressed: { type: "boolean", required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); }, run: function (args) {
+      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
+      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
         var before = !!entranceState().drive.holds[args.control];
         if (window.__entranceDriveControl) window.__entranceDriveControl(args.control, args.pressed);
         var after = !!entranceState().drive.holds[args.control];
         return { changed: before !== after, control: args.control, pressed: after };
       } });
     register({ id: "car.cruise.set", group: "Entrance / Car", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); }, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
+      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
         var before = !!entranceState().drive.cruise.active;
         if (window.__setEntrancePorscheCruiseActive) window.__setEntrancePorscheCruiseActive(args.on);
         var state = entranceState().drive.cruise;
@@ -74418,26 +74491,33 @@ setOfficeProgress("pc", false);
     }
     register({ id: "roadtrip.start", group: "Road Trip", kind: "action", risk: "scene",
       description: "Navigate to the car and start a fresh Calgary Road Trip independent of story progress.",
-      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; }, run: function () {
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; },
+      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiStart === "function", canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !ready && "The Road Trip controller is not ready."],
+        active && ready && canExit ? { id: "roadtrip.exit", args: {} } : null); }, run: function () {
         if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
         return { started: !!window.__entranceRoadtripApiStart("calgary"), roadtrip: roadtripState() };
       } });
     register({ id: "roadtrip.chooser.open", group: "Road Trip", kind: "action", risk: "ambient",
       description: "Navigate to the car and open the route chooser independent of story progress.",
-      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiOpenChooser === "function"; }, run: function () {
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiOpenChooser === "function"; },
+      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiOpenChooser === "function", canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !ready && "The Road Trip route chooser is not ready."],
+        active && ready && canExit ? { id: "roadtrip.exit", args: {} } : null); }, run: function () {
         if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
         return { opened: !!window.__entranceRoadtripApiOpenChooser(), roadtrip: roadtripState() };
       } });
     register({ id: "roadtrip.route.start", group: "Road Trip", kind: "action", risk: "scene",
       description: "Navigate to the car and start the selected route independent of story progress.",
       args: { route: { type: "string", enum: ["calgary", "banff", "abraham"], required: true } },
-      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; }, run: function (args) {
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; },
+      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiStart === "function", canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !ready && "The Road Trip controller is not ready."],
+        active && ready && canExit ? { id: "roadtrip.exit", args: {} } : null); }, run: function (args) {
         if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
         var started = !!window.__entranceRoadtripApiStart(args.route);
         return { started: started, route: roadtripState().route, requested: args.route };
       } });
     register({ id: "roadtrip.pause.set", group: "Road Trip", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { return !!roadtripState().active; }, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function () { return !!roadtripState().active; },
+      unavailable: staticBlocked("No Road Trip is active."), run: function (args) {
         var beforeState = window.__entranceRoadtripTransportState ? window.__entranceRoadtripTransportState() : roadtripState();
         var before = !!beforeState.paused;
         if (before !== args.on && window.__toggleEntranceRoadtripTransport) window.__toggleEntranceRoadtripTransport();
@@ -74446,70 +74526,96 @@ setOfficeProgress("pc", false);
         return { changed: before !== after, on: after };
       } });
     register({ id: "roadtrip.exit", group: "Road Trip", kind: "action", risk: "scene",
-      available: function () { return !!roadtripState().active; }, run: function () {
+      available: function () { return !!roadtripState().active; }, unavailable: staticBlocked("No Road Trip is active."), run: function () {
         var before = !!roadtripState().active;
         var exited = !!(window.__exitEntranceRoadtrip && window.__exitEntranceRoadtrip());
         return { changed: before !== !!roadtripState().active, exited: exited, roadtrip: roadtripState() };
       } });
     register({ id: "camping.fire.open", group: "Camping", kind: "action", risk: "ambient",
-      available: function () { var s = roadtripState(); return !!s.active && s.route === "camp"; }, run: function () {
+      available: function () { var s = roadtripState(); return !!s.active && s.route === "camp"; }, unavailable: function () {
+        var s = roadtripState(); return blocked(s.active ? "The active Road Trip is not at the campsite." : "Camping is not active.");
+      }, run: function () {
         return { opened: !!(window.__entranceRoadtripCampFireStart && window.__entranceRoadtripCampFireStart()), fire: campState().fire };
       } });
     register({ id: "camping.fire.place", group: "Camping", kind: "action", risk: "ambient",
       args: { item: { type: "string", enum: ["tinder", "twigs", "teepee", "stack"], required: true } },
-      available: function () { var s = campState(); return !!(s.active && s.fire.open); }, run: function (args) {
+      available: function () { var s = campState(); return !!(s.active && s.fire.open); }, unavailable: function () {
+        var s = campState(); return s.active ? blocked("The campfire builder is not open.", "camping.fire.open") : blocked("Camping is not active.");
+      }, run: function (args) {
         var result = window.__entranceRoadtripCampFirePlace && window.__entranceRoadtripCampFirePlace(args.item);
         return { placed: !!result, item: args.item, fire: campState().fire };
       } });
     register({ id: "camping.fire.light", group: "Camping", kind: "action", risk: "scene",
-      available: function () { var s = campState(); return !!(s.active && s.fire.open); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.fire.open); }, unavailable: function () {
+        var s = campState(); return s.active ? blocked("The campfire builder is not open.", "camping.fire.open") : blocked("Camping is not active.");
+      }, run: function () {
         return { lit: !!(window.__entranceRoadtripCampFireLight && window.__entranceRoadtripCampFireLight(true)), fire: campState().fire };
       } });
     register({ id: "camping.fire.replay", group: "Camping", kind: "action", risk: "ambient",
-      available: function () { var s = campState(); return !!(s.active && s.fire.complete); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.fire.complete); }, unavailable: function () {
+        return blocked(campState().active ? "The campfire sequence is not complete." : "Camping is not active.");
+      }, run: function () {
         return { replayed: !!(window.__entranceRoadtripCampFireReplay && window.__entranceRoadtripCampFireReplay()), fire: campState().fire };
       } });
     register({ id: "camping.stew.open", group: "Camping", kind: "action", risk: "ambient",
-      available: function () { var s = campState(); return !!(s.active && s.fire.complete && s.fire.lit); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.fire.complete && s.fire.lit); }, unavailable: function () {
+        var s = campState(); return blocked(!s.active ? "Camping is not active." : !s.fire.complete ? "The campfire sequence is not complete." : "The campfire is not lit.");
+      }, run: function () {
         return { opened: !!(window.__entranceRoadtripCampStewOpen && window.__entranceRoadtripCampStewOpen()), stew: campState().stew };
       } });
     register({ id: "camping.stew.select", group: "Camping", kind: "action", risk: "ambient",
       args: { item: { type: "string", enum: ["beef", "lamb", "pork", "chicken", "tofu", "rice", "potatoes", "beans", "pasta", "barley", "onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "tomato", "curry", "salt", "pepper", "chilies", "coriander"], required: true } },
-      available: function () { var s = campState(); return !!(s.active && s.stew.open && s.stew.status === "assembling"); }, run: function (args) {
+      available: function () { var s = campState(); return !!(s.active && s.stew.open && s.stew.status === "assembling"); }, unavailable: function () {
+        var s = campState(); return blocked(!s.active ? "Camping is not active." : !s.stew.open ? "The camp stew is not open." : "The camp stew is not being assembled.");
+      }, run: function (args) {
         var result = window.__entranceRoadtripCampStewSelect && window.__entranceRoadtripCampStewSelect(args.item);
         return { selected: !!result, item: args.item, stew: campState().stew };
       } });
     register({ id: "camping.stew.cook", group: "Camping", kind: "action", risk: "scene",
-      available: function () { var s = campState(); return !!(s.active && s.stew.open && s.stew.status === "assembling"); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.stew.open && s.stew.status === "assembling"); }, unavailable: function () {
+        var s = campState(); return blocked(!s.active ? "Camping is not active." : !s.stew.open ? "The camp stew is not open." : "The camp stew is not ready to cook.");
+      }, run: function () {
         var result = window.__entranceRoadtripCampStewCook && window.__entranceRoadtripCampStewCook();
         return { result: result, stew: campState().stew };
       } });
     register({ id: "camping.stew.serve", group: "Camping", kind: "action", risk: "scene",
-      available: function () { var s = campState(); return !!(s.active && s.stew.status === "cooking"); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.stew.status === "cooking"); }, unavailable: function () {
+        return blocked(campState().active ? "The camp stew is not cooking." : "Camping is not active.");
+      }, run: function () {
         var result = window.__entranceRoadtripCampStewServe && window.__entranceRoadtripCampStewServe();
         return { result: result, stew: campState().stew };
       } });
     register({ id: "camping.stargazing.open", group: "Camping", kind: "action", risk: "scene",
-      available: function () { var s = campState(); return !!(s.active && s.stew.status === "served"); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.stew.status === "served"); }, unavailable: function () {
+        return blocked(campState().active ? "The camp stew has not been served." : "Camping is not active.");
+      }, run: function () {
         return { opened: !!(window.__entranceRoadtripCampStargazingOpen && window.__entranceRoadtripCampStargazingOpen()), stargazing: campState().stargazing };
       } });
     register({ id: "camping.stargazing.trace", group: "Camping", kind: "action", risk: "ambient",
       args: { constellation: { type: "string", enum: ["cassiopeia", "ursa-major", "ursa-minor"], required: true },
         star: { type: "integer", min: 0, max: 6, required: true } },
-      available: function () { var s = campState(); return !!(s.active && s.stargazing.open); }, run: function (args) {
+      available: function () { var s = campState(); return !!(s.active && s.stargazing.open); }, unavailable: function () {
+        return blocked(campState().active ? "Stargazing is not open." : "Camping is not active.");
+      }, run: function (args) {
         var result = window.__entranceRoadtripCampStargazingTrace && window.__entranceRoadtripCampStargazingTrace(args.constellation, args.star);
         return { traced: !!result, constellation: args.constellation, star: args.star, stargazing: campState().stargazing };
       } });
     register({ id: "camping.stargazing.close", group: "Camping", kind: "action", risk: "ambient",
-      available: function () { var s = campState(); return !!(s.active && s.stargazing.open); }, run: function () {
+      available: function () { var s = campState(); return !!(s.active && s.stargazing.open); }, unavailable: function () {
+        return blocked(campState().active ? "Stargazing is not open." : "Camping is not active.");
+      }, run: function () {
         return { closed: !!(window.__entranceRoadtripCampStargazingClose && window.__entranceRoadtripCampStargazingClose()), stargazing: campState().stargazing };
       } });
     register({ id: "camping.finale.start", group: "Camping", kind: "action", risk: "scene",
-      available: function () { return campState().finale.phase === "prompt"; }, run: function () {
+      available: function () { return campState().finale.phase === "prompt"; }, unavailable: function () {
+        return blocked("The Camping finale is not at its start prompt (current phase: " + campState().finale.phase + ").");
+      }, run: function () {
         return { started: !!(window.__entranceRoadtripCampSleepStart && window.__entranceRoadtripCampSleepStart()), finale: campState().finale };
       } });
     register({ id: "camping.finale.advance", group: "Camping", kind: "action", risk: "scene",
-      available: function () { var phase = campState().finale.phase; return ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].indexOf(phase) >= 0; }, run: function () {
+      available: function () { var phase = campState().finale.phase; return ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].indexOf(phase) >= 0; }, unavailable: function () {
+        return blocked("The Camping finale cannot advance from its current phase (" + campState().finale.phase + ").");
+      }, run: function () {
         return { finale: window.__entranceRoadtripCampSleepStep ? window.__entranceRoadtripCampSleepStep() : campState().finale };
       } });
     register({ id: "app.open", kind: "action", risk: "ambient", args: { app: { type: "string", enum: ["chrome", "video", "life", "doom", "console", "python", "linux", "chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "code"].concat(PHONE_APPS.filter(function (app) { return ["messages", "album"].indexOf(app) < 0; })), required: true } }, run: function (args) {
@@ -74539,12 +74645,12 @@ setOfficeProgress("pc", false);
       syncAppState("opened", "ui");
       return { changed: beforeState !== JSON.stringify(currentAppState()), app: args.app, device: "monitor", result: monitorResult };
     } });
-    register({ id: "message.send", kind: "action", risk: "external", description: "Send a bounded message as the visitor to the wedding thread.", args: { text: { type: "string", required: true, minLength: 1, maxLength: 500 } }, available: function () { return typeof window.__sendCrewMessage === "function"; }, run: function (args) {
+    register({ id: "message.send", kind: "action", risk: "external", description: "Send a bounded message as the visitor to the wedding thread.", args: { text: { type: "string", required: true, minLength: 1, maxLength: 500 } }, available: function () { return typeof window.__sendCrewMessage === "function"; }, unavailable: staticBlocked("The wedding-thread message controller is not ready."), run: function (args) {
       var text = args.text.trim();
       if (!text || !window.__sendCrewMessage(text)) throw new Error("The message could not be sent.");
       return { accepted: true, text: text };
     } });
-    register({ id: "volume.set", kind: "action", risk: "ambient", description: "Set master audio volume from zero to one.", args: { level: { type: "number", required: true, min: 0, max: 1 } }, available: function () { return typeof window.volume === "function"; }, run: function (args) {
+    register({ id: "volume.set", kind: "action", risk: "ambient", description: "Set master audio volume from zero to one.", args: { level: { type: "number", required: true, min: 0, max: 1 } }, available: function () { return typeof window.volume === "function"; }, unavailable: staticBlocked("The volume controller is not ready."), run: function (args) {
       var before = typeof window.__audioMaster === "number" ? window.__audioMaster : 1;
       window.volume(args.level);
       var after = typeof window.__audioMaster === "number" ? window.__audioMaster : args.level;
@@ -74556,14 +74662,16 @@ setOfficeProgress("pc", false);
       run: function (args) { return { open: window.roster ? window.roster.set(args.open) : false }; } });
     register({ id: "music.play", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (!before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
     register({ id: "music.pause", kind: "action", risk: "ambient", run: function () { var before = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); if (before && window.__phoneMusicToggle) window.__phoneMusicToggle(); var after = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying()); return { changed: before !== after, playing: after }; } });
-    register({ id: "video.pause", kind: "action", risk: "ambient", available: function () { return !!(window.__videoPlaying && window.__videoPlaying()); }, run: function () {
+    register({ id: "video.pause", kind: "action", risk: "ambient", available: function () { return !!(window.__videoPlaying && window.__videoPlaying()); }, unavailable: staticBlocked("No video is playing."), run: function () {
       var changed = !!(window.__pauseMonitorVideo && window.__pauseMonitorVideo("ui"));
       return { changed: changed, playing: !!(window.__videoPlaying && window.__videoPlaying()) };
     } });
-    register({ id: "music.skip", kind: "action", risk: "ambient", available: function () { return !window.__gardenPartyOn; }, run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
+    register({ id: "music.skip", kind: "action", risk: "ambient", available: function () { return !window.__gardenPartyOn; }, unavailable: staticBlocked("The Garden Party owns music playback."), run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.previous", kind: "action", risk: "ambient", run: function () { if (window.__phoneMusicSkip) window.__phoneMusicSkip(-1); return { track: window.__phoneMusicId ? window.__phoneMusicId() : null }; } });
     register({ id: "music.track.play", kind: "action", risk: "ambient", args: { track: { type: "string", enum: Object.keys(TRACKS), required: true } }, run: function (args) { if (window.__playSongAt) window.__playSongAt(TRACKS[args.track]); return { track: args.track }; } });
-    register({ id: "garden.music.next", group: "Garden / Party", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn; }, run: function () {
+    register({ id: "garden.music.next", group: "Garden / Party", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn; }, unavailable: function () {
+      return blocked("The Garden Party is not running.", partySetReady() ? "garden.set" : null, { on: true });
+    }, run: function () {
       var changed = !!(window.__nextPartyDance && window.__nextPartyDance());
       return { changed: changed, dance: window.__partyDance || null };
     } });
@@ -74574,7 +74682,9 @@ setOfficeProgress("pc", false);
       var after = !!window.__gardenPartyOn;
       return { changed: before !== after, on: after };
     } });
-    register({ id: "garden.extend", group: "Garden / Party", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn; }, run: function () {
+    register({ id: "garden.extend", group: "Garden / Party", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn; }, unavailable: function () {
+      return blocked("The Garden Party is not running.", partySetReady() ? "garden.set" : null, { on: true });
+    }, run: function () {
       var extended = !!(window.__extendPartyLifecycle && window.__extendPartyLifecycle());
       return { changed: extended, extended: extended, on: !!window.__gardenPartyOn };
     } });
@@ -74593,7 +74703,11 @@ setOfficeProgress("pc", false);
       if (window.__setDayNight) window.__setDayNight(false);
       return { room: "kitchen", daylight: true, party: false };
     } });
-    register({ id: "photo.take", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn && typeof window.__photogSnap === "function"; }, run: function () {
+    register({ id: "photo.take", kind: "action", risk: "ambient", available: function () { return !!window.__gardenPartyOn && typeof window.__photogSnap === "function"; }, unavailable: function () {
+      var party = !!window.__gardenPartyOn, ready = typeof window.__photogSnap === "function";
+      return blockedBy([!party && "The Garden Party is not running.", !ready && "The photographer is not ready."],
+        !party && ready && partySetReady() ? { id: "garden.set", args: { on: true } } : null);
+    }, run: function () {
       var room = window.currentStageName || "garden";
       var rec = window.__photogSnap(room, false, true);
       return { changed: !!rec, taken: !!rec, room: room, photo_id: rec && rec.id || null };
@@ -74614,6 +74728,9 @@ setOfficeProgress("pc", false);
     register({ id: "trip.next", kind: "action", risk: "scene", completion: "finite",
       description: "Start the next psychedelic magic-box trip without changing rooms.", available: function () {
       return !window.__tripActive && document.visibilityState !== "hidden" && typeof window.__nextTrip === "function";
+    }, unavailable: function () {
+      return blockedBy([window.__tripActive && "A magic-box trip is already active.", document.visibilityState === "hidden" && "Magic-box trips cannot start while the page is hidden.",
+        typeof window.__nextTrip !== "function" && "The magic-box trip controller is not ready."], null);
     }, run: function () {
       window.__nextTrip();
       var state = window.__tripState ? window.__tripState() : { active: !!window.__tripActive, variant: null };
@@ -74629,6 +74746,10 @@ setOfficeProgress("pc", false);
       description: "Start a named psychedelic magic-box trip without changing rooms.", args: { variant: { type: "string", enum: TRIPS, required: true } }, available: function (args) {
       if (window.__tripActive || document.visibilityState === "hidden") return false;
       return !window.__gardenPartyOn || (args.variant !== "ketamine" && args.variant !== "iboga");
+    }, unavailable: function (args) {
+      var partyBlocks = window.__gardenPartyOn && (args.variant === "ketamine" || args.variant === "iboga");
+      return blockedBy([window.__tripActive && "A magic-box trip is already active.", document.visibilityState === "hidden" && "Magic-box trips cannot start while the page is hidden.",
+        partyBlocks && args.variant + " is unavailable while the Garden Party is running."], null);
     }, run: function (args) {
       if (window.__gardenPartyOn && (args.variant === "ketamine" || args.variant === "iboga")) throw new Error("That trip is unavailable during the party.");
       if (typeof window.__startTrip !== "function") throw new Error("The trip controls are not ready.");
@@ -74643,7 +74764,11 @@ setOfficeProgress("pc", false);
     register({ id: "garden.dance.request", group: "Garden / Party", kind: "action", risk: "ambient",
       description: "Request a Party dance; the room-owned slow dance also requires the Garden to be open.",
       args: { style: { type: "string", enum: DANCES, required: true } },
-      available: function (args) { return !!window.__gardenPartyOn && (args.style !== "slow" || currentRoom() === "garden"); }, run: function (args) {
+      available: function (args) { return !!window.__gardenPartyOn && (args.style !== "slow" || currentRoom() === "garden"); }, unavailable: function (args) {
+        var party = !!window.__gardenPartyOn, room = currentRoom() === "garden", slow = args.style === "slow";
+        return blockedBy([!party && "The Garden Party is not running.", slow && !room && "The Garden is not open."],
+          !party && partySetReady() ? { id: "garden.set", args: { on: true } } : party ? { id: "room.go", args: { room: "garden" } } : null);
+      }, run: function (args) {
       if (args.style === "slow") { if (window.slowdance) window.slowdance(); }
       else if (args.style === "fast") { if (window.__requestDance) window.__requestDance("techno"); }
       else if (window.__requestDance) window.__requestDance(args.style);
@@ -74652,7 +74777,11 @@ setOfficeProgress("pc", false);
     register({ id: "garden.dj.set", group: "Garden / Party", kind: "action", risk: "ambient",
       description: "Swap the DJ at the live Party booth while the Garden is open.",
       args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } },
-      available: function () { return !!window.__gardenPartyOn && currentRoom() === "garden"; }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
+      available: function () { return !!window.__gardenPartyOn && currentRoom() === "garden"; }, unavailable: function () {
+        var party = !!window.__gardenPartyOn, room = currentRoom() === "garden";
+        return blockedBy([!party && "The Garden Party is not running.", !room && "The Garden is not open."],
+          !party && partySetReady() ? { id: "garden.set", args: { on: true } } : party ? { id: "room.go", args: { room: "garden" } } : null);
+      }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
     register({ id: "cuddly.projector.set", group: "Cuddly", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"], required: true } }, run: function (args) { var before = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; if (window.__cuddlyProjector) window.__cuddlyProjector.set(args.mode); var after = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { changed: before !== after, mode: after }; } });
     register({ id: "weather.scene.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["clear", "rain", "snow", "thunderstorm", "overcast"], required: true } }, run: function (args) {
       var rain = args.mode === "rain" || args.mode === "thunderstorm", snow = args.mode === "snow", storm = args.mode === "thunderstorm", overcast = args.mode === "overcast";
@@ -74670,12 +74799,20 @@ setOfficeProgress("pc", false);
     register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene",
       description: "Start a finite Party moment while the Garden is open, independent of game phase.",
       args: { moment: { type: "string", enum: Object.keys(PARTY_MOMENTS), required: true } },
-      available: function () { return currentRoom() === "garden" && !anyPartyMoment(); }, run: function (args) {
+      available: function () { return currentRoom() === "garden" && !anyPartyMoment(); }, unavailable: function () {
+        var room = currentRoom() === "garden", busy = anyPartyMoment();
+        return blockedBy([!room && "The Garden is not open.", busy && "Another Garden Party moment is still running."],
+          !room && !busy ? { id: "room.go", args: { room: "garden" } } : null);
+      }, run: function (args) {
       var fn = window[PARTY_MOMENTS[args.moment]];
       if (typeof fn !== "function") throw new Error("Party moment is not ready.");
       return Promise.resolve(fn()).then(function () { return { moment: args.moment, completed: true }; });
     } });
-    register({ id: "call.incoming.trigger", kind: "action", risk: "scene", args: { caller: { type: "string", enum: ["madla", "prague"], required: true } }, available: function () { return !callBusy() && typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function"; }, run: function (args) {
+    register({ id: "call.incoming.trigger", kind: "action", risk: "scene", args: { caller: { type: "string", enum: ["madla", "prague"], required: true } }, available: function () { return !callBusy() && typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function"; }, unavailable: function () {
+      var busy = callBusy(), ready = typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function";
+      return blockedBy([busy && "Another call is active or ringing.", !ready && "The incoming-call controller is not ready."],
+        busy && ready && callHangupReady() ? { id: "call.hangup", args: {} } : null);
+    }, run: function (args) {
       // The phone close animation leaves its modal mounted for 220ms. Queue the ring after
       // that teardown; otherwise ringCall() correctly sees a busy phone and returns false.
       if (phoneState().open && window.__closePhoneModal) {
@@ -74700,8 +74837,12 @@ setOfficeProgress("pc", false);
     } });
     register({ id: "call.video.start", kind: "action", risk: "scene",
       description: "Start an Office video call while the Office is open, independent of story progress.",
-      args: { contact: { type: "string", enum: ["tehran", "california", "prague", "lubeck"], required: true } }, available: function () {
-      return currentRoom() === "office" && !callBusy() && (typeof window.__laptopCall === "function" || typeof window.__openMonitorApp === "function");
+      args: { contact: { type: "string", enum: ["tehran", "california", "prague", "lubeck"], required: true } }, available: function (args) {
+      return currentRoom() === "office" && !callBusy() && videoCallReady(args.contact);
+    }, unavailable: function (args) {
+      var room = currentRoom() === "office", busy = callBusy(), ready = videoCallReady(args.contact);
+      return blockedBy([!room && "The Office is not open.", busy && "Another call is active or ringing.", !ready && "The video-call controller is not ready."],
+        !room && !busy && ready ? { id: "room.go", args: { room: "office" } } : room && busy && ready && callHangupReady() ? { id: "call.hangup", args: {} } : null);
     }, run: function (args) {
       var live;
       if (args.contact === "tehran" || args.contact === "california") {
@@ -74716,7 +74857,7 @@ setOfficeProgress("pc", false);
         value: { contact: args.contact, completed: true }
       });
     } });
-    register({ id: "call.hangup", kind: "action", risk: "ambient", available: callBusy, run: function () {
+    register({ id: "call.hangup", kind: "action", risk: "ambient", available: callBusy, unavailable: staticBlocked("No call is active or ringing."), run: function () {
       var before = callBusy();
       if (document.querySelector(".call-ring.show") && window.__hideCallRing) window.__hideCallRing();
       if (phoneState().call && window.__hangupPhoneCall) window.__hangupPhoneCall();
@@ -74728,7 +74869,12 @@ setOfficeProgress("pc", false);
     } });
     register({ id: "kitchen.cocktail.make", group: "Kitchen / Bar", kind: "action", risk: "scene",
       description: "Have Pouria make a cocktail at the open Kitchen bar, independent of game phase.",
-      args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: bartenderAvailable, run: function (args) {
+      args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: bartenderAvailable, unavailable: function () {
+        var room = currentRoom() === "kitchen", minigame = minigameRunning(), serving = !!((window.__ambientMaking && window.__ambientMaking()) ||
+          (window.__userMixing && window.__userMixing()) || (window.__bartenderDragging && window.__bartenderDragging()));
+        return blockedBy([!room && "The Kitchen is not open.", minigame && "A minigame is running.", serving && "The Kitchen bar is already serving or mixing a drink."],
+          !room && !minigame && !serving ? { id: "room.go", args: { room: "kitchen" } } : room && minigame && !serving && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
+      }, run: function (args) {
       if (typeof window.__makeCocktail !== "function") throw new Error("The bar is not ready.");
       var message = window.__makeCocktail(COCKTAILS[args.drink], true);
       if (!(window.__ambientMaking && window.__ambientMaking())) throw new Error(String(message));
@@ -74739,7 +74885,12 @@ setOfficeProgress("pc", false);
     } });
     register({ id: "kitchen.mixer.start", group: "Kitchen / Bar", kind: "action", risk: "scene",
       description: "Run the hands-on mixer at the open Kitchen bar, independent of game phase.",
-      args: { recipe: { type: "string", enum: ["negroni", "yale"], required: true } }, available: bartenderAvailable, run: function (args) {
+      args: { recipe: { type: "string", enum: ["negroni", "yale"], required: true } }, available: bartenderAvailable, unavailable: function () {
+        var room = currentRoom() === "kitchen", minigame = minigameRunning(), serving = !!((window.__ambientMaking && window.__ambientMaking()) ||
+          (window.__userMixing && window.__userMixing()) || (window.__bartenderDragging && window.__bartenderDragging()));
+        return blockedBy([!room && "The Kitchen is not open.", minigame && "A minigame is running.", serving && "The Kitchen bar is already serving or mixing a drink."],
+          !room && !minigame && !serving ? { id: "room.go", args: { room: "kitchen" } } : room && minigame && !serving && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
+      }, run: function (args) {
       if (typeof window.mixer !== "function") throw new Error("The mixer is not ready.");
       return Promise.resolve(window.mixer(args.recipe)).then(function () {
         return { recipe: args.recipe, completed: true };
@@ -74752,6 +74903,14 @@ setOfficeProgress("pc", false);
       if (args.game === "flair-catch") return currentRoom() === "kitchen" && typeof window.__startFlairCatch === "function";
       if (args.game === "invaders") return currentRoom() === "office" && typeof window.__startArcade === "function";
       return typeof window.__startArcade === "function" || typeof window.__startFlairCatch === "function";
+    }, unavailable: function (args) {
+      var known = args.game === "invaders" || args.game === "flair-catch", roomName = args.game === "invaders" ? "office" : "kitchen";
+      var running = minigameRunning(), room = !known || currentRoom() === roomName;
+      var ready = args.game === "invaders" ? typeof window.__startArcade === "function" : args.game === "flair-catch" ? typeof window.__startFlairCatch === "function" : false;
+      return blockedBy([running && "A minigame is already running.", known && !room && "The " + (roomName === "office" ? "Office" : "Kitchen") + " is not open.",
+        known && !ready && "The " + (args.game === "invaders" ? "Invaders" : "Flair Catch") + " controller is not ready.",
+        !known && typeof window.__startArcade !== "function" && typeof window.__startFlairCatch !== "function" && "No minigame controller is ready."],
+        known && running && room && ready && minigameStopReady() ? { id: "minigame.stop", args: {} } : known && !running && !room && ready ? { id: "room.go", args: { room: roomName } } : null);
     }, run: function (args) {
       if (args.game === "invaders") {
         window.__startArcade();
@@ -74761,14 +74920,14 @@ setOfficeProgress("pc", false);
       }
       return { game: args.game, started: true };
     } });
-    register({ id: "minigame.stop", kind: "action", risk: "ambient", available: minigameRunning, run: function () {
+    register({ id: "minigame.stop", kind: "action", risk: "ambient", available: minigameRunning, unavailable: staticBlocked("No minigame is running."), run: function () {
       var before = minigameState(), game = before.active;
       if (game === "invaders" && window.__arcadeStop) window.__arcadeStop();
       else if (game === "flair-catch" && window.__flairStop) window.__flairStop();
       var after = minigameState();
       return { changed: before.active !== after.active, game: game, active: after.active };
     } });
-    register({ id: "album.remove", kind: "action", risk: "destructive", args: { id: { type: "integer", min: 1, required: true } }, available: function () { return typeof window.__albumRemove === "function"; }, run: function (args) {
+    register({ id: "album.remove", kind: "action", risk: "destructive", args: { id: { type: "integer", min: 1, required: true } }, available: function () { return typeof window.__albumRemove === "function"; }, unavailable: staticBlocked("The album controller is not ready."), run: function (args) {
       var removed = window.__albumRemove(args.id);
       return { changed: !!removed, removed: !!removed, id: args.id };
     } });
@@ -74777,6 +74936,8 @@ setOfficeProgress("pc", false);
       args: { activity: { type: "string", enum: ["kids-chase", "butterfly", "rainbow"], required: true } },
       available: function (args) {
         return currentRoom() === (args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony");
+      }, unavailable: function (args) {
+        return roomBlocked(args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony")();
       }, run: function (args) {
       var fn = args.activity === "kids-chase" ? window.chase : args.activity === "butterfly" ? window.butterfly : window.rainbow;
       if (typeof fn !== "function") throw new Error("Scene activity is not ready.");
@@ -74807,7 +74968,7 @@ setOfficeProgress("pc", false);
     register({ id: "session.preview.end", group: "Utilities / Scripting", kind: "action", risk: "scene",
       completion: "finite", description: "End a preview by restoring the visit, leaving a fresh Kitchen, or returning to the saved recovery/intro entry surface.",
       args: { disposition: { type: "string", enum: ["restore", "fresh", "entry"], required: true } },
-      available: previewActive, run: function (args) { return window.__loftPreviewEnd(args.disposition); } });
+      available: previewActive, unavailable: staticBlocked("No preview session is active."), run: function (args) { return window.__loftPreviewEnd(args.disposition); } });
     var TRAILER_DURATION_MS = 100000;
     register({ id: "trailer.status", group: "Utilities / Scripting", kind: "query",
       description: "Report the authored Trailer player and its advertised duration.", run: function () {
@@ -74818,11 +74979,20 @@ setOfficeProgress("pc", false);
     register({ id: "trailer.play", group: "Utilities / Scripting", kind: "action", risk: "scene",
       completion: "finite", description: "Play the canonical authored Trailer inside a reversible preview session.",
       available: function () { return !window.__cinematic && !previewActive() && typeof window.__startCinematic === "function"; },
+      unavailable: function () {
+        var cinematic = !!window.__cinematic, preview = previewActive(), ready = typeof window.__startCinematic === "function", remedy = null;
+        var reasons = [cinematic && preview ? "The Trailer is already playing inside an active preview session." : cinematic && "The Trailer is already playing.",
+          !cinematic && preview && "Another preview session is active.", !ready && "The Trailer controller is not ready."];
+        if (ready && cinematic && typeof window.__stopCinematic === "function") remedy = { id: "trailer.stop", args: {} };
+        else if (ready && !cinematic && preview && typeof window.__loftPreviewEnd === "function") remedy = { id: "session.preview.end", args: { disposition: "restore" } };
+        return blocked(reasons.filter(function (reason) { return !!reason; }).join(" "), remedy && remedy.id, remedy && remedy.args);
+      },
       run: function () { return window.__startCinematic(); } });
     register({ id: "trailer.stop", group: "Utilities / Scripting", kind: "action", risk: "scene",
       completion: "finite", description: "Stop the Trailer, restoring the visit by default, leaving a fresh Kitchen, or returning to the saved recovery/intro entry surface.",
       args: { disposition: { type: "string", enum: ["restore", "fresh", "entry"] } },
       available: function () { return !!window.__cinematic && typeof window.__stopCinematic === "function"; },
+      unavailable: function () { return window.__cinematic ? blocked("The Trailer stop controller is not ready.") : blocked("The Trailer is not playing."); },
       run: function (args) { return window.__stopCinematic(args.disposition || "restore"); } });
     register({ id: "game.reset", group: "Game", kind: "action", risk: "destructive", completion: "finite",
       description: "Reset through the canonical game owner, optionally showing the extinguisher effect.",
@@ -74887,6 +75057,7 @@ setOfficeProgress("pc", false);
       description: "Activate one bounded semantic interaction in the currently open room.",
       args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } },
       available: function (args) { var info = interactionInfo(args.interaction); return !!(info && info.available); },
+      unavailable: function (args) { var info = interactionInfo(args.interaction); return info && document.getElementById(INTERACTIONS[args.interaction].element) ? roomBlocked(info.room)() : blocked("The interaction is not ready."); },
       run: function (args) {
         var spec = INTERACTIONS[args.interaction], node = spec && document.getElementById(spec.element);
         if (!node) throw new Error("Interaction is not ready.");
@@ -74900,36 +75071,42 @@ setOfficeProgress("pc", false);
     var PRESENTATION_CAPTIONS = ["cine_open", "cine_arcade", "cine_below", "cine_clues", "cine_anywhere", "cine_phone", "cine_round", "cine_soft", "cine_party", "cine_road", "cine_camp", "cine_signoff"];
     var PRESENTATION_CHAPTERS = ["cine_chapter_jump", "cine_chapter_open", "cine_chapter_unlock", "cine_chapter_wander", "cine_chapter_round", "cine_chapter_soft", "cine_chapter_party", "cine_chapter_road", "cine_chapter_camp"];
     function presentationReady() { return !!window.__cinematic && !!window.__loftPresentation; }
+    function presentationBlocked() { return blocked(window.__cinematic ? "The Trailer presentation controller is not ready." : "The Trailer is not playing."); }
+    function previewBlocked() { return blocked("No preview session is active.", typeof window.__loftPreviewBegin === "function" ? "session.preview.begin" : null); }
     register({ id: "presentation.reduced.status", group: "Presentation / Trailer", kind: "query",
       description: "Report whether reduced-motion presentation timing is active.", run: function () {
         return { on: !!(window.__loftPresentation ? window.__loftPresentation.reduced() : window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) };
       } });
     register({ id: "presentation.card.show", group: "Presentation / Trailer", kind: "action", risk: "ambient",
       description: "Show a canonical translated Trailer title or final card.",
-      args: { card: { type: "string", enum: ["title", "final"], required: true } }, available: presentationReady,
+      args: { card: { type: "string", enum: ["title", "final"], required: true } }, available: presentationReady, unavailable: presentationBlocked,
       run: function (args) { window.__loftPresentation.cardShow(args.card); return { card: args.card, visible: true }; } });
     register({ id: "presentation.card.hide", group: "Presentation / Trailer", kind: "action", risk: "ambient",
-      description: "Hide the current Trailer card.", available: presentationReady,
+      description: "Hide the current Trailer card.", available: presentationReady, unavailable: presentationBlocked,
       run: function () { window.__loftPresentation.cardHide(); return { visible: false }; } });
     register({ id: "presentation.caption.show", group: "Presentation / Trailer", kind: "action", risk: "ambient",
       description: "Show one canonical translated Trailer caption.",
-      args: { caption: { type: "string", enum: PRESENTATION_CAPTIONS, required: true } }, available: presentationReady,
+      args: { caption: { type: "string", enum: PRESENTATION_CAPTIONS, required: true } }, available: presentationReady, unavailable: presentationBlocked,
       run: function (args) { window.__loftPresentation.caption(args.caption); return { caption: args.caption }; } });
     register({ id: "presentation.chapter.show", group: "Presentation / Trailer", kind: "action", risk: "ambient",
       description: "Show one canonical translated Trailer chapter heading.",
-      args: { chapter: { type: "string", enum: PRESENTATION_CHAPTERS, required: true } }, available: presentationReady,
+      args: { chapter: { type: "string", enum: PRESENTATION_CHAPTERS, required: true } }, available: presentationReady, unavailable: presentationBlocked,
       run: function (args) { window.__loftPresentation.chapter(args.chapter); return { chapter: args.chapter }; } });
     register({ id: "presentation.cut", group: "Presentation / Trailer", kind: "action", risk: "ambient", completion: "finite",
       description: "Take the canonical Trailer veil out or bring it back in around public state changes.",
-      args: { phase: { type: "string", enum: ["out", "in"], required: true } }, available: presentationReady,
+      args: { phase: { type: "string", enum: ["out", "in"], required: true } }, available: presentationReady, unavailable: presentationBlocked,
       run: function (args) { return window.__loftPresentation.cut(args.phase).then(function () { return { phase: args.phase }; }); } });
     register({ id: "presentation.point", group: "Presentation / Trailer", kind: "action", risk: "ambient", completion: "finite",
       description: "Move the Trailer pointer to one bounded semantic interaction without activating it.",
-      args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } }, available: presentationReady,
+      args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } }, available: presentationReady, unavailable: presentationBlocked,
       run: function (args) { return window.__loftPresentation.point(args.interaction).then(function () { return { interaction: args.interaction }; }); } });
     register({ id: "bathroom.bubbles.preview", group: "Bathroom", kind: "action", risk: "scene",
       description: "Start or stop the real bubble-pop board inside a preview session.",
-      args: { on: { type: "boolean", required: true } }, available: previewActive, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function (args) { return previewActive() && (!args.on || currentRoom() === "bathroom"); }, unavailable: function (args) {
+        var preview = previewActive(), room = currentRoom() === "bathroom", needsRoom = !!args.on;
+        return blockedBy([!preview && "No preview session is active.", needsRoom && !room && "The Bathroom is not open."],
+          !preview && (!needsRoom || room) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : preview && needsRoom && !room ? { id: "room.go", args: { room: "bathroom" } } : null);
+      }, run: function (args) {
         var tub = document.getElementById("bathroom-tub");
         if (args.on) {
           if (currentRoom() !== "bathroom") throw new Error("Open the Bathroom first.");
@@ -74940,7 +75117,11 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "bedroom.tic-tac-toe.preview", group: "Bedroom", kind: "action", risk: "scene",
       description: "Start or dismiss the real tic-tac-toe board inside a preview session.",
-      args: { on: { type: "boolean", required: true } }, available: previewActive, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function (args) { return previewActive() && (!args.on || currentRoom() === "bedroom"); }, unavailable: function (args) {
+        var preview = previewActive(), room = currentRoom() === "bedroom", needsRoom = !!args.on;
+        return blockedBy([!preview && "No preview session is active.", needsRoom && !room && "The Bedroom is not open."],
+          !preview && (!needsRoom || room) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : preview && needsRoom && !room ? { id: "room.go", args: { room: "bedroom" } } : null);
+      }, run: function (args) {
         if (args.on) {
           if (currentRoom() !== "bedroom") throw new Error("Open the Bedroom first.");
           if (window.__startBedroomTicTacToe) window.__startBedroomTicTacToe();
@@ -74950,7 +75131,11 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "office.invaders.preview", group: "Office / Devices", kind: "action", risk: "scene",
       description: "Run or stop the real invaders board under preview-owned score isolation.",
-      args: { on: { type: "boolean", required: true } }, available: previewActive, run: function (args) {
+      args: { on: { type: "boolean", required: true } }, available: function (args) { return previewActive() && (!args.on || currentRoom() === "office"); }, unavailable: function (args) {
+        var preview = previewActive(), room = currentRoom() === "office", needsRoom = !!args.on;
+        return blockedBy([!preview && "No preview session is active.", needsRoom && !room && "The Office is not open."],
+          !preview && (!needsRoom || room) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : preview && needsRoom && !room ? { id: "room.go", args: { room: "office" } } : null);
+      }, run: function (args) {
         if (args.on && currentRoom() !== "office") throw new Error("Open the Office first.");
         if (window.__previewArcadeDemo) window.__previewArcadeDemo(args.on);
         if (args.on && window.__loftPreviewOwn) window.__loftPreviewOwn(function () { if (window.__previewArcadeDemo) window.__previewArcadeDemo(false); });
@@ -74961,7 +75146,7 @@ setOfficeProgress("pc", false);
       args: {
         route: { type: "string", enum: ["calgary", "turnoff", "banff", "lake-turnoff", "abraham", "camp"], required: true },
         distance: { type: "number", min: 0 }
-      }, available: previewActive, run: function (args) {
+      }, available: previewActive, unavailable: previewBlocked, run: function (args) {
         if (!window.__prepareRoadtripShortcut || !window.__entranceRoadtripDevStart) throw new Error("Road Trip preview is not ready.");
         if (window.__gardenPartyOn && window.__setPartyMode) window.__setPartyMode(false, true, false);
         window.__prepareRoadtripShortcut();
@@ -75022,7 +75207,7 @@ setOfficeProgress("pc", false);
     register({ id: "session.preview.score.play", group: "Utilities / Scripting", kind: "action", risk: "ambient",
       description: "Play a preview-owned score loop that is restored or stopped with the transaction.",
       completion: "finite", args: { track: { type: "string", enum: Object.keys(PREVIEW_SCORE_TRACKS), required: true }, loop: { type: "boolean" }, level: { type: "number", min: 0, max: 1 }, fade_ms: { type: "integer", min: 0, max: 5000 } },
-      available: previewActive, run: function (args) {
+      available: previewActive, unavailable: previewBlocked, run: function (args) {
         return stopPreviewScore(true, 0).then(function () {
           var audio = document.getElementById(PREVIEW_SCORE_TRACKS[args.track]);
           if (!audio) throw new Error("Score is not ready.");
@@ -75049,7 +75234,7 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "session.preview.score.stop", group: "Utilities / Scripting", kind: "action", risk: "ambient",
       completion: "finite", args: { fade_ms: { type: "integer", min: 0, max: 5000 } },
-      available: previewActive, run: function (args) {
+      available: previewActive, unavailable: previewBlocked, run: function (args) {
         return stopPreviewScore(true, args.fade_ms || 0).then(function (changed) {
           return { changed: changed, fade_ms: args.fade_ms || 0 };
         });
@@ -75429,7 +75614,8 @@ setOfficeProgress("pc", false);
             completion: entry.completion || "instant",
             returns: entry.returns || { type: "envelope", value: "json", asynchronous: entry.kind === "action" },
             aliases: entry.aliases || [],
-            available: !!entry.available
+            available: !!entry.available,
+            availability: entry.availability || { available: !!entry.available }
           };
         });
       }
@@ -75805,15 +75991,21 @@ setOfficeProgress("pc", false);
     click: "summon"
   };
   function capabilitySignature(cap) {
-    var order = cap.argOrder || Object.keys(cap.args || {}), call;
+    var order = cap.argOrder || Object.keys(cap.args || {}), call, line;
     if (!order.length) call = "()";
     else if (order.length === 1) {
       var one = cap.args[order[0]] || {}, label = one.enum ? one.enum.join("|") : one.type || "value";
       if (one.nullable) label += "|null";
       call = "(" + order[0] + ": " + label + ")";
     } else call = "({" + order.join(", ") + "})";
-    return "loft." + cap.id + call + " [" + cap.kind + ", " + cap.completion + "]" +
+    line = "loft." + cap.id + call + " [" + cap.kind + ", " + cap.completion + "]" +
       (cap.description ? " — " + cap.description : "");
+    if (cap.availability && !cap.availability.available && cap.availability.reason) {
+      line += " [unavailable: " + cap.availability.reason;
+      if (cap.availability.remedy) line += "; remedy: loft.api.perform(" + JSON.stringify(cap.availability.remedy.id) + ", " + JSON.stringify(cap.availability.remedy.args || {}) + ")";
+      line += "]";
+    }
+    return line;
   }
   // JavaScript and Python share this help text, so its order must not vary by host locale.
   function typedHelpCompare(a, b) {
@@ -83574,10 +83766,13 @@ from pyodide.ffi import to_js as _to_js
 class LoftError(RuntimeError):
     """A validated Loft API request that could not be completed."""
 
-    def __init__(self, capability, code, message):
+    def __init__(self, capability, code, message, availability=None):
         self.capability = capability
         self.code = code or "FAILED"
         self.message = message or "The Loft API request failed."
+        self.availability = availability if isinstance(availability, dict) else {}
+        self.reason = self.availability.get("reason")
+        self.remedy = self.availability.get("remedy")
         super().__init__("{}: {} ({})".format(capability, self.message, self.code))
 
 
@@ -83638,7 +83833,7 @@ def _unwrap(capability, response):
     if not isinstance(response, dict):
         raise LoftError(capability, "INVALID_RESPONSE", "The Loft API returned an invalid response.")
     if not response.get("ok"):
-        raise LoftError(capability, response.get("code"), response.get("message"))
+        raise LoftError(capability, response.get("code"), response.get("message"), response.get("availability"))
     return response.get("value")
 
 

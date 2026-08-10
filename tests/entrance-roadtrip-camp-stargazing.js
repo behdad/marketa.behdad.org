@@ -410,7 +410,7 @@ check(result && result.open && result.open.panelBottomGap >= 8 && result.open.pa
 check(result && result.open &&
   same(result.open.builderShapes.cassiopeia.points, [[68,-20],[105,25],[150,20],[178,55],[210,24]]) &&
   same(result.open.builderShapes["ursa-major"].points, [[265,-22],[298,-22],[326,-10],[351,7],[410,10],[398,52],[354,42]]) &&
-  same(result.open.builderShapes["ursa-minor"].points, [[466,42],[489,55],[513,20],[492,2],[552,-8],[592,-8],[626,1]]) &&
+  same(result.open.builderShapes["ursa-minor"].points, [[489,55],[466,42],[492,2],[513,20],[552,-8],[592,-8],[626,1]]) &&
   result.open.builderShapes["ursa-major"].lines.length === 7 && result.open.builderShapes["ursa-minor"].lines.length === 7,
   "the trace cards use an upright Cassiopeia W and the referenced seven-star Big and Little Dippers",
   result && result.open && result.open.builderShapes);

@@ -38495,6 +38495,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_SHORTCUT_REMAINING_SECONDS = 5;
   var ROADTRIP_CAMP_SIGN_SECONDS = 8;
   var ROADTRIP_CAMP_SPUR_SECONDS = 5.5;
+  var ROADTRIP_CAMP_SPUR_WIDTH_SCALE = 2;
   var ROADTRIP_CAMP_EXIT_LEAD_SECONDS = 2.4;
   var ROADTRIP_CAMP_EXIT_TAIL_SECONDS = 1.2;
   var ROADTRIP_CAMP_EXIT_REPEAT_DESKTOP_SECONDS = 30;
@@ -44780,12 +44781,17 @@ window.__entranceRoomOpen = false;
     var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
     var junctionOverlap = 7 + junctionPoint.perspective * 11;
     var junctionInner = junctionRoadRight - junctionOverlap;
-    var junctionOuter = roadtripProjectLateral(junctionPoint, 1.015);
-    var junctionOuterWidth = junctionOuter - junctionRoadRight;
+    var authoredJunctionOuter = roadtripProjectLateral(junctionPoint, 1.015);
+    var junctionOuterWidth = authoredJunctionOuter - junctionRoadRight;
+    // Keep the proven highway-side mouth and tangent fixed, then give the branch
+    // a full lane's visual weight by expanding outward from that inner join.
+    var junctionOuter = junctionInner +
+      (authoredJunctionOuter - junctionInner) * ROADTRIP_CAMP_SPUR_WIDTH_SCALE;
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationY = destinationPoint.y;
-    var farHalfWidth = 2.5 + destinationPoint.perspective * 4.5;
+    var farHalfWidth = (2.5 + destinationPoint.perspective * 4.5) *
+      ROADTRIP_CAMP_SPUR_WIDTH_SCALE;
     // Author the turnoff in the parked-shoulder view, then reproject its far end
     // at its own depth so other lanes see it converge toward the travel lane.
     var referenceRoadFraction = roadtripLaneRoadFraction(ROADTRIP_ABRAHAM_START_LANE);
@@ -44942,6 +44948,8 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-join-tangent-dy", joinControlDy.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-near-width", (junctionOuter - junctionInner).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-width-scale",
+      ROADTRIP_CAMP_SPUR_WIDTH_SCALE.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-geometry", "cubic-merge");
     roadtripCampSpurNode.setAttribute("visibility", "visible");
     return { x: destinationX, y: destinationY, halfWidth: farHalfWidth, roadRight: mainRoadRight };

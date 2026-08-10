@@ -59,6 +59,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       destinationOuterX: Number(spur.getAttribute("data-roadtrip-destination-outer-x")),
       nearWidth: Number(spur.getAttribute("data-roadtrip-near-width")),
       farWidth: Number(spur.getAttribute("data-roadtrip-far-width")),
+      widthScale: Number(spur.getAttribute("data-roadtrip-width-scale")),
       speedClearances: Array.prototype.filter.call(
         document.querySelectorAll("[data-roadtrip-furniture^='speed-']"),
         function (node) { return node.getAttribute("visibility") === "visible"; }
@@ -217,8 +218,8 @@ function connectedSpur(visual) {
     visual.junctionOverlap <= 18.1 &&
     Math.abs(visual.junctionRoadRightX - visual.shoulderMouthInnerX -
       visual.junctionOverlap) <= .03 &&
-    visual.junctionOuterX - visual.junctionRoadRightX > .02 &&
-    visual.junctionOuterX - visual.junctionRoadRightX < 5.1 &&
+    visual.junctionOuterX - visual.junctionRoadRightX > 12 &&
+    visual.junctionOuterX - visual.junctionRoadRightX < 30 &&
     visual.innerEdgeStartT >= .35 && visual.innerEdgeStartT <= .42 &&
     visual.bendInnerX < visual.bendOuterX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
@@ -229,7 +230,7 @@ function connectedSpur(visual) {
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     Number.isFinite(visual.junctionLaneCenterX) && Number.isFinite(visual.destinationLaneCenterX) &&
-    visual.nearWidth > visual.farWidth;
+    visual.nearWidth > visual.farWidth && visual.widthScale === 2;
 }
 function cubicBand(path) {
   var values = String(path || "").match(/-?(?:\d+\.?\d*|\.\d+)/g);

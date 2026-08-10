@@ -5556,7 +5556,19 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 #balcony-winebottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #garden-bottle-liquid-1, #garden-bottle-liquid-2, #garden-bottle-liquid-3{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 #garden-bottle-1, #garden-bottle-2, #garden-bottle-3{transition:translate .5s cubic-bezier(.34,1.56,.64,1)}
-@media (prefers-reduced-motion: reduce){#garden-bottle-1, #garden-bottle-2, #garden-bottle-3{transition:none}}
+#garden-empty-bottles-wiggle{transform-box:fill-box; transform-origin:50% 100%}
+#garden-bottles.empty-wiggle #garden-empty-bottles-wiggle{animation:garden-empty-bottles-wiggle .52s ease-in-out}
+@keyframes garden-empty-bottles-wiggle{
+  0%,100%{transform:translateX(0) rotate(0)}
+  20%{transform:translateX(-1px) rotate(-3deg)}
+  45%{transform:translateX(1px) rotate(2.5deg)}
+  68%{transform:translateX(-.6px) rotate(-1.5deg)}
+  86%{transform:translateX(.35px) rotate(.8deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  #garden-bottle-1, #garden-bottle-2, #garden-bottle-3{transition:none}
+  #garden-bottles.empty-wiggle #garden-empty-bottles-wiggle{animation:none}
+}
 #kitchen-waterbottle-liquid{transform-box:fill-box; transform-origin:bottom center; transition:transform .5s ease}
 /* the water sloshes to the beat: a wrapper grooves so the inner path keeps its JS-set fill level */
 #kitchen-waterbottle-liquid-groove{transform-box:fill-box; transform-origin:bottom center}
@@ -18011,6 +18023,7 @@ section{margin:1.9rem 0}
 <clipPath id="garden-bottle-liquid-clip-2"><path d="M197 270 V250 Q197 245 201 243 V237 H203 V243 Q207 245 207 250 V270 Z"/></clipPath>
 <clipPath id="garden-bottle-liquid-clip-3"><path d="M213 270 V254 Q213 249 216 247 V242 H218 V247 Q221 249 221 254 V270 Z"/></clipPath>
 </defs>
+<g id="garden-empty-bottles-wiggle">
 <g id="garden-bottle-1" class="hunt-hit">
 <path d="M180 270 L180 252 Q180 246 184 244 L184 238 L188 238 L188 244 Q192 246 192 252 L192 270 Z" fill="#4a7a52" fill-opacity="0.85" stroke="#3a6042" stroke-width="1"/>
 <g id="garden-bottle-liquid-1" clip-path="url(#garden-bottle-liquid-clip-1)"><rect x="181" y="246" width="10" height="24" rx="0.7" fill="#cfe8f2" opacity="0.55"/></g>
@@ -18051,6 +18064,7 @@ section{margin:1.9rem 0}
 <path d="M215.1 259.2 H218.9" stroke="#466455" stroke-width="0.42" opacity="0.75"/>
 <text x="217" y="259.9" text-anchor="middle" font-family="Georgia,serif" font-size="1.95" font-weight="700" fill="#a54832">TC</text>
 <path d="M213.7 267.6 Q217 268.9 220.3 267.6" fill="none" stroke="#b7d1bd" stroke-width="0.48" opacity="0.6"/>
+</g>
 </g>
 </g>
 </g>
@@ -102584,15 +102598,45 @@ async def localfont(name):
   if (bottles) {
     var bottleCenters = [{ x: 186 }, { x: 202 }, { x: 217 }];
     var bottlesWaterLeft = [4, 4, 4];
+    var emptyBottleWiggleGeneration = 0, emptyBottleWiggleTimer = null;
     var bottlesPlantSpots = [
       { x: 950, y: 195 }, { x: 1090, y: 200 }, { x: 1168, y: 180 },
       { x: 1015, y: 155 }, { x: 1148, y: 215 }, { x: 820, y: 180 }
     ];
+    var allGardenBottlesEmpty = function () {
+      return bottlesWaterLeft.every(function (level) { return level <= 0; });
+    };
+    function clearEmptyBottleWiggle() {
+      emptyBottleWiggleGeneration++;
+      clearTimeout(emptyBottleWiggleTimer);
+      emptyBottleWiggleTimer = null;
+      bottles.classList.remove("empty-wiggle");
+    }
+    var triggerGardenEmptyBottleWiggle = function () {
+      if (!allGardenBottlesEmpty()) return false;
+      clearEmptyBottleWiggle();
+      var generation = emptyBottleWiggleGeneration;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (generation !== emptyBottleWiggleGeneration) return;
+          bottles.classList.add("empty-wiggle");
+          emptyBottleWiggleTimer = setTimeout(clearEmptyBottleWiggle, 620);
+        });
+      });
+      return true;
+    };
+    window.__gardenBottlesAllEmpty = allGardenBottlesEmpty;
+    window.__wiggleEmptyGardenBottles = triggerGardenEmptyBottleWiggle;
+    var emptyBottleWiggle = document.getElementById("garden-empty-bottles-wiggle");
+    if (emptyBottleWiggle) emptyBottleWiggle.addEventListener("animationend", function (event) {
+      if (event.animationName === "garden-empty-bottles-wiggle") clearEmptyBottleWiggle();
+    });
     function updateBottleLiquid(idx) {
       var liquid = document.getElementById("garden-bottle-liquid-" + (idx + 1));
       if (liquid) liquid.style.transform = "scaleY(" + (bottlesWaterLeft[idx] / 4) + ")";
     }
     function setBottleLevels(levels) {
+      clearEmptyBottleWiggle();
       for (var i = 0; i < bottlesWaterLeft.length; i++) {
         bottlesWaterLeft[i] = levels[i];
         updateBottleLiquid(i);
@@ -116001,12 +116045,22 @@ function spawnDustMote(container) {
     var remaining = Math.max(0, 30000 - (Date.now() - state.rottedAt));
     tripPropRotTimers[id] = setTimeout(function () { recoverTripProp(id); }, remaining);
   }
-  function waterTripProp(id, drain, source) {
+  function signalEmptyBottleAttempt(source) {
+    // Reusable tools and independent prop gates do not implicate the bottle inventory.
+    if ((source === "plant" || source === "bottle") && window.__gardenBottlesAllEmpty &&
+        window.__gardenBottlesAllEmpty() && window.__wiggleEmptyGardenBottles) window.__wiggleEmptyGardenBottles();
+  }
+  function waterTripProp(id, drain, source, attemptSource) {
     var state = tripPropWaterState[id];
     var el = document.getElementById(id);
     var spot = plantSpots[id];
     if (!state || !el || !spot) return false;
-    if (state.rotted || !drain || !drain()) {
+    if (state.rotted) {
+      playDryClickSound(id);
+      return false;
+    }
+    if (!drain || !drain()) {
+      signalEmptyBottleAttempt(attemptSource);
       playDryClickSound(id);
       return false;
     }
@@ -116030,8 +116084,9 @@ function spawnDustMote(container) {
     var spot = plantSpots[id];
     if (!el || !spot) return false;
     var drain = drainFn || window.drainRandomBottle;
-    if (spot.tripProp) return waterTripProp(id, drain, source || "bottle");
+    if (spot.tripProp) return waterTripProp(id, drain, source || "bottle", source);
     if (!drain || !drain()) {
+      signalEmptyBottleAttempt(source);
       playDryClickSound(id);
       return false;
     }
@@ -116164,7 +116219,7 @@ function spawnDustMote(container) {
   Object.keys(plantSpots).forEach(function (id) {
     if (plantSpots[id].tripProp) return;
     var el = document.getElementById(id);
-    onActivate(el, function () { waterSpecificPlant(id); });
+    onActivate(el, function () { waterSpecificPlant(id, null, "plant"); });
   });
   // click the night caterpillar and it metamorphoses — flutters off as a butterfly
   (function () {

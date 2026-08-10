@@ -200,6 +200,9 @@ state; a clean-fresh ending stops preview ownership without leaking another audi
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
   the refcount drops and the manager can suspend. The recovery Continue/Start over cover also
   counts as a room-ambience cover, keeping its saved-room preview silent until a choice is made.
+  The cricket scheduler owns its short-lived chirp nodes as well: raising a cover or leaving an
+  attended window retires an in-flight chirp immediately, and a later scheduler tick may start a
+  fresh one only after uncovered play resumes.
 
 The campsite outdoor bed keeps a low-passed lake lap under its wind and fire/weather layers; its
 rain is a softly band-passed wash rather than a bright broadband hiss. The

@@ -53028,7 +53028,7 @@ window.__partyForegroundState = function () {
     listeners: __partyForegroundListeners.size };
 };
 window.__refreshRoomAmbience = function () {
-  ["__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
+  ["__updateCricketAmbience", "__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
      "__updateGardenBirdsong", "__updateKettleHum", "__updateRadioSound",
      "__updatePcFan", "__updateCinemaProjectorHum", "__updateACHum", "__updateCityHum",
      "__updateWind", "__updateRainSound", "__updatePorscheIdle", "__updateRoadtripCampAudio"].forEach(function (name) {
@@ -103442,22 +103442,54 @@ function playThunderSound(volume, panId, enclosure) {
 }
 // Quiet cricket night-ambience: 2-3 layered "crickets", each a narrow-bandpass
 // high tone (~4-5kHz) pulsed into a short trill, at slightly different pitch and
-// rhythm. Deliberately faint (well under the game sounds). One short context per
-// chirp, closed right after it finishes — see scheduleCrickets for the loop/gates.
+// rhythm. Deliberately faint (well under the game sounds). The cricket scheduler
+// owns every live chirp so a newly raised ambience cover can retire one immediately.
+var activeCricketChirps = new Set();
+function finishCricketChirp(chirp, stopNow) {
+  if (!chirp || !chirp.active) return false;
+  chirp.active = false;
+  activeCricketChirps.delete(chirp);
+  clearTimeout(chirp.cleanupTimer);
+  if (stopNow) {
+    try {
+      var now = chirp.ctx.currentTime;
+      chirp.master.gain.cancelScheduledValues(now);
+      chirp.master.gain.value = 0;
+      chirp.oscillators.forEach(function (osc) {
+        try { osc.stop(now + 0.01); } catch (_error) {}
+      });
+    } catch (_error) {}
+  }
+  setTimeout(function () {
+    try { chirp.master.disconnect(); } catch (_error) {}
+  }, stopNow ? 30 : 0);
+  return true;
+}
+function stopActiveCricketChirps() {
+  var stopped = activeCricketChirps.size;
+  Array.from(activeCricketChirps).forEach(function (chirp) {
+    finishCricketChirp(chirp, true);
+  });
+  return stopped;
+}
 function playCricketChirp(panId) {
+  var chirp = null;
   try {
     var ctx = getSfxCtx();
-    if (!ctx) return;
+    if (!ctx) return null;
     var t0 = ctx.currentTime;
     var master = ctx.createGain();
     master.gain.value = 0.04; // ambient, barely-there
     master.connect(panId == null ? ctx.destination : pannedOut(ctx, panId));
+    chirp = { active: true, cleanupTimer: null, ctx: ctx, master: master, oscillators: [] };
+    activeCricketChirps.add(chirp);
 
     var n = 2 + (Math.random() < 0.5 ? 1 : 0); // 2 or 3 crickets
     var maxEnd = t0;
     for (var c = 0; c < n; c++) {
       var freq = 4100 + Math.random() * 900; // 4.1-5 kHz whistle
       var osc = ctx.createOscillator();
+      chirp.oscillators.push(osc);
       osc.type = "triangle";
       osc.frequency.value = freq;
       var bp = ctx.createBiquadFilter();
@@ -103492,7 +103524,12 @@ function playCricketChirp(panId) {
       if (tt > maxEnd) maxEnd = tt;
     }
     var closeMs = Math.ceil((maxEnd - t0) * 1000) + 140;
-  } catch (e) {}
+    chirp.cleanupTimer = setTimeout(function () { finishCricketChirp(chirp, false); }, closeMs);
+    return chirp;
+  } catch (e) {
+    if (chirp) finishCricketChirp(chirp, true);
+    return null;
+  }
 }
 function playFinishMelody(panId) {
   try {
@@ -121609,13 +121646,10 @@ function spawnDustMote(container) {
   // one ambient sound with no room gate at all, and visibilityState alone
   // misses a window that's merely covered by other windows — Linux/X11 Chrome
   // has no window-occlusion detection, so a fully covered window reports
-  // "visible" indefinitely. Each chirp there is a fresh AudioContext (a fresh
-  // OS audio stream) playing a faint 4-5kHz pulse train — from an unattended
-  // window that reads as an endless stream of crackle/pop artifacts, not as
-  // crickets. Self-scheduling: each tick only builds a WebAudio context when
-  // the gate passes, so a hidden/unfocused/daytime tick does zero audio work
-  // and just re-arms the single outstanding timer (no context/node/timeout
-  // pile-up). Skipped during a rainstorm.
+  // "visible" indefinitely. Self-scheduling: each tick only builds WebAudio
+  // nodes when the gate passes and otherwise just re-arms the single outstanding
+  // timer. Covers and unattended transitions also stop an in-flight chirp instead
+  // of waiting for its trill to finish. Skipped during a rainstorm.
   (function scheduleCrickets() {
     var quiet = false;
     function gate() {
@@ -121624,8 +121658,20 @@ function spawnDustMote(container) {
         document.hasFocus() && !window.__balconyStorm &&
         !(window.__roomAmbienceCovered && window.__roomAmbienceCovered());
     }
+    function state() {
+      return { active: activeCricketChirps.size, allowed: gate() };
+    }
+    window.__cricketAmbienceState = state;
+    window.__updateCricketAmbience = function () {
+      if (!gate()) stopActiveCricketChirps();
+      return state();
+    };
+    window.addEventListener("blur", window.__updateCricketAmbience);
+    document.addEventListener("visibilitychange", window.__updateCricketAmbience);
     function tick() {
-      if (!quiet && gate()) playCricketChirp();
+      var allowed = gate();
+      if (!allowed) stopActiveCricketChirps();
+      else if (!quiet) playCricketChirp();
       // crickets don't chirp non-stop — now and then they lull into a quiet spell
       var next;
       if (quiet) { quiet = false; next = 1300 + Math.random() * 1800; }

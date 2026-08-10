@@ -175,6 +175,7 @@ T["en"] = {
   "console_welcome": "   loft console — real JavaScript; typed Loft API ready as `loft`. try: help · ? keyboard shortcuts",
   "contact": "Questions? Write to us:",
   "credits_codesigner": "co-designer",
+  "credits_codesigner_translator": "co-designer | Czech translator",
   "credits_killed": "CREDITS KILLED",
   "credits_licenses": "Licence notices are included with the software.",
   "credits_open_source": "Open-source software",

@@ -22,9 +22,13 @@ var harness = String.raw`<script>
     check("Ayushi appears in the language-neutral tester roster",
       names.indexOf("Ayushi") !== -1, names.join(", "));
     check("new testers remain appended in source order",
-      names.slice(-10).join(",") ===
-        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Zahra",
+      names.slice(-9).join(",") ===
+        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir",
       names.join(", "));
+    var marketa = window.LOFT_CREDITS.people.find(function (person) { return person.name === "Markéta"; });
+    check("Markéta is credited for co-design and Czech translation",
+      marketa && marketa.role === "credits_codesigner_translator",
+      marketa && marketa.role);
     var sortedNames = window.__loftCreditsTesters("en").map(function (person) { return person.name; });
     var expectedSorted = names.slice().sort(function (a, b) {
       return a.localeCompare(b, "en", { sensitivity: "base" });

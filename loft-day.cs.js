@@ -175,6 +175,7 @@ T["cs"] = {
   "console_welcome": "   loftová konzole — opravdový JavaScript; typované API Loft je připravené jako `loft`. zkuste: help · ? klávesové zkratky",
   "contact": "Dotazy? Napište nám:",
   "credits_codesigner": "spolutvůrkyně designu",
+  "credits_codesigner_translator": "spolutvůrkyně designu | český překlad",
   "credits_killed": "TITULKY UKONČENY",
   "credits_licenses": "Licenční informace jsou přiloženy k softwaru.",
   "credits_open_source": "Open-source software",

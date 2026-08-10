@@ -259,7 +259,7 @@ T["en"] = {
   "fun_hannah": "gymnast. learning piano.",
   "fun_irene": "learning Python already",
   "fun_jay": "the philosopher / jesus",
-  "fun_lauren": "cyclist too",
+  "fun_lauren": "Farhang's boss",
   "fun_madla": "plays the guitar",
   "fun_mahzad": "architect & painter",
   "fun_marie": "engineer & psychologist",

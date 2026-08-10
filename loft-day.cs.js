@@ -259,7 +259,7 @@ T["cs"] = {
   "fun_hannah": "gymnastka. učí se hrát na piano.",
   "fun_irene": "už se učí Python",
   "fun_jay": "filozof / Ježíš",
-  "fun_lauren": "taky cyklistka",
+  "fun_lauren": "Farhangova šéfka",
   "fun_madla": "hraje na kytaru",
   "fun_mahzad": "architektka a malířka",
   "fun_marie": "inženýrka a psycholožka",

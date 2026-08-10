@@ -423,6 +423,12 @@ confirmation. It removes only `deskScripts`, `deskPythonScripts`, `deskCodeBuilt
 runs/repeats, queued Code-to-Python handoffs, and remembered Code errors. It must not reset either
 runtime, installed Python packages, Linux state, or unrelated game/browser storage.
 
+The editor is a static `.code-editor` grid: a noninteractive line-number gutter sits beside the
+native, non-wrapping textarea, which remains the sole focus, selection, and scroll owner.
+`codeSyncLineNumbers` mirrors its vertical scroll while `codeSetBuffer` covers programmatic loads,
+resets, drafts, and edits. Keep the gutter out of positioned/transformed layers under the scaled
+monitor `foreignObject` (WebKit bug 23113).
+
 The Pyodide console installs an embedded `loft.py` module beside the browser Turtle module. On
 `import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
 namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
@@ -675,7 +681,7 @@ references.
 | Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
 | Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
 | Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |
-| Code files | `LOFT_CODE_SNIPPETS`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker`, `__resetMonitorCodeFiles` |
+| Code files/editor | `LOFT_CODE_SNIPPETS`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker`, `codeSetBuffer`, `codeSyncLineNumbers`, `__resetMonitorCodeFiles` |
 | Typed API | `initLoftApi`, `window.loft.api`, `__loftStateChanged` |
 | Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `PUBLIC_MONITOR_APPS` |
 | Entry/recovery | `urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, `stopCinematic` |

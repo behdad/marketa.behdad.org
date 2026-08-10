@@ -92,6 +92,14 @@ check(/\.code-item\.builtin\{font-style:italic\}/.test(html) &&
       /it\.title = file\.edited \? "canonical file · locally edited" : "canonical file"/.test(html) &&
       /it\.title = "your saved file"/.test(html),
   "only unsaved and untouched canonical filenames are italic; exact tooltips distinguish ownership without icons or colors");
+var codeLinesRule = (/\.code-lines\{([^}]+)\}/.exec(html) || ["", ""])[1];
+check(/id="monitor-code-lines" class="code-lines">1<\/div><textarea[^>]*wrap="off"/.test(html) &&
+      /display:grid/.test((/\.code-editor\{([^}]+)\}/.exec(html) || ["", ""])[1]) &&
+      /pointer-events:none/.test(codeLinesRule) &&
+      !/(?:position|transform|will-change)\s*:/.test(codeLinesRule) &&
+      /function codeSyncLineNumbers\(\)/.test(html) &&
+      /codeCode\.addEventListener\("scroll", function \(\) \{ codeSyncLineNumbers\(\)/.test(html),
+  "the noninteractive static-grid gutter mirrors the native non-wrapping textarea without a WebKit-sensitive layer");
 check(/error:\s*codeGetRunError\(codeLanguage\)/.test(html) &&
       /codeSetRunError\("python",\s*msg\)/.test(html) &&
       /codeSetRunError\("js",\s*msg\)/.test(html),
@@ -202,6 +210,31 @@ check(collisionState && !collisionState.error && collisionState.oneRow && collis
       collisionState.emptyLoads && collisionState.emptyReset && collisionState.explicitEmptyLoads && collisionState.explicitReset && collisionState.afterReset,
   "same-name saved files collapse into one canonical row without losing content, empty overrides, reset behavior, or unrelated files",
   collisionState && (collisionState.error || JSON.stringify(collisionState)));
+
+var lineNumberHarness = [
+  '<script>',
+  '(async function(){try{',
+  'localStorage.setItem("deskScripts",JSON.stringify({"many.js":["const first = 1;","const second = 2;","const third = 3;"].join("\\n")}));localStorage.setItem("deskPythonScripts",JSON.stringify({"many.py":["first = 1","second = 2","third = 3","fourth = 4"].join("\\n")}));',
+  'var mon=document.getElementById("office-monitor");mon.classList.add("screen-on","show-caps");window.edit("many.js");await new Promise(function(r){setTimeout(r,100)});',
+  'var code=document.getElementById("monitor-code-code"),lines=document.getElementById("monitor-code-lines"),editor=code.closest(".code-editor"),name=document.getElementById("monitor-code-name"),out={errors:window.__errs.slice()};',
+  'out.jsFile=name.value==="many.js"&&lines.textContent==="1\\n2\\n3";',
+  'window.edit("many.py");await new Promise(function(r){setTimeout(r,20)});out.pythonFile=name.value==="many.py"&&lines.textContent==="1\\n2\\n3\\n4"&&document.getElementById("monitor-code-lang-py").classList.contains("active");',
+  'document.getElementById("monitor-code-lang-js").click();out.languageSwitch=lines.textContent==="1\\n2\\n3\\n4"&&document.getElementById("monitor-code-lang-js").classList.contains("active");',
+  'var content=[];for(var i=1;i<=120;i++)content.push(i===60?"const veryLongLine = "+"x".repeat(240):"line "+i);code.value=content.join("\\n");code.setSelectionRange(17,39);code.dispatchEvent(new Event("input",{bubbles:true}));',
+  'var beforeLeft=lines.getBoundingClientRect().left;code.scrollTop=83;code.scrollLeft=61;code.dispatchEvent(new Event("scroll"));var afterLeft=lines.getBoundingClientRect().left,style=getComputedStyle(code);',
+  'out.edits=lines.textContent.split("\\n").length===120&&lines.textContent.endsWith("120");out.scroll=Math.abs(lines.scrollTop-code.scrollTop)<1&&lines.scrollLeft===0&&beforeLeft===afterLeft;out.noWrap=code.getAttribute("wrap")==="off"&&style.whiteSpace==="pre"&&code.scrollWidth>code.clientWidth&&code.scrollLeft>0;out.nativeSelection=code.selectionStart===17&&code.selectionEnd===39;out.width=code.clientWidth/editor.clientWidth>.88;out.gutter=getComputedStyle(lines).pointerEvents==="none"&&lines.tabIndex<0;',
+  'window.resetMonitorAppState("code");out.appReset=code.value===""&&lines.textContent==="1"&&lines.scrollTop===0;',
+  'window.edit("hello.js");await new Promise(function(r){setTimeout(r,30)});var canonicalCount=window.__codeSnippetResourceLoader("code-snippets/hello.js").split("\\n").length;out.openCanonical=lines.textContent.split("\\n").length===canonicalCount;code.value="one line";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});document.getElementById("monitor-code-del").click();out.canonicalReset=lines.textContent.split("\\n").length===canonicalCount;',
+  'document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify(out);',
+  '}catch(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e),errors:window.__errs});}})();',
+  '<\/script>',
+].join("\n");
+var lineNumberState = lib.runPageSync("rsvp.html", lineNumberHarness, 3000, { patchRaf: true });
+check(lineNumberState && !lineNumberState.error && lineNumberState.errors.length === 0 && lineNumberState.jsFile && lineNumberState.pythonFile &&
+      lineNumberState.languageSwitch && lineNumberState.edits && lineNumberState.scroll && lineNumberState.noWrap && lineNumberState.nativeSelection &&
+      lineNumberState.width && lineNumberState.gutter && lineNumberState.appReset && lineNumberState.openCanonical && lineNumberState.canonicalReset,
+  "Code line numbers track JS/Python files, edits, language changes, scrolling, resets, and canonical opens without wrapping or stealing native selection",
+  lineNumberState && (lineNumberState.error || JSON.stringify(lineNumberState)));
 
 var trailerStopHarness = [
   '<script>(async function(){try{',

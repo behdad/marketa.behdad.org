@@ -186,7 +186,8 @@ files are upright. Tooltips identify exact ownership—never icons or colors. Ed
 file stores a local override, and its reset control reveals the current public file again. The
 file sidebar's **Reset files…** context-menu action, after confirmation, clears every saved file,
 local canonical edit, and draft, then returns Code to its canonical list plus a blank unsaved
-buffer. The authored Trailer is the canonical `trailer.js`.
+buffer. The editor keeps fixed line numbers beside the native code field; long lines scroll
+horizontally rather than soft-wrapping. The authored Trailer is the canonical `trailer.js`.
 It loads only when played and both Watch Trailer and Code use your local built-in edit, if present.
 Play it through `await loft.trailer.play()`, inspect it with `loft.trailer.status()`, and stop it with
 `await loft.trailer.stop("restore")`.

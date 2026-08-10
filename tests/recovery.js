@@ -75,7 +75,7 @@ check(!s.gate.incidentalAccepted && s.gate.captionOwner === "recovery",
 check(!!s.gate.summary && /^Saved office · /.test(s.gate.summary) && !s.gate.duplicateMeta && s.gate.ariaCount === 0, "the visible caption alone carries the concise recovery summary, without ARIA metadata", s.gate);
 check(s.gate.recoveryActive && s.gate.restartVisibility === "hidden" && s.gate.escapeVisibility === "hidden" && s.gate.prevVisibility === "hidden" && s.gate.mediaVisibility === "hidden" && s.gate.dotsDisplay === "none" && s.gate.fullscreenVisibility === "visible", "recovery hides inactive game controls but keeps fullscreen available", s.gate);
 check(s.gate.utilityVisibility === "visible" && s.gate.brandDisplay === "block" && s.gate.brandAboveTitle && s.gate.langsDisplay === "flex", "recovery keeps utilities/language in chrome and Loft Day above Welcome back", s.gate);
-check(s.translatedRecovery && s.translatedRecovery.brand === "Den v podkroví" && s.translatedRecovery.title === "Vítej zpátky" &&
+check(s.translatedRecovery && s.translatedRecovery.brand === "Den v loftu" && s.translatedRecovery.title === "Vítej zpátky" &&
   /Pokračovat/.test(s.translatedRecovery.continueText) && /Začít znovu/.test(s.translatedRecovery.restartText) && /^Uloženo pracovna · /.test(s.translatedRecovery.summary),
   "changing language repaints the visible recovery choice and saved-room summary", s.translatedRecovery);
 check(s.gate.watchParent === "hunt-bottom-nav" && s.gate.watchDisplay === "flex", "Trailer occupies the top row during recovery", s.gate);
@@ -166,7 +166,7 @@ check(startedOver && startedOver.confirmations === 0 && !startedOver.gate && !st
   "Start over is the confirmation: it resets immediately without a browser dialog", startedOver);
 check(startedOver && !startedOver.started && startedOver.entered && startedOver.clickMe && startedOver.introActive && startedOver.watchParent === "hunt-bottom-nav" && startedOver.langsDisplay === "flex" && startedOver.escapeVisibility === "hidden" && !/La Maz/.test(startedOver.caption),
   "recovery Start over enlarges the page but preserves the clean CLICK ME introduction", startedOver);
-check(startedOver && startedOver.translatedClickMe && startedOver.translatedClickMe.brand === "Den v podkroví" &&
+check(startedOver && startedOver.translatedClickMe && startedOver.translatedClickMe.brand === "Den v loftu" &&
   startedOver.translatedClickMe.word === "KLIKNI!" && startedOver.translatedClickMe.ariaCount === 0,
   "changing language repaints the visible CLICK ME invitation without adding ARIA metadata", startedOver && startedOver.translatedClickMe);
 check(startedOver && startedOver.date === "2027-02-14" && startedOver.time === "18:30",

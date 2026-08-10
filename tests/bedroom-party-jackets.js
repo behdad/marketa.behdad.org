@@ -11,17 +11,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   var report = { errors: [], steps: {} };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function click(el) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
-  function press(el, key) {
-    var event = new KeyboardEvent("keydown", { key: key, bubbles: true, cancelable: true });
-    el.dispatchEvent(event);
-    return event.defaultPrevented;
-  }
   function state(coats) {
     var style = getComputedStyle(coats);
     return {
       opacity: style.opacity,
       pointer: style.pointerEvents,
-      tab: coats.getAttribute("tabindex"),
+      tab: coats.hasAttribute("tabindex") ? coats.getAttribute("tabindex") : null,
       rustling: coats.classList.contains("rustling"),
       animation: style.animationName,
       focus: document.activeElement && document.activeElement.id
@@ -64,13 +59,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
           })
         };
 
-        coats.focus();
-        var enterPrevented = press(coats, "Enter");
-        var enter = { state: state(coats), prevented: enterPrevented, swishes: swishes.slice() };
-        var spacePrevented = press(coats, " ");
-        report.steps.keyboard = {
-          enter: enter,
-          space: { state: state(coats), prevented: spacePrevented, swishes: swishes.slice() },
+        report.steps.isolated = {
           checkpointUnchanged: checkpointBefore === JSON.stringify(window.__captureCheckpointSystems()["bedroom-lamps"] || null),
           childTransforms: childTransforms
         };
@@ -111,36 +100,35 @@ console.log("loft-day.html Bedroom Party jackets:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, { patchRaf: true, forceMotion: true });
 var s = (result && result.steps) || {};
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
-check(s.idle && s.idle.opacity === "0" && s.idle.pointer === "none" && s.idle.tab === "-1" &&
+check(s.idle && s.idle.opacity === "0" && s.idle.pointer === "none" && s.idle.tab === null &&
   s.idleClick && !s.idleClick.state.rustling && s.idleClick.swishes.length === 0 && !s.idleClick.bed,
   "the jackets stay hidden, unfocusable, and inert before Party", { idle: s.idle, click: s.idleClick });
-check(s.party && s.party.opacity === "1" && s.party.pointer === "auto" && s.party.tab === "-1",
-  "Party exposes the jacket pile without adding a browser Tab stop", s.party);
+check(s.party && s.party.opacity === "1" && s.party.pointer === "auto" && s.party.tab === null,
+  "Party exposes the jacket pile without making it focusable", s.party);
 check(s.pointer && s.pointer.state.rustling &&
   s.pointer.state.animation === "bedroom-party-coats-rustle" &&
   s.pointer.swishes.length === 1 && s.pointer.swishes[0] === "bedroom-party-coats" &&
-  !s.pointer.bed && s.pointer.state.focus === "bedroom-party-coats" &&
-  JSON.stringify(s.pointer.childTransforms) === JSON.stringify(s.keyboard && s.keyboard.childTransforms),
+  !s.pointer.bed && s.pointer.state.focus !== "bedroom-party-coats" &&
+  JSON.stringify(s.pointer.childTransforms) === JSON.stringify(s.isolated && s.isolated.childTransforms),
   "a jacket click rustles the pile without making the bed or replacing garment placement", s.pointer);
-check(s.keyboard && s.keyboard.enter.prevented && s.keyboard.enter.state.rustling &&
-  s.keyboard.enter.swishes.length === 2 && s.keyboard.space.prevented &&
-  s.keyboard.space.state.rustling && s.keyboard.space.swishes.length === 3 &&
-  s.keyboard.checkpointUnchanged,
-  "Enter and Space replay the transient reaction without entering checkpoint state", s.keyboard);
+check(s.isolated && s.isolated.checkpointUnchanged,
+  "the click-only reaction never enters checkpoint state", s.isolated);
 check(s.ended && s.ended.opacity === "0" && s.ended.pointer === "none" &&
-  s.ended.tab === "-1" && !s.ended.rustling && s.ended.focus !== "bedroom-party-coats" &&
-  s.endedClick && s.endedClick.swishes.length === 3 && !s.endedClick.bed,
-  "ending Party clears the reaction and focus, and later jacket clicks stay inert",
+  s.ended.tab === null && !s.ended.rustling && s.ended.focus !== "bedroom-party-coats" &&
+  s.endedClick && s.endedClick.swishes.length === 1 && !s.endedClick.bed,
+  "ending Party clears the reaction and later jacket clicks stay inert",
   { ended: s.ended, click: s.endedClick });
 check(s.closed && s.closed.party && s.closed.state.pointer === "none" &&
-  s.closed.state.tab === "-1" && !s.closed.state.rustling && s.closed.swishes.length === 3,
+  s.closed.state.tab === null && !s.closed.state.rustling && s.closed.swishes.length === 1,
   "closing Bedroom disables the jackets without altering Party itself", s.closed);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
 check(/function partyCoatsActive\(\) \{[\s\S]*window\.__bedroomRoomOpen[\s\S]*gameStrip\.classList\.contains\("party-on"\)/.test(source) &&
   /partyCoats\.addEventListener\("click", function \(event\) \{[\s\S]*event\.stopPropagation\(\);[\s\S]*if \(!partyCoatsActive\(\)\) return;[\s\S]*replayClass\(partyCoats, "rustling", 760\)/.test(source) &&
-  /event\.target\.closest\("#bedroom-room \.bedroom-prop, #bedroom-party-coats"\)/.test(source),
-  "the shared Bedroom controller owns the scoped pointer and keyboard paths");
+  !/id="bedroom-party-coats"[^>]*tabindex=/.test(source) &&
+  !/partyCoats\.focus\(/.test(source) &&
+  !/event\.target\.closest\("#bedroom-room \.bedroom-prop, #bedroom-party-coats"\)/.test(source),
+  "the shared Bedroom controller owns a scoped click-only path with no focus handling");
 
 console.log("");
 if (failures) {

@@ -122,7 +122,7 @@ check(s.shoes && s.shoes.count === 2 && s.shoes.opacity.every(function (opacity)
 check(s.coats && s.coats.off === "0" && s.coats.on === "1" && s.coats.ended === "0" &&
   s.coats.parent === "bedroom-bed" && s.coats.pointer === "none" &&
   s.coats.pointerOn === "auto" && s.coats.pointerEnded === "none" &&
-  s.coats.tab === "-1" && s.coats.tabOn === "-1" && s.coats.tabEnded === "-1",
+  s.coats.tab === null && s.coats.tabOn === null && s.coats.tabEnded === null,
   "the guest-coat pile becomes interactive only while Party and Bedroom are active", s.coats);
 check(s.coats && s.coats.garments && s.coats.garments.length === 3 &&
   s.coats.garments.every(function (garment) {
@@ -202,10 +202,11 @@ check((source.match(/class="bedroom-lamp-pedestal"/g) || []).length === 2 &&
   "the tables sit over the bed frame, under the duvet, with matching brass lamps in front");
 check(!/<image[^>]+bedroom/i.test(source),
   "Bedroom remains code-native rather than embedding a raster room image");
-check(/id="bedroom-party-coats" tabindex="-1"/.test(source) &&
+check(/id="bedroom-party-coats">/.test(source) &&
+  !/id="bedroom-party-coats"[^>]*tabindex=/.test(source) &&
   /html\.mir-party \.hunt-viewport\.bedroom-room-open #bedroom-party-coats\{pointer-events:auto;cursor:pointer\}/.test(source) &&
   source.indexOf('id="bedroom-party-coats"') < source.lastIndexOf('<g class="bedroom-sprinkler-water"'),
-  "the native SVG coat pile stays below the sprinkler layer and starts outside the Tab order");
+  "the native SVG coat pile stays below the sprinkler layer without becoming focusable");
 check(/id="bedroom-brick" width="60" height="32"[\s\S]*?M0 1H60M0 16H60M0 31H60/.test(source),
   "Bedroom uses a native running-bond loft brick pattern");
 

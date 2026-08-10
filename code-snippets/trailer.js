@@ -1,10 +1,8 @@
-/* Loft Day's authored trailer timeline. The page injects only presentation mechanics
-   (cards, captions, cuts, cursor, scheduling); every world change below goes through
-   the same typed `loft` API exposed to Code, Console, and Python. */
-(function () {
-  "use strict";
+/* Loft Day's canonical Trailer. Every game and presentation beat uses the same typed
+   `loft` API exposed to Code, Console, and Python. */
+"use strict";
 
-  var FULL = {
+var FULL = {
     announce: 2200,
     title: 4000,
     office: 4000,
@@ -19,144 +17,170 @@
     camp: 6500,
     final: 4000,
     kitchen: 1000
-  };
+};
 
-  function unwrap(envelope, label) {
+function unwrap(envelope, label) {
     if (!envelope || envelope.ok !== true) {
       throw new Error((label || "Trailer action") + " failed: " +
         (envelope && (envelope.message || envelope.code) || "no result"));
     }
     return envelope.value;
-  }
+}
 
-  function timing(host) {
-    if (!host.reduced) return FULL;
+function timing(loft) {
+    var reducedStatus = unwrap(loft.presentation.reduced.status(), "Read motion preference");
+    if (!reducedStatus.on) return FULL;
     var reduced = {};
     Object.keys(FULL).forEach(function (key) {
       reduced[key] = key === "announce" ? 1600 : Math.max(1800, Math.round(FULL[key] * .55));
     });
     return reduced;
-  }
+}
 
-  async function pause(host, ms) {
-    if (!await host.wait(ms)) throw new Error("Trailer stopped");
-  }
+function trailerStopped() {
+  var error = new Error("Trailer stopped");
+  error.__scriptStop = true;
+  return error;
+}
 
-  async function announceAndCut(host, t, room, chapter, caption, hold, setup) {
-    host.announce(chapter, caption);
-    await pause(host, t.announce); // narration lands before the camera moves
-    await host.cut(async function () {
-      unwrap(await window.loft.room.go(room), "Open " + room);
+async function pause(loft, ms) {
+    var remaining = ms;
+    while (remaining > 0) {
+      var slice = Math.min(100, remaining);
+      await sleep(slice);
+      remaining -= slice;
+      if (!unwrap(loft.trailer.status(), "Read Trailer status").playing) throw trailerStopped();
+    }
+}
+
+async function action(promise, label) {
+    return unwrap(await promise, label);
+}
+
+async function caption(loft, key) {
+    return action(loft.presentation.caption.show(key), "Show Trailer caption");
+}
+
+async function announce(loft, chapter, captionKey) {
+    await action(loft.presentation.chapter.show(chapter), "Show Trailer chapter");
+    await caption(loft, captionKey);
+}
+
+async function cut(loft, setup) {
+    await action(loft.presentation.cut("out"), "Fade Trailer out");
+    await setup();
+    await action(loft.presentation.cut("in"), "Fade Trailer in");
+}
+
+async function announceAndCut(loft, t, room, chapter, captionKey, hold, setup) {
+    await announce(loft, chapter, captionKey);
+    await pause(loft, t.announce);
+    await cut(loft, async function () {
+      await action(loft.room.go(room), "Open " + room);
       if (setup) await setup();
     });
-    await pause(host, hold); // the same caption remains through the move and tableau
-  }
+    await pause(loft, hold);
+}
 
-  async function interact(host, loft, id) {
-    await host.point(id); // presentation-only ghost cursor; activation stays in the typed API
-    return unwrap(await loft.interaction.activate(id), "Activate " + id);
-  }
+async function interact(loft, id) {
+    await action(loft.presentation.point(id), "Point to " + id);
+    return action(loft.interaction.activate(id), "Activate " + id);
+}
 
-  async function run(host) {
-    var loft = window.loft;
-    if (!loft || !loft.session || !loft.session.preview) {
-      throw new Error("Loft API is not ready.");
-    }
-    var t = timing(host);
+async function playTimeline(loft) {
+    var t = timing(loft);
 
-    host.card("title", "cine_title_kicker", "cine_title", "cine_title_sub");
-    host.caption("cine_open");
-    unwrap(await loft.session.preview.score.play({
+    await action(loft.presentation.card.show("title"), "Show Trailer title");
+    await caption(loft, "cine_open");
+    await action(loft.session.preview.score.play({
       track: "tumbala", loop: true, level: .42, fade_ms: 900
-    }), "Start trailer score");
-    await pause(host, t.title);
-    host.hideCard();
+    }), "Start Trailer score");
+    await pause(loft, t.title);
+    await action(loft.presentation.card.hide(), "Hide Trailer title");
 
-    await announceAndCut(host, t, "office", "cine_chapter_jump", "cine_arcade", t.office,
-      async function () { unwrap(await loft.office.invaders.preview(true), "Start Invaders preview"); });
-    unwrap(await loft.office.invaders.preview(false), "Stop Invaders preview");
+    await announceAndCut(loft, t, "office", "cine_chapter_jump", "cine_arcade", t.office,
+      async function () { await action(loft.office.invaders.preview(true), "Start Invaders preview"); });
+    await action(loft.office.invaders.preview(false), "Stop Invaders preview");
 
-    await announceAndCut(host, t, "cinema", "cine_chapter_open", "cine_below", t.cinema,
+    await announceAndCut(loft, t, "cinema", "cine_chapter_open", "cine_below", t.cinema,
       async function () {
-        await interact(host, loft, "cinema.bike");
-        await pause(host, host.reduced ? 500 : 900);
-        await interact(host, loft, "cinema.cushion");
+        await interact(loft, "cinema.bike");
+        await pause(loft, unwrap(loft.presentation.reduced.status(), "Read motion preference").on ? 500 : 900);
+        await interact(loft, "cinema.cushion");
       });
 
-    await announceAndCut(host, t, "garden", "cine_chapter_unlock", "cine_clues", t.garden,
-      async function () { await interact(host, loft, "garden.tensegrity"); });
+    await announceAndCut(loft, t, "garden", "cine_chapter_unlock", "cine_clues", t.garden,
+      async function () { await interact(loft, "garden.tensegrity"); });
 
-    await announceAndCut(host, t, "bathroom", "cine_chapter_wander", "cine_anywhere", t.bathroom,
-      async function () { unwrap(await loft.bathroom.bubbles.preview(true), "Start bubbles preview"); });
-    unwrap(await loft.bathroom.bubbles.preview(false), "Stop bubbles preview");
+    await announceAndCut(loft, t, "bathroom", "cine_chapter_wander", "cine_anywhere", t.bathroom,
+      async function () { await action(loft.bathroom.bubbles.preview(true), "Start bubbles preview"); });
+    await action(loft.bathroom.bubbles.preview(false), "Stop bubbles preview");
 
-    host.caption("cine_phone");
-    unwrap(await loft.app.open("clock"), "Open Clock");
-    await pause(host, t.phone);
-    unwrap(await loft.app.open("mines"), "Open Mines");
-    await pause(host, t.phone);
-    unwrap(await loft.app.close("phone"), "Close phone");
+    await caption(loft, "cine_phone");
+    await action(loft.app.open("clock"), "Open Clock");
+    await pause(loft, t.phone);
+    await action(loft.app.open("mines"), "Open Mines");
+    await pause(loft, t.phone);
+    await action(loft.app.close("phone"), "Close phone");
 
-    await announceAndCut(host, t, "bedroom", "cine_chapter_round", "cine_round", t.bedroom,
-      async function () { unwrap(await loft.api.perform("bedroom.tic-tac-toe.preview", { on: true }), "Start tic-tac-toe preview"); });
-    unwrap(await loft.api.perform("bedroom.tic-tac-toe.preview", { on: false }), "Stop tic-tac-toe preview");
+    await announceAndCut(loft, t, "bedroom", "cine_chapter_round", "cine_round", t.bedroom,
+      async function () { await action(loft.bedroom["tic-tac-toe"].preview(true), "Start tic-tac-toe preview"); });
+    await action(loft.bedroom["tic-tac-toe"].preview(false), "Stop tic-tac-toe preview");
 
-    await announceAndCut(host, t, "cuddly", "cine_chapter_soft", "cine_soft", t.cuddly,
+    await announceAndCut(loft, t, "cuddly", "cine_chapter_soft", "cine_soft", t.cuddly,
       async function () {
-        await interact(host, loft, "cuddly.pan-edge");
-        await pause(host, host.reduced ? 450 : 800);
-        await interact(host, loft, "cuddly.bolster");
+        await interact(loft, "cuddly.pan-edge");
+        await pause(loft, unwrap(loft.presentation.reduced.status(), "Read motion preference").on ? 450 : 800);
+        await interact(loft, "cuddly.bolster");
       });
 
-    await announceAndCut(host, t, "garden", "cine_chapter_party", "cine_party", t.party,
-      async function () { unwrap(await loft.party.set(true), "Start Party preview"); });
+    await announceAndCut(loft, t, "garden", "cine_chapter_party", "cine_party", t.party,
+      async function () { await action(loft.party.set(true), "Start Party preview"); });
 
-    host.announce("cine_chapter_road", "cine_road");
-    await pause(host, t.announce);
-    await host.cut(async function () {
-      unwrap(await loft.party.set(false), "Stop Party preview");
-      unwrap(await loft.roadtrip.preview.show({ route: "banff", distance: 540 }), "Show Road Trip");
+    await announce(loft, "cine_chapter_road", "cine_road");
+    await pause(loft, t.announce);
+    await cut(loft, async function () {
+      await action(loft.party.set(false), "Stop Party preview");
+      await action(loft.roadtrip.preview.show({ route: "banff", distance: 540 }), "Show Road Trip");
     });
-    await pause(host, t.road);
+    await pause(loft, t.road);
 
-    host.announce("cine_chapter_camp", "cine_camp");
-    await pause(host, t.announce);
-    await host.cut(async function () {
-      unwrap(await loft.roadtrip.preview.show({ route: "camp", distance: 0 }), "Show Camping");
-      unwrap(await loft.camping.fire.open(), "Open campfire builder");
-      unwrap(await loft.camping.fire.place("tinder"), "Place tinder");
-      unwrap(await loft.camping.fire.place("twigs"), "Place twigs");
-      unwrap(await loft.camping.fire.place("teepee"), "Place logs");
-      unwrap(await loft.camping.fire.light(), "Light campfire");
+    await announce(loft, "cine_chapter_camp", "cine_camp");
+    await pause(loft, t.announce);
+    await cut(loft, async function () {
+      await action(loft.roadtrip.preview.show({ route: "camp", distance: 0 }), "Show Camping");
+      await action(loft.camping.fire.open(), "Open campfire builder");
+      await action(loft.camping.fire.place("tinder"), "Place tinder");
+      await action(loft.camping.fire.place("twigs"), "Place twigs");
+      await action(loft.camping.fire.place("teepee"), "Place logs");
+      await action(loft.camping.fire.light(), "Light campfire");
     });
-    // Fire lighting deliberately has two delayed beats of its own. Reclaim the authored
-    // line after they settle so the campsite's ordinary clue cannot replace the trailer.
-    await pause(host, Math.min(1800, t.camp));
-    host.caption("cine_camp");
-    await pause(host, Math.max(0, t.camp - 1800));
+    await pause(loft, Math.min(1800, t.camp));
+    await caption(loft, "cine_camp");
+    await pause(loft, Math.max(0, t.camp - 1800));
 
-    host.card("final", "cine_final_kicker", "cine_final_title", "cine_final_detail", "cine_final_note");
-    host.caption("cine_signoff");
-    await pause(host, t.final);
-    host.hideCard();
+    await action(loft.presentation.card.show("final"), "Show Trailer finale");
+    await caption(loft, "cine_signoff");
+    await pause(loft, t.final);
+    await action(loft.presentation.card.hide(), "Hide Trailer finale");
 
-    // Finish through public owners: return to the Kitchen, let the camera land, then
-    // use the canonical extinguisher reset. Preview completion preserves raw recovery bytes.
-    await host.cut(async function () {
-      unwrap(await loft.room.go("kitchen"), "Return to Kitchen");
-    });
-    host.caption("cine_signoff");
-    await pause(host, t.kitchen);
+    await cut(loft, async function () { await action(loft.room.go("kitchen"), "Return to Kitchen"); });
+    await caption(loft, "cine_signoff");
+    await pause(loft, t.kitchen);
     var reset = loft.game.reset("extinguisher");
-    host.caption("cine_signoff");
-    unwrap(await reset, "Reset Loft Day");
-    host.caption("cine_signoff");
-    unwrap(await loft.session.preview.score.stop({ fade_ms: 1200 }), "Fade trailer score");
-    await host.stop("fresh");
-  }
+    await caption(loft, "cine_signoff");
+    await action(reset, "Reset Loft Day");
+    await caption(loft, "cine_signoff");
+    await action(loft.session.preview.score.stop({ fade_ms: 1200 }), "Fade Trailer score");
+    await action(loft.trailer.stop("fresh"), "Finish Trailer");
+}
 
-  window.LoftDayTrailer = Object.freeze({
-    duration: 90000,
-    run: run
-  });
-})();
+var loft = window.loft;
+if (!loft || !loft.session || !loft.session.preview) throw new Error("Loft API is not ready.");
+if (!unwrap(loft.trailer.status(), "Read Trailer status").playing) {
+  await action(loft.trailer.play(), "Start Trailer");
+} else {
+  await action(loft.session.preview.begin("trailer"), "Begin Trailer preview");
+  await action(loft.game.reset("instant"), "Reset Trailer preview");
+  await playTimeline(loft);
+}

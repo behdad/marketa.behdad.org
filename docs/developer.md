@@ -475,11 +475,15 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The authored timing and world sequence lives in `code-snippets/trailer.js` and uses typed Loft API
-actions. It is both the executable timeline and the editable canonical file shown in Code; do not
-mirror its body in HTML or another sample. The inline entry controller remains the narrow privileged
-presentation host for the current reel: captions, cards, cut veil, ghost cursor, trusted-click audio
-priming, scheduling, and takeover/error teardown.
+The authored timing and world sequence lives in `code-snippets/trailer.js` and calls only public
+typed `loft.*` capabilities plus ordinary JavaScript timing. It is both the executable timeline and
+the editable canonical file shown in Code; do not mirror its body in HTML or another sample. The
+manifest exposes only its name: first activation resolves the local built-in override or lazily
+fetches the canonical bytes, then uses the same async JavaScript source runner as Code and
+`run("name")`. The ordinary script requests `loft.trailer.play()` when run outside an active reel and
+opens its preview transaction itself once activated; the IDE has no Trailer filename branch. The
+inline entry controller keeps overlay DOM, geometry, trusted-click audio priming, and takeover/error
+teardown private.
 
 Public `presentation.*` actions expose only translated cards/captions/chapters, two finite cut
 phases, and the fixed semantic `interaction.*` targets while a Trailer preview is active; overlay

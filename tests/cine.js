@@ -73,6 +73,19 @@ var LAYOUT = [
   "})();</script>"
 ].join("\n");
 
+var LAZY = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre><script>(function(){',
+  "function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}",
+  "window.addEventListener('load',function(){setTimeout(async function(){var r={errors:window.__errs};try{",
+  " r.before=(window.__codeSnippetResourceRequests||[]).slice();var load=window.__codeSnippetResourceLoader;window.__codeSnippetResourceLoader=function(path){return new Promise(function(resolve,reject){setTimeout(function(){Promise.resolve(load(path)).then(resolve,reject);},240);});};",
+  " var cancelledPlay=window.loft.trailer.play();await wait(40);var cancelledStop=await window.loft.trailer.stop('restore');await cancelledPlay;await wait(320);r.cancelled={stop:cancelledStop,inactive:!window.__cinematic&&!value(window.loft.session.preview.status()).active};",
+  " var play=window.loft.trailer.play();await wait(1200);r.active=!!window.__cinematic&&!!document.getElementById('cine-overlay')&&value(window.loft.session.preview.status()).active;await window.loft.trailer.stop('restore');await play;",
+  " localStorage.setItem('deskCodeBuiltinOverrides',JSON.stringify({'trailer.js':'window.__trailerOverrideRuns=(window.__trailerOverrideRuns||0)+1;'}));await window.loft.trailer.play();r.override=window.__trailerOverrideRuns===1&&!window.__cinematic&&!value(window.loft.session.preview.status()).active;r.requests=(window.__codeSnippetResourceRequests||[]).slice();",
+  "}catch(e){window.__errs.push(String(e&&e.stack||e));}r.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(r);},400);});",
+  "function value(envelope){return envelope&&envelope.ok?envelope.value:null;}",
+  "})();</script>"
+].join("\n");
+
 var failures = 0;
 function check(ok, message, detail) {
   if (ok) console.log("  ✓ " + message);
@@ -89,7 +102,17 @@ function clean(r, disposition) {
   check(s.scorePaused && !s.scoreLoop && s.scoreTime < .05, disposition + " restores the incoming score state", { paused: s.scorePaused, loop: s.scoreLoop, time: s.scoreTime });
 }
 
-console.log("Trailer cinematic — authored full reel:");
+console.log("Trailer cinematic — lazy ordinary-script activation:");
+var lazy = lib.runPageSync("loft-day.html", LAZY, 7000, { patchRaf: true, forceMotion: true, chromeFlags: "--autoplay-policy=no-user-gesture-required" });
+check(lazy && lazy.errors.length === 0, "lazy activation has no uncaught errors", lazy && lazy.errors);
+check(lazy && lazy.before.length === 0 && lazy.requests.filter(function (path) { return path === "code-snippets/trailer.js"; }).length === 1,
+  "the page requests Trailer source only on first activation and reuses that lazy load", lazy && { before: lazy.before, requests: lazy.requests });
+check(lazy && lazy.cancelled && lazy.cancelled.stop && lazy.cancelled.inactive,
+  "Stop during the lazy load cancels execution without a delayed restart", lazy && lazy.cancelled);
+check(lazy && lazy.active && lazy.override,
+  "repeat activation executes the ordinary canonical source, while a local built-in override remains authoritative", lazy);
+
+console.log("\nTrailer cinematic — authored full reel:");
 var full = lib.runPageSync("loft-day.html", NATURAL, 105000, { patchRaf: true, forceMotion: true, chromeFlags: "--autoplay-policy=no-user-gesture-required" });
 if (!full) check(false, "full reel produced a report");
 else {
@@ -149,12 +172,13 @@ check(!/window\.__|__cineRoadtripDemo|createElementNS|<path|setAttribute\s*\(\s*
 check(/roadtrip\.preview\.show\(\{ route: "banff"/.test(source) && /roadtrip\.preview\.show\(\{ route: "camp"/.test(source), "timeline selects both exact renderer-owned routes");
 var html = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(!/function runFullCinematic|function runReducedCinematic|__cineRoadtripDemo/.test(html), "obsolete inline/fake trailer runners are gone");
-check((html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 1 && !/loft-day\.trailer\.js/.test(html), "page executes the one canonical Code-visible trailer file");
-var hostCalls = Array.from(new Set(Array.from(source.matchAll(/host\.([A-Za-z]+)/g), function (match) { return match[1]; }))).sort();
-check(hostCalls.join("|") === "announce|caption|card|cut|hideCard|point|reduced|stop|wait", "host dependency is presentation-only and explicitly bounded", hostCalls);
-var apiCalls = Array.from(new Set(Array.from(source.matchAll(/(?:window\.)?loft\.([A-Za-z0-9_.]+)\s*\(/g), function (match) { return match[1]; }))).sort();
-var expectedApiCalls = ["api.perform","app.close","app.open","bathroom.bubbles.preview","camping.fire.light","camping.fire.open","camping.fire.place","game.reset","interaction.activate","office.invaders.preview","party.set","roadtrip.preview.show","room.go","session.preview.score.play","session.preview.score.stop"].sort();
-check(apiCalls.join("|") === expectedApiCalls.join("|"), "every world dependency is a typed Loft capability", apiCalls);
+check((html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 0 && /window\.__runCodeScript\("trailer\.js"/.test(html) && !/LoftDayTrailer|loft-day\.trailer\.js/.test(html), "page lazily hands the one canonical Code-visible Trailer file to the general source runner");
+check(!/\bhost\./.test(source), "canonical Trailer has no injected presentation host dependency");
+check(/loft\.trailer\.play\(\)/.test(source) && /loft\.session\.preview\.begin\("trailer"\)/.test(source) && /loft\.game\.reset\("instant"\)/.test(source), "ordinary Trailer source bootstraps its bounded public play and preview lifecycle");
+var normalizedSource = source.replace(/\["tic-tac-toe"\]/g, ".tic-tac-toe");
+var apiCalls = Array.from(new Set(Array.from(normalizedSource.matchAll(/(?:window\.)?loft\.([A-Za-z0-9_.-]+)\s*\(/g), function (match) { return match[1]; }))).sort();
+var expectedApiCalls = ["app.close","app.open","bathroom.bubbles.preview","bedroom.tic-tac-toe.preview","camping.fire.light","camping.fire.open","camping.fire.place","game.reset","interaction.activate","office.invaders.preview","party.set","presentation.card.hide","presentation.card.show","presentation.caption.show","presentation.chapter.show","presentation.cut","presentation.point","presentation.reduced.status","roadtrip.preview.show","room.go","session.preview.begin","session.preview.score.play","session.preview.score.stop","trailer.play","trailer.status","trailer.stop"].sort();
+check(apiCalls.join("|") === expectedApiCalls.join("|"), "every Trailer dependency is a public typed Loft capability", apiCalls);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

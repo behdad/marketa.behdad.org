@@ -58,9 +58,13 @@ check(Array.isArray(snippets) && snippets.length === 8 &&
       snippets.join("|") !== snippets.slice().sort().join("|"),
   "the filename-only manifest names every canonical public file without relying on authored order");
 check(/src="code-snippets\/manifest\.js"/.test(html) &&
-      (html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 1 &&
+      (html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 0 &&
+      !/CODE_BUILTINS\.forEach\(codeFetchBuiltin\)/.test(html) &&
       !/CODE_STARTER|CODE_PY_STARTER|CODE_PY_HELLO|CODE_PY_LOFT_API|CODE_PY_SPACE_FILLER|CODE_PY_FRAUNCES|CODE_JS_FRAUNCES|deskCodeExamples|deskCodeHelloSync/.test(html),
-  "Code and the Trailer load canonical external files without inline samples or migration keys");
+  "Code keeps canonical files external and leaves the Trailer unloaded until activation");
+var codeRunCurrentSource = (/function codeRunCurrent\(\)[\s\S]*?\/\/ Code assistance/.exec(html) || [""])[0];
+check(/codeRunCode\(name, code/.test(codeRunCurrentSource) && !/trailer\.js|trailer/i.test(codeRunCurrentSource),
+  "Code runs every JavaScript buffer through its general source runner without a Trailer filename branch");
 var helloJs = snippet("hello.js"), helloPy = snippet("hello.py"), squarePy = snippet("square.py");
 check(/loft\.party\.set\(true\)/.test(helloJs) && /await loft\.room\.go\("garden"\)/.test(helloJs) && /await loft\.caption\.show\("hello from the loft 👋"\)/.test(helloJs) &&
       /import loft/.test(helloPy) && /loft\.party\.set\(True\)/.test(helloPy) && /await loft\.room\.go\("garden"\)/.test(helloPy) &&
@@ -180,9 +184,9 @@ var collisionHarness = [
   '  var code=document.getElementById("monitor-code-code"),del=document.getElementById("monitor-code-del");',
   '  var js=JSON.parse(localStorage.getItem("deskScripts")||"{}"),py=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}"),overrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");',
   '  var out={oneRow:items("loft-type.js").length===1&&items("space-filler.py").length===1&&items("square.py").length===1,storesClean:!own(js,"loft-type.js")&&!own(py,"space-filler.py")&&!own(py,"square.py"),unrelated:js["keep.js"]==="window.keep = true;"&&py["keep.py"]===\'print("keep")\',migrated:overrides["loft-type.js"]==="window.migrated = true;"&&own(overrides,"space-filler.py")&&overrides["space-filler.py"]==="",explicitEmpty:own(overrides,"square.py")&&overrides["square.py"]==="",styles:getComputedStyle(builtin("hello.js")).fontStyle==="italic"&&getComputedStyle(builtin("loft-type.js")).fontStyle==="normal"&&getComputedStyle(items("keep.js")[0]).fontStyle==="normal"&&getComputedStyle(items("unsaved")[0]).fontStyle==="italic"};',
-  '  builtin("loft-type.js").click();out.migratedLoads=code.value==="window.migrated = true;";del.click();out.resetLoadsCanonical=code.value===window.__codeSnippetResourceLoader("code-snippets/loft-type.js")&&!own(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"loft-type.js");',
-  '  builtin("space-filler.py").click();out.emptyLoads=code.value===""&&!del.disabled;del.click();out.emptyReset=code.value===window.__codeSnippetResourceLoader("code-snippets/space-filler.py");',
-  '  builtin("square.py").click();out.explicitEmptyLoads=code.value===""&&!del.disabled;del.click();out.explicitReset=code.value===window.__codeSnippetResourceLoader("code-snippets/square.py");',
+  '  builtin("loft-type.js").click();out.migratedLoads=code.value==="window.migrated = true;";del.click();await new Promise(function(r){setTimeout(r,20)});out.resetLoadsCanonical=code.value===window.__codeSnippetResourceLoader("code-snippets/loft-type.js")&&!own(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"loft-type.js");',
+  '  builtin("space-filler.py").click();out.emptyLoads=code.value===""&&!del.disabled;del.click();await new Promise(function(r){setTimeout(r,20)});out.emptyReset=code.value===window.__codeSnippetResourceLoader("code-snippets/space-filler.py");',
+  '  builtin("square.py").click();out.explicitEmptyLoads=code.value===""&&!del.disabled;del.click();await new Promise(function(r){setTimeout(r,20)});out.explicitReset=code.value===window.__codeSnippetResourceLoader("code-snippets/square.py");',
   '  js=JSON.parse(localStorage.getItem("deskScripts")||"{}");py=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}");out.afterReset=items("loft-type.js").length===1&&items("space-filler.py").length===1&&items("square.py").length===1&&js["keep.js"]==="window.keep = true;"&&py["keep.py"]===\'print("keep")\';',
   '  document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
@@ -196,17 +200,30 @@ check(collisionState && !collisionState.error && collisionState.oneRow && collis
   "same-name saved files collapse into one canonical row without losing content, empty overrides, reset behavior, or unrelated files",
   collisionState && (collisionState.error || JSON.stringify(collisionState)));
 
+var trailerStopHarness = [
+  '<script>(async function(){try{',
+  'localStorage.removeItem("deskCodeBuiltinOverrides");var mon=document.getElementById("office-monitor");mon.classList.add("screen-on","show-caps","show-code");await new Promise(function(r){setTimeout(r,40)});',
+  'var item=Array.from(document.querySelectorAll("#monitor-code-list .code-item")).find(function(node){return node.textContent==="trailer.js";});item.click();await new Promise(function(r){setTimeout(r,20)});document.getElementById("monitor-code-run").click();await new Promise(function(r){setTimeout(r,900)});var active=!!window.__cinematic,stopResult=window.stop(),deadline=performance.now()+2200;while((window.__cinematic||window.loft.session.preview.status().value.active)&&performance.now()<deadline)await new Promise(function(r){setTimeout(r,40)});',
+  'var out={errors:window.__errs,active:active,stop:/stopped/.test(stopResult),inactive:!window.__cinematic&&!window.loft.session.preview.status().value.active,status:document.getElementById("monitor-code-ai-status").textContent,last:window.__lastCodeError||""};document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify(out);',
+  '}catch(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e),errors:window.__errs});}})();<\/script>'
+].join("\n");
+var trailerStopState = lib.runPageSync("rsvp.html", trailerStopHarness, 5500, { patchRaf: true, forceHybridPointer: true });
+check(trailerStopState && !trailerStopState.error && trailerStopState.errors.length === 0 && trailerStopState.active && trailerStopState.stop && trailerStopState.inactive && /stopped/.test(trailerStopState.status) && !trailerStopState.last,
+  "Code Stop cancels the canonical Trailer through the same ordinary script runner and restores its preview",
+  trailerStopState && (trailerStopState.error || JSON.stringify(trailerStopState)));
+
 var harness = [
   '<script>',
   '(async function(){',
   '  var out={};',
   '  localStorage.removeItem("deskScripts"); localStorage.removeItem("deskPythonScripts"); localStorage.removeItem("deskCodeDraft"); localStorage.removeItem("deskCodeLanguage"); localStorage.removeItem("deskCodeBuiltinOverrides");',
+  '  var resourceCalls=[],resourceLoader=window.__codeSnippetResourceLoader;window.__codeSnippetResourceLoader=function(path){resourceCalls.push(path);return resourceLoader(path);};',
   '  var mon=document.getElementById("office-monitor"); mon.classList.add("screen-on","show-caps","show-code");',
   '  var name=document.getElementById("monitor-code-name"), code=document.getElementById("monitor-code-code"), py=document.getElementById("monitor-code-lang-py");',
-  '  await new Promise(function(r){setTimeout(r,30)});',
+  '  await new Promise(function(r){setTimeout(r,30)});out.noEagerTrailer=resourceCalls.indexOf("code-snippets/trailer.js")<0;',
   '  function codeItem(label,kind){return Array.from(document.querySelectorAll("#monitor-code-list .code-item")).find(function(item){return item.textContent===label&&(!kind||item.classList.contains(kind));});}',
-  '  var helloItem=codeItem("hello.js","builtin");helloItem.click();out.builtinHello=code.value;out.builtinIdentity=name.value;code.value="";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});var emptyOverrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");out.emptyOverride=Object.prototype.hasOwnProperty.call(emptyOverrides,"hello.js")&&emptyOverrides["hello.js"]==="";out.builtinSelectedAfterEdit=codeItem("hello.js","builtin").classList.contains("active")&&codeItem("hello.js","builtin").classList.contains("edited");document.getElementById("monitor-code-del").click();out.builtinReset=/loft\\.party\\.set\\(true\\)/.test(code.value)&&!Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"hello.js");',
-  '  codeItem("trailer.js","builtin").click();out.trailer={code:code.value,name:name.value,editable:!code.readOnly&&name.readOnly,runEnabled:!document.getElementById("monitor-code-run").disabled,resetInitiallyDisabled:document.getElementById("monitor-code-del").disabled};code.value+="\\n// local override";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});out.trailerOverride=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}")["trailer.js"];document.getElementById("monitor-code-del").click();out.trailerReset=code.value===window.__codeSnippetResourceLoader("code-snippets/trailer.js");',
+  '  var helloItem=codeItem("hello.js","builtin");helloItem.click();await new Promise(function(r){setTimeout(r,20)});out.builtinHello=code.value;out.builtinIdentity=name.value;code.value="";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});var emptyOverrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");out.emptyOverride=Object.prototype.hasOwnProperty.call(emptyOverrides,"hello.js")&&emptyOverrides["hello.js"]==="";out.builtinSelectedAfterEdit=codeItem("hello.js","builtin").classList.contains("active")&&codeItem("hello.js","builtin").classList.contains("edited");document.getElementById("monitor-code-del").click();out.builtinReset=/loft\\.party\\.set\\(true\\)/.test(code.value)&&!Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"hello.js");',
+  '  codeItem("trailer.js","builtin").click();await new Promise(function(r){setTimeout(r,20)});out.trailerLoadedOnSelection=resourceCalls.filter(function(path){return path==="code-snippets/trailer.js";}).length===1;out.trailer={code:code.value,name:name.value,editable:!code.readOnly&&name.readOnly,runEnabled:!document.getElementById("monitor-code-run").disabled,resetInitiallyDisabled:document.getElementById("monitor-code-del").disabled};code.value="window.__ordinaryTrailerBuffer=(window.__ordinaryTrailerBuffer||0)+1;";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});out.trailerOverride=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}")["trailer.js"];document.getElementById("monitor-code-run").click();await new Promise(function(r){setTimeout(r,80)});out.trailerOrdinaryRun=window.__ordinaryTrailerBuffer===1&&!window.__cinematic&&mon.classList.contains("show-console");window.__closeMonitorConsole();window.__openMonitorCode();await new Promise(function(r){setTimeout(r,20)});document.getElementById("monitor-code-del").click();out.trailerReset=code.value===resourceLoader("code-snippets/trailer.js");',
   '  window.edit("zebra.js");code.value="window.zebra=1";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});window.edit("Aardvark.js");code.value="window.aardvark=1";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});var items=Array.from(document.querySelectorAll("#monitor-code-list .code-item")),labels=items.map(function(item){return item.textContent;}),rest=labels.slice(1),sorted=rest.slice().sort(function(a,b){var aa=a.toLowerCase(),bb=b.toLowerCase();return aa<bb?-1:aa>bb?1:a<b?-1:a>b?1:0;});out.sortedMerged=labels[0]==="unsaved"&&rest.join("|")===sorted.join("|")&&labels.includes("hello.js")&&labels.includes("trailer.js")&&labels.includes("Aardvark.js")&&labels.includes("zebra.js")&&!!codeItem("hello.js","builtin")&&!!codeItem("Aardvark.js","user-file");out.selectionAfterResort=codeItem("Aardvark.js","user-file").classList.contains("active");',
   '  window.edit();',
   '  py.click(); code.value="print(\\\"turtle time\\\")"; code.dispatchEvent(new Event("input",{bubbles:true}));',
@@ -261,13 +278,13 @@ var harness = [
   '<\/script>',
 ].join("\n");
 
-var state = lib.runPageSync("rsvp.html", harness, 5200, { patchRaf: true, forceHybridPointer: true });
+var state = lib.runPageSync("rsvp.html", harness, 5400, { patchRaf: true, forceHybridPointer: true });
 check(state && !state.error, "headless Code interaction completed", state && state.error);
 if (state && !state.error) {
   check(state.builtinHello === helloJs && state.builtinIdentity === "hello.js" && state.emptyOverride && state.builtinSelectedAfterEdit && state.builtinReset,
     "editable built-ins load exact canonical text, preserve empty overrides, stay selected, and reset by deleting the override", state);
-  check(state.trailer && state.trailer.code === snippet("trailer.js") && state.trailer.name === "trailer.js" && state.trailer.editable && state.trailer.runEnabled && state.trailer.resetInitiallyDisabled && /local override/.test(state.trailerOverride) && state.trailerReset,
-    "the executable Trailer is the exact canonical Code file with an explicit local override/reset lifecycle", state.trailer);
+  check(state.noEagerTrailer && state.trailerLoadedOnSelection && state.trailer && state.trailer.code === snippet("trailer.js") && state.trailer.name === "trailer.js" && state.trailer.editable && state.trailer.runEnabled && state.trailer.resetInitiallyDisabled && /ordinaryTrailerBuffer/.test(state.trailerOverride) && state.trailerOrdinaryRun && state.trailerReset,
+    "Trailer stays unloaded until selected, then its exact editable buffer uses the ordinary JavaScript runner and reset lifecycle", state.trailer);
   check(state.sortedMerged && state.selectionAfterResort,
     "the merged canonical/user file list sorts deterministically at display time without losing selection", state);
   check(state.pythonSaved === 'print("turtle time")' && state.jsUntouched,

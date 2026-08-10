@@ -77,7 +77,7 @@ function codeSnippetResourceHook(html) {
     resources["code-snippets/" + entry.name] = fs.readFileSync(path.join(root, entry.name), "utf8");
   });
   var serialized = JSON.stringify(resources).replace(/<\/script/gi, "<\\/script");
-  return "<script>window.__codeSnippetResourceLoader=function(path){var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing test resource: '+path));};</script>";
+  return "<script>window.__codeSnippetResourceRequests=[];window.__codeSnippetResourceLoader=function(path){window.__codeSnippetResourceRequests.push(path);var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing test resource: '+path));};</script>";
 }
 
 function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {

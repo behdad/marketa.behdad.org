@@ -36778,7 +36778,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <script src="loft-day.en.js"></script>
 <script src="loft-day.cs.js"></script>
 <script src="code-snippets/manifest.js"></script>
-<script src="code-snippets/trailer.js"></script>
 <script>
 // A popup outside the browser's fullscreen element exists in the DOM but cannot paint.
 // Every context-menu builder uses this host so its existing fixed viewport coordinates
@@ -74778,10 +74777,11 @@ setOfficeProgress("pc", false);
       completion: "finite", description: "End a preview and restore the captured visit, or leave a fresh Kitchen runtime.",
       args: { disposition: { type: "string", enum: ["restore", "fresh"], required: true } },
       available: previewActive, run: function (args) { return window.__loftPreviewEnd(args.disposition); } });
+    var TRAILER_DURATION_MS = 90000;
     register({ id: "trailer.status", group: "Utilities / Scripting", kind: "query",
       description: "Report the authored Trailer player and its advertised duration.", run: function () {
         return { playing: !!window.__cinematic,
-          duration_ms: window.LoftDayTrailer && window.LoftDayTrailer.duration || 0,
+          duration_ms: TRAILER_DURATION_MS,
           reduced_motion: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) };
       } });
     register({ id: "trailer.play", group: "Utilities / Scripting", kind: "action", risk: "scene",
@@ -76168,7 +76168,7 @@ setOfficeProgress("pc", false);
       language: /\.py$/i.test(filename) ? "python" : "js"
     };
   }).filter(function (entry) { return entry.filename && /\.(?:js|py)$/i.test(entry.filename); });
-  var codeBuiltinSources = Object.create(null), codeBuiltinErrors = Object.create(null), codeActiveBuiltin = null;
+  var codeBuiltinSources = Object.create(null), codeBuiltinErrors = Object.create(null), codeBuiltinLoads = Object.create(null), codeActiveBuiltin = null;
   function codeHasOwn(object, key) { return Object.prototype.hasOwnProperty.call(object, key); }
   function readCodeBuiltinOverrides() {
     try { var raw = localStorage.getItem(CODE_BUILTIN_OVERRIDE_KEY), value = raw ? JSON.parse(raw) : null; return value && typeof value === "object" && !Array.isArray(value) ? value : {}; }
@@ -76198,16 +76198,28 @@ setOfficeProgress("pc", false);
     });
   }
   function codeFetchBuiltin(entry) {
-    return codeLoadResource(entry.path).then(function (source) {
+    if (codeHasOwn(codeBuiltinSources, entry.filename)) return Promise.resolve(codeBuiltinSources[entry.filename]);
+    if (codeBuiltinLoads[entry.filename]) return codeBuiltinLoads[entry.filename];
+    var loading = codeLoadResource(entry.path).then(function (source) {
       codeBuiltinSources[entry.filename] = String(source);
       delete codeBuiltinErrors[entry.filename];
       if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = codeBuiltinSources[entry.filename];
       codeRefreshPicker(codeLastSavedName);
+      return codeBuiltinSources[entry.filename];
     }).catch(function (error) {
       codeBuiltinErrors[entry.filename] = String(error && error.message || error || "unavailable");
       if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = "// canonical source could not be loaded";
       codeRefreshPicker(codeLastSavedName);
+      throw error;
     });
+    codeBuiltinLoads[entry.filename] = loading.then(function (source) {
+      delete codeBuiltinLoads[entry.filename];
+      return source;
+    }, function (error) {
+      delete codeBuiltinLoads[entry.filename];
+      throw error;
+    });
+    return codeBuiltinLoads[entry.filename];
   }
   function codeSyncBuiltinControls() {
     var builtin = codeActiveBuiltin;
@@ -76244,8 +76256,9 @@ setOfficeProgress("pc", false);
     codeSyncBuiltinControls();
     codeAiSetStatus(codeBuiltinHasOverride(entry) ? "edited built-in" : "canonical built-in", false);
     codeRefreshPicker(entry.filename);
+    if (!codeBuiltinHasOverride(entry) && !codeHasOwn(codeBuiltinSources, entry.filename)) codeFetchBuiltin(entry).catch(function () {});
+    return entry;
   }
-  CODE_BUILTINS.forEach(codeFetchBuiltin);
   var CODE_LANG_KEY = "deskCodeLanguage";
   function readCodeLanguage() { try { return localStorage.getItem(CODE_LANG_KEY) === "python" ? "python" : "js"; } catch (e) { return "js"; } }
   var codeLanguage = readCodeLanguage();
@@ -76564,6 +76577,7 @@ setOfficeProgress("pc", false);
       delete overrides[entry.filename];
       writeCodeBuiltinOverrides(overrides);
       if (codeCode) codeCode.value = codeBuiltinText(entry);
+      if (!codeHasOwn(codeBuiltinSources, entry.filename)) codeFetchBuiltin(entry).catch(function () {});
       codeAiSetStatus("reset to canonical", true);
       codeRefreshPicker(entry.filename);
       codeSyncBuiltinControls();
@@ -76633,10 +76647,15 @@ setOfficeProgress("pc", false);
       if (!err && options.console && monitor.classList.contains("show-console")) consolePrint("✓ " + name + " finished.", "console-dim");
       return !err;
     }
+    function fail(err) {
+      finish(err);
+      if (options.rejectOnError) throw err;
+      return false;
+    }
     var p;
     try { p = window.eval("(async function(){\n" + code + "\n})()"); }
-    catch (e) { finish(e); return Promise.resolve(false); }
-    if (p && typeof p.then === "function") return p.then(function () { return finish(); }, finish);
+    catch (e) { try { return Promise.resolve(fail(e)); } catch (error) { return Promise.reject(error); } }
+    if (p && typeof p.then === "function") return p.then(function () { return finish(); }, fail);
     finish();
     return Promise.resolve(true);
   }
@@ -76869,15 +76888,47 @@ setOfficeProgress("pc", false);
     var key = String(name), lang = language === "python" ? "python" : "js", saved = readScripts(lang);
     if (codeHasOwn(saved, key)) return { name: key, code: String(saved[key]), language: lang, builtin: null };
     var builtin = codeFindBuiltin(key, lang);
-    if (!builtin || (!codeBuiltinHasOverride(builtin) && !codeHasOwn(codeBuiltinSources, builtin.filename))) return null;
-    return { name: builtin.filename, code: codeBuiltinText(builtin), language: lang, builtin: builtin };
+    if (!builtin) return null;
+    var ready = codeBuiltinHasOverride(builtin) || codeHasOwn(codeBuiltinSources, builtin.filename);
+    return { name: builtin.filename, code: ready ? codeBuiltinText(builtin) : null, language: lang, builtin: builtin };
   }
+  function codeResolveScriptAsync(name, language) {
+    var resolved = codeResolveScript(name, language);
+    if (!resolved || resolved.code !== null) return Promise.resolve(resolved);
+    return codeFetchBuiltin(resolved.builtin).then(function (source) {
+      resolved.code = String(source);
+      return resolved;
+    });
+  }
+  function codeRunNamedScript(name, options) {
+    options = options || {};
+    var language = options.language === "python" ? "python" : "js";
+    return codeResolveScriptAsync(name, language).then(function (resolved) {
+      if (!resolved) {
+        var missing = new Error("No runnable script named \"" + name + "\".");
+        surfaceScriptError(String(name), missing, !!options.codeRun);
+        if (options.rejectOnError) throw missing;
+        return false;
+      }
+      if (options.guard && !options.guard()) {
+        var stopped = { __scriptStop: true };
+        if (options.rejectOnError) throw stopped;
+        return false;
+      }
+      return codeRunCode(resolved.name, resolved.code, options);
+    }, function (error) {
+      surfaceScriptError(String(name), error, !!options.codeRun);
+      if (options.rejectOnError) throw error;
+      return false;
+    });
+  }
+  window.__runCodeScript = codeRunNamedScript;
   window.run = function (name) {
     if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr("js");
     var key = String(name), resolved = codeResolveScript(key, "js");
     if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
     codeStopRepeat(); // a one-shot run supersedes any active loop
-    codeRunCode(resolved.name, resolved.code);
+    codeRunNamedScript(resolved.name);
     return "▶ running " + resolved.name + "…";
   };
   // repeat("name") / repeat() → run a script on a loop until Esc (or stop()/reset). A compile or
@@ -76891,7 +76942,13 @@ setOfficeProgress("pc", false);
 
     codeRunBtn.classList.toggle("code-btn-stop", active);
   }
-  function codeStopOneShot() { if (!codeOneShotOn) return false; codeOneShotOn = false; codeOneShotToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; codeUpdateRunBtn(); codeAiSetStatus("script stopped", true); return true; }
+  function codeStopOneShot() {
+    if (!codeOneShotOn) return false;
+    codeOneShotOn = false; codeOneShotToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1;
+    codeUpdateRunBtn(); codeAiSetStatus("script stopped", true);
+    window.dispatchEvent(new Event("loft:scriptstop"));
+    return true;
+  }
   function codeStopRepeat() { var was = codeRepeatOn; codeRepeatOn = false; codeRepeatToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; codeUpdateRunBtn(); return was; } // also aborts any in-flight one-shot script at its next await sleep()
   window.__stopRepeat = codeStopRepeat; // reset/other hooks end the loop through here
   function codeLoopStep(tok, name, code) {
@@ -76908,7 +76965,7 @@ setOfficeProgress("pc", false);
   window.repeat = function (name) {
     if (name === false) return window.stop();
     codeStopRepeat();
-    var key, code;
+    var key, code, loading = null;
     if (name == null || String(name).trim() === "") {
       if (codeLanguage === "js" && codeCode && codeCode.value.trim()) { key = (codeName && codeName.value.trim()) || "(code)"; code = codeCode.value; } // no arg → loop the current JS buffer
       else return "repeat(\"name\") — which script? " + scriptsListStr("js");
@@ -76916,10 +76973,18 @@ setOfficeProgress("pc", false);
       key = String(name); var resolved = codeResolveScript(key, "js");
       if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
       key = resolved.name; code = resolved.code;
+      if (code === null) loading = codeResolveScriptAsync(key, "js");
     }
     var tok = ++codeRepeatToken; codeRepeatOn = true;
     codeUpdateRunBtn();
-    codeLoopStep(tok, key, code);
+    if (loading) loading.then(function (resolved) {
+      if (tok === codeRepeatToken && codeRepeatOn) codeLoopStep(tok, resolved.name, resolved.code);
+    }, function (error) {
+      if (tok !== codeRepeatToken || !codeRepeatOn) return;
+      surfaceScriptError(key, error);
+      codeStopRepeat();
+    });
+    else codeLoopStep(tok, key, code);
     return "🔁 repeating " + key + " — Esc, the ■ button, or stop() to end.";
   };
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && codeRepeatOn) codeStopRepeat(); }, true); // Esc ends a repeating script (doesn't preventDefault — Esc still does its usual job)
@@ -126575,6 +126640,7 @@ function spawnDustMote(container) {
   var cinematicTimers = [];
   var cinematicTeardown = null;
   var cinematicStopping = null;
+  var cinematicLaunchToken = 0;
   var cineLastCaptionKey = null;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // NB: named cineBeat, NOT beat — keep the trailer timing helper distinct from the other
@@ -126776,6 +126842,7 @@ function spawnDustMote(container) {
       window.loft.session.preview.status();
     var previewActive = !!(preview && preview.ok && preview.value && preview.value.active);
     if (!window.__cinematic && !previewActive) return Promise.resolve(false);
+    cinematicLaunchToken++;
     window.__cinematic = false;
     cinematicTimers.forEach(clearTimeout);
     cinematicTimers = [];
@@ -126917,11 +126984,6 @@ function spawnDustMote(container) {
     if (host) host.classList.remove("cine-cutting");
     return true;
   }
-  async function cineCutAction(action) {
-    if (!await cineCutPhase("out")) return false;
-    await action();
-    return cineCutPhase("in");
-  }
   var CINE_INTERACTION_TARGETS = {
     "garden.tensegrity": "garden-tensegrity",
     "cuddly.pan-edge": "cuddly-panedge-hit",
@@ -126975,10 +127037,11 @@ function spawnDustMote(container) {
   }
   function startCinematic() {
     if (window.__cinematic || cinematicStopping) return Promise.resolve(false);
-    if (!window.LoftDayTrailer || !window.loft || !window.loft.session) {
+    if (!window.loft || !window.loft.session || typeof window.__runCodeScript !== "function") {
       try { console.error("Trailer timeline or Loft API is unavailable."); } catch (_error) {}
       return Promise.resolve(false);
     }
+    var launchToken = ++cinematicLaunchToken;
     window.__cinematic = true;
     stopHintBlink(); // the show owns the caption — end any attract-blink first (Watch is off-strip)
     if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
@@ -127004,40 +127067,34 @@ function spawnDustMote(container) {
       }
     }
     function onVisibility() { if (document.hidden) stopCinematic("restore"); }
+    function onScriptStop() { stopCinematic("restore"); }
     function onError(event) { if (!event || event.error) stopCinematic("restore"); }
     function onRejection() { stopCinematic("restore"); }
     document.addEventListener("pointerdown", swallowSceneInput, true);
     document.addEventListener("click", swallowSceneInput, true);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("loft:scriptstop", onScriptStop);
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
     cinematicTeardown = function () {
       document.removeEventListener("pointerdown", swallowSceneInput, true);
       document.removeEventListener("click", swallowSceneInput, true);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("loft:scriptstop", onScriptStop);
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
     };
-    var host = {
-      reduced: reduceMotion,
-      active: function () { return !!window.__cinematic; },
-      wait: cineWait,
-      caption: paintCineCaption,
-      announce: function (chapter, captionKey) { cineChapter(chapter); paintCineCaption(captionKey); },
-      card: cineShowCard,
-      hideCard: cineHideCard,
-      cut: cineCutAction,
-      point: cinePoint,
-      stop: stopCinematic
-    };
-    return window.loft.session.preview.begin("trailer").then(function (begun) {
-      if (!begun || !begun.ok) throw new Error("Trailer preview could not begin.");
-      return window.loft.game.reset("instant");
-    }).then(function (reset) {
-      if (!reset || !reset.ok) throw new Error("Trailer reset could not begin.");
-      return window.LoftDayTrailer.run(host);
+    // Resolve the canonical/locally-overridden file only after activation, then hand its exact
+    // bytes to the same ordinary async JavaScript runner used by Code and run("name").
+    return window.__runCodeScript("trailer.js", {
+      language: "js", rejectOnError: true,
+      guard: function () { return window.__cinematic && launchToken === cinematicLaunchToken; }
+    }).then(function (result) {
+      if (!window.__cinematic || launchToken !== cinematicLaunchToken) return result;
+      return stopCinematic("restore").then(function () { return result; });
     }).catch(function (error) {
-      if (window.__cinematic && (!error || error.message !== "Trailer stopped")) {
+      var expectedStop = !!(error && (error.__scriptStop || error.message === "Trailer stopped"));
+      if (window.__cinematic && !expectedStop) {
         try { console.error("Trailer stopped after an error", error); } catch (_error) {}
       }
       return stopCinematic("restore");

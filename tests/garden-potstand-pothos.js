@@ -16,6 +16,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         window.goToStage("garden");
         var plant = document.getElementById("garden-potstand");
         var lift = document.getElementById("garden-potstand-lift");
+        var offset = lift.parentNode;
         var hit = plant.querySelector(":scope > rect");
         var planter = document.getElementById("garden-potstand-planter");
         var pot = planter.querySelector(":scope > rect");
@@ -23,7 +24,10 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         report.structure = {
           parent: plant.parentNode && plant.parentNode.id,
           liftClass: lift && lift.getAttribute("class"),
+          offsetClass: offset && offset.getAttribute("class"),
+          offsetTransform: offset && offset.getAttribute("transform"),
           transform: plant.getAttribute("transform"),
+          waterSpot: window.gardenPlantSpots && window.gardenPlantSpots["garden-potstand"],
           hit: [hit.getAttribute("x"), hit.getAttribute("y"), hit.getAttribute("width"), hit.getAttribute("height")],
           pot: [pot.getAttribute("x"), pot.getAttribute("y"), pot.getAttribute("width"), pot.getAttribute("height"), pot.getAttribute("rx")],
           legs: Array.from(document.querySelectorAll("#garden-potstand-legs line")).map(function (line) {
@@ -84,8 +88,10 @@ var s = (result && result.structure) || {};
 var w = (result && result.water) || {};
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(s.parent === "garden-potstand-lift" && /\btrip-plant-lift\b/.test(s.liftClass || "") &&
-  s.transform === "translate(3,0)" && JSON.stringify(s.hit) === JSON.stringify(["106", "196", "68", "98"]),
-  "the established lift wrapper, id owner, transform, and hit rectangle remain exact", s);
+  s.offsetClass === "garden-potstand-offset" && s.offsetTransform === "translate(7,0)" &&
+  s.transform === "translate(3,0)" && JSON.stringify(s.hit) === JSON.stringify(["106", "196", "68", "98"]) &&
+  s.waterSpot && s.waterSpot.x === 827 && s.waterSpot.y === 180,
+  "the outer offset moves the complete plant and water effect seven units without changing internals", s);
 check(JSON.stringify(s.pot) === JSON.stringify(["126", "204", "28", "24", "4"]) &&
   JSON.stringify(s.legs) === JSON.stringify(["140,228,128,290", "140,228,152,290", "140,228,140,290"]),
   "the white pot and three-leg stand keep their authored size and height", s);
@@ -100,7 +106,7 @@ check(w.drains === 1 && w.afterClick === 1 && w.count === 3 && w.timestamp > 0 &
   "a real plant click and two more waterings still trigger and recover owned overwater state", w);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
-check(/id="garden-potstand" class="hunt-hit" transform="translate\(3,0\)">\s*<rect x="106" y="196" width="68" height="98" fill="transparent"\/>/.test(source) &&
+check(/class="garden-potstand-offset" transform="translate\(7,0\)">\s*<g class="trip-plant-lift" id="garden-potstand-lift"><g id="garden-potstand" class="hunt-hit" transform="translate\(3,0\)">\s*<rect x="106" y="196" width="68" height="98" fill="transparent"\/>/.test(source) &&
   /class="garden-potstand-variegation"/.test(source) && /class="garden-potstand-midribs"/.test(source),
   "the code-native SVG keeps the established interaction owner and pothos anatomy");
 

@@ -13,6 +13,26 @@ var harness = String.raw`<script>
       Date.now = function () { return now; };
       var rooster = document.getElementById("garden-rooster");
       var egg = document.getElementById("garden-rooster-egg");
+      var stage = document.getElementById("stage-garden");
+      var svg = document.getElementById("loft-game-strip");
+      function eggOrigin() {
+        var point = svg.createSVGPoint(); point.x = 0; point.y = 0;
+        var screen = point.matrixTransform(egg.getScreenCTM());
+        var local = screen.matrixTransform(stage.getScreenCTM().inverse());
+        return [Number(local.x.toFixed(3)), Number(local.y.toFixed(3))];
+      }
+      report.geometry = {
+        roosterTransform: rooster.getAttribute("transform"),
+        hit: Array.from(rooster.querySelectorAll(":scope > rect")).map(function (rect) {
+          return ["x", "y", "width", "height"].map(function (name) { return rect.getAttribute(name); });
+        }),
+        eggTransform: egg.getAttribute("transform"),
+        eggParent: egg.parentNode && egg.parentNode.id,
+        effectOwners: ["garden-rooster-egg-anim", "garden-rooster-egg-sparkle"].map(function (id) {
+          var effect = document.getElementById(id); return effect && effect.parentNode && effect.parentNode.id;
+        }),
+        preOrigin: eggOrigin()
+      };
       var lay = window.__roosterEggTry;
       window.__roosterEggTry = function () {
         var accepted = lay();
@@ -32,7 +52,8 @@ var harness = String.raw`<script>
           laying: egg.classList.contains("laying"),
           eggs: document.querySelectorAll("#garden-rooster-egg").length,
           accepted: report.tries.filter(Boolean).length,
-          additions: report.additions
+          additions: report.additions,
+          origin: eggOrigin()
         };
         for (var i = 0; i < 5; i++) click();
         setTimeout(function () {
@@ -45,6 +66,7 @@ var harness = String.raw`<script>
           };
           egg.dispatchEvent(new Event("animationend", { bubbles: true }));
           report.firstCleaned = !egg.classList.contains("laying");
+          report.finishedOrigin = eggOrigin();
           now += 2700;
           click();
           setTimeout(function () {
@@ -66,7 +88,8 @@ var harness = String.raw`<script>
               window.__resetRoosterEgg();
               report.reset = {
                 laying: egg.classList.contains("laying"),
-                eggs: document.querySelectorAll("#garden-rooster-egg").length
+                eggs: document.querySelectorAll("#garden-rooster-egg").length,
+                origin: eggOrigin()
               };
               report.errors = (window.__errs || []).slice();
               var pre = document.createElement("pre");
@@ -93,6 +116,19 @@ function check(ok, text, detail) {
 }
 check(!r.errors.length, "no uncaught page errors", r.errors);
 check(!r.thrown, "the real-click probe completes", r.thrown);
+check(r.geometry && r.geometry.roosterTransform === "translate(184,192)" &&
+  JSON.stringify(r.geometry.hit) === JSON.stringify([["-4", "0", "30", "42"]]) &&
+  r.geometry.eggTransform === "translate(24,39.4)" && r.geometry.eggParent === "garden-rooster" &&
+  JSON.stringify(r.geometry.effectOwners) === JSON.stringify(["garden-rooster-egg", "garden-rooster-egg"]),
+  "the whole rooster moves eight units while its hit box and nested egg effects stay unchanged", r.geometry);
+check(r.geometry && JSON.stringify(r.geometry.preOrigin) === JSON.stringify([208, 231.4]) &&
+  r.first && JSON.stringify(r.first.origin) === JSON.stringify([208, 231.4]) &&
+  JSON.stringify(r.finishedOrigin) === JSON.stringify([208, 231.4]) &&
+  r.reset && JSON.stringify(r.reset.origin) === JSON.stringify([208, 231.4]),
+  "the static, active, finished, and reset egg origin follows the exact eight-unit shift", {
+    pre: r.geometry && r.geometry.preOrigin, active: r.first && r.first.origin,
+    finished: r.finishedOrigin, reset: r.reset && r.reset.origin
+  });
 check(r.first && r.first.laying && r.first.eggs === 1 && r.first.accepted === 1 && r.first.additions === 1,
   "the first real click lays the single static egg even at the old rejecting random value", r.first);
 check(r.capped && r.capped.results.length === 6 && r.capped.results[0] === true &&

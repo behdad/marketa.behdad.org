@@ -74976,16 +74976,17 @@ setOfficeProgress("pc", false);
     function buildNamespace() {
       var root = window.loft;
       var allIds = Object.keys(definitions).sort();
+      var apiMethods = ["capabilities", "describe", "groups", "perform", "query", "subscribe"];
       rememberNamespace(root, "", allIds);
       rememberNamespace(root.api, "api", allIds.filter(function (id) { return id.indexOf("api.") === 0; }));
-      ["capabilities", "describe", "groups", "perform", "query", "subscribe"].forEach(function (method) {
+      apiMethods.forEach(function (method) {
         rememberNamespace(root.api[method], "api." + method, []);
       });
       allIds.forEach(function (id) {
         var def = definitions[id], bits = id.split("."), node = root;
-        // `loft.api` is the transport/discovery surface itself. Do not replace its
-        // query()/perform()/capabilities() methods with namespace convenience leaves.
-        if (bits[0] === "api") return;
+        // `loft.api` is also the transport/discovery surface. Preserve those methods while
+        // still installing non-conflicting registered leaves such as `loft.api.info()`.
+        if (bits[0] === "api" && bits.length === 2 && apiMethods.indexOf(bits[1]) >= 0) return;
         for (var i = 0; i < bits.length - 1; i++) {
           var prefix = bits.slice(0, i + 1).join(".");
           if (!node[bits[i]] || (typeof node[bits[i]] !== "object" && typeof node[bits[i]] !== "function")) {
@@ -75767,6 +75768,13 @@ setOfficeProgress("pc", false);
     if (meta.path === "api") {
       lines.push("  loft.api.capabilities(options?) — full machine manifest");
       lines.push("  loft.api.describe(id, args?) · query(id, args?) · perform(id, args?, options?) · subscribe(listener)");
+      direct.forEach(function (cap) {
+        var target = helpTargetFromPath(cap.id);
+        var targetMeta = window.__loftHelpTarget && window.__loftHelpTarget(target);
+        if (targetMeta && targetMeta.capabilities.length === 1 && targetMeta.capabilities[0] === cap.id) {
+          lines.push("  " + capabilitySignature(cap));
+        }
+      });
       return lines;
     }
     direct.sort(function (a, b) { return a.id.localeCompare(b.id); }).forEach(function (cap) {

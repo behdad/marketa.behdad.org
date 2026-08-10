@@ -170,6 +170,7 @@ the `loft` namespace. Bare `help` or `help(loft)` lists its top-level objects. D
 `help(loft.weather)`, `help(loft.weather.rain)`, or `help(loft.cuddly.chest.set)`;
 `loft.api.capabilities()` returns the complete structured catalogue. On/off commands use explicit
 reads and writes—for example, `loft.party.status()` and `loft.party.set(true)`.
+`loft.api.info()` reports the current typed-state revision.
 Weather/environment controls also accept
 `set(null)` to resume automatic ownership and expose `mode()` as `"auto"`, `"on"`, or `"off"`.
 The typed room API covers all ten rooms; `loft.bar` is the Kitchen alias and `loft.party` is the

@@ -352,6 +352,8 @@ ids stay canonical in results. The same registry mechanically creates discoverab
 `help(loft.kitchen)` and `help(loft.cuddly.chest)` resolve by registry object identity, not object
 stringification. Bare `help` (and `help(loft)`) lists only immediate top-level namespaces;
 namespace help drills down one level at a time, and callable help prints one exact typed signature.
+The transport methods keep their names under `loft.api`; non-conflicting registered API leaves such
+as `loft.api.info()` are installed and documented by the same namespace builder.
 Legacy console prose remains available only through direct string lookup, such as `help("dance")`.
 `capabilities()` remains the complete structured machine discovery surface.
 

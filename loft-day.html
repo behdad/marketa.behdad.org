@@ -116060,11 +116060,36 @@ function spawnDustMote(container) {
   var plantWaterCounts = {};
   var plantOverwateredAt = {};
   var plantRecoveryTimers = {};
+  var plantPerkGenerations = {};
+  var plantPerkTimers = {};
   var tripPropWaterState = {
     "garden-mushroom": { growth: 0, rotted: false, rottedAt: 0 },
     "garden-frog": { growth: 0, rotted: false, rottedAt: 0 }
   };
   var tripPropRotTimers = {};
+  function clearGardenPlantPerk(id) {
+    plantPerkGenerations[id] = (plantPerkGenerations[id] || 0) + 1;
+    clearTimeout(plantPerkTimers[id]);
+    plantPerkTimers[id] = null;
+    var el = document.getElementById(id);
+    if (el) el.classList.remove("watered");
+  }
+  function perkGardenPlant(id, el) {
+    if (!el || !plantSpots[id] || plantSpots[id].tripProp) return false;
+    clearGardenPlantPerk(id);
+    el.classList.remove("plant-sway");
+    var generation = plantPerkGenerations[id];
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (generation !== plantPerkGenerations[id]) return;
+        // A pending ambient-sway frame must not steal this deterministic reaction.
+        el.classList.remove("plant-sway");
+        el.classList.add("watered");
+        plantPerkTimers[id] = setTimeout(function () { clearGardenPlantPerk(id); }, 560);
+      });
+    });
+    return true;
+  }
   function renderTripPropWater(id) {
     var state = tripPropWaterState[id];
     var el = document.getElementById(id);
@@ -116150,6 +116175,7 @@ function spawnDustMote(container) {
     if (!el || !spot) return false;
     var drain = drainFn || window.drainRandomBottle;
     if (spot.tripProp) return waterTripProp(id, drain, source || "bottle", source);
+    if (source === "plant") perkGardenPlant(id, el);
     if (!drain || !drain()) {
       signalEmptyBottleAttempt(source);
       playDryClickSound(id);
@@ -116159,10 +116185,7 @@ function spawnDustMote(container) {
     el.classList.add("done");
     playWaterSound(id);
     spawnWaterDroplets(strip, spot.x, spot.y);
-    el.classList.remove("watered");
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { el.classList.add("watered"); });
-    });
+    if (source !== "plant") perkGardenPlant(id, el);
     plantWaterCounts[id] = Math.min(3, (plantWaterCounts[id] || 0) + 1);
     if (plantWaterCounts[id] >= 3) {
       el.classList.add("overwatered");
@@ -116190,6 +116213,7 @@ function spawnDustMote(container) {
         Number.isInteger(counts[id]) && counts[id] >= 0 && counts[id] <= 3;
     });
     Object.keys(plantSpots).forEach(function (id) {
+      clearGardenPlantPerk(id);
       var count = valid && Object.prototype.hasOwnProperty.call(counts, id) ? counts[id] : 0;
       var rottedAt = count >= 3 && overwateredAt && Number.isFinite(overwateredAt[id]) ? overwateredAt[id] : 0;
       if (count >= 3 && (!rottedAt || Date.now() - rottedAt >= 30000)) count = 0;
@@ -116199,7 +116223,6 @@ function spawnDustMote(container) {
       plantRecoveryTimers[id] = null;
       var el = document.getElementById(id);
       if (el) {
-        el.classList.remove("watered");
         el.classList.toggle("overwatered", count >= 3);
       }
       if (count >= 3) schedulePlantRecovery(id);
@@ -116284,6 +116307,9 @@ function spawnDustMote(container) {
   Object.keys(plantSpots).forEach(function (id) {
     if (plantSpots[id].tripProp) return;
     var el = document.getElementById(id);
+    if (el) el.addEventListener("animationend", function (event) {
+      if (event.target === el && event.animationName === "plant-perk") clearGardenPlantPerk(id);
+    });
     onActivate(el, function () { waterSpecificPlant(id, null, "plant"); });
   });
   // click the night caterpillar and it metamorphoses — flutters off as a butterfly
@@ -116871,10 +116897,12 @@ function spawnDustMote(container) {
         var ids = Object.keys(plantSpots).filter(function (id) { return !plantSpots[id].tripProp; });
         var id = ids[Math.floor(Math.random() * ids.length)];
         var el = document.getElementById(id);
-        if (el) {
+        if (el && !el.classList.contains("watered")) {
           el.classList.remove("plant-sway");
           requestAnimationFrame(function () {
-            requestAnimationFrame(function () { el.classList.add("plant-sway"); });
+            requestAnimationFrame(function () {
+              if (!el.classList.contains("watered")) el.classList.add("plant-sway");
+            });
           });
           setTimeout(function () { el.classList.remove("plant-sway"); }, 1600);
         }
@@ -124851,7 +124879,8 @@ function spawnDustMote(container) {
     if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {
       var el = document.getElementById(id);
-      if (el) el.classList.remove("done", "watered", "overwatered");
+      clearGardenPlantPerk(id);
+      if (el) el.classList.remove("done", "overwatered");
       plantWaterCounts[id] = 0;
     });
     Object.keys(instrumentSpots).forEach(function (id) {

@@ -417,6 +417,12 @@ an already-present override, including an empty one, wins. Do not reintroduce sa
 migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository bytes through
 a test-only resource hook because `file://` cannot fetch siblings.
 
+The Code sidebar's `Reset files…` context action calls `__resetMonitorCodeFiles` after a native
+confirmation. It removes only `deskScripts`, `deskPythonScripts`, `deskCodeBuiltinOverrides`,
+`deskCodeUnsaved`, `deskCodeDraft`, and `deskCodeLanguage`; it also cancels pending Code saves,
+runs/repeats, queued Code-to-Python handoffs, and remembered Code errors. It must not reset either
+runtime, installed Python packages, Linux state, or unrelated game/browser storage.
+
 The Pyodide console installs an embedded `loft.py` module beside the browser Turtle module. On
 `import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
 namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
@@ -669,7 +675,7 @@ references.
 | Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
 | Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
 | Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |
-| Code built-ins | `LOFT_CODE_SNIPPETS`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker` |
+| Code files | `LOFT_CODE_SNIPPETS`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker`, `__resetMonitorCodeFiles` |
 | Typed API | `initLoftApi`, `window.loft.api`, `__loftStateChanged` |
 | Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `PUBLIC_MONITOR_APPS` |
 | Entry/recovery | `urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, `stopCinematic` |

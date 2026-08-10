@@ -8306,8 +8306,8 @@ html.mir-uv #prince-dungeon-set.gate-secret-peek #prince-dungeon-secret-light{
 .mon-ctx:not(:has(button)),.console-ctx:not(:has(button)){display:none}
 .mon-ctx button{display:flex; align-items:center; gap:7px; width:100%; box-sizing:border-box; padding:6px 10px; border:none; border-radius:4px; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer}
 .mon-ctx button:hover:not(:disabled), .mon-ctx button:focus-visible:not(:disabled){background:var(--cream)}
-.mon-ctx button.ctx-kill{color:var(--wine)}
-.mon-ctx button.ctx-kill:hover:not(:disabled), .mon-ctx button.ctx-kill:focus-visible:not(:disabled){background:#f4e6e6}
+.mon-ctx button.ctx-kill,.mon-ctx button.ctx-danger{color:var(--wine)}
+.mon-ctx button.ctx-kill:hover:not(:disabled),.mon-ctx button.ctx-kill:focus-visible:not(:disabled),.mon-ctx button.ctx-danger:hover:not(:disabled),.mon-ctx button.ctx-danger:focus-visible:not(:disabled){background:#f4e6e6}
 .mon-ctx button.ctx-sep{margin-top:3px; border-top:1px solid var(--rule); border-radius:0 0 4px 4px}
 .mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
@@ -76995,6 +76995,40 @@ setOfficeProgress("pc", false);
     else codeLoopStep(tok, key, code);
     return "🔁 repeating " + key + " — Esc, the ■ button, or stop() to end.";
   };
+  function codeResetFiles() {
+    var lang = document.documentElement.lang;
+    var strings = T[lang] || T.en;
+    if (!window.confirm(strings.code_reset_files_confirm || T.en.code_reset_files_confirm)) return false;
+
+    // Cancel every Code-owned deferred write/run before removing persistence, otherwise an
+    // old debounce or queued Python handoff could recreate a file after this reset returns.
+    clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
+    clearTimeout(codeDraftTimer); codeDraftTimer = null;
+    codeStopRepeat();
+    codeStopOneShot();
+    if (Array.isArray(pyCodeQueue)) pyCodeQueue.length = 0;
+    [CODE_STORE_KEYS.js, CODE_STORE_KEYS.python, CODE_BUILTIN_OVERRIDE_KEY,
+      CODE_UNSAVED_KEY, CODE_DRAFT_KEY, CODE_LANG_KEY].forEach(function (key) {
+      try { localStorage.removeItem(key); } catch (_error) {}
+    });
+
+    codeActiveBuiltin = null;
+    codeLanguage = "js";
+    codeLastSavedName = null;
+    codeLastSavedLanguage = "js";
+    codeWelcomeShown.js = codeWelcomeShown.python = true; // keep the requested unsaved buffer blank this visit
+    if (codeName) { codeName.value = ""; codeName.classList.remove("conflict"); }
+    if (codeCode) codeCode.value = "";
+    if (typeof codeAcHide === "function") codeAcHide();
+    codeSetRunError("js", "");
+    codeSetRunError("python", "");
+    codeAiDismissReview();
+    codePaintLanguage();
+    codeSyncBuiltinControls();
+    codeRefreshPicker(null);
+    return true;
+  }
+  window.__resetMonitorCodeFiles = codeResetFiles;
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && codeRepeatOn) codeStopRepeat(); }, true); // Esc ends a repeating script (doesn't preventDefault — Esc still does its usual job)
   window.edit = function (name) {
     // hand the screen from whichever console is up to Code
@@ -79997,6 +80031,7 @@ setOfficeProgress("pc", false);
     var PASTE_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.4 H2.6 A.8.8 0 0 0 1.8 3.2 V10 A.8.8 0 0 0 2.6 10.8 H9.4 A.8.8 0 0 0 10.2 10 V3.2 A.8.8 0 0 0 9.4 2.4 H8"/><rect x="4" y="1.1" width="4" height="2.3" rx=".7"/></svg>';
     var SELECT_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round"><path d="M1.5 4 V1.5 H4 M8 1.5 H10.5 V4 M10.5 8 V10.5 H8 M4 10.5 H1.5 V8"/></svg>';
     var EQ_RESET_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round"><path d="M1.5 3 V9 M4.5 2 V10 M7.5 3 V9 M10.5 2 V10"/><path d="M.7 6 H2.3 M3.7 4.5 H5.3 M6.7 7.5 H8.3 M9.7 5.5 H11.3"/></svg>';
+    var FILES_RESET_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.2 H5 L6 4.2 H10 V9.8 H2 Z"/><path d="M4 7.4 A2.1 2.1 0 1 0 4.6 5.9"/><path d="M3.2 5.8 L4.7 5.8 L4.7 7.3"/></svg>';
     // Desktop dock hosts: the three self-hosted runtimes have an additional live-engine
     // predicate. Opening one registers the task like every other app, but Kill only becomes
     // available once its actual engine is ready.
@@ -80114,8 +80149,12 @@ setOfficeProgress("pc", false);
       var edit = editSelection(editTarget);
       var chatText = app.cls === "show-chat" ? chatTextTarget(target) : null;
       var targetEl = target && (target.nodeType === 1 ? target : target.parentElement);
+      var codeFiles = app.cls === "show-code" && targetEl && targetEl.closest && targetEl.closest(".code-side");
       var onEq = app.cls === "show-nowplaying" && targetEl && targetEl.closest &&
         targetEl.closest("#monitor-manual-eq, #monitor-eq-hit, #monitor-logo-nowplaying .eq-bar");
+      if (codeFiles) {
+        items.push(makeItem("ctx-reset-files ctx-danger", FILES_RESET_ICO, tr("code_reset_files"), "__resetMonitorCodeFiles", false));
+      }
       if (edit && edit.target) {
         items.push(makeItem("ctx-cut", CUT_ICO, tr("mon_ctx_cut"), function () { cutEditSelection(edit); }, !edit.text));
         items.push(makeItem("ctx-copy", COPY_ICO, tr("mon_ctx_copy"), function () {
@@ -80149,7 +80188,7 @@ setOfficeProgress("pc", false);
       }
       if (!monitorTouchMenusChooserOnly()) {
         var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-        items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
+        items.push(makeItem("ctx-kill" + (codeFiles || (edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       }
       if (!items.length) return false;
       openMenu(items, x, y);

@@ -184,7 +184,9 @@ Code puts the unsaved buffer first, then lists canonical and visitor-created fil
 the unsaved buffer and untouched default snippets are italic, while overridden defaults and user
 files are upright. Tooltips identify exact ownership—never icons or colors. Editing a canonical
 file stores a local override, and its reset control reveals the current public file again. The
-authored Trailer is the canonical `trailer.js`.
+file sidebar's **Reset files…** context-menu action, after confirmation, clears every saved file,
+local canonical edit, and draft, then returns Code to its canonical list plus a blank unsaved
+buffer. The authored Trailer is the canonical `trailer.js`.
 It loads only when played and both Watch Trailer and Code use your local built-in edit, if present.
 Play it through `await loft.trailer.play()`, inspect it with `loft.trailer.status()`, and stop it with
 `await loft.trailer.stop("restore")`.

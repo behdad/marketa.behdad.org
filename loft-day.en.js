@@ -169,6 +169,8 @@ T["en"] = {
   "clk_playtime": "You’ve been in the loft for",
   "code_email_intro": "Hi Markéta & Behdad!\n\nLook what I built in the loft — run it in the office computer's Code app:",
   "code_email_subject": "Look what I built!",
+  "code_reset_files": "Reset files…",
+  "code_reset_files_confirm": "Reset all Code files and edits? This cannot be undone.",
   "console_hint": "Open the drop-down console",
   "console_hint_close": "Close the drop-down console",
   "console_laser": "bzzzt — red dot on the loose, shadowing your cursor. laser.set(false) calls it off. good luck, cat.",

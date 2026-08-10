@@ -13,6 +13,9 @@ function harness(lang) {
     var r = node.getBoundingClientRect();
     return { left:r.left, top:r.top, right:r.right, bottom:r.bottom, width:r.width, height:r.height };
   }
+  function authoredBox(node) {
+    return { width:Number(node.getAttribute("width")), height:Number(node.getAttribute("height")) };
+  }
   function overlaps(a, b) {
     return !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
   }
@@ -47,6 +50,9 @@ function harness(lang) {
       out.samples.push(sample("sharecard",share.querySelector(".sharecard-x"),share.querySelector(".sharecard-img")));
       out.sharecard=box(share);
       window.__shareCloseModal();
+      var continueHit=document.querySelector(".entrance-roadtrip-camp-wisdom-continue-hit");
+      var continueFace=document.querySelector(".entrance-roadtrip-camp-wisdom-continue-face");
+      out.continueControl={hit:box(continueHit),face:box(continueFace),svgHit:authoredBox(continueHit),svgFace:authoredBox(continueFace)};
     } catch (error) { out.errors.push(String(error&&error.stack||error)); }
     document.getElementById("__report").textContent=JSON.stringify(out);
   },200); });
@@ -90,6 +96,12 @@ function check(ok, message, detail) {
   });
   check(report.sharecard.top>=0 && report.sharecard.bottom<=report.viewport[1]+1,
     "share-card modal stays vertically reachable", { viewport:report.viewport, box:report.sharecard });
+  check(report.continueControl.svgHit.height>=64 && report.continueControl.svgFace.height===27,
+    "camp Continue enlarges only its transparent pointer target", report.continueControl);
+  if (spec.width>520) {
+    check(report.continueControl.hit.height>=32 && report.continueControl.hit.height>report.continueControl.face.height,
+      "camp Continue keeps at least a 32px rendered landscape target", report.continueControl);
+  }
   console.log("");
 });
 

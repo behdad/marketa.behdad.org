@@ -80,9 +80,14 @@ check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),
   "the sidebar lists both language stores and opening a file selects its stored runtime");
-check(/\.code-item\.builtin::before\{content:"";flex:none;width:0;height:0;margin-right:\.45px;border:\.9px solid/.test(html) &&
-      /\.code-item\.user-file::before\{content:"";flex:none;width:1\.8px;height:1\.8px;margin-right:\.45px;border:\.25px solid/.test(html),
-  "canonical and visitor ownership marks use aligned CSS geometry instead of font glyph metrics");
+check(/\.code-item\.builtin\{font-style:italic\}/.test(html) &&
+      /\.code-item\.builtin\.edited\{font-style:normal\}/.test(html) &&
+      /\.code-item\.unsaved\{font-style:italic\}/.test(html) &&
+      !/\.code-item\.(?:builtin|user-file|unsaved)\{[^}]*color:/.test(html) &&
+      !/\.code-item\.(?:builtin|user-file)::before/.test(html) &&
+      /it\.title = file\.edited \? "canonical file · locally edited" : "canonical file"/.test(html) &&
+      /it\.title = "your saved file"/.test(html),
+  "only unsaved and untouched canonical filenames are italic; exact tooltips distinguish ownership without icons or colors");
 check(/error:\s*codeGetRunError\(codeLanguage\)/.test(html) &&
       /codeSetRunError\("python",\s*msg\)/.test(html) &&
       /codeSetRunError\("js",\s*msg\)/.test(html),
@@ -174,7 +179,7 @@ var collisionHarness = [
   '  function builtin(label){return items(label).find(function(item){return item.classList.contains("builtin");});}',
   '  var code=document.getElementById("monitor-code-code"),del=document.getElementById("monitor-code-del");',
   '  var js=JSON.parse(localStorage.getItem("deskScripts")||"{}"),py=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}"),overrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");',
-  '  var out={oneRow:items("loft-type.js").length===1&&items("space-filler.py").length===1&&items("square.py").length===1,storesClean:!own(js,"loft-type.js")&&!own(py,"space-filler.py")&&!own(py,"square.py"),unrelated:js["keep.js"]==="window.keep = true;"&&py["keep.py"]===\'print("keep")\',migrated:overrides["loft-type.js"]==="window.migrated = true;"&&own(overrides,"space-filler.py")&&overrides["space-filler.py"]==="",explicitEmpty:own(overrides,"square.py")&&overrides["square.py"]===""};',
+  '  var out={oneRow:items("loft-type.js").length===1&&items("space-filler.py").length===1&&items("square.py").length===1,storesClean:!own(js,"loft-type.js")&&!own(py,"space-filler.py")&&!own(py,"square.py"),unrelated:js["keep.js"]==="window.keep = true;"&&py["keep.py"]===\'print("keep")\',migrated:overrides["loft-type.js"]==="window.migrated = true;"&&own(overrides,"space-filler.py")&&overrides["space-filler.py"]==="",explicitEmpty:own(overrides,"square.py")&&overrides["square.py"]==="",styles:getComputedStyle(builtin("hello.js")).fontStyle==="italic"&&getComputedStyle(builtin("loft-type.js")).fontStyle==="normal"&&getComputedStyle(items("keep.js")[0]).fontStyle==="normal"&&getComputedStyle(items("unsaved")[0]).fontStyle==="italic"};',
   '  builtin("loft-type.js").click();out.migratedLoads=code.value==="window.migrated = true;";del.click();out.resetLoadsCanonical=code.value===window.__codeSnippetResourceLoader("code-snippets/loft-type.js")&&!own(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"loft-type.js");',
   '  builtin("space-filler.py").click();out.emptyLoads=code.value===""&&!del.disabled;del.click();out.emptyReset=code.value===window.__codeSnippetResourceLoader("code-snippets/space-filler.py");',
   '  builtin("square.py").click();out.explicitEmptyLoads=code.value===""&&!del.disabled;del.click();out.explicitReset=code.value===window.__codeSnippetResourceLoader("code-snippets/square.py");',
@@ -185,7 +190,7 @@ var collisionHarness = [
 ].join("\n");
 
 var collisionState = lib.runPageSync("rsvp.html", collisionHarness, 2400, { patchRaf: true });
-check(collisionState && !collisionState.error && collisionState.oneRow && collisionState.storesClean && collisionState.unrelated &&
+check(collisionState && !collisionState.error && collisionState.oneRow && collisionState.storesClean && collisionState.unrelated && collisionState.styles &&
       collisionState.migrated && collisionState.explicitEmpty && collisionState.migratedLoads && collisionState.resetLoadsCanonical &&
       collisionState.emptyLoads && collisionState.emptyReset && collisionState.explicitEmptyLoads && collisionState.explicitReset && collisionState.afterReset,
   "same-name saved files collapse into one canonical row without losing content, empty overrides, reset behavior, or unrelated files",

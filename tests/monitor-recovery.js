@@ -15,8 +15,8 @@ var HARNESS = [
   ' var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn");if(button)button.click();',
   ' setTimeout(function(){try{var monitor=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio"),row=window.__captureCheckpointSystems().monitor,persisted=JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.monitor;',
   ' report.steps.continued={room:window.currentStageName,tower:tower.classList.contains("on"),here:monitor.classList.contains("here"),screen:monitor.classList.contains("screen-on"),desktop:monitor.classList.contains("show-caps"),zoomed:window.__monitorZoomed(),running:window.__monitorRunningApps(),activity:appClasses.filter(function(c){return monitor.classList.contains(c);}),row:row,persisted:persisted};',
-  ' var video=document.getElementById("monitor-video-el"),fakePaused=true,playCalls=0;try{Object.defineProperty(video,"paused",{configurable:true,get:function(){return fakePaused;}});}catch(_e){}video.play=function(){playCalls++;fakePaused=false;video.dispatchEvent(new Event("play"));return Promise.resolve();};video.pause=function(){fakePaused=true;video.dispatchEvent(new Event("pause"));};var opened=window.__openMonitorApp("video");var pp=document.querySelector("#monitor-video-wrap .vid-ctrl-pp");if(pp)pp.click();setTimeout(function(){report.steps.video={opened:opened,open:monitor.classList.contains("show-video"),desktop:monitor.classList.contains("show-caps"),src:/art\\/downtown-dance\\.mp4$/.test(video.src),playCalls:playCalls,playing:window.__videoPlaying(),running:window.__monitorRunningApps().slice()};',
-  ' report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},40);',
+  ' setTimeout(function(){try{report.steps.saver={show:monitor.classList.contains("show-saver"),zoomed:window.__monitorZoomed(),state:window.__monitorSaverState()};window.__wakeMonitorSaver();var video=document.getElementById("monitor-video-el"),fakePaused=true,playCalls=0;try{Object.defineProperty(video,"paused",{configurable:true,get:function(){return fakePaused;}});}catch(_e){}video.play=function(){playCalls++;fakePaused=false;video.dispatchEvent(new Event("play"));return Promise.resolve();};video.pause=function(){fakePaused=true;video.dispatchEvent(new Event("pause"));};var opened=window.__openMonitorApp("video");var pp=document.querySelector("#monitor-video-wrap .vid-ctrl-pp");if(pp)pp.click();setTimeout(function(){report.steps.video={opened:opened,open:monitor.classList.contains("show-video"),desktop:monitor.classList.contains("show-caps"),src:/art\\/downtown-dance\\.mp4$/.test(video.src),playCalls:playCalls,playing:window.__videoPlaying(),running:window.__monitorRunningApps().slice()};',
+  ' report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},40);}catch(e){window.__errs.push("idle: "+String(e&&e.stack||e));report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);}},8100);',
   '}catch(e){window.__errs.push("inner: "+String(e&&e.stack||e));report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);}},450);',
   '}catch(e){window.__errs.push("outer: "+String(e&&e.stack||e));report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);}},100);});',
   '})();</script>'
@@ -29,7 +29,7 @@ function check(ok, msg, detail) {
 }
 
 console.log("loft-day.html monitor checkpoint shell recovery:");
-var r = lib.runPageSync("loft-day.html", HARNESS, 2200, { patchRaf: true });
+var r = lib.runPageSync("loft-day.html", HARNESS, 11200, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, continued = s.continued, video = s.video;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
@@ -42,6 +42,8 @@ check(continued && Object.keys(continued.row).sort().join(",") === "dockOrder,sc
   Object.keys(continued.persisted).sort().join(",") === "dockOrder,screenOn,surface,zoomed" &&
   continued.row.dockOrder.join(",") === continued.persisted.dockOrder.join(","),
   "new in-memory and persisted monitor rows retain only shell state and dock order", continued);
+check(s.saver && s.saver.show && s.saver.zoomed && s.saver.state.kind,
+  "Continue rearms the restored monitor's idle saver without changing its zoom", s.saver);
 check(video && /video/.test(video.opened || "") && video.open && video.desktop && video.src &&
   video.playCalls === 1 && video.playing && video.running.join(",") === "video",
   "Video launches fresh from the recovered desktop and its normal play control works", video);

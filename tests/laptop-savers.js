@@ -13,7 +13,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' window.goToStage("office");await sleep(920);window.resetLaptop();',
-  ' var laptop=document.getElementById("office-laptop");laptop.classList.add("open");',
+  ' var laptop=document.getElementById("office-laptop");window.__restoreCheckpointSystems({laptop:{open:true,zoomed:false}},"beforeStage");window.__restoreCheckpointSystems({laptop:{open:true,zoomed:false}},"afterStage");await sleep(8100);S("continued",{open:laptop.classList.contains("open"),show:laptop.classList.contains("show-saver"),zoomed:window.__laptopZoomed(),state:window.__laptopSaverState()});window.resetLaptop();laptop.classList.add("open");',
   ' var sequence=[];window.__startLaptopSaver();await sleep(60);sequence.push(window.__laptopSaverState());window.__cycleLaptopSaver();await sleep(60);sequence.push(window.__laptopSaverState());window.__cycleLaptopSaver();await sleep(60);sequence.push(window.__laptopSaverState());S("sequence",sequence);',
   ' var sleepState=sequence.filter(function(x){return x.kind==="sleep";})[0];S("scene",{sleepClass:laptop.classList.contains("saver-sleep"),behdad:document.querySelectorAll("#laptop-saver-zzz-behdad .laptop-saver-z").length,marketa:document.querySelectorAll("#laptop-saver-zzz-marketa .laptop-saver-z").length,people:document.querySelectorAll("#laptop-saver-sleeping-behdad,#laptop-saver-sleeping-marketa").length,sleepState:sleepState});',
   ' window.__startLaptopSaver("caps");await sleep(60);var beforeBlur=window.__laptopSaverState();focused=false;window.dispatchEvent(new Event("blur"));await sleep(20);var blurred=window.__laptopSaverState();focused=true;window.dispatchEvent(new Event("focus"));await sleep(20);var refocused=window.__laptopSaverState();S("focus",{before:beforeBlur,blurred:blurred,refocused:refocused});',
@@ -34,16 +34,19 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html laptop screensavers:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 3500, {
+var r = lib.runPageSync("rsvp.html", HARNESS, 12500, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true
 });
 check(r && r.errors.length === 0, "the saver reel runs without uncaught errors", r && r.errors);
+check(r && r.steps.continued && r.steps.continued.open && r.steps.continued.show && !r.steps.continued.zoomed &&
+  r.steps.continued.state.kind && r.steps.continued.state.cycling,
+  "Continue rearms the open, unzoomed laptop's idle saver", r && r.steps.continued);
 var sequence = r && r.steps.sequence || [], order = sequence[0] && sequence[0].order || [];
 check(sequence.length === 3 && order.length === 2 &&
   order.slice().sort().join("|") === "caps|sleep" &&
-  sequence[0].kind === order[0] && sequence[1].kind === order[1] && sequence[2].kind === order[0] &&
+  sequence[0].kind === order[1] && sequence[1].kind === order[0] && sequence[2].kind === order[1] &&
   sequence.every(function (state) { return state.order.join("|") === order.join("|") && state.cycling; }),
   "the once-shuffled order stays fixed across a complete wrap", sequence);
 check(order.filter(function (kind) { return kind === "sleep"; }).length * 2 === order.length,

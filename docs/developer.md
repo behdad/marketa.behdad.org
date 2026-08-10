@@ -448,7 +448,10 @@ Kitchen is solved or deliberately left, then flow through debounced `__checkpoin
 `checkpointPayload()` creates the record and `applyCheckpoint()` restores it. Subsystems register
 settled state with `__registerCheckpointAdapter(id, adapter)`; closures created before that registry
 use `__deferCheckpointAdapter`. Adapters can restore in `beforeStage` or `afterStage` phases so state
-that affects initial rendering lands before the room is exposed.
+that affects initial rendering lands before the room is exposed. The `afterStage` phase must also
+rearm runtime derived from restored intent—such as idle countdowns or a bounded particle interval—
+even when Continue lands in another room; the runtime's normal room gate keeps parked rendering and
+audio dormant.
 
 An adapter should persist **intent**, not runtime mechanics:
 

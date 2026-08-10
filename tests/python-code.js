@@ -138,6 +138,9 @@ check(/installPythonModules\(py\)/.test(html) &&
   "the API, Turtle and sanitized SVG modules are installed before user Python imports them");
 check(/pyLoadState\s*=\s*"ready";[\s\S]*?pyPrint\(">>> import loft", "console-dim"\)[\s\S]*?typed Loft API ready/.test(html),
   "the completed Python boot transcript leaves the automatic import loft line visible");
+check(/window\.__pyRuntimeState\s*=\s*function \(\) \{ return pyLoadState \|\| "stopped"; \}/.test(html) &&
+      /id: "app\.python\.status"[\s\S]*?run: pythonAppState/.test(html),
+  "the public Python status query derives readiness from the runtime owner's real boot state");
 check(/typed Loft API ready as the imported `loft` module/.test(html) &&
       /typed Loft API ready as the preloaded `loft` global/.test(html),
   "empty Python and JavaScript Code buffers explain their respective Loft API boot modes");

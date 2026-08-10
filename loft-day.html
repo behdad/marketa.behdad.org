@@ -73852,6 +73852,11 @@ setOfficeProgress("pc", false);
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
       return monitor && monitor.classList.contains("show-caps") ? "desktop" : null;
     }
+    function pythonAppState() {
+      var state = window.__pyRuntimeState ? window.__pyRuntimeState() : "stopped";
+      return { app: "python", device: "monitor", open: monitorAppState() === "python",
+        ready: state === "ready", state: state };
+    }
     function minigameState() {
       var arcade = window.__arcadeState ? window.__arcadeState() : {}, flair = window.__flairState ? window.__flairState() : {};
       return {
@@ -74094,6 +74099,9 @@ setOfficeProgress("pc", false);
     register({ id: "media.status", kind: "query", description: "Combined music, video, dance, projector and volume state.", run: mediaState });
     register({ id: "cuddly.projector.status", group: "Cuddly", kind: "query", run: function () { var mode = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { mode: mode, on: !!mode && mode !== "off", room: "cuddly" }; } });
     register({ id: "app.current", kind: "query", run: function () { var phone = phoneState(); return { monitor: monitorAppState(), phone: phone.open ? (phone.app || "home") : null, phone_open: !!phone.open }; } });
+    register({ id: "app.python.status", group: "Office / Devices", kind: "query",
+      description: "Report Python app visibility and the real CPython runtime's boot state.",
+      run: pythonAppState });
     register({ id: "apps.list", kind: "query", run: function () { return window.__chatAppCatalog ? window.__chatAppCatalog() : { monitor: window.__chatMonitorApps ? window.__chatMonitorApps() : [], phone: [] }; } });
     register({ id: "apps.status", kind: "query", description: "Current device apps and their public catalogs.", run: appsState });
     register({ id: "calls.status", kind: "query", run: callState });
@@ -74777,7 +74785,7 @@ setOfficeProgress("pc", false);
       completion: "finite", description: "End a preview and restore the captured visit, or leave a fresh Kitchen runtime.",
       args: { disposition: { type: "string", enum: ["restore", "fresh"], required: true } },
       available: previewActive, run: function (args) { return window.__loftPreviewEnd(args.disposition); } });
-    var TRAILER_DURATION_MS = 90000;
+    var TRAILER_DURATION_MS = 100000;
     register({ id: "trailer.status", group: "Utilities / Scripting", kind: "query",
       description: "Report the authored Trailer player and its advertised duration.", run: function () {
         return { playing: !!window.__cinematic,
@@ -83304,6 +83312,7 @@ setOfficeProgress("pc", false);
   var pyHist = [], pyHistIdx = 0, pyWelcomed = false;
   var pyRuntime = null, pyReprFn = null;
   var pyLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
+  var pyLoadGeneration = 0, PY_LOAD_CANCELLED = {};
   var pyBusy = false, pyLastCmd = "";
   var pyCodeQueue = [];
   var PYODIDE_URL = "pyodide/pyodide.js";
@@ -84027,7 +84036,10 @@ def colormode(mode=None):
     while (pyOut.childNodes.length > 150) pyOut.removeChild(pyOut.firstChild);
     pyOut.scrollTop = pyOut.scrollHeight;
   }
-  function pyLoadFailed() {
+  function pyLoadCurrent(generation) { return generation === pyLoadGeneration && pyLoadState === "loading"; }
+  function pyLoadGuard(generation) { if (!pyLoadCurrent(generation)) throw PY_LOAD_CANCELLED; }
+  function pyLoadFailed(generation) {
+    if (generation !== pyLoadGeneration) return;
     pyLoadState = "failed";
     pyCodeQueue.length = 0;
     pyPrint(pyT("py_fail"), "console-err");
@@ -84035,26 +84047,29 @@ def colormode(mode=None):
   function loadPythonRuntime() {
     if (pyLoadState === "loading" || pyLoadState === "ready") return;
     pyLoadState = "loading";
+    var generation = ++pyLoadGeneration;
     pyPrint(pyT("py_loading"), "console-dim");
-    if (window.loadPyodide) { initPyodide(); return; } // library already fetched (e.g. a Restart) — don't re-inject the script
+    if (window.loadPyodide) { initPyodide(generation); return; } // library already fetched (e.g. a Restart) — don't re-inject the script
     var s = document.createElement("script");
     s.src = PYODIDE_URL;
-    s.onerror = function () { pyLoadFailed(); };
-    s.onload = function () { initPyodide(); };
+    s.onerror = function () { pyLoadFailed(generation); };
+    s.onload = function () { initPyodide(generation); };
     document.head.appendChild(s);
   }
   // Build a fresh CPython interpreter from the (already-loaded) loadPyodide global. Split
   // out of loadPythonRuntime so Restart can re-init a new interpreter without re-injecting
   // the pyodide script (and re-running its whole bundle).
-  function initPyodide() {
+  function initPyodide(generation) {
+      if (!pyLoadCurrent(generation)) return;
       var p;
       try {
         p = window.loadPyodide({
           indexURL: "pyodide/",
           packageBaseUrl: PYODIDE_PACKAGE_BASE_URL
         });
-      } catch (e) { pyLoadFailed(); return; }
+      } catch (e) { pyLoadFailed(generation); return; }
       Promise.resolve(p).then(function (py) {
+        pyLoadGuard(generation);
         // stdout/stderr land in the scrollback, so print() behaves like a real shell
         try {
           py.setStdout({ batched: function (t) { pyPrint(t); } });
@@ -84064,6 +84079,7 @@ def colormode(mode=None):
         // it, so a failed package fetch just skips the import
         return py.loadPackage("micropip").then(function () { return py.runPythonAsync("import micropip"); }).then(function () { return py; }, function () { return py; });
       }).then(function (py) {
+        pyLoadGuard(generation);
         pyRuntime = py;
         installPythonModules(py);
         try { pyReprFn = py.runPython("repr"); } catch (e) {}
@@ -84155,6 +84171,7 @@ async def localfont(name):
         pyPrint(">>> from fontTools.ttLib import TTFont", "console-dim");
         return py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
           .then(function (v) {
+            pyLoadGuard(generation);
             pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "console-dim");
             // uharfbuzz (the groom's own) — installed from the self-hosted wheel via the FS, which
             // sidesteps the lock's stricter tag check on the abi3 wheel. Optional; a hiccup here
@@ -84164,18 +84181,22 @@ async def localfont(name):
               py.FS.writeFile("/tmp/" + HBWHL, new Uint8Array(buf));
               return py.runPythonAsync("await micropip.install('emfs:/tmp/" + HBWHL + "')\nimport uharfbuzz as hb\nhb.version_string()");
             }).then(function (hv) {
+              pyLoadGuard(generation);
               pyPrint(">>> import uharfbuzz as hb", "console-dim");
               pyPrint(pyT("py_uharfbuzz").replace("{v}", String(hv)), "console-dim");
             }, function () {});
           })
           .then(function () {
+            pyLoadGuard(generation);
             // define googlefonts() once TTFont is in scope, THEN print the demo line that uses hb + it
             return py.runPythonAsync(GFPY).then(function () {
+              pyLoadGuard(generation);
               pyPrint(">>> hb.Face(await googlefonts('Anton'))  # any family — weight=700, italic=True; googlefonts.list('mono')", "console-dim");
             }, function () {});
           })
           .catch(function () {})
           .then(function () {
+            pyLoadGuard(generation);
             pyLoadState = "ready";
             pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
             pyPrint(">>> import loft", "console-dim");
@@ -84183,7 +84204,7 @@ async def localfont(name):
             pyPrint(">>> import turtle  # browser graphics", "console-dim");
             pyDrainCodeQueue();
           });
-      }).catch(function () { pyLoadFailed(); });
+      }).catch(function (error) { if (error !== PY_LOAD_CANCELLED) pyLoadFailed(generation); });
   }
   function openPython(fromCode) {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-python") || monitor.classList.contains("show-console") || monitor.classList.contains("show-linux")) return;
@@ -84210,11 +84231,13 @@ async def localfont(name):
   }
   window.__closeMonitorPython = closePython; // other monitor apps close the REPL before taking the screen
   window.__pyRunning = function () { return pyLoadState === "ready"; }; // interpreter up — gates the context-menu Kill
+  window.__pyRuntimeState = function () { return pyLoadState || "stopped"; };
   // A true KILL/Restart (vs the ✕, which just hides the REPL with its interpreter intact): throw
   // away the current interpreter and namespace and drop back to the desktop, so the next open COLD-
   // BOOTS a fresh CPython. The heavy pyodide bundle stays in memory (reloading the wasm is far too
   // heavy), so reopening only re-inits the interpreter via openPython → loadPythonRuntime, not the fetch.
   function destroyPython() {
+    pyLoadGeneration++;
     pyReturnToCode = false;
     paintPythonClose();
     if (pyOut) pyOut.innerHTML = "";

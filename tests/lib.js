@@ -107,6 +107,7 @@ function makeScratch(file, harness, hookHtml) {
     }
   });
   if (html.indexOf('src="code-snippets/') !== -1) fs.cpSync(path.join(ROOT, "code-snippets"), path.join(scratchDir, "code-snippets"), { recursive: true });
+  if (html.indexOf('pyodide/pyodide.js') !== -1) fs.symlinkSync(path.join(ROOT, "pyodide"), path.join(scratchDir, "pyodide"), "dir");
   fs.writeFileSync(scratch, patched);
   return scratch;
 }

@@ -328,6 +328,10 @@ source through `loadPackagesFromImports()` before evaluation, so ordinary import
 unbundled official wheel from the pinned v314.0.2 package CDN. Keep `indexURL` local, keep
 `packageBaseUrl` version-pinned, and do not point automatic import loading at unversioned PyPI;
 explicit `micropip` remains the separate path for compatible pure-Python PyPI packages.
+The typed `app.python.status()` query reports the runtime owner's real stopped/loading/ready/failed state;
+use it when a public script must wait for the visible CPython prompt rather than treating app-open
+as interpreter readiness. A load-generation guard prevents a reset or Kill during initialization
+from letting a stale Pyodide promise resurrect the discarded runtime.
 
 App and minigame state follows the same durable/transient rule as rooms. Preserve a meaningful
 selection or score only when a checkpoint adapter says so; close cameras, calls, dialogs, media,

@@ -81,7 +81,7 @@ existing linear levels. Overall level is otherwise the device's job. The headpho
 filter (bass shelf + lowpass) lives only in the song pipeline — music-only, deliberately
 not applied to SFX/beds or Vimeo.
 
-The roughly 90-second Trailer owns Tumbalalaika as one temporary, gracefully faded loop. The score
+The roughly 100-second Trailer owns Tumbalalaika as one temporary, gracefully faded loop. The score
 starts from the trusted Trailer click, spans the whole reel (including Road Trip, Camping, and the
 final card), then fades before preview teardown restores every song's incoming time, loop, logical
 level, and playing state. Natural completion, Take over, hide/pagehide, and error abort all use that

@@ -272,10 +272,11 @@ Running games, calls, cameras, and media return stopped; an interrupted highway 
 
 The finale clock counts only while the started game is visible, focused, and not explicitly paused;
 its total carries across Continue. **Start over** clears both checkpoint and clock. The roughly
-90-second **Trailer** is separate and does not consume a save. It visits real rooms, games, Party,
-Road Trip, and Camping under a reversible preview; none of those excerpts solve or reward the
-player's own game. Starting over also clears the car's remembered transmission choice and returns
-it to automatic in park.
+100-second **Trailer** is separate and does not consume a save. It visits real rooms, games, Party,
+Road Trip, and Camping under a reversible preview; its Office excerpt waits for the real Python
+prompt before giving that runtime the monitor's full themed Kill. None of those excerpts solve or
+reward the player's own game. Starting over also clears the car's remembered transmission choice
+and returns it to automatic in park.
 
 - English and Czech are available, and the choice persists when storage is allowed.
 - Reduced-motion preferences simplify animation without removing activities.

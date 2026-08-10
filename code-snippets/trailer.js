@@ -5,7 +5,8 @@
 var FULL = {
     announce: 2200,
     title: 4000,
-    office: 4000,
+    office: 1600,
+    python: 2600,
     cinema: 4000,
     garden: 3500,
     bathroom: 3500,
@@ -51,6 +52,22 @@ async function pause(loft, ms) {
       remaining -= slice;
       if (!unwrap(loft.trailer.status(), "Read Trailer status").playing) throw trailerStopped();
     }
+}
+
+async function waitForPython(loft) {
+    var remaining = 60000;
+    var opened = false;
+    while (remaining > 0) {
+        var status = unwrap(loft.app.python.status(), "Read Python runtime status");
+        if (status.open) opened = true;
+        if (status.open && status.ready) return status;
+        if (status.state === "failed" || (opened && !status.open)) {
+            throw new Error("Python runtime did not become ready.");
+        }
+        await pause(loft, 100);
+        remaining -= 100;
+    }
+    throw new Error("Python runtime did not become ready in time.");
 }
 
 async function action(promise, label) {
@@ -101,6 +118,10 @@ async function playTimeline(loft) {
     await announceAndCut(loft, t, "office", "cine_chapter_jump", "cine_arcade", t.office,
       async function () { await action(loft.office.invaders.preview(true), "Start Invaders preview"); });
     await action(loft.office.invaders.preview(false), "Stop Invaders preview");
+    await action(loft.app.open("python"), "Open Python");
+    await waitForPython(loft);
+    await pause(loft, t.python);
+    await action(loft.app.kill({ app: "python", device: "monitor" }), "Kill Python");
 
     await announceAndCut(loft, t, "cinema", "cine_chapter_open", "cine_below", t.cinema,
       async function () {

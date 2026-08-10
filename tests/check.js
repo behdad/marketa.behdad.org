@@ -6,6 +6,7 @@
 var fs = require("fs");
 var path = require("path");
 var os = require("os");
+var crypto = require("crypto");
 var execSync = require("child_process").execSync;
 
 var ROOT = path.join(__dirname, "..");
@@ -32,7 +33,7 @@ function extractScript(html) {
   while ((m = re.exec(html))) {
     var src = /\bsrc=["']([^"']+)["']/.exec(m[1]);
     if (src && !/^[a-z]+:/i.test(src[1])) {
-      var external = path.join(ROOT, src[1]);
+      var external = path.join(ROOT, src[1].split(/[?#]/)[0]);
       if (fs.existsSync(external)) parts.push(fs.readFileSync(external, "utf8"));
     } else if (m[2].trim()) {
       parts.push(m[2]);
@@ -266,10 +267,27 @@ function dictionaryKeyPaths(value, prefix, paths) {
   });
 }
 
+function loftDictionaryCacheToken() {
+  var hash = crypto.createHash("sha256");
+  hash.update(fs.readFileSync(path.join(ROOT, "loft-day.en.js")));
+  hash.update("\0");
+  hash.update(fs.readFileSync(path.join(ROOT, "loft-day.cs.js")));
+  return "dict-" + hash.digest("hex").slice(0, 12);
+}
+
 function checkLoftDictParity(file, html) {
   var init = html.indexOf("<script>var T = {};</script>");
-  var enLoad = html.indexOf('<script src="loft-day.en.js"></script>');
-  var csLoad = html.indexOf('<script src="loft-day.cs.js"></script>');
+  var expectedToken = loftDictionaryCacheToken();
+  var enTag = '<script src="loft-day.en.js?v=' + expectedToken + '"></script>';
+  var csTag = '<script src="loft-day.cs.js?v=' + expectedToken + '"></script>';
+  var enLoad = html.indexOf(enTag);
+  var csLoad = html.indexOf(csTag);
+  if (enLoad === -1 || csLoad === -1) {
+    fail(file + ": external dictionary cache token matches combined EN+CS content",
+      "expected token: " + expectedToken + "\n" + enTag + "\n" + csTag);
+  } else {
+    pass(file + ": external dictionary cache token matches combined EN+CS content (" + expectedToken + ")");
+  }
   if (!(init !== -1 && init < enLoad && enLoad < csLoad)) {
     fail(file + ": external dictionaries initialize and load EN before CS");
   } else {
@@ -284,6 +302,12 @@ function checkLoftDictParity(file, html) {
     fail(file + ": external dictionaries are canonical and alphabetically sorted", error.message);
     return;
   }
+  var resetLabelsResolve = [en, cs].every(function (dictionary) {
+    return typeof dictionary.code_reset_file === "string" && dictionary.code_reset_file.replace("{filename}", "trailer.js").indexOf("{filename}") === -1 &&
+      typeof dictionary.code_reset_files === "string" && dictionary.code_reset_files !== "code_reset_files";
+  });
+  if (resetLabelsResolve) pass(file + ": external dictionaries resolve the per-file and whole-files Code reset labels");
+  else fail(file + ": external dictionaries resolve the per-file and whole-files Code reset labels");
   var enPaths = [], csPaths = [];
   dictionaryKeyPaths(en, "", enPaths);
   dictionaryKeyPaths(cs, "", csPaths);

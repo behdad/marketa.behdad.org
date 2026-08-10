@@ -96,13 +96,17 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
 function makeScratch(file, harness, hookHtml) {
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
   var patched = html.replace("<head>", "<head>" + hookHtml + codeSnippetResourceHook(html)).replace("</body>", harness + "\n</body>");
+  // Production HTTP uses content-versioned dictionary URLs. Chrome's file:// loader treats
+  // those query-bearing local scripts as missing, so scratch pages remove only the already-
+  // check.js-verified cache query while retaining the exact copied dictionary bytes.
+  patched = patched.replace(/(<script src="loft-day\.(?:en|cs)\.js)\?v=[^"]+("><\/script>)/g, "$1$2");
   // Each page gets a private directory so relative authored assets remain relative.
   // Preserve the exact HTML basename: Loft Day's outer RSVP scaffolding is selected
   // positively by an rsvp/rsvp.html pathname, while every other name is game-only.
   var scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-page-"));
   var scratch = path.join(scratchDir, path.basename(file));
   ["loft-day.en.js", "loft-day.cs.js"].forEach(function (name) {
-    if (html.indexOf('src="' + name + '"') !== -1) {
+    if (html.indexOf('src="' + name) !== -1) {
       fs.copyFileSync(path.join(ROOT, name), path.join(scratchDir, name));
     }
   });

@@ -590,6 +590,12 @@ syntax, and recursive parity. Write printable Unicode directly as UTF-8. `setLan
 translation HTML, so preserve intentional markup and use the established `brk-sm` / `brk-lg` breaks
 when the two viewport classes need different wrapping.
 
+Both dictionary `<script>` URLs carry the same `dict-…` cache token: the first 12 hex characters of
+SHA-256 over the exact English bytes, a NUL separator, then the exact Czech bytes. `tests/check.js`
+recomputes it and prints the exact expected token on mismatch; update both tags whenever either
+dictionary changes. Local test readers and `file://` scratch pages strip the query only after that
+invariant is checked; production HTTP keeps the content-versioned URLs.
+
 After changing copy or layout, inspect both languages at mobile and desktop widths. Czech strings
 are often longer, and a clean English coach or caption can overlap its target in Czech.
 

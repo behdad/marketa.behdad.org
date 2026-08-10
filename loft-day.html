@@ -74835,11 +74835,14 @@ setOfficeProgress("pc", false);
       return { changed: extended, extended: extended, on: !!window.__gardenPartyOn };
     } });
     register({ id: "balcony.bbq.set", group: "Balcony / BBQ", kind: "action", risk: "ambient", args: { on: { type: "boolean", required: true } }, run: function (args) {
-      var before = !!(window.bbq && window.bbq.status());
-      if (args.on && window.__startBBQ) window.__startBBQ("api");
-      else if (!args.on && window.__stopBBQ) window.__stopBBQ("api");
-      var after = !!(window.bbq && window.bbq.status());
-      return { changed: before !== after, on: after };
+      function invoke() {
+        var before = !!(window.bbq && window.bbq.status());
+        if (args.on && window.__startBBQ) window.__startBBQ("api");
+        else if (!args.on && window.__stopBBQ) window.__stopBBQ("api");
+        var after = !!(window.bbq && window.bbq.status());
+        return { changed: before !== after, on: after };
+      }
+      return args.on ? runInRoom("balcony", invoke) : invoke();
     } });
     register({ id: "kitchen.coffee.make", group: "Kitchen / Bar", kind: "action", risk: "ambient", run: function () {
       if (window.__gardenPartyOn) {

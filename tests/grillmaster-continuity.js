@@ -21,31 +21,39 @@ var harness = String.raw`<script>
     return getComputedStyle(plate).visibility === "visible" && box.width > 0 && box.height > 0;
   }
 
-  window.__gameStarted = function () { return true; };
-  window.goToStage("balcony");
-  // A stopped/restored party may briefly retain the old Garden arrival class even
-  // though no party room is visible. It must not hide a directly started cookout.
-  document.querySelector("#garden-guests .g-hamid").classList.add("arrived");
-  document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  check("lighting without a party summons Hamid despite stale hidden attendance",
-    !window.__gardenPartyOn && lit() && shown() && plateVisible());
+  async function run() {
+    window.__gameStarted = function () { return true; };
+    window.goToStage("kitchen");
+    window.__secondRound = false;
+    // A stopped/restored party may briefly retain the old Garden arrival class even
+    // though no party room is visible. It must not hide a directly started cookout.
+    document.querySelector("#garden-guests .g-hamid").classList.add("arrived");
+    var started = await window.loft.api.perform("balcony.bbq.set", { on: true }, { source: "test" });
+    check("a Phase-1 Kitchen script visibly routes to the BBQ and summons Hamid",
+      started.ok && started.value.on && !window.__secondRound && window.currentStageName === "balcony" &&
+      !window.__gardenPartyOn && lit() && shown() && plateVisible());
 
-  Math.random = function () { return 0.99; }; // the old drift roll hid him at this value
-  window.__balconyGrillmasterDriftNow();
-  check("ambient drift keeps Hamid and plate through the fire cycle", lit() && shown() && plateVisible());
+    Math.random = function () { return 0.99; }; // the old drift roll hid him at this value
+    window.__balconyGrillmasterDriftNow();
+    check("ambient drift keeps Hamid and plate through the fire cycle", lit() && shown() && plateVisible());
 
-  window.goToStage("cuddly");
-  check("leaving the balcony hides the projection", lit() && !shown());
-  window.goToStage("balcony");
-  check("returning to the lit smoker restores the same grillmaster setup", lit() && shown() && plateVisible());
+    window.goToStage("cuddly");
+    check("leaving the balcony hides the projection", lit() && !shown());
+    window.goToStage("balcony");
+    check("returning to the lit smoker restores the same grillmaster setup", lit() && shown() && plateVisible());
 
-  document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  check("extinguishing the smoker releases Hamid", !lit() && !shown());
-  report();
+    document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    check("extinguishing the smoker releases Hamid", !lit() && !shown());
+    report();
+  }
+  run().catch(function (error) {
+    out.errors.push(String(error && error.stack || error));
+    report();
+  });
 })();
 </script>`;
 
-var report = lib.runPageSync("rsvp.html", harness, 2200, {
+var report = lib.runPageSync("rsvp.html", harness, 3400, {
   forceMotion: true,
   seedRandom: true,
   patchRaf: true

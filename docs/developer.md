@@ -354,6 +354,8 @@ stringification. Bare `help` (and `help(loft)`) lists only immediate top-level n
 namespace help drills down one level at a time, and callable help prints one exact typed signature.
 The transport methods keep their names under `loft.api`; non-conflicting registered API leaves such
 as `loft.api.info()` are installed and documented by the same namespace builder.
+Its groups, namespaces, and capability rows use one fixed code-unit comparator, keeping JavaScript
+and Python help identical across browser locales.
 Legacy console prose remains available only through direct string lookup, such as `help("dance")`.
 `capabilities()` remains the complete structured machine discovery surface.
 

@@ -75728,6 +75728,11 @@ setOfficeProgress("pc", false);
     return "loft." + cap.id + call + " [" + cap.kind + ", " + cap.completion + "]" +
       (cap.description ? " — " + cap.description : "");
   }
+  // JavaScript and Python share this help text, so its order must not vary by host locale.
+  function typedHelpCompare(a, b) {
+    a = String(a); b = String(b);
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
   function helpTargetFromPath(path) {
     path = String(path || "").trim().replace(/^loft\.?/, "");
     var node = window.loft;
@@ -75780,18 +75785,18 @@ setOfficeProgress("pc", false);
       });
       return lines;
     }
-    direct.sort(function (a, b) { return a.id.localeCompare(b.id); }).forEach(function (cap) {
+    direct.sort(function (a, b) { return typedHelpCompare(a.id, b.id); }).forEach(function (cap) {
       lines.push("  " + capabilitySignature(cap));
     });
-    var names = Object.keys(children).sort();
+    var names = Object.keys(children).sort(typedHelpCompare);
     if (!meta.path) {
       var grouped = {};
       names.forEach(function (name) {
-        var groups = children[name].groups, group = Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a] || a.localeCompare(b); })[0] || "Other";
+        var groups = children[name].groups, group = Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a] || typedHelpCompare(a, b); })[0] || "Other";
         (grouped[group] || (grouped[group] = [])).push(name);
       });
-      Object.keys(grouped).sort().forEach(function (group) {
-        var members = grouped[group].sort().map(function (name) {
+      Object.keys(grouped).sort(typedHelpCompare).forEach(function (group) {
+        var members = grouped[group].sort(typedHelpCompare).map(function (name) {
           var alias = name === "kitchen" ? " (alias: loft.bar)" : name === "garden" ? " (alias: loft.party)" : "";
           return "loft." + name + alias;
         });

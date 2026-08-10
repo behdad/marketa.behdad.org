@@ -81,14 +81,13 @@ existing linear levels. Overall level is otherwise the device's job. The headpho
 filter (bass shelf + lowpass) lives only in the song pipeline — music-only, deliberately
 not applied to SFX/beds or Vimeo.
 
-The one-minute Trailer owns Tumbalalaika as a temporary score. In the full reel, its Road Trip cut
-lands at the recording's authored near-silent 38-second seam, fades the last breath, rewinds, and
-fades the same track back as an ending reprise; the reduced-motion edit reuses that transition
-earlier. This keeps an intentional cue under Camping and the final card without asking autoplay
-policy to unlock a second media element. Natural completion, Take over, and hide-abort all cancel
-an in-flight element fade, pause and rewind the track, and restore its logical level. The visual
-highway/Camping adapter deliberately leaves the real transport and camp audio controllers inactive,
-so it creates no drivetrain, lake, wind, fire, or weather bed.
+The roughly 90-second Trailer owns Tumbalalaika as one temporary, gracefully faded loop. The score
+starts from the trusted Trailer click, spans the whole reel (including Road Trip, Camping, and the
+final card), then fades before preview teardown restores every song's incoming time, loop, logical
+level, and playing state. Natural completion, Take over, hide/pagehide, and error abort all use that
+same finite owner. Road Trip and Camping are their exact renderer/controller previews rather than a
+separate visual adapter, so their normal focus-gated vehicle, lake, wind, fire, and weather layers
+remain under their existing audio owners while the centered trailer score continues.
 
 ## Lower-floor acoustics
 
@@ -190,7 +189,8 @@ folded into this.
 
 API preview sessions treat score playback as transaction-owned audio. Starting a preview score
 snapshots and pauses all four real song elements, plays one selected loop through the existing
-media/audio graph, and registers generation-scoped teardown. Ending, hiding, page-hiding, or
+media/audio graph, and registers generation-scoped teardown. Typed `fade_ms` arguments use the
+existing song fade owner and settle before the action completes. Ending, hiding, page-hiding, or
 aborting the preview stops that loop and restores each song's prior time, loop, volume, and playing
 state; a clean-fresh ending stops preview ownership without leaking another audio context.
 

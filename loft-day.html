@@ -1194,30 +1194,6 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp.fire-out #entrance-roadtrip-camp-finished-fire{cursor:pointer}
 #entrance-roadtrip-camp-empty-pit{cursor:pointer;outline:none}
 #entrance-roadtrip-camp.fire-built #entrance-roadtrip-camp-empty-pit{opacity:0;pointer-events:none}
-/* The trailer borrows the authored Road Trip/Camping artwork without starting either
-   controller. Keep its tableau inert and suppress mechanics/reward layers; the dedicated
-   adapter below owns these classes and restores the exact pre-preview attributes. */
-#entrance-room.cine-roadtrip-preview #entrance-drive-hud{pointer-events:none}
-#entrance-room.cine-roadtrip-preview :is(
-  #entrance-roadtrip-dismiss,#entrance-drive-help,#entrance-drive-coach,
-  #entrance-drive-touch-controls,#entrance-roadtrip-score,#entrance-roadtrip-route-progress,
-  #entrance-roadtrip-route-chooser,#entrance-roadtrip-pause-dialog,
-  #entrance-roadtrip-run-panel,#entrance-roadtrip-meta-panel-group,
-  #entrance-drive-transmission-mode
-){display:none!important}
-#entrance-room.cine-roadtrip-camp-preview #entrance-roadtrip-camp-builder-overlays{display:none!important}
-#entrance-room.cine-roadtrip-camp-preview #entrance-roadtrip-camp-stars>:not(#entrance-roadtrip-camp-star-scatter){
-  display:inline;opacity:.82
-}
-#entrance-room.cine-roadtrip-camp-preview :is(
-  #entrance-roadtrip-camp-finale-constellations,#entrance-roadtrip-camp-wisdom,
-  #entrance-roadtrip-camp-mama-bear,#entrance-roadtrip-camp-food-crate,
-  #entrance-roadtrip-camp-pot,#entrance-roadtrip-camp-finale-night-sky,
-  #entrance-roadtrip-camp-finale-fin
-){display:none!important}
-#entrance-room.cine-roadtrip-camp-preview :is(#entrance-roadtrip-camp,#entrance-roadtrip-camp-builder-overlays){
-  pointer-events:none!important
-}
 #entrance-roadtrip-fire-game{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease}
 #entrance-roadtrip-fire-game.open{opacity:1;visibility:visible;pointer-events:auto}
 .entrance-roadtrip-fire-game-button{cursor:pointer;outline:none}
@@ -3008,7 +2984,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #cine-overlay .cine-rail-bottom{bottom:0;transform:translateY(110%)}
 #hunt-fullscreen-area.cinematic-running #cine-overlay .cine-rail{transform:translateY(0)}
 #cine-overlay .cine-progress{position:absolute;left:0;right:0;bottom:0;height:2px;z-index:3;background:rgba(255,253,248,.18)}
-#cine-overlay .cine-progress-fill{display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;background:var(--pink);animation:cine-progress 60s linear forwards}
+#cine-overlay .cine-progress-fill{display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;background:var(--pink);animation:cine-progress 90s linear forwards}
 @keyframes cine-progress{to{transform:scaleX(1)}}
 #cine-overlay .cine-veil{position:absolute;inset:0;z-index:1;background:#211a17;opacity:0;transition:opacity .32s ease}
 #cine-overlay.cine-cut .cine-veil{opacity:.94}
@@ -36559,6 +36535,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <script>var T = {};</script>
 <script src="loft-day.en.js"></script>
 <script src="loft-day.cs.js"></script>
+<script src="loft-day.trailer.js"></script>
 <script>
 // A popup outside the browser's fullscreen element exists in the DOM but cannot paint.
 // Every context-menu builder uses this host so its existing fixed viewport coordinates
@@ -41413,105 +41390,6 @@ window.__entranceRoomOpen = false;
     paintCampCarDrag();
     host.setAttribute("data-ready", "true");
   }
-  // The cinematic needs two late-story images, not a second Road Trip session. This narrow
-  // adapter changes presentation attributes only: it never starts a frame/audio loop, calls a
-  // gameplay/dev hook, advances roadtripState, or checkpoints. Teardown restores the exact
-  // incoming class/style attributes so Take over, hide, and natural completion are equivalent.
-  var cineRoadtripDemoSnapshot = null;
-  var cineRoadtripDemoMode = null;
-  function restoreCineRoadtripAttr(node, name, value) {
-    if (!node) return;
-    if (value == null) node.removeAttribute(name);
-    else node.setAttribute(name, value);
-  }
-  function stopCineRoadtripDemo() {
-    if (!cineRoadtripDemoSnapshot) return false;
-    var camp = roadtripElement("entrance-roadtrip-camp");
-    var campPorsche = roadtripElement("entrance-roadtrip-camp-porsche");
-    restoreCineRoadtripAttr(room, "class", cineRoadtripDemoSnapshot.roomClass);
-    restoreCineRoadtripAttr(room, "style", cineRoadtripDemoSnapshot.roomStyle);
-    restoreCineRoadtripAttr(camp, "class", cineRoadtripDemoSnapshot.campClass);
-    restoreCineRoadtripAttr(camp, "style", cineRoadtripDemoSnapshot.campStyle);
-    restoreCineRoadtripAttr(campPorsche, "class", cineRoadtripDemoSnapshot.campPorscheClass);
-    restoreCineRoadtripAttr(campPorsche, "style", cineRoadtripDemoSnapshot.campPorscheStyle);
-    restoreCineRoadtripAttr(campPorsche, "data-ready", cineRoadtripDemoSnapshot.campPorscheReady);
-    if (campPorsche && cineRoadtripDemoSnapshot.campPorscheChildren) {
-      Array.prototype.slice.call(campPorsche.childNodes).forEach(function (node) {
-        if (cineRoadtripDemoSnapshot.campPorscheChildren.indexOf(node) < 0) campPorsche.removeChild(node);
-      });
-      cineRoadtripDemoSnapshot.campPorscheChildren.forEach(function (node, index) {
-        if (campPorsche.childNodes[index] !== node) {
-          campPorsche.insertBefore(node, campPorsche.childNodes[index] || null);
-        }
-      });
-    }
-    restoreCineRoadtripAttr(driveHudSvg, "viewBox", cineRoadtripDemoSnapshot.driveViewBox);
-    restoreCineRoadtripAttr(driveHudSvg, "preserveAspectRatio", cineRoadtripDemoSnapshot.driveAspect);
-    cineRoadtripDemoSnapshot = null;
-    cineRoadtripDemoMode = null;
-    return true;
-  }
-  function showCineRoadtripDemo(mode) {
-    if ((mode !== "highway" && mode !== "camp") || !window.__cinematic ||
-        !window.__entranceRoomOpen) return false;
-    ensureRoadtripScene();
-    var camp = roadtripElement("entrance-roadtrip-camp");
-    var campPorsche = roadtripElement("entrance-roadtrip-camp-porsche");
-    if (!camp) return false;
-    if (!cineRoadtripDemoSnapshot) {
-      cineRoadtripDemoSnapshot = {
-        roomClass: room.getAttribute("class"),
-        roomStyle: room.getAttribute("style"),
-        campClass: camp.getAttribute("class"),
-        campStyle: camp.getAttribute("style"),
-        campPorscheClass: campPorsche && campPorsche.getAttribute("class"),
-        campPorscheStyle: campPorsche && campPorsche.getAttribute("style"),
-        campPorscheReady: campPorsche && campPorsche.getAttribute("data-ready"),
-        campPorscheChildren: campPorsche ? Array.prototype.slice.call(campPorsche.childNodes) : null,
-        driveViewBox: driveHudSvg && driveHudSvg.getAttribute("viewBox"),
-        driveAspect: driveHudSvg && driveHudSvg.getAttribute("preserveAspectRatio")
-      };
-    }
-    ["calgary", "turnoff", "banff", "lake-turnoff", "abraham", "camp"].forEach(function (route) {
-      room.classList.remove("roadtrip-route-" + route);
-    });
-    room.classList.add("roadtrip-active", "cine-roadtrip-preview");
-    room.classList.remove("cine-roadtrip-highway-preview", "cine-roadtrip-camp-preview",
-      "entrance-clouded", "entrance-raining", "entrance-snowing", "roadtrip-on-shoulder",
-      "roadtrip-on-gravel", "roadtrip-resume-pending");
-    room.style.setProperty("--roadtrip-road-mix", "1");
-    room.style.setProperty("--roadtrip-banff-mix", "1");
-    if (driveHudSvg) driveHudSvg.setAttribute("viewBox", "0 -120 680 340");
-    if (mode === "highway") {
-      if (driveHudSvg) driveHudSvg.setAttribute("preserveAspectRatio", "xMidYMax slice");
-      room.classList.add("roadtrip-route-banff", "cine-roadtrip-highway-preview", "entrance-day",
-        "entrance-roadtrip-season-summer");
-      room.classList.remove("camp-stargazing-clear");
-    } else {
-      if (driveHudSvg) driveHudSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      ensureRoadtripCampPorsche();
-      room.classList.add("roadtrip-route-camp", "cine-roadtrip-camp-preview", "camp-stargazing-clear");
-      room.classList.remove("entrance-day");
-      Array.prototype.slice.call(camp.classList).forEach(function (name) {
-        if (/^(?:camp-sleep-|stargazing-|stew-|pinecone-)/.test(name)) camp.classList.remove(name);
-      });
-      camp.classList.add("fire-built");
-      camp.classList.remove("fire-out");
-    }
-    cineRoadtripDemoMode = mode;
-    return true;
-  }
-  window.__cineRoadtripDemo = function (mode) {
-    return mode === false || mode == null ? stopCineRoadtripDemo() : showCineRoadtripDemo(mode);
-  };
-  window.__cineRoadtripDemoState = function () {
-    return {
-      active: !!cineRoadtripDemoSnapshot,
-      mode: cineRoadtripDemoMode,
-      highway: room.classList.contains("cine-roadtrip-highway-preview"),
-      camp: room.classList.contains("cine-roadtrip-camp-preview")
-    };
-  };
   var campNotebook = roadtripElement("entrance-roadtrip-camp-notebook");
   var campCharacterDrag = null;
   var campCharacters = [
@@ -63334,7 +63212,7 @@ function quickReversalGesture(action) {
     // zero-score run stays below the streak reward.
     // The high score is snapshotted and restored on teardown, so passive watching never
     // inflates the player's real best. Its rAF self-cancels when the reel or game stops;
-    // The preview transaction owns teardown; the inline reel also calls the alias below.
+    // The preview transaction owns teardown.
     var cineArcadeRaf = null, cineArcadeSavedHigh = 0, cineArcadeEngaged = false;
     function cineArcadePilot() {
       if (!cineArcadeEngaged || !arcadeActive || (!window.__cinematic && !window.__loftSessionPreviewActive)) { cineArcadeRaf = null; return; }
@@ -63360,8 +63238,6 @@ function quickReversalGesture(action) {
         arcadeSetHigh(cineArcadeSavedHigh); // the tour was autopilot, not a real run — don't bank it
       }
     };
-    window.__cineArcadeDemo = window.__previewArcadeDemo;
-
     chair.addEventListener("pointerdown", function (e) {
       if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom drag
       chairDragging = true;
@@ -74581,8 +74457,18 @@ setOfficeProgress("pc", false);
         return new Promise(function (resolve) {
           setTimeout(function () {
             if (window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
-            var started = window.__entranceRoadtripDevStart(args.route, args.distance == null ? 0 : args.distance);
+            // The deterministic drive starter accepts only the three selectable starting
+            // destinations. Preview also exposes renderer-owned handoffs and Camping, so seed
+            // the nearest selectable segment and then ask the same route owner to paint the
+            // requested exact route. In particular, passing "camp" straight to the starter
+            // silently normalized to Calgary and never showed the campsite.
+            var seedRoute = args.route === "calgary" || args.route === "turnoff" ? "calgary" :
+              args.route === "banff" || args.route === "lake-turnoff" ? "banff" : "abraham";
+            var started = window.__entranceRoadtripDevStart(seedRoute, args.distance == null ? 0 : args.distance);
             if (!started) { resolve({ shown: false, route: args.route }); return; }
+            if (args.route !== seedRoute && window.__entranceRoadtripSetRouteDistance) {
+              window.__entranceRoadtripSetRouteDistance(args.route, args.distance == null ? 0 : args.distance);
+            }
             if (window.__loftPreviewOwn) window.__loftPreviewOwn(function () { if (window.__exitEntranceRoadtrip) window.__exitEntranceRoadtrip(); });
             resolve({ shown: true, route: roadtripState().route, roadtrip: roadtripState() });
           }, 820);
@@ -74593,40 +74479,70 @@ setOfficeProgress("pc", false);
       tumbala: "tumbala-song-audio", danbern: "guitar-song-audio",
       orit: "ukulele-song-audio", "marketa-czech": "marketa-czech-song-audio"
     };
-    var previewScore = null;
-    function stopPreviewScore(restore) {
-      if (!previewScore) return false;
-      var owned = previewScore; previewScore = null;
+    var previewScore = null, previewScoreAudio = null;
+    function previewScoreLevel(audio, level) {
+      if (window.__setSongLevel) window.__setSongLevel(audio, level);
+      else audio.volume = Math.max(0, Math.min(1, level));
+    }
+    function restorePreviewScore(owned) {
       owned.forEach(function (state) {
         try { state.audio.pause(); } catch (_error) {}
-        if (!restore) return;
-        state.audio.loop = state.loop; state.audio.volume = state.volume;
+        state.audio.loop = state.loop;
+        previewScoreLevel(state.audio, state.level);
         try { state.audio.currentTime = state.currentTime; } catch (_error2) {}
         if (!state.paused) { var resumed = state.audio.play(); if (resumed && resumed.catch) resumed.catch(function () {}); }
       });
-      return true;
+    }
+    function stopPreviewScore(restore, fadeMs) {
+      if (!previewScore) return Promise.resolve(false);
+      var owned = previewScore, activeAudio = previewScoreAudio;
+      previewScore = null; previewScoreAudio = null;
+      return new Promise(function (resolve) {
+        function finish() {
+          if (restore) restorePreviewScore(owned);
+          else owned.forEach(function (state) { try { state.audio.pause(); } catch (_error) {} });
+          resolve(true);
+        }
+        if (fadeMs > 0 && activeAudio && !activeAudio.paused && window.__fadeSongTo) {
+          window.__fadeSongTo(activeAudio, 0, fadeMs, finish);
+        } else finish();
+      });
     }
     register({ id: "session.preview.score.play", group: "Utilities / Scripting", kind: "action", risk: "ambient",
       description: "Play a preview-owned score loop that is restored or stopped with the transaction.",
-      args: { track: { type: "string", enum: Object.keys(PREVIEW_SCORE_TRACKS), required: true }, loop: { type: "boolean" }, level: { type: "number", min: 0, max: 1 } },
+      completion: "finite", args: { track: { type: "string", enum: Object.keys(PREVIEW_SCORE_TRACKS), required: true }, loop: { type: "boolean" }, level: { type: "number", min: 0, max: 1 }, fade_ms: { type: "integer", min: 0, max: 5000 } },
       available: previewActive, run: function (args) {
-        stopPreviewScore(true);
-        var audio = document.getElementById(PREVIEW_SCORE_TRACKS[args.track]);
-        if (!audio) throw new Error("Score is not ready.");
-        previewScore = Object.keys(PREVIEW_SCORE_TRACKS).map(function (track) {
-          var item = document.getElementById(PREVIEW_SCORE_TRACKS[track]);
-          if (!item) return null;
-          return { audio: item, paused: item.paused, currentTime: item.currentTime || 0, loop: item.loop, volume: item.volume };
-        }).filter(function (state) { return !!state.audio; });
-        previewScore.forEach(function (state) { try { state.audio.pause(); } catch (_error) {} });
-        audio.loop = args.loop !== false; audio.volume = args.level == null ? .45 : args.level;
-        try { audio.currentTime = 0; } catch (_error) {}
-        var played = audio.play(); if (played && played.catch) played.catch(function () {});
-        if (window.__loftPreviewOwn) window.__loftPreviewOwn(function () { stopPreviewScore(true); });
-        return { track: args.track, loop: audio.loop, level: audio.volume };
+        return stopPreviewScore(true, 0).then(function () {
+          var audio = document.getElementById(PREVIEW_SCORE_TRACKS[args.track]);
+          if (!audio) throw new Error("Score is not ready.");
+          previewScore = Object.keys(PREVIEW_SCORE_TRACKS).map(function (track) {
+            var item = document.getElementById(PREVIEW_SCORE_TRACKS[track]);
+            if (!item) return null;
+            return { audio: item, paused: item.paused, currentTime: item.currentTime || 0, loop: item.loop,
+              level: window.__songLevel ? window.__songLevel(item) : item.volume };
+          }).filter(function (state) { return !!state.audio; });
+          previewScore.forEach(function (state) { try { state.audio.pause(); } catch (_error) {} });
+          previewScoreAudio = audio;
+          audio.loop = args.loop !== false;
+          var level = args.level == null ? .45 : args.level, fadeMs = args.fade_ms || 0;
+          previewScoreLevel(audio, fadeMs ? 0 : level);
+          try { audio.currentTime = 0; } catch (_error) {}
+          var played = audio.play(); if (played && played.catch) played.catch(function () {});
+          if (window.__loftPreviewOwn) window.__loftPreviewOwn(function () { stopPreviewScore(true, 0); });
+          return new Promise(function (resolve) {
+            var finish = function () { resolve({ track: args.track, loop: audio.loop, level: level, fade_ms: fadeMs }); };
+            if (fadeMs && window.__fadeSongTo) window.__fadeSongTo(audio, level, fadeMs, finish);
+            else { previewScoreLevel(audio, level); finish(); }
+          });
+        });
       } });
     register({ id: "session.preview.score.stop", group: "Utilities / Scripting", kind: "action", risk: "ambient",
-      available: previewActive, run: function () { return { changed: stopPreviewScore(true) }; } });
+      completion: "finite", args: { fade_ms: { type: "integer", min: 0, max: 5000 } },
+      available: previewActive, run: function (args) {
+        return stopPreviewScore(true, args.fade_ms || 0).then(function (changed) {
+          return { changed: changed, fade_ms: args.fade_ms || 0 };
+        });
+      } });
 
     // The same registry drives the discoverable object tree used by Code and human help.
     // Query leaves are synchronous; action leaves return the normal perform() Promise/envelope.
@@ -126128,20 +126044,16 @@ function spawnDustMote(container) {
     });
   }
 
-  // ── one-minute Trailer cinematic ───────────────────────────────────────────
-  // A fixed game trailer: arbitrary cuts mix the main and lower floors, then selective
-  // minigames and device apps advertise the breadth without exposing their triggers,
-  // solutions, inventories, punchlines, or payoffs. Every pacing timer lands in
-  // cinematicTimers, so Take over cancels the authored timeline as one; a ghost cursor
-  // makes only the deliberately safe prop interactions legible. window.__cinematic gates
-  // the game's own auto-advances + the balcony storm so they cannot fight the montage.
+  // ── Trailer presentation host ───────────────────────────────────────────────
+  // The authored timeline lives in loft-day.trailer.js. This host owns only the film
+  // treatment, ghost cursor, trusted-gesture audio prime, and teardown boundary; every
+  // world mutation in the timeline goes through the typed Loft API preview transaction.
   var watchBtn = document.getElementById("watch-loft-btn");
   var skipBtn = document.getElementById("watch-skip-btn");
   var cinematicTimers = [];
   var cinematicTeardown = null;
-  var cineScoreStarted = false;
-  var cineTailCueStarted = false;
-  var cineArcadeLedger = null;
+  var cinematicStopping = null;
+  var cineLastCaptionKey = null;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // NB: named cineBeat, NOT beat — keep the trailer timing helper distinct from the other
   // local builders in this IIFE. A plain `beat` here would be too easy to shadow and would
@@ -126336,8 +126248,12 @@ function spawnDustMote(container) {
   // cursorHide() — send the ghost cursor away (fade it out), to end a scripted sequence.
   window.cursorHide = function () { cursorHide(); };
 
-  function stopCinematic() {
-    if (!window.__cinematic) return;
+  function stopCinematic(disposition) {
+    if (cinematicStopping) return cinematicStopping;
+    var preview = window.loft && window.loft.session && window.loft.session.preview &&
+      window.loft.session.preview.status();
+    var previewActive = !!(preview && preview.ok && preview.value && preview.value.active);
+    if (!window.__cinematic && !previewActive) return Promise.resolve(false);
     window.__cinematic = false;
     cinematicTimers.forEach(clearTimeout);
     cinematicTimers = [];
@@ -126347,93 +126263,30 @@ function spawnDustMote(container) {
     if (cineFrame) cineFrame.classList.remove("cinematic-running");
     if (caption) caption.classList.remove("cine-caption", "cine-caption-in");
     captionArbiter.cancel("cinematic");
-    // the balcony finale runs on its OWN finaleTimers (rain/rainbow/fireworks + a delayed
-    // showRsvpNudge). A mid-finale cancel must clear those too, or a late nudge would
-    // stomp the room caption we're about to restore. Only reached while the show ran, so
-    // normal (non-cinematic) play is untouched.
-    finaleTimers.forEach(clearTimeout);
-    finaleTimers = [];
-    if (finaleActTimer && window.__cancelAttention) window.__cancelAttention(finaleActTimer);
-    finaleActTimer = null;
-    cineHushSong(); // the montage score belongs only to the reel
-    if (window.__closePhoneModal) window.__closePhoneModal(true);
-    // Mini-games own rAF/timers and lower rooms own delayed slide teardowns. End each through
-    // its real lifecycle path so a natural finish, Take over, and hidden-tab abort are identical.
-    if (window.__cineArcadeDemo) window.__cineArcadeDemo(false);
-    if (window.__stopBalconyTetris) window.__stopBalconyTetris();
-    restoreCinematicArcadeLedger();
-    if (window.__closeBathroomRoom) {
-      window.__closeBathroomRoom();
-      // While Bubble-gun is active the first dismiss stops only the game, by design.
-      // The trailer owns both layers, so dismiss the room itself afterward as well.
-      if (window.__bathroomRoomOpen) window.__closeBathroomRoom();
-    }
-    if (window.__closeCinemaRoom) window.__closeCinemaRoom();
-    if (window.__closeBedroomRoom) window.__closeBedroomRoom();
-    if (window.__cineRoadtripDemo) window.__cineRoadtripDemo(false);
-    if (window.__closeEntranceRoom) window.__closeEntranceRoom();
-    // Device previews are real apps, but they are not a real play session. A clean monitor
-    // shutdown drops their loops and the office solve milestone the previewed boot would set.
-    var cinePc = document.getElementById("office-pc-desk-trio");
-    if (cinePc) cinePc.classList.remove("on");
-    if (window.stopPcFan) window.stopPcFan();
-    if (window.resetOfficeMonitor) window.resetOfficeMonitor();
-    // Direct editorial cuts deliberately bypass the solve gates, and goToStage records every
-    // visited room as navigable. Hand control back at the real starting line so the
-    // reel never becomes a progression shortcut or a substitute playthrough.
-    if (window.goToStage && window.currentStageName !== "kitchen") window.goToStage("kitchen");
-    if (window.__setMaxUnlocked) window.__setMaxUnlocked(0);
+    cineLastCaptionKey = null;
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
-    // Restore the ordinary caption for whatever room we cancelled on, except when the
-    // completed second act already owns the line with its RSVP link.
-    if (captionKey !== "rsvp_exit") {
-      var here = STAGES[stageIndex];
-      setCaption(here);
-      restoreStageHint(here);
-    }
-    // A Trailer launched from the recovery gate previews a deterministic fresh loft, but it must
-    // not destroy the unopened checkpoint. Its final beat can reset after stopCinematic returns,
-    // so restore on the next task, after that reset has had its turn.
-    if (cinematicRecoveryRaw) {
-      var heldCheckpoint = cinematicRecoveryRaw;
-      setTimeout(function () {
-        try { localStorage.setItem(LOFT_CHECKPOINT_KEY, heldCheckpoint); } catch (_error) {}
-        if (cinematicRecoveryRaw === heldCheckpoint) cinematicRecoveryRaw = null;
-      }, 0);
-    }
+    // Preview is the sole world-state owner. `fresh` hands control back at a clean Kitchen;
+    // attention loss and errors use `restore`. Both preserve raw recovery bytes and storage.
+    var ending = previewActive ? window.loft.session.preview.end(disposition === "restore" ? "restore" : "fresh") : Promise.resolve(null);
+    cinematicStopping = Promise.resolve(ending).then(function () {
+      cinematicStopping = null;
+      return true;
+    }, function (error) {
+      cinematicStopping = null;
+      try { console.error("Trailer teardown failed", error); } catch (_error) {}
+      return false;
+    });
+    return cinematicStopping;
   }
 
-  // ── timeline helpers ──
-  // runSteps(steps[, done]) plays a sequence strictly in order. Two step shapes:
-  //   [gapMs, fn]              — wait gapMs, then fn (pacing / dramatic beats)
-  //   tapAt(gapMs, id)         — wait gapMs (the ghost cursor gliding in over the
-  //                              last CURSOR_GLIDE_MS of it), then click id
-  // Every delay runs through cineBeat(), so the whole sequence lives in cinematicTimers
-  // and cancels as one; a cancelled runner simply never advances.
-  function runSteps(steps, done) {
-    var i = 0;
-    function next() {
-      if (!window.__cinematic) return;
-      if (i >= steps.length) { if (done) done(); return; }
-      var s = steps[i++];
-      if (s.tap) {
-        var lead = Math.min(CURSOR_GLIDE_MS, s.gap);
-        if (lead > 0) cineBeat(s.gap - lead, function () { cursorGlideTo(s.tap, lead); });
-        cineBeat(s.gap, function () { cineClick(s.tap); next(); });
-      } else {
-        cineBeat(s[0], function () { if (s[1]) s[1](); next(); });
-      }
-    }
-    next();
-  }
-  function tapAt(gapMs, id) { return { tap: id, gap: gapMs }; }
   // A scheduled caption beat forces narration past the setCaption guard and gives each
   // authored line a restrained cut-in. Re-adding after layout reliably restarts the one-shot;
   // reduced-motion disables the keyframes in CSS.
   function paintCineCaption(key) {
     if (!window.__cinematic) return;
+    cineLastCaptionKey = key;
     captionArbiter.exclusive({ key: key, owner: "cinematic", scope: "global",
       priority: CAPTION_PRIORITY.exclusive });
     if (!caption) return;
@@ -126442,7 +126295,6 @@ function spawnDustMote(container) {
     void caption.offsetWidth;
     caption.classList.add("cine-caption-in");
   }
-  function cine(key) { return function () { paintCineCaption(key); }; }
   // ── film presentation ──
   // One generated overlay owns every editorial layer, keeping the underlying room SVG
   // untouched. Its scoped keys refresh alongside the ordinary setLang pass.
@@ -126516,31 +126368,49 @@ function spawnDustMote(container) {
     chapter.classList.add("show");
     cineBeat(2800, function () { if (chapter) chapter.classList.remove("show"); });
   }
-  // Fade to ink, switch rooms at full cover, then reveal the new tableau with its chapter
-  // and narration. The ordinary 720ms room slide is suppressed only while the veil is up.
-  function cineCutTo(name, chapterKey, captionKey, settle) {
-    var overlay = ensureCineOverlay(), host = cursorHost();
-    cursorHide();
-    cineHideCard();
-    if (overlay) overlay.classList.add("cine-cut");
-    if (host) host.classList.add("cine-cutting");
-    cineBeat(320, function () {
-      goToStage(name);
-      if (settle) settle();
-      cineChapter(chapterKey);
-      paintCineCaption(captionKey);
-    });
-    cineBeat(820, function () {
-      if (overlay) overlay.classList.remove("cine-cut");
-      if (host) host.classList.remove("cine-cutting");
-    });
-  }
   function cineOverlayTeardown() {
     var host = cursorHost();
     if (host) host.classList.remove("cine-cutting");
     if (cineOverlayEl) { cineOverlayEl.remove(); cineOverlayEl = null; }
   }
-  function cinePhoneClose() { if (window.__closePhoneModal) window.__closePhoneModal(true); }
+  function cineWait(ms) {
+    return new Promise(function (resolve) {
+      cineBeat(ms, function () { resolve(!!window.__cinematic); });
+    });
+  }
+  async function cineCutAction(action) {
+    if (!window.__cinematic) return false;
+    var overlay = ensureCineOverlay(), host = cursorHost();
+    cursorHide();
+    if (overlay) overlay.classList.add("cine-cut");
+    if (host) host.classList.add("cine-cutting");
+    if (!await cineWait(320)) return false;
+    await action();
+    // Room/minigame setup may publish its own clue while the veil is opaque. Reassert the
+    // authored narration before revealing the cut so it remains readable through the pan.
+    if (cineLastCaptionKey) paintCineCaption(cineLastCaptionKey);
+    if (!await cineWait(180)) return false;
+    if (overlay) overlay.classList.remove("cine-cut");
+    if (host) host.classList.remove("cine-cutting");
+    return true;
+  }
+  var CINE_INTERACTION_TARGETS = {
+    "garden.tensegrity": "garden-tensegrity",
+    "cuddly.pan-edge": "cuddly-panedge-hit",
+    "cuddly.bolster": "cuddly-bolster",
+    "cinema.bike": "cinema-bike",
+    "cinema.cushion": "cinema-cushion-wine"
+  };
+  async function cineInteract(interaction) {
+    var target = CINE_INTERACTION_TARGETS[interaction];
+    if (target) {
+      cursorGlideTo(target, CURSOR_GLIDE_MS);
+      if (!await cineWait(CURSOR_GLIDE_MS)) return null;
+      var point = cursorPointFor(target);
+      if (point) { cursorPlace(point.x, point.y); cursorRipple(point.x, point.y); }
+    }
+    return window.loft.interaction.activate(interaction);
+  }
   // The score starts after the trusted Trailer click. Unlock its real recording here with a
   // silent play→pause so WebKit permits the delayed timeline beat. Prime only the track this
   // cut actually uses: strict browsers may unlock just one media element per gesture.
@@ -126555,7 +126425,7 @@ function spawnDustMote(container) {
       // A slow play() promise may settle after the scheduled score beat. In that case the
       // score owns the element now, so this gesture-prime must not pause it underneath.
       var settle = function () {
-        if (cineScoreStarted) return;
+        if (window.__cinematic && a.loop) return;
         try { a.pause(); a.currentTime = 0; } catch (e) {}
       };
       var p = a.play();
@@ -126563,247 +126433,19 @@ function spawnDustMote(container) {
       else settle();
     } catch (e) {}
   }
-  // The recording is trailer score, not a demonstrated game trigger. Always rewind it so
-  // taking over never inherits a paused mid-track "current song".
-  function cineHushSong() {
-    ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio", "marketa-czech-song-audio"].forEach(function (id) {
-      var a = document.getElementById(id);
-      if (!a) return;
-      if (a._fadeTimer) { clearInterval(a._fadeTimer); a._fadeTimer = null; }
-      try {
-        a.pause();
-        a.currentTime = 0;
-        if (window.__setSongLevel) window.__setSongLevel(a, window.__songVolume ? window.__songVolume() : 0.5);
-      } catch (e) {}
-    });
-    cineScoreStarted = false;
-    cineTailCueStarted = false;
-  }
-  // ── THE TRAILER — a curated 60-second invitation to play ─────────────────────
-  // Editorial rule: advertise possibility, never progression. The montage jumps across
-  // floors in deliberately arbitrary order, uses dedicated preview hooks so no trigger is
-  // demonstrated, and leaves the later act locked. The party and every first-arrival/formal
-  // payoff remain completely absent; the road/camp adapter is presentation-only.
-  function startCinematicScore() {
-    var a = document.getElementById("tumbala-song-audio");
-    if (!a || !window.__cinematic) return;
-    var level = window.__songVolume ? window.__songVolume() : 0.5;
-    try {
-      cineScoreStarted = true;
-      if (window.__captureSongAudio) window.__captureSongAudio(a);
-      a.currentTime = 0;
-      if (window.__setSongLevel) window.__setSongLevel(a, level); else a.volume = level;
-      var p = a.play();
-      if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] trailer score rejected:", e); });
-    } catch (e) {}
-  }
-  // Tumbalalaika naturally falls silent near 38 seconds. The road cut lands at that seam:
-  // fade the last breath, rewind, and bring it back as a quiet reprise so the camp and final
-  // card have an authored cue instead of twenty seconds of accidental silence.
-  function startCinematicTailCue() {
-    var a = document.getElementById("tumbala-song-audio");
-    if (!a || !window.__cinematic || cineTailCueStarted) return;
-    cineTailCueStarted = true;
-    var level = window.__songVolume ? window.__songVolume() : 0.5;
-    var restart = function () {
-      if (!window.__cinematic) return;
-      try {
-        a.currentTime = 0;
-        if (window.__setSongLevel) window.__setSongLevel(a, 0); else a.volume = 0;
-        var p = a.play();
-        if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] trailer reprise rejected:", e); });
-        if (window.__fadeSongTo) window.__fadeSongTo(a, level, 900);
-        else if (window.__setSongLevel) window.__setSongLevel(a, level);
-        else a.volume = level;
-      } catch (e) {}
-    };
-    if (window.__fadeSongTo) window.__fadeSongTo(a, 0, 650, restart);
-    else restart();
-  }
-  window.__cinematicAudioState = function () {
-    return { scoreStarted: cineScoreStarted, tailCueStarted: cineTailCueStarted };
-  };
-  // Starting the two real arcade previews should not quietly consume the player's cross-game
-  // recommendations. Snapshot only that separate promotion ledger; scores already use their
-  // own preview-safe lifecycle.
-  function captureCinematicArcadeLedger() {
-    cineArcadeLedger = {};
-    ["loftArcadesPlayed", "loftArcadesSuggested"].forEach(function (key) {
-      try { cineArcadeLedger[key] = localStorage.getItem(key); } catch (e) { cineArcadeLedger[key] = null; }
-    });
-  }
-  function restoreCinematicArcadeLedger() {
-    if (!cineArcadeLedger) return;
-    Object.keys(cineArcadeLedger).forEach(function (key) {
-      try {
-        if (cineArcadeLedger[key] == null) localStorage.removeItem(key);
-        else localStorage.setItem(key, cineArcadeLedger[key]);
-      } catch (e) {}
-    });
-    cineArcadeLedger = null;
-  }
-  function openLower(openFn) {
-    return function () { if (typeof window[openFn] === "function") window[openFn](); };
-  }
-  function startBathroomBubbles() {
-    var tub = document.getElementById("bathroom-tub");
-    if (tub) tub.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  }
-  function runFullCinematic() {
-    ensureCineOverlay();
-    cineShowCard("title", "cine_title_kicker", "cine_title", "cine_title_sub");
-    paintCineCaption("cine_open"); // synchronous, so resetHunt's blocked caption never flashes stale
-    runSteps([
-      // 0.0–8.6 · Start deep in the Office with a game already in motion. No chair tap
-      // or solve beat is shown; the preview-only pilot keeps it lively without banking a score.
-      [500, startCinematicScore],
-      [2100, function () { cineHideCard(); cineCutTo("office", "cine_chapter_jump", "cine_arcade"); }],
-      [1200, function () { if (window.__cineArcadeDemo) window.__cineArcadeDemo(true); }],
-      [4800, function () {
-        if (window.__cineArcadeDemo) window.__cineArcadeDemo(false);
-        cineCutTo("cuddly", "cine_chapter_open", "cine_below", openLower("__openCinemaRoom"));
-      }],
-
-      // 8.6–18.1 · A lower-floor cinema breath, then a calm Garden clue tableau. The
-      // two harmless cinema props advertise reactivity; Garden shows one ordinary wobble,
-      // never a solve object, hidden multi-tap, or punchline.
-      tapAt(1400, "cinema-bike"),
-      tapAt(1300, "cinema-cushion-blue"),
-      [1800, function () { cineCutTo("garden", "cine_chapter_unlock", "cine_clues"); }],
-      tapAt(1400, "garden-tensegrity"),
-      [1400, null],
-      [2200, function () {
-        cineCutTo("kitchen", "cine_chapter_wander", "cine_anywhere", openLower("__openBathroomRoom"));
-      }],
-
-      // 18.1–27.4 · The Bathroom's bubble game starts without revealing the tub trigger.
-      // Two phone apps then open directly, never exposing the full launcher inventory.
-      [1200, startBathroomBubbles],
-      [1400, function () {
-        var bubble = document.getElementById("bathroom-bubble-4");
-        if (bubble) bubble.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      }],
-      [1300, function () {
-        paintCineCaption("cine_phone");
-        if (window.__openPhoneAppHere) window.__openPhoneAppHere("clock", true);
-      }],
-      [2400, function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("mines", true); }],
-      [3000, function () {
-        cinePhoneClose();
-        cineCutTo("office", "cine_chapter_round", "cine_round", function () {
-          if (window.__openBedroomRoom) window.__openBedroomRoom();
-          if (window.__startBedroomTicTacToe) window.__startBedroomTicTacToe();
-        });
-      }],
-
-      // 27.4–35.0 · One unfinished round downstairs, then two safe Cuddly toys. The
-      // later story remains locked for the entire reel.
-      [2200, cine("cine_more")],
-      [2600, function () { cineCutTo("cuddly", "cine_chapter_soft", "cine_soft"); }],
-      tapAt(1400, "cuddly-panedge-hit"),
-      tapAt(1400, "cuddly-bolster"),
-
-      // 35.0–56.2 · Leave the redundant skyline/app sampler behind. A presentation-only
-      // adapter holds a westbound highway, then a quiet fire-and-stars campsite without
-      // starting Road Trip, building the fire, solving stargazing, or saving any state.
-      [2200, function () {
-        startCinematicTailCue();
-        cineCutTo("balcony", "cine_chapter_road", "cine_road", function () {
-          if (window.__openEntranceRoom) window.__openEntranceRoom();
-          if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("highway");
-        });
-      }],
-      [6000, function () {
-        cursorHide();
-        if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("camp");
-        cineChapter("cine_chapter_camp");
-        paintCineCaption("cine_camp");
-      }],
-
-      // 43.2–60.0 · Let the campsite breathe, then make one concise invitation and return
-      // control. No Party, camp mechanics, story reward, wedding card, or final payoff.
-      [13000, function () {
-        cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_detail", "cine_final_note");
-        paintCineCaption("cine_signoff");
-      }],
-      [3800, function () { stopCinematic(); }]
-    ]);
-  }
-
-  function runReducedCinematic() {
-    // The same arbitrary-floor promise, compressed into held tableaux. Animation is disabled
-    // by CSS, but lower rooms, static minigame frames, and the inert road/camp preview remain.
-    var D = 2200;
-    ensureCineOverlay();
-    cineShowCard("title", "cine_title_kicker", "cine_title", "cine_title_sub");
-    paintCineCaption("cine_open");
-    cineBeat(500, startCinematicScore);
-    cineBeat(D, function () {
-      cineHideCard(); goToStage("office"); cineChapter("cine_chapter_jump");
-      if (window.__arcadeTest) window.__arcadeTest(12, 80);
-      paintCineCaption("cine_arcade");
-    });
-    cineBeat(D * 2, function () {
-      if (window.__arcadeStop) window.__arcadeStop();
-      goToStage("cuddly"); if (window.__openCinemaRoom) window.__openCinemaRoom();
-      cineChapter("cine_chapter_open"); paintCineCaption("cine_below");
-    });
-    cineBeat(D * 3, function () {
-      goToStage("garden"); cineChapter("cine_chapter_unlock");
-      cineClick("garden-tensegrity"); paintCineCaption("cine_clues");
-    });
-    cineBeat(D * 4, function () {
-      goToStage("kitchen"); if (window.__openBathroomRoom) window.__openBathroomRoom();
-      startBathroomBubbles(); cineChapter("cine_chapter_wander");
-      paintCineCaption("cine_anywhere");
-    });
-    cineBeat(D * 5, function () {
-      if (window.__openPhoneAppHere) window.__openPhoneAppHere("clock", true);
-      paintCineCaption("cine_phone");
-    });
-    cineBeat(D * 6, function () {
-      if (window.__openPhoneAppHere) window.__openPhoneAppHere("mines", true);
-      paintCineCaption("cine_more");
-    });
-    cineBeat(D * 7, function () {
-      cinePhoneClose(); goToStage("office");
-      if (window.__openBedroomRoom) window.__openBedroomRoom();
-      if (window.__startBedroomTicTacToe) window.__startBedroomTicTacToe();
-      cineChapter("cine_chapter_round"); paintCineCaption("cine_round");
-    });
-    cineBeat(D * 8, function () {
-      startCinematicTailCue();
-      goToStage("balcony"); if (window.__openEntranceRoom) window.__openEntranceRoom();
-      if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("highway");
-      cineChapter("cine_chapter_road"); paintCineCaption("cine_road");
-    });
-    cineBeat(D * 9, function () {
-      if (window.__cineRoadtripDemo) window.__cineRoadtripDemo("camp");
-      cursorHide(); cineChapter("cine_chapter_camp"); paintCineCaption("cine_camp");
-    });
-    cineBeat(D * 10, function () {
-      cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_detail", "cine_final_note");
-      paintCineCaption("cine_signoff");
-    });
-    cineBeat(D * 11, function () { stopCinematic(); });
-  }
-
   function startCinematic() {
-    if (window.__cinematic) return;
-    if (window.__cineRoadtripDemo) window.__cineRoadtripDemo(false);
+    if (window.__cinematic || cinematicStopping) return Promise.resolve(false);
+    if (!window.LoftDayTrailer || !window.loft || !window.loft.session) {
+      try { console.error("Trailer timeline or Loft API is unavailable."); } catch (_error) {}
+      return Promise.resolve(false);
+    }
     window.__cinematic = true;
-    captureCinematicArcadeLedger();
     stopHintBlink(); // the show owns the caption — end any attract-blink first (Watch is off-strip)
     if (watchBtn) { watchBtn.classList.remove("nudge"); watchBtn.hidden = true; }
     if (skipBtn) skipBtn.hidden = false;
     var cineFrame = document.getElementById("hunt-fullscreen-area");
     if (cineFrame) cineFrame.classList.add("cinematic-running");
-    resetHunt(); // deterministic fresh loft; the fixed cut owns everything shown from here
-    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky so arbitrary cuts stay visually coherent
-    // Seasonal defaults can otherwise wake a music/video projector channel before a Cuddly
-    // cut. Pin its ordinary fire tableau so the montage never previews the richer selector.
-    if (window.__cuddlyProjector) window.__cuddlyProjector.set("fire");
-    primeCinematicAudio(); // unlock the one trailer score inside the trusted Watch gesture
+    primeCinematicAudio(); // unlock the score element inside the trusted Watch gesture
 
     // The show is NOT stopped by stray input — only the explicit skip/take-over
     // control ends it. Pointer events aimed at the game scene are swallowed while
@@ -126821,18 +126463,50 @@ function spawnDustMote(container) {
         e.stopPropagation();
       }
     }
-    function onVisibility() { if (document.hidden) stopCinematic(); }
+    function onVisibility() { if (document.hidden) stopCinematic("restore"); }
+    function onError(event) { if (!event || event.error) stopCinematic("restore"); }
+    function onRejection() { stopCinematic("restore"); }
     document.addEventListener("pointerdown", swallowSceneInput, true);
     document.addEventListener("click", swallowSceneInput, true);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
     cinematicTeardown = function () {
       document.removeEventListener("pointerdown", swallowSceneInput, true);
       document.removeEventListener("click", swallowSceneInput, true);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
     };
-
-    if (reduceMotion) runReducedCinematic();
-    else runFullCinematic();
+    var host = {
+      reduced: reduceMotion,
+      active: function () { return !!window.__cinematic; },
+      wait: cineWait,
+      caption: paintCineCaption,
+      announce: function (chapter, captionKey) { cineChapter(chapter); paintCineCaption(captionKey); },
+      card: cineShowCard,
+      hideCard: cineHideCard,
+      cut: cineCutAction,
+      interact: function (interaction) {
+        return cineInteract(interaction).then(function (envelope) {
+          if (!envelope || !envelope.ok) throw new Error("Trailer interaction failed: " + interaction);
+          return envelope.value;
+        });
+      },
+      stop: stopCinematic
+    };
+    return window.loft.session.preview.begin("trailer").then(function (begun) {
+      if (!begun || !begun.ok) throw new Error("Trailer preview could not begin.");
+      return window.loft.game.reset("instant");
+    }).then(function (reset) {
+      if (!reset || !reset.ok) throw new Error("Trailer reset could not begin.");
+      return window.LoftDayTrailer.run(host);
+    }).catch(function (error) {
+      if (window.__cinematic && (!error || error.message !== "Trailer stopped")) {
+        try { console.error("Trailer stopped after an error", error); } catch (_error) {}
+      }
+      return stopCinematic("restore");
+    });
   }
   window.__startCinematic = startCinematic; // for headless driving / tests
   window.__stopCinematic = stopCinematic; // 'w' keybind toggles the show off with this
@@ -126906,7 +126580,6 @@ function spawnDustMote(container) {
   var recoveryBrand = null, recoveryTitle = null, recoveryContinueBtn = null, recoveryRestartBtn = null;
   var recoveryReleaseHandler = null, recoveryBlurHandler = null;
   var introWatchParent = null, introWatchNext = null;
-  var cinematicRecoveryRaw = null;
   var loftAttendedMs = 0, loftAttendedStartedAt = null, loftAttendedComplete = false;
   var loftAttendedPageHeld = false;
   function loftAttendedEligible() {
@@ -127472,14 +127145,8 @@ function spawnDustMote(container) {
   }
   function startRecoveryTrailer() {
     if (!recoverySaved) return false;
-    try { cinematicRecoveryRaw = JSON.stringify(recoverySaved); } catch (_error) { cinematicRecoveryRaw = null; }
     hideRecoveryGate();
     startCinematic();
-    // startCinematic's deterministic reset clears normal progress. Reinstate the held checkpoint
-    // immediately; stopCinematic repeats this after the reel's optional final reset.
-    if (cinematicRecoveryRaw) {
-      try { localStorage.setItem(LOFT_CHECKPOINT_KEY, cinematicRecoveryRaw); } catch (_error) {}
-    }
     return true;
   }
   function showRecoveryGate(saved) {

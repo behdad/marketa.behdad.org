@@ -87,7 +87,7 @@ function makeScratch(file, harness, hookHtml) {
   // positively by an rsvp/rsvp.html pathname, while every other name is game-only.
   var scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-page-"));
   var scratch = path.join(scratchDir, path.basename(file));
-  ["loft-day.en.js", "loft-day.cs.js"].forEach(function (name) {
+  ["loft-day.en.js", "loft-day.cs.js", "loft-day.trailer.js"].forEach(function (name) {
     if (html.indexOf('src="' + name + '"') !== -1) {
       fs.copyFileSync(path.join(ROOT, name), path.join(scratchDir, name));
     }

@@ -444,9 +444,10 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The current cinematic runner remains inline with that controller. A future
-`loft-day.trailer.js` should drive world state through the public API; only captions, cards, camera
-moves, cursor choreography, and scheduling stay privileged presentation code.
+The authored timing and world sequence lives in `loft-day.trailer.js` and uses only the typed Loft API
+actions. The inline entry controller is the narrow privileged presentation host: captions, cards,
+cut veil, ghost cursor, trusted-click audio prime, scheduling, and takeover/error teardown. Keep
+that boundary narrow rather than exporting DOM ids or duplicating game renderers for future edits.
 
 `session.preview` is the general reversible boundary for scripted presentations. `begin()` captures
 the semantic checkpoint, raw checkpoint bytes, and the complete browser store; generation-owned
@@ -457,8 +458,10 @@ notification, and external/destructive writes; hide, pagehide, and uncaught-erro
 automatically. Public preview helpers activate the real room, minigame, Road Trip, Camping, and
 score owners rather than duplicating renderer geometry or audio.
 
-`tests/cine.js` continues to cover the inline reel. `tests/api-preview.js` covers the public
-transaction, exact Road Trip renderer, write isolation, restore, and clean-fresh disposition.
+`tests/cine.js` covers the authored reel, narration lead time, exact Road Trip/Camping and minigame
+owners, score continuity, EN/CS desktop/mobile title layout, and natural/takeover/attention/error
+teardown. `tests/api-preview.js` separately covers the general transaction, write isolation,
+restore, and clean-fresh disposition.
 
 `loftSessionExport` and `loftSessionImport` are deliberately narrower than a full checkpoint: they
 move progress and puzzle state without exporting bulky or personal app data. Do not broaden that

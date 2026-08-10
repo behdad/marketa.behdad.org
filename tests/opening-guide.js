@@ -135,6 +135,35 @@ var harness = String.raw`<script>
         item.querySelectorAll(":scope > .hunt-coach-x").length === 1;
     }));
   click(x);
+
+  await showGuide("en");
+  localStorage.setItem("opening-guide-reset-unrelated", "keep");
+  localStorage.setItem("loftCheckpoint:v1", "discarded-by-explicit-reset");
+  var confirmations = 0;
+  window.confirm = function () { confirmations++; return true; };
+  var reset = document.getElementById("hunt-restart-btn"), resetRect = reset.getBoundingClientRect();
+  var resetHit = document.elementFromPoint(resetRect.left + resetRect.width / 2, resetRect.top + resetRect.height / 2);
+  click(resetHit);
+  await sleep(850);
+  var watch = document.getElementById("watch-loft-btn"), watchRect = watch.getBoundingClientRect();
+  var watchHit = document.elementFromPoint(watchRect.left + watchRect.width / 2, watchRect.top + watchRect.height / 2);
+  check("Phase-one coach keeps the explicit whole-loft Reset pointer-accessible",
+    resetHit && resetHit.closest("#hunt-restart-btn") && confirmations === 1,
+    JSON.stringify({ hit: resetHit && (resetHit.id || String(resetHit.className)), confirmations: confirmations }));
+  check("Phase-one Kitchen Reset returns to CLICK ME with Trailer selectable",
+    window.currentStageName === "kitchen" && !window.__secondRound && window.__maxUnlocked() === 0 &&
+      !window.__gameStarted() && !!document.getElementById("click-me-overlay") &&
+      document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
+      !document.getElementById("hunt-fullscreen-area").classList.contains("opening-guide-active") &&
+      watchHit && watchHit.closest("#watch-loft-btn"),
+    JSON.stringify({ room: window.currentStageName, phase2: !!window.__secondRound,
+      max: window.__maxUnlocked(), started: window.__gameStarted(), watchHit: watchHit && (watchHit.id || String(watchHit.className)) }));
+  check("explicit Reset clears the resumable checkpoint but preserves unrelated browser data",
+    localStorage.getItem("loftCheckpoint:v1") === null &&
+      localStorage.getItem("opening-guide-reset-unrelated") === "keep",
+    JSON.stringify({ checkpoint: localStorage.getItem("loftCheckpoint:v1"),
+      unrelated: localStorage.getItem("opening-guide-reset-unrelated") }));
+  localStorage.removeItem("opening-guide-reset-unrelated");
   report();
 })().catch(function (error) {
   var pre = document.createElement("pre"); pre.id = "__report";
@@ -144,7 +173,7 @@ var harness = String.raw`<script>
 </script>`;
 
 function run(label, opts) {
-  var result = lib.runPageSync("rsvp.html", harness, 2500, opts);
+  var result = lib.runPageSync("rsvp.html", harness, 3600, opts);
   if (!result) { console.error("opening guide " + label + ": no report"); return false; }
   var failed = false;
   result.checks.forEach(function (check) {

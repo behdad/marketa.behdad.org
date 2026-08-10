@@ -741,7 +741,6 @@ const javascriptCodeResponse = await worker.fetch(makeRequest("/chat", {
     turnstile_token: "javascript-code-token",
     context: {
       scripting_api: {
-        version: "loft-api-4",
         runtime: "JavaScript in the Loft Code app; top-level await is valid.",
         typed: [{ id: "garden.set", kind: "action", args: { on: { type: "boolean" } }, argOrder: ["on"], completion: "instant" }],
         primitives: [{ signature: "sleep(ms)", result: "Promise<void>" }],

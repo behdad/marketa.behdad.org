@@ -334,7 +334,7 @@ intervals, and one-shot games during reset or restore.
 
 ### Typed API and console
 
-`initLoftApi()` installs API version 4 at `window.loft.api`. Its public surface is:
+`initLoftApi()` installs the typed API at `window.loft.api`. Its public surface is:
 
 - `capabilities(options)` for the discoverable, alphabetically keyed action/query catalogue;
 - `groups()` for the stable, alphabetically sorted capability groups;
@@ -343,9 +343,9 @@ intervals, and one-shot games during reset or restore.
 - `perform(id, args, options)` for validated actions;
 - `subscribe(listener)` for state notifications.
 
-Version 4 covers all ten rooms and the Entrance car, Road Trip, and Camping controllers in addition
-to the established party, media, apps, calls, weather, minigames, and album surfaces. Room ids stay
-canonical in results. The same registry mechanically creates discoverable JavaScript namespaces:
+The registry covers all ten rooms and the Entrance car, Road Trip, and Camping controllers in
+addition to the established party, media, apps, calls, weather, minigames, and album surfaces. Room
+ids stay canonical in results. The same registry mechanically creates discoverable JavaScript namespaces:
 `loft.kitchen`, `loft.cuddly.chest`, `loft.roadtrip`, and so on. `loft.bar === loft.kitchen` and
 `loft.party === loft.garden`; aliases never create duplicate capabilities or noncanonical results.
 `help(loft.kitchen)` and `help(loft.cuddly.chest)` resolve by registry object identity, not object

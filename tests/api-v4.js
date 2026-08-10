@@ -22,7 +22,7 @@ var HARNESS = [
   ' var invalidAuto=await api.perform("environment.daylight.set",{on:"auto"},{source:"test"}),invalidGear=await api.perform("car.transmission.set",{mode:"automatic"},{source:"test"});',
   ' var help={all:window.help(),loft:window.help(window.loft),kitchen:window.help(window.loft.kitchen),party:window.help(window.loft.party),weather:window.help(window.loft.weather),rain:window.help(window.loft.weather.rain),rainSet:window.help(window.loft.weather.rain.set),chest:window.help(window.loft.cuddly.chest),string:window.help("kitchen"),legacy:window.help("dance")};',
   ' window.__openDropTerm();var consoleIn=document.getElementById("dropterm-in"),consoleOut=document.getElementById("dropterm-out");function consoleHelp(command){consoleOut.replaceChildren();consoleIn.focus();consoleIn.value=command;consoleIn.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));return consoleOut.textContent;}var consoleHelpText={bare:consoleHelp("help"),call:consoleHelp("help()")};window.__closeDropTerm();',
-  ' S("api",{version:api.version,caps:caps,groups:groups,rooms:rooms,game:game,manifest:manifest,schemas:schemas,strict:strict,env:env,aliases:{bar:window.loft.bar===window.loft.kitchen,party:window.loft.party===window.loft.garden,roomBar:barRoom,roomParty:partyRoom,navBar:navBar,navParty:navParty},namespace:{partyImmediate:partyImmediate,pans:pans,chest:typeof window.loft.cuddly.chest.set,oldChest:typeof window.chest,oldPirate:typeof window.piratebox},invalid:{auto:invalidAuto,gear:invalidGear},help:help,consoleHelp:consoleHelpText});',
+  ' S("api",{caps:caps,groups:groups,rooms:rooms,game:game,manifest:manifest,schemas:schemas,strict:strict,env:env,aliases:{bar:window.loft.bar===window.loft.kitchen,party:window.loft.party===window.loft.garden,roomBar:barRoom,roomParty:partyRoom,navBar:navBar,navParty:navParty},namespace:{partyImmediate:partyImmediate,pans:pans,chest:typeof window.loft.cuddly.chest.set,oldChest:typeof window.chest,oldPirate:typeof window.piratebox},invalid:{auto:invalidAuto,gear:invalidGear},help:help,consoleHelp:consoleHelpText});',
   ' window.__maxUnlocked=oldMax;',
   '}',
   '})();</script>'
@@ -39,10 +39,10 @@ var result = lib.runPageSync("loft-day.html", HARNESS, 5200, { patchRaf: true })
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps.api || {}, caps = s.caps || [], ids = caps.map(function (cap) { return cap.id; }), rooms = s.rooms && s.rooms.value || [];
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.version === 4 && caps.length >= 130 && caps.every(function (cap) {
+check(caps.length >= 130 && caps.every(function (cap) {
   return cap.id && cap.group && (cap.kind === "query" || cap.kind === "action") && Array.isArray(cap.argOrder) &&
     (cap.completion === "instant" || cap.completion === "finite") && cap.description && cap.returns && cap.returns.type === "envelope";
-}), "v4 exposes a stable, fully described grouped typed catalogue", { version: s.version, count: caps.length });
+}), "the API exposes a stable, fully described grouped typed catalogue", { count: caps.length });
 check(Array.isArray(s.groups) && s.groups.length >= 15 && s.groups.join("\0") === s.groups.slice().sort().join("\0") && s.groups.includes("Entrance / Car") && s.groups.includes("Road Trip") && s.groups.includes("Camping"), "capability groups are stable, sorted, and cover the terminal act", s.groups);
 check(rooms.length === 10 && rooms[0].id === "kitchen" && rooms[5].id === "bathroom" && rooms[9].id === "entrance" && rooms[0].aliases.includes("bar") && rooms[1].aliases.includes("party"), "room catalogue covers both floors and canonical aliases", rooms);
 check(s.game && s.game.ok && s.game.value.unlocked_rooms.length === 10 && s.game.value.unlocked_rooms.includes("entrance"), "game status reports all unlocked upper and lower rooms", s.game);
@@ -60,7 +60,7 @@ check(s.help && /loft\.kitchen/.test(s.help.kitchen) && /alias: loft\.bar/.test(
 check(s.consoleHelp && [s.consoleHelp.bare, s.consoleHelp.call].every(function (text) {
   return /Loft typed API/.test(text) && /loft\.weather/.test(text) && /help\(loft\.weather\)/.test(text);
 }), "bare help and help() print the concise typed map in the monitor console", s.consoleHelp);
-check(s.manifest && s.manifest.version === "loft-api-4" && s.manifest.typed.length === caps.length && s.manifest.typed.every(function (entry) { return entry.id && entry.kind && Array.isArray(entry.argOrder) && Array.isArray(entry.aliases) && entry.completion && entry.returns; }) && !Object.prototype.hasOwnProperty.call(s.manifest, "globals"), "assistant manifest stays compact and derives from the typed registry", s.manifest && { version: s.manifest.version, count: s.manifest.typed && s.manifest.typed.length, primitives: s.manifest.primitives && s.manifest.primitives.length });
+check(s.manifest && !Object.prototype.hasOwnProperty.call(s.manifest, "version") && s.manifest.typed.length === caps.length && s.manifest.typed.every(function (entry) { return entry.id && entry.kind && Array.isArray(entry.argOrder) && Array.isArray(entry.aliases) && entry.completion && entry.returns; }) && !Object.prototype.hasOwnProperty.call(s.manifest, "globals"), "assistant manifest stays compact and derives from the typed registry", s.manifest && { count: s.manifest.typed && s.manifest.typed.length, primitives: s.manifest.primitives && s.manifest.primitives.length });
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

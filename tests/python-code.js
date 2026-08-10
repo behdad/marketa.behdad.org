@@ -223,12 +223,13 @@ var harness = [
   '  var svgHost=document.getElementById("monitor-py-svg-display"),svgRoot=svgHost.querySelector("svg"),svgPath=svgHost.querySelector("#py-svg-probe");',
   '  out.svgDisplay=shown&&document.getElementById("monitor-py-view-toggle").classList.contains("has-graphics")&&svgRoot&&svgRoot.getAttribute("viewBox")==="0 0 20 10"&&svgRoot.getAttribute("width")==="620"&&!svgRoot.hasAttribute("onload")&&!svgHost.querySelector("script")&&svgPath&&!svgPath.hasAttribute("onclick");',
   '  window.__loftTurtleCommand("screen_clear"); out.svgClears=!svgHost.firstElementChild&&!document.getElementById("monitor-py-view-toggle").classList.contains("has-graphics");',
+  '  window.goToStage("office");await new Promise(function(r){setTimeout(r,100)});var runtimeStyle=document.createElement("style");runtimeStyle.textContent="#monitor-console,#monitor-python,#monitor-linux{transition:none!important}";document.head.appendChild(runtimeStyle);var runtimeClasses=["show-console","show-python","show-linux"],runtimeInputs=["monitor-console-in","monitor-py-in","monitor-linux-in"],runtimeFocus={},focusSink=document.createElement("button");document.body.appendChild(focusSink);for(var runtimeIndex=0;runtimeIndex<runtimeClasses.length;runtimeIndex++){mon.classList.remove.apply(mon.classList,runtimeClasses);mon.classList.add(runtimeClasses[runtimeIndex]);focusSink.focus();var runtimeInput=document.getElementById(runtimeInputs[runtimeIndex]),focusResult=window.__refocusMonitorRuntime();runtimeFocus[runtimeClasses[runtimeIndex]]={focused:document.activeElement===runtimeInput,result:focusResult,active:document.activeElement&&document.activeElement.id};}focusSink.remove();runtimeStyle.remove();out.runtimeFocus=runtimeFocus;',
   '  document.body.innerHTML="<pre id=\\"__report\\"></pre>"; document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
   '<\/script>',
 ].join("\n");
 
-var state = lib.runPageSync("rsvp.html", harness, 2400, { patchRaf: true });
+var state = lib.runPageSync("rsvp.html", harness, 2400, { patchRaf: true, forceHybridPointer: true });
 check(state && !state.error, "headless Code interaction completed", state && state.error);
 if (state && !state.error) {
   check(state.pythonSaved === 'print("turtle time")' && state.jsUntouched,
@@ -259,6 +260,8 @@ if (state && !state.error) {
     "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
   check(state.pyGfxInitiallyHidden && state.svgDisplay && state.svgClears,
     "loft SVG output is fitted, sanitized, and cleared on the native graphics surface", state);
+  check(state.runtimeFocus && state.runtimeFocus["show-console"].focused && state.runtimeFocus["show-python"].focused && state.runtimeFocus["show-linux"].focused,
+    "JavaScript, Python, and Linux restore keyboard ownership when the browser window regains focus", JSON.stringify(state.runtimeFocus));
 }
 
 if (failures) {

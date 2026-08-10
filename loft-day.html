@@ -84037,6 +84037,17 @@ async def localfont(name):
     lxWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied */ appAutoFocusTextControl(lxIn); });
     lxWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // Returning from another desktop window must restore keyboard ownership before the
+  // next key reaches the loft's global shortcuts. The active runtime remains an editor
+  // surface even though browsers commonly leave document.body focused after a blur.
+  function refocusMonitorRuntime() {
+    var input = monitor.classList.contains("show-console") ? consoleIn :
+      monitor.classList.contains("show-python") ? pyIn :
+      monitor.classList.contains("show-linux") ? lxIn : null;
+    return !!(input && appAutoFocusTextControl(input, true));
+  }
+  window.__refocusMonitorRuntime = refocusMonitorRuntime;
+  window.addEventListener("focus", refocusMonitorRuntime, true);
   if (lxCloseBtn) {
     lxCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLinux(); playLaptopClickSound("office-monitor"); });
     lxCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });

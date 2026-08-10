@@ -49,6 +49,7 @@ check(/id="monitor-code-explain"[^>]*>explain<\/button>/.test(html) &&
   "Code AI controls use explicit, compact labels");
 check(/js\["hello\.js"\]\s*=\s*CODE_STARTER/.test(html) &&
       /py\["square\.py"\]\s*=\s*CODE_PY_STARTER/.test(html) &&
+      /CODE_HELLO_SYNC_KEY\s*=\s*"deskCodeHelloSyncV2"/.test(html) &&
       /loft\.party\.set\(true\)/.test(html) &&
       /await loft\.room\.go\(\\"garden\\"\)/.test(html) &&
       /await loft\.caption\.show\(\\"hello from the loft 👋\\"\)/.test(html) &&
@@ -61,6 +62,7 @@ check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
   "the centered space-filler turtle reaches existing players through its own one-time migration");
 check(/py\["hello\.py"\]\s*=\s*CODE_PY_HELLO/.test(html) &&
       /CODE_PY_HELLO_KEY\s*=\s*"deskCodePythonHelloV1"/.test(html) &&
+      /var CODE_PY_HELLO = \[\s*"import loft"/.test(html) &&
       /loft\.party\.set\(True\)/.test(html) &&
       /await loft\.room\.go\(\\"garden\\"\)/.test(html) &&
       /await loft\.caption\.show\(\\"hello from the loft 👋\\"\)/.test(html),

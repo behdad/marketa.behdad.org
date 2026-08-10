@@ -61,9 +61,10 @@ function interruptionHarness(kind) {
     " window.__setMaxUnlocked(3);localStorage.setItem('loftCheckpoint:v1',r.checkpoint);localStorage.setItem('trailer-test','before');",
     kind === "hidden" ? " var forced=false;Object.defineProperty(document,'hidden',{configurable:true,get:function(){return forced;}});" : "",
     kind === "error" ? " window.__weddingTestShouldIgnoreError=function(e){return e&&e.message==='forced trailer error';};" : "",
+    kind === "generic-error" ? " var genericError=new ErrorEvent('error',{message:'Script error.',error:null});window.__weddingTestShouldIgnoreError=function(e){return e===genericError;};" : "",
     " window.loft.trailer.play();await wait(" + (kind === "takeover" ? "18000" : "2600") + ");r.started=!!window.__cinematic;",
-    kind === "takeover" ? " await window.loft.trailer.stop('fresh');" : kind === "hidden" ? " forced=true;document.dispatchEvent(new Event('visibilitychange'));" : " window.dispatchEvent(new ErrorEvent('error',{message:'forced trailer error',error:new Error('forced trailer error')}));",
-    " await wait(1000);r.state=finalState();r.ignored=window.__ignoredWeddingTestErrors||0;",
+    kind === "takeover" ? " await window.loft.trailer.stop('fresh');" : kind === "hidden" ? " forced=true;document.dispatchEvent(new Event('visibilitychange'));" : kind === "generic-error" ? " var afterEvents=[],offAbort=window.loft.api.subscribe(function(event){afterEvents.push(event.id);});window.dispatchEvent(genericError);r.stoppedSync=!window.__cinematic;" : " window.dispatchEvent(new ErrorEvent('error',{message:'forced trailer error',error:new Error('forced trailer error')}));",
+    " await wait(" + (kind === "generic-error" ? "5000" : "1000") + ");if(typeof offAbort==='function')offAbort();r.state=finalState();r.ignored=window.__ignoredWeddingTestErrors||0;r.nullDetail=typeof genericError!=='undefined'&&genericError.error===null;r.afterEvents=typeof afterEvents==='undefined'?[]:afterEvents;",
     "});})();</script>"
   ].join("\n");
 }
@@ -171,7 +172,8 @@ else {
 [
   ["takeover", "fresh", true],
   ["hidden", "restore", false],
-  ["error", "restore", false]
+  ["error", "restore", false],
+  ["generic-error", "restore", false]
 ].forEach(function (row) {
   console.log("\nTrailer cinematic — " + row[0] + " teardown:");
   var result = lib.runPageSync("loft-day.html", interruptionHarness(row[0]), row[0] === "takeover" ? 26000 : 12000, { patchRaf: true, forceMotion: true, chromeFlags: CINE_CHROME });
@@ -179,6 +181,11 @@ else {
   check(result.started, row[0] + " interrupts an active reel");
   check(result.errors.length === 0, row[0] + " has no unexpected page errors", result.errors);
   if (row[0] === "error") check(result.ignored === 1, "forced error reached the trailer abort path", result.ignored);
+  if (row[0] === "generic-error") {
+    check(result.nullDetail && result.ignored === 1 && result.stoppedSync, "exact null-detail generic ErrorEvent synchronously stops the Trailer", result);
+    check(result.afterEvents.indexOf("game.reset") < 0 && result.afterEvents.indexOf("room.go") < 0,
+      "aborted timeline issues no later room or reset actions", result.afterEvents);
+  }
   check(result.state.room === "kitchen" && result.state.max === (row[2] ? 0 : 3), row[0] + " uses the requested " + row[1] + " disposition", { room: result.state.room, max: result.state.max });
   clean(result, row[0]);
 });

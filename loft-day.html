@@ -127855,6 +127855,13 @@ function spawnDustMote(container) {
   };
   function abortPreview() {
     if (!previewSession) return;
+    // Trailer and its preview are one lifecycle: mark the reel stopped before ending its
+    // transaction, so no later timeline beat can mutate the restored visit.
+    if (window.__cinematic && typeof window.__stopCinematic === "function") {
+      var stopping = window.__stopCinematic("restore");
+      if (stopping && stopping.catch) stopping.catch(function () {});
+      return;
+    }
     var ending = window.__loftPreviewEnd("restore");
     if (ending && ending.catch) ending.catch(function () {});
   }

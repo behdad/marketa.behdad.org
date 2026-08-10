@@ -1,8 +1,8 @@
 # The Loft Game Manual
 
-Loft Day is a point-and-click visit to ten connected rooms. Follow the story when you want direction,
-or linger over the games, music, guests, messages, and odd little details along the way. No adventure
-game experience is required.
+Loft Day is a point-and-click visit to ten connected rooms. Follow the story for direction or linger
+over the optional games, music, guests, messages, and odd details. No adventure-game experience is
+required.
 
 ## Contents
 
@@ -17,18 +17,14 @@ game experience is required.
 
 ## Start here
 
-Select **CLICK ME**. The opening coach points out the room navigation at the top and the caption at
-the bottom; dismiss each step with its visible ×. From there, follow the caption when you want
-direction, or try anything that looks useful.
-
-The required path is short. Most objects, games, apps, conversations, and surprises are optional,
-so curiosity is rewarded but never demanded.
+Select **CLICK ME**. The opening coach points out the top room navigation and bottom caption; dismiss
+each step with its visible ×. Follow the caption when you want direction. The required path is short,
+and most objects, games, apps, conversations, and surprises are optional.
 
 ## Finding your way
 
-The top dots show the five main rooms. The side arrows move to the previous or next room. Once a
-downstairs route has been found, the up/down control changes floors. Every main room has a paired
-lower room:
+The top dots select the five main rooms, the side arrows move between them, and the up/down control
+changes floors once a downstairs route has been found. Every main room has a paired lower room:
 
 | Main floor | Lower floor |
 | --- | --- |
@@ -38,66 +34,53 @@ lower room:
 | Office | Bedroom |
 | Balcony | Entrance |
 
-Each main room contains a route to its lower neighbour. Finding any one of them opens lower-floor
-navigation for the rest of the run. Before then, deliberately double-clicking or double-tapping the
-floor control opens the lower room paired with your current room.
+Each main room contains a route downstairs; finding any one opens lower-floor navigation for the
+rest of the run. Before that, deliberately double-click or double-tap the floor control to open the
+current room's lower neighbour.
 
-The window-grid button opens **The Loft**, a map of all ten rooms. Clear cards are places you have
-visited; blurred cards are still waiting. Before the Party begins, a locked card takes a deliberate
-double-click or double-tap to open. Once the Party has begun, one selection unlocks and opens any
-remaining room. The map is therefore both a shortcut and the simplest way to see what is left.
+The window-grid button opens **The Loft**, a ten-room map: clear cards are visited and blurred cards
+are waiting. Before the Party, a locked card needs a deliberate double-click or double-tap; after the
+Party begins, one selection unlocks and opens it. The first navigation coach leaves these controls
+live while waiting to be dismissed.
 
-The first navigation coach leaves this whole row live: you can open The Loft or deliberately unlock
-a room while the coach stays in place until you dismiss it.
-
-During a Road Trip or at Camping, the Entrance card represents that live scene. Opening the map from
-an active drive pauses it. Choosing Entrance returns to the paused dashboard; resume it yourself.
+During a Road Trip or Camping, Entrance represents the live scene. Opening the map during a drive
+pauses it; choosing Entrance returns to the paused dashboard, which you resume yourself.
 
 ## How the day unfolds
 
 ### Morning routine
 
-The caption leads through Kitchen, Garden, Cuddly-puddly, Office, and Balcony. Each room has a short
-chain of actions and remembers where you stopped. Completing the Balcony finishes the clue trail and
-opens the loft for free exploration.
+The caption leads through Kitchen, Garden, Cuddly-puddly, Office, and Balcony. Each room remembers
+where its short action chain stopped. Completing Balcony ends the clue trail and opens free
+exploration.
 
 ### Party
 
-Return to the Garden and start the party. The loft changes with it, the room map becomes easier to
-use, and the story asks you to visit all ten rooms. Room introductions and the map keep count, so you
-do not need to remember the total yourself. Visiting is enough; the lower-room games remain optional.
-Guests keep circulating while you explore: the dance floor, bar, office, and balcony stay populated,
-and the balcony includes the wider social crowd as well as smokers. Click or tap the DJ to open song
-requests while keeping the booth's scratch reaction.
+Start the Party in the Garden, then visit all ten rooms. Introductions and the map keep count;
+visiting is enough, and lower-room games remain optional. Guests stay active while you explore. Tap
+the DJ for song requests without losing the booth's scratch reaction.
 
-A coach eventually points to the Garden wall switch that ends the party. You may use it then, dismiss
-the coach and keep dancing, or leave the party running while you explore. Once the party has started
-and all ten rooms have been visited, Behdad and Markéta’s message exchange leads to **Let’s go!**.
-That action winds down any active party and takes you to the Entrance. Selecting the Entrance road
-after the same milestone also moves the story forward, so missing the exchange cannot strand you.
+A coach eventually points to the Garden wall switch. Use it to end the Party, dismiss it and keep
+dancing, or leave the Party running while you explore. After the Party has started and all ten rooms
+are visited, Behdad and Markéta’s message exchange offers **Let’s go!**, which winds down the Party
+and takes you to Entrance. Selecting the Entrance road after the same milestone is the fallback.
 
 ### Road Trip
 
-The Entrance car is available for local driving, but the longer trip belongs to the story milestone
-above. A first-drive coach introduces the dashboard. After that, **Road Trip** lets you choose where
-along the route to begin. The final road includes the Camping turnoff, which carries the story
-through a fire, dinner, stargazing, sleep, and `~ fin ~`.
+The Entrance car allows local driving at any time. The longer journey follows the milestone above:
+finish or dismiss the first-drive coach, choose a **Road Trip** starting point, and take the final
+road's Camping turnoff for the fire, dinner, stargazing, sleep, and `~ fin ~`.
 
 ## Captions, coaches, and messages
 
-The caption below the scene gives the current instruction or reports what just happened. During the
-Morning routine it is the main clue trail; later it becomes activity feedback and progression help.
-Brief feedback never queues up behind a more important story or outcome, so when it clears the
-caption returns to the latest instruction instead of replaying an older line.
+The bottom caption carries the Morning clue trail, later feedback, and progression help. Brief
+feedback yields to important story or outcome text, then returns to the latest instruction rather
+than replaying an old line.
 
-Coaches are larger callouts for controls that are easy to miss. Their visible × dismisses the
-lesson, not the surrounding activity. The Party handoff coach remains attached to the Garden and
-does not prevent room navigation; while it is visible, new notifications and calls wait rather than
-competing with it.
-
-Messages may suggest an activity, but opening a message never performs that activity automatically.
-Use its separate activity arrow when you want to act. A message can remain readable after its moment
-has passed even if its activity is no longer available.
+Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The Party
+handoff coach allows navigation but holds new notifications and calls until it leaves. Opening a
+message never performs its suggested activity: use the separate activity arrow. Old messages remain
+readable even when their activity has expired.
 
 If you are unsure what comes next:
 
@@ -111,23 +94,20 @@ If you are unsure what comes next:
 - Click or tap an object to use it. Some objects can be dragged; a short tap still performs their
   ordinary action.
 - Right-click opens local actions. On touch, press and hold without moving.
-- Double-click or double-tap is reserved for deliberate early unlocks in the room map and floor
-  control. Ordinary actions need only one selection.
-- Use the visible × or back control to close an open layer. From an idle lower room, use the visible
-  Up control to return to its main room.
+- Double-click or double-tap only for deliberate early unlocks in the map or floor control; ordinary
+  actions need one selection.
+- Use × or Back to close a layer. From an idle lower room, use Up to return to its main room.
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
-- Phone and tablet apps leave text fields unfocused so the software keyboard does not cover the
-  content. Tap the exact field when you want to type.
+- Phone and tablet apps leave text fields unfocused; tap the exact field to type.
 - Phone Mines fills the space above its bottom toolbar. Tap a cell to reveal it, press and hold to
-  place a flag, and use `↻` to restart; the ring count and timer stay beside it in the same toolbar.
+  flag it, and use `↻` to restart. The ring count and timer remain in that toolbar.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
   of the pedal slider holds speed; its outer zones accelerate or brake.
 
 ## Keyboard navigation
 
-Keyboard commands are global unless a typing field, game, device, or driving dashboard is using the
-same key. This section covers the controls needed to find your way; outside a typing field, `?`
-opens the complete keyboard-shortcut card.
+Keyboard commands are global unless a field, game, device, or dashboard owns the same key. Outside
+a typing field, `?` opens the complete shortcut card.
 
 ### Rooms and layers
 
@@ -142,9 +122,8 @@ opens the complete keyboard-shortcut card.
   `Enter` opens the selected room. A locked room takes two quick `Enter` presses before the Party and
   one after it begins.
 - `Escape` / `Backspace`: dismiss the current activity or layer. On an active Road Trip, the first
-  press pauses the highway and a second press exits it. In a search field, Backspace only
-  edits the query and stays put even when it is empty; use `Escape` to leave. In an idle lower room
-  both keys leave you there; use `↑` when you want to go upstairs.
+  press pauses and the second exits. In a search field, Backspace only edits the query and stays put
+  even when it is empty; use Escape to leave. In an idle lower room both keys stay put; use `↑`.
 
 ### Actions and tools
 
@@ -162,39 +141,33 @@ opens the complete keyboard-shortcut card.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 
-An open, idle Office laptop starts a two-scene screensaver reel: the crossed caps and the couple
-asleep in bed. The reel starts in a shuffled order, then alternates evenly until activity wakes it.
+An open, idle Office laptop alternates the crossed-caps and sleeping-couple screensavers in a
+shuffled starting order until activity wakes it.
 
-The JavaScript console, Code app, and Python runtime expose an extensive typed scripting API under
-the `loft` namespace. Bare `help` or `help(loft)` lists its top-level objects. Drill down with
-`help(loft.weather)`, `help(loft.weather.rain)`, or `help(loft.cuddly.chest.set)`;
-`loft.api.capabilities()` returns the complete structured catalogue. On/off commands use explicit
-reads and writes—for example, `loft.party.status()` and `loft.party.set(true)`.
-`loft.api.info()` reports the current typed-state revision.
-Weather/environment controls also accept
-`set(null)` to resume automatic ownership and expose `mode()` as `"auto"`, `"on"`, or `"off"`.
-The typed room API covers all ten rooms; `loft.bar` is the Kitchen alias and `loft.party` is the
-Garden alias. State commands leave the current view alone; navigate explicitly with, for example,
-`await loft.room.go("garden")`. The JavaScript console and Code app preload `loft`; no import is
-needed. Scripts may visit any room and start a Road Trip independently of story progress. Actions
-on physical room objects still require that room to be open, and an action remains unavailable
-while a conflicting or prerequisite activity is active. `await loft.caption.show("hello")` writes
-a literal scene caption without moving the view.
-Code puts the unsaved buffer first, then lists canonical and visitor-created files by basename;
-the unsaved buffer and untouched default snippets are italic, while overridden defaults and user
-files are upright. Tooltips identify exact ownership—never icons or colors. Editing a canonical
-file stores a local override; right-click its edited filename to reset only that local edit, or use
-its reset control to reveal the current public file directly. The file sidebar's broader **Reset
-files…** context-menu action, after confirmation, clears every saved file,
-local canonical edit, and draft, then returns Code to its canonical list plus a blank unsaved
-buffer. The editor keeps fixed line numbers beside the native code field; long lines scroll
-horizontally rather than soft-wrapping. The authored Trailer is the canonical `trailer.js`.
-It loads only when played and both Watch Trailer and Code use your local built-in edit, if present.
-Play it through `await loft.trailer.play()`, inspect it with `loft.trailer.status()`, and stop it with
-`await loft.trailer.stop("restore")`.
-While the Trailer is active, `loft.presentation` exposes its bounded translated cards, captions,
-cuts, and pointer. `loft.app.close(...)` preserves an app session; `loft.app.kill(...)` instead runs
-the phone reset or monitor's full themed Kill and completes only after that process has stopped.
+The JavaScript console, Code, and Python share the typed `loft` scripting API. JavaScript preloads
+it. Use `help` or `help(loft)` for top-level objects, drill down with `help(loft.weather)`, list the
+catalogue with `loft.api.capabilities()`, and read its revision with `loft.api.info()`.
+
+Controls use explicit reads and writes such as `loft.party.status()` and
+`loft.party.set(true)`. Weather controls accept `set(null)` to restore automatic ownership and
+report `mode()` as `"auto"`, `"on"`, or `"off"`. The room API covers all ten rooms (`loft.bar`
+aliases Kitchen; `loft.party` aliases Garden). State changes do not move the view: navigate with
+`await loft.room.go("garden")`. Scripts may enter any room or start Road Trip outside story
+progression, but room-owned, conflicting, or prerequisite actions remain gated. Use
+`await loft.caption.show("hello")` for a literal caption.
+
+Code lists the unsaved buffer first, then default and user files by basename. Unsaved and untouched
+defaults are italic; overridden defaults and user files are upright. Tooltips—not icons or colors—
+identify ownership. Editing a default stores a local override; right-click its edited filename to
+reset only that local edit, or use its Reset control to restore the public file. After confirmation,
+the sidebar's **Reset files…** clears all saved files, default overrides, and the draft, then restores
+the default list plus a blank unsaved buffer. This affects Code files, not the game checkpoint.
+Fixed line numbers stay beside the editor; long lines scroll instead of wrap.
+
+The canonical `trailer.js` loads only when played, and Watch Trailer and Code both use its local
+override. Use `await loft.trailer.play()`, `loft.trailer.status()`, and
+`await loft.trailer.stop("restore")`. For apps, `loft.app.close(...)` preserves a session while
+`loft.app.kill(...)` resets it.
 
 ### Fast-forward shortcuts
 
@@ -202,14 +175,13 @@ the phone reset or monitor's full themed Kill and completes only after that proc
 - `Shift` + `R`: mark every room visited, wind down the Party, and go to the Entrance ready for
   Road Trip.
 
-Plain `P` and `R` have no global shortcut. Restart remains available from the visible reset control
-and the console.
+Plain `P` and `R` do nothing globally. Start over remains available from the visible reset control
+and console.
 
 ### Python scripting
 
-The Office Python Console imports the preinstalled `loft` module while it boots, so Python files in
-Code can use it immediately. Its namespaces follow the same typed API as the JavaScript console
-without exposing private page internals:
+The Office Python Console imports `loft` while it boots, so Python files in Code can use it
+immediately:
 
 ```python
 import loft
@@ -220,14 +192,9 @@ loft.weather.rain.set(None)  # release the override to automatic weather
 await loft.room.go("garden") # wait for a finite action to finish
 ```
 
-Queries return normal Python values. Actions begin when called and can be awaited when their final
-result matters. A failed query or awaited action raises `loft.LoftError`. Use
-`loft.api.capabilities()`
-for the current compact catalogue; new typed capabilities appear through the same module without a
-separate Python binding. Automatic environment control is restored with `None`, not the string
-`"auto"`. `help()` prints the top-level Loft namespace map; drill down with, for example,
-`help(loft.weather)` and `help(loft.weather.rain)`. Python's normal help remains available for
-non-Loft objects such as `help(str)`.
+Queries return ordinary Python values. Actions start when called and may be awaited; failures raise
+`loft.LoftError`. Use `None`, not `"auto"`, to restore automatic environment control. `help()` and
+`help(loft.weather)` browse Loft; normal Python help still works, for example `help(str)`.
 
 ### Driving
 
@@ -236,58 +203,48 @@ non-Loft objects such as `help(str)`.
 - `↑`: accelerate; `↓`: brake and cancel cruise control.
 - `Space`: set or reset cruise control at the current speed.
 - `Shift` + `↑` / `↓`: change gear or move the automatic selector toward P/D.
-On a Road Trip, `Enter` toggles pause/resume, while `Space`, steering, or a pedal also resumes a
-paused highway. `Escape` / `Backspace` pause first and exit only when pressed again while paused.
-Text fields, open devices, and Camping activities keep ownership of their normal keys.
-
-The driving coach remains the best introduction because it adapts its instructions to the selected
-transmission and input device. During the automatic lesson, each step temporarily owns the driving
-controls: finish the action it points to before another selector or driving input can affect the car.
+On a Road Trip, `Enter` toggles pause/resume; `Space`, steering, or a pedal also resumes. Escape or
+Backspace pauses first and exits on the next press. Fields, open devices, and Camping activities
+keep their keys. The coach adapts to the transmission and input device; during its automatic lesson,
+finish the current step before another selector or driving input can act.
 
 ## Road Trip and Camping
 
-Street laps are optional free driving and do not unlock the journey. Once the Party has started and
-all ten rooms have been visited, finish or dismiss the car coach and use **Road Trip** to choose a
-destination. A new route begins stopped on the shoulder and keeps the selected transmission
-mode.
+Street laps are optional and do not unlock the journey. After starting the Party and visiting all
+ten rooms, finish or dismiss the car coach and choose **Road Trip**. A route starts stopped on the
+shoulder and keeps the selected transmission.
 
-The choices move progressively west from Calgary through Banff to Abraham Lake. Start at the
-beginning for the whole drive, or choose a later segment to shorten it. The Camping turnoff appears
-on the Abraham Lake segment and, if missed, returns after 30 seconds of desktop travel or 20 seconds
-on mobile. The three-part ribbon in the driving HUD
-tracks each leg; earlier legs are hatched when a journey starts farther west.
-Each leg is about 2.08 km on desktop and 1.25 km on coarse-pointer/mobile devices.
+Routes progress west through Calgary, Banff, and Abraham Lake; choose a later segment for a shorter
+drive. The three-part HUD ribbon tracks the legs and hatches skipped ones. On the Abraham Lake leg,
+a missed Camping turnoff returns after 30 seconds of desktop travel or 20 seconds on mobile.
 
-Unfocusing a highway pauses it in place. Reloading while the highway is visible reopens that same
-view paused; leaving the Entrance instead offers **Continue**, **New**, or **Camping** after the
-campsite has been reached.
+Unfocusing pauses the highway. Reloading while it is visible restores that view paused; leaving
+Entrance instead offers **Continue**, **New**, or, once reached, **Camping**.
 
-At Camping, follow the caption through the fire, stew, stargazing, and sleep. Once cooking starts,
-the stew burns after 45 seconds of counted cooking time; opening Markéta’s notebook pauses that
-clock until the notebook closes. The fire cannot be put out until the later sleep prompt, so an
-early click cannot skip the evening. The finale caption includes the time spent in loft and invites
-you to share it in the RSVP.
+At Camping, follow the caption through fire, stew, stargazing, and sleep. Stew burns after 45
+seconds of counted cooking; Markéta’s open notebook pauses that clock. The fire stays lit until the
+sleep prompt. The finale reports time spent in the loft and offers to share it in the RSVP.
 
 ## Saves and browser notes
 
-Checkpointing begins after the Kitchen is solved or deliberately left. On a later visit,
-**Continue** restores the room and floor, story progress, durable discoveries, Album, and Messages.
-Running games, calls, cameras, and media return stopped; an interrupted highway returns paused.
+Checkpointing begins after Kitchen is solved or deliberately left. **Continue** restores room and
+floor, story progress, durable discoveries, Album, and Messages. Games, calls, cameras, and media
+return stopped; an interrupted highway returns paused.
 
-The finale clock counts only while the started game is visible, focused, and not explicitly paused;
-its total carries across Continue. **Start over** clears both checkpoint and clock. The roughly
-100-second **Trailer** is separate and does not consume a save. It visits real rooms, games, Party,
-Road Trip, and Camping under a reversible preview; its Office excerpt waits for the real Python
-prompt before giving that runtime the monitor's full themed Kill. None of those excerpts solve or
-reward the player's own game. Starting over also clears the car's remembered transmission choice
-and returns it to automatic in park.
+The finale clock counts only while the started game is visible, focused, and not paused, and carries
+across Continue. Game **Start over** clears the checkpoint and clock and returns the car to automatic
+in park; it is separate from Code's **Reset files…**.
+
+The roughly 100-second **Trailer** is separate from the checkpoint and clock. Its reversible Office
+beat waits for the real Python prompt before giving that runtime the monitor's full themed Kill.
+Trailer scenes never solve or reward the player's game.
 
 - English and Czech are available, and the choice persists when storage is allowed.
 - Reduced-motion preferences simplify animation without removing activities.
-- Camera, torch, sharing, fullscreen, installation, and some computer toys depend on browser support
-  and permission; denying them does not block the story.
-- The Python toy includes CPython and its starter tools locally. Importing another supported package
-  downloads the matching pinned Pyodide build on first use, so that import needs a connection.
+- Camera, torch, sharing, fullscreen, installation, and some computer toys need browser support or
+  permission; denying them does not block the story.
+- Python and its starter tools are local. A first import of another supported package needs a
+  connection for the matching pinned build.
 - If audio is silent, interact with the page once so the browser can enable sound.
 
 The simplest path is also the whole shape of the day: finish the Morning routine, start the Party,

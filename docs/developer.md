@@ -552,7 +552,9 @@ animation frames are throttled. Autonomous one-shot sounds must also require
 
 The laptop saver reel follows the same ownership rule: its order is shuffled once at load, its equal
 caps/sleep slots advance only while the Office is attended, and both the cycle timeout and the active
-caps animation frame are paused or cleared by the shared saver lifecycle.
+caps animation frame are paused or cleared by the shared saver lifecycle. Its unmarked top-left bezel
+control starts or advances that reel without passing pointer/click activity to the laptop's ordinary
+wake, lid, or zoom handlers.
 
 Particle systems must have bounded cardinality. Prefer a fixed population that replenishes itself
 from each particle's animation completion, or cap and remove stale nodes before spawning. An

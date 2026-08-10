@@ -142,7 +142,8 @@ a typing field, `?` opens the complete shortcut card.
 - `F`: toggle browser fullscreen.
 
 An open, idle Office laptop alternates the crossed-caps and sleeping-couple screensavers in a
-shuffled starting order until activity wakes it.
+shuffled starting order until activity wakes it. Its unmarked top-left bezel corner starts or
+advances the reel, like the matching monitor control.
 
 The JavaScript console, Code, and Python share the typed `loft` scripting API. JavaScript preloads
 it. Use `help` or `help(loft)` for top-level objects, drill down with `help(loft.weather)`, list the

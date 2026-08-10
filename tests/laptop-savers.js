@@ -14,6 +14,10 @@ var HARNESS = [
   'async function run(){',
   ' window.goToStage("office");await sleep(920);window.resetLaptop();',
   ' var laptop=document.getElementById("office-laptop");window.__restoreCheckpointSystems({laptop:{open:true,zoomed:false}},"beforeStage");window.__restoreCheckpointSystems({laptop:{open:true,zoomed:false}},"afterStage");await sleep(8100);S("continued",{open:laptop.classList.contains("open"),show:laptop.classList.contains("show-saver"),zoomed:window.__laptopZoomed(),state:window.__laptopSaverState()});window.resetLaptop();laptop.classList.add("open");',
+  ' var hit=document.getElementById("laptop-saver-cycle-hit"),bezel=document.getElementById("office-laptop-bezel"),parentPointer=0,parentClick=0;laptop.addEventListener("pointerdown",function(){parentPointer++;});laptop.addEventListener("click",function(){parentClick++;});function tapHit(){var move=new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerType:"mouse",button:0}),down=new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerType:"mouse",button:0}),click=new MouseEvent("click",{bubbles:true,cancelable:true,button:0});hit.dispatchEvent(move);var kept=laptop.classList.contains("show-saver"),pointerPrevented=!hit.dispatchEvent(down),clickPrevented=!hit.dispatchEvent(click);return{kept:kept,pointerPrevented:pointerPrevented,clickPrevented:clickPrevented};}',
+  ' var hb=hit.getBBox(),bb=bezel.getBBox(),innerClear=!hit.isPointInFill(new DOMPoint(389,165));S("control",{exists:!!hit,noTab:!hit.hasAttribute("tabindex"),transparent:hit.getAttribute("fill")==="transparent",cursor:hit.getAttribute("cursor"),inside:hb.x>=bb.x&&hb.y>=bb.y&&hb.x+hb.width<=bb.x+bb.width&&hb.y+hb.height<=bb.y+bb.height,innerClear:innerClear,path:hit.getAttribute("d")});',
+  ' var beforeHit=window.__laptopSaverState(),firstTap=tapHit();await sleep(60);var firstHit=window.__laptopSaverState(),firstShow=laptop.classList.contains("show-saver"),firstZoom=window.__laptopZoomed(),secondTap=tapHit();await sleep(60);var secondHit=window.__laptopSaverState();S("bezel",{before:beforeHit,first:firstHit,second:secondHit,firstTap:firstTap,secondTap:secondTap,firstShow:firstShow,show:laptop.classList.contains("show-saver"),firstZoom:firstZoom,zoom:window.__laptopZoomed(),open:laptop.classList.contains("open"),parentPointer:parentPointer,parentClick:parentClick});',
+  ' async function blocked(state){window.resetLaptop();if(state!=="closed")laptop.classList.add("open");if(state!=="closed")laptop.classList.add(state);var tap=tapHit();await sleep(280);var value={show:laptop.classList.contains("show-saver"),kind:window.__laptopSaverState().kind,open:laptop.classList.contains("open"),zoom:window.__laptopZoomed(),tap:tap};laptop.classList.remove(state);return value;}S("blocked",{closed:await blocked("closed"),updating:await blocked("updating"),rebooting:await blocked("rebooting"),calling:await blocked("calling")});window.resetLaptop();laptop.classList.add("open");',
   ' var sequence=[];window.__startLaptopSaver();await sleep(60);sequence.push(window.__laptopSaverState());window.__cycleLaptopSaver();await sleep(60);sequence.push(window.__laptopSaverState());window.__cycleLaptopSaver();await sleep(60);sequence.push(window.__laptopSaverState());S("sequence",sequence);',
   ' var sleepState=sequence.filter(function(x){return x.kind==="sleep";})[0];S("scene",{sleepClass:laptop.classList.contains("saver-sleep"),behdad:document.querySelectorAll("#laptop-saver-zzz-behdad .laptop-saver-z").length,marketa:document.querySelectorAll("#laptop-saver-zzz-marketa .laptop-saver-z").length,people:document.querySelectorAll("#laptop-saver-sleeping-behdad,#laptop-saver-sleeping-marketa").length,sleepState:sleepState});',
   ' window.__startLaptopSaver("caps");await sleep(60);var beforeBlur=window.__laptopSaverState();focused=false;window.dispatchEvent(new Event("blur"));await sleep(20);var blurred=window.__laptopSaverState();focused=true;window.dispatchEvent(new Event("focus"));await sleep(20);var refocused=window.__laptopSaverState();S("focus",{before:beforeBlur,blurred:blurred,refocused:refocused});',
@@ -43,6 +47,24 @@ check(r && r.errors.length === 0, "the saver reel runs without uncaught errors",
 check(r && r.steps.continued && r.steps.continued.open && r.steps.continued.show && !r.steps.continued.zoomed &&
   r.steps.continued.state.kind && r.steps.continued.state.cycling,
   "Continue rearms the open, unzoomed laptop's idle saver", r && r.steps.continued);
+check(r && r.steps.control && r.steps.control.exists && r.steps.control.noTab && r.steps.control.transparent &&
+  r.steps.control.cursor === "pointer" && r.steps.control.inside && r.steps.control.innerClear &&
+  r.steps.control.path === "M384 160 H398 V164 H388 V174 H384 Z",
+  "the unmarked, untabbable hit target stays wholly on the top-left laptop bezel", r && r.steps.control);
+var bezel = r && r.steps.bezel;
+check(bezel && bezel.first.kind === bezel.first.order[bezel.before.next] &&
+  bezel.second.kind === bezel.second.order[bezel.first.next] && bezel.first.kind !== bezel.second.kind &&
+  bezel.firstShow && bezel.show && !bezel.firstZoom && !bezel.zoom && bezel.open,
+  "the bezel starts the next idle saver, then advances it without waking or zooming", bezel);
+check(bezel && bezel.firstTap.pointerPrevented && bezel.firstTap.clickPrevented &&
+  bezel.secondTap.kept && bezel.secondTap.pointerPrevented && bezel.secondTap.clickPrevented &&
+  bezel.parentPointer === 0 && bezel.parentClick === 0,
+  "pointer movement preserves the active saver and both activation events stay out of ordinary laptop behavior", bezel);
+var blocked = r && r.steps.blocked;
+check(blocked && !blocked.closed.show && !blocked.closed.kind && !blocked.closed.open && !blocked.closed.zoom &&
+  [blocked.updating, blocked.rebooting, blocked.calling].every(function (state) {
+    return state && !state.show && !state.kind && state.open && !state.zoom;
+  }), "the bezel is inert while the laptop is closed, updating, rebooting, or in a call", blocked);
 var sequence = r && r.steps.sequence || [], order = sequence[0] && sequence[0].order || [];
 check(sequence.length === 3 && order.length === 2 &&
   order.slice().sort().join("|") === "caps|sleep" &&

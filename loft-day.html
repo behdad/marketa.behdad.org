@@ -27912,7 +27912,10 @@ section{margin:1.9rem 0}
      to just above the headphones, staying clear of the typewriter to the right. -->
 <rect id="laptop-hit-pad" x="379" y="178" width="82" height="34" fill="transparent"/>
 <g id="office-laptop-screen">
-<rect x="384" y="160" width="66" height="42" rx="2" fill="#2a2a2a" stroke="#1a1a1a" stroke-width="1.5"/>
+<rect id="office-laptop-bezel" x="384" y="160" width="66" height="42" rx="2" fill="#2a2a2a" stroke="#1a1a1a" stroke-width="1.5"/>
+<!-- The monitor's unmarked physical saver control, repeated on the laptop: the L-shaped
+     target stays entirely on the top-left bezel and intentionally adds no Tab stop. -->
+<path id="laptop-saver-cycle-hit" class="laptop-saver-cycle-control" d="M384 160 H398 V164 H388 V174 H384 Z" fill="transparent" cursor="pointer"/>
 <!-- webcam on the top bezel: a lens + an LED that glows green while a call is live -->
 <circle cx="416.5" cy="162" r="0.9" fill="#15161a"/>
 <circle cx="416.2" cy="161.7" r="0.32" fill="#3b3f4a" pointer-events="none"/>
@@ -68487,7 +68490,7 @@ setOfficeProgress("pc", false);
     window.__laptopCallLive = inCall;
     window.__endLaptopCall = function (silent) { if (silent) endLaptopUpdate(); else endCall(); }; // silent: drop the line at once (no goodbye/tone) so a competing call can take the one-at-a-time lock immediately
     // After the laptop has been open and untouched a while, its shuffled-once
-    // saver reel takes over. Any click wakes it back to the normal TextEdit face.
+    // saver reel takes over. Ordinary activity wakes it; the bezel control advances it.
     var laptopSaverTimer = null, laptopSaverRaf = null, laptopSaverMotion = null, laptopSaverStep = null;
     var laptopSaverCycleTimer = null, laptopSaverCycleStartedAt = 0;
     var LAPTOP_SAVER_CYCLE_MS = 12000, laptopSaverCycleRemaining = LAPTOP_SAVER_CYCLE_MS;
@@ -68589,7 +68592,12 @@ setOfficeProgress("pc", false);
       syncLaptopSaverLoop();
     }
     function cycleLaptopSaver() {
-      if (!laptop.classList.contains("show-saver")) return false;
+      if (!laptop.classList.contains("open") || laptop.classList.contains("updating") ||
+          laptop.classList.contains("rebooting") || anyCall()) return false;
+      if (!laptop.classList.contains("show-saver")) {
+        startLaptopSaver();
+        return laptop.classList.contains("show-saver");
+      }
       showLaptopSaver(laptopSaverOrder[laptopSaverAt++ % laptopSaverOrder.length]);
       return true;
     }
@@ -68615,6 +68623,18 @@ setOfficeProgress("pc", false);
     };
     window.__startLaptopSaver = function (kind) { startLaptopSaver(kind); return window.__laptopSaverState(); };
     window.__cycleLaptopSaver = function () { cycleLaptopSaver(); return window.__laptopSaverState(); };
+    var laptopSaverCycleHit = document.getElementById("laptop-saver-cycle-hit");
+    if (laptopSaverCycleHit) {
+      laptopSaverCycleHit.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      laptopSaverCycleHit.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (cycleLaptopSaver()) playLaptopClickSound("office-laptop");
+      });
+    }
     document.addEventListener("visibilitychange", syncLaptopSaverLoop);
     window.addEventListener("focus", syncLaptopSaverLoop);
     window.addEventListener("blur", syncLaptopSaverLoop);
@@ -68858,7 +68878,8 @@ setOfficeProgress("pc", false);
       }
       laptopClickTimer = setTimeout(toggleLaptop, 240);
     });
-    laptop.addEventListener("pointermove", function () {
+    laptop.addEventListener("pointermove", function (e) {
+      if (e.target && e.target.closest && e.target.closest("#laptop-saver-cycle-hit")) return;
       if (!laptop.classList.contains("show-saver")) return;
       stopLaptopSaver();
       scheduleLaptopSaver();

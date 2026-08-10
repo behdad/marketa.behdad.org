@@ -193,7 +193,7 @@ async function playTimeline(loft) {
     await action(reset, "Reset Loft Day");
     await caption(loft, "cine_signoff");
     await action(loft.session.preview.score.stop({ fade_ms: 1200 }), "Fade Trailer score");
-    await action(loft.trailer.stop("fresh"), "Finish Trailer");
+    await action(loft.trailer.stop("entry"), "Finish Trailer");
 }
 
 var loft = window.loft;

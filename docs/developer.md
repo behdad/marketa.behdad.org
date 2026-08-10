@@ -517,18 +517,21 @@ game/presentation renderers.
 `session.preview` is the general reversible boundary for scripted presentations. `begin()` captures
 the semantic checkpoint, raw checkpoint bytes, and the complete browser store; generation-owned
 teardowns stop preview effects. `end("restore")` returns to the captured visit, while
-`end("fresh")` leaves a clean Kitchen runtime. Both restore the pre-preview browser store and raw
-recovery checkpoint byte-for-byte. Preview mode suppresses checkpoint, progression/reward, Album,
-notification, and external/destructive writes; hide, pagehide, and uncaught-error paths restore
-automatically. A global abort during Trailer first stops the reel, then restores through that same
-owner, so the timeline cannot keep mutating state after its preview transaction ends. Public preview
-helpers activate the real room, minigame, Road Trip, Camping, and score owners rather than duplicating
-renderer geometry or audio.
+`end("fresh")` leaves a clean Kitchen runtime and `end("entry")` rebuilds the existing recovery gate
+for a valid resumable save or the normal CLICK ME intro otherwise. Every disposition restores the
+pre-preview browser store and raw recovery checkpoint byte-for-byte; the entry check parses those
+raw bytes without applying, clearing, or rewriting them. Preview mode suppresses checkpoint,
+progression/reward, Album, notification, and external/destructive writes; hide, pagehide, and
+uncaught-error paths restore automatically. A global abort during Trailer first stops the reel, then
+restores through that same owner, so the timeline cannot keep mutating state after its preview
+transaction ends. Public preview helpers activate the real room, minigame, Road Trip, Camping, and
+score owners rather than duplicating renderer geometry or audio.
 
 `tests/cine.js` covers the authored reel, narration lead time, exact Road Trip/Camping and minigame
 owners, score continuity, EN/CS desktop/mobile title layout, and natural/takeover/attention/error
 teardown, including null-detail generic script errors. `tests/api-preview.js` separately covers the
-general transaction, write isolation, restore, and clean-fresh disposition.
+general transaction, write isolation, restore, clean-fresh disposition, and non-destructive
+recovery/intro entry selection.
 
 `loftSessionExport` and `loftSessionImport` are deliberately narrower than a full checkpoint: they
 move progress and puzzle state without exporting bulky or personal app data. Do not broaden that

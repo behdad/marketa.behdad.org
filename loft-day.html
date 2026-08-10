@@ -74784,8 +74784,8 @@ setOfficeProgress("pc", false);
         return window.__loftPreviewBegin ? window.__loftPreviewBegin(args.source || "script") : { active: false };
       } });
     register({ id: "session.preview.end", group: "Utilities / Scripting", kind: "action", risk: "scene",
-      completion: "finite", description: "End a preview and restore the captured visit, or leave a fresh Kitchen runtime.",
-      args: { disposition: { type: "string", enum: ["restore", "fresh"], required: true } },
+      completion: "finite", description: "End a preview by restoring the visit, leaving a fresh Kitchen, or returning to the saved recovery/intro entry surface.",
+      args: { disposition: { type: "string", enum: ["restore", "fresh", "entry"], required: true } },
       available: previewActive, run: function (args) { return window.__loftPreviewEnd(args.disposition); } });
     var TRAILER_DURATION_MS = 100000;
     register({ id: "trailer.status", group: "Utilities / Scripting", kind: "query",
@@ -74799,8 +74799,8 @@ setOfficeProgress("pc", false);
       available: function () { return !window.__cinematic && !previewActive() && typeof window.__startCinematic === "function"; },
       run: function () { return window.__startCinematic(); } });
     register({ id: "trailer.stop", group: "Utilities / Scripting", kind: "action", risk: "scene",
-      completion: "finite", description: "Stop the Trailer, restoring the visit by default or leaving a fresh Kitchen.",
-      args: { disposition: { type: "string", enum: ["restore", "fresh"] } },
+      completion: "finite", description: "Stop the Trailer, restoring the visit by default, leaving a fresh Kitchen, or returning to the saved recovery/intro entry surface.",
+      args: { disposition: { type: "string", enum: ["restore", "fresh", "entry"] } },
       available: function () { return !!window.__cinematic && typeof window.__stopCinematic === "function"; },
       run: function (args) { return window.__stopCinematic(args.disposition || "restore"); } });
     register({ id: "game.reset", group: "Game", kind: "action", risk: "destructive", completion: "finite",
@@ -112198,6 +112198,16 @@ function spawnDustMote(container) {
     syncFloorNavigation();
     releaseAttract();
   }
+  function settleRecoveryEntry() {
+    introPending = true;
+    huntIntroShowing = false;
+    clearOpeningGuide();
+    calmIntroBlink();
+    removeClickMe();
+    leaveIntroChrome();
+    strip.removeEventListener("pointerdown", stopHintBlink);
+    strip.removeEventListener("click", stopHintBlink);
+  }
   var dotsWrap = document.getElementById("hunt-dots");
   var dots = [];
   function roomDotLabel(name) {
@@ -127015,9 +127025,10 @@ function spawnDustMote(container) {
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
-    // Preview is the sole world-state owner. `fresh` hands control back at a clean Kitchen;
-    // attention loss and errors use `restore`. Both preserve raw recovery bytes and storage.
-    var ending = previewActive ? window.loft.session.preview.end(disposition === "restore" ? "restore" : "fresh") : Promise.resolve(null);
+    // Preview is the sole world-state owner. Normal completion uses `entry`; explicit takeover
+    // may request `fresh`, while attention loss and errors use `restore`. All preserve storage.
+    disposition = disposition === "fresh" || disposition === "entry" ? disposition : "restore";
+    var ending = previewActive ? window.loft.session.preview.end(disposition) : Promise.resolve(null);
     cinematicStopping = Promise.resolve(ending).then(function () {
       cinematicStopping = null;
       return true;
@@ -127514,6 +127525,15 @@ function spawnDustMote(container) {
     // tap-only maxUnlocked:0 records this gate is designed to retire.
     return !!progress.phase2 || Math.max(0, parseInt(progress.maxUnlocked, 10) || 0) >= 1;
   }
+  function parseResumableCheckpoint(raw) {
+    try {
+      var saved = raw ? JSON.parse(raw) : null;
+      if (!saved || saved.version !== LOFT_CHECKPOINT_VERSION || !saved.progress ||
+          STAGES.indexOf(saved.progress.room) === -1 || !checkpointWorthResuming(saved) ||
+          Date.now() - (+saved.savedAt || 0) > LOFT_CHECKPOINT_MAX_AGE) return null;
+      return saved;
+    } catch (_error) { return null; }
+  }
   function checkpointWorthSavingNow() {
     return roomSolved("kitchen") || window.currentStageName !== "kitchen" || !!activeLowerRoom();
   }
@@ -127535,16 +127555,11 @@ function spawnDustMote(container) {
     resetLoftAttendedTime();
   }
   function loadCheckpoint() {
-    try {
-      var raw = localStorage.getItem(LOFT_CHECKPOINT_KEY), saved = raw ? JSON.parse(raw) : null;
-      if (!saved || saved.version !== LOFT_CHECKPOINT_VERSION || !saved.progress ||
-          STAGES.indexOf(saved.progress.room) === -1 || !checkpointWorthResuming(saved) ||
-          Date.now() - (+saved.savedAt || 0) > LOFT_CHECKPOINT_MAX_AGE) {
-        if (raw) clearCheckpoint();
-        return null;
-      }
-      return saved;
-    } catch (_error) { clearCheckpoint(); return null; }
+    var raw = null;
+    try { raw = localStorage.getItem(LOFT_CHECKPOINT_KEY); } catch (_error) {}
+    var saved = parseResumableCheckpoint(raw);
+    if (!saved && raw) clearCheckpoint();
+    return saved;
   }
   window.__saveLoftCheckpoint = saveCheckpoint;
   window.__clearLoftCheckpoint = clearCheckpoint;
@@ -127811,7 +127826,7 @@ function spawnDustMote(container) {
   // A preview is a reversible transaction around the real game owners. It snapshots the full
   // semantic checkpoint and browser store, blocks checkpoint writes, and owns all finite preview
   // teardowns by generation. Restore returns to the captured visit; fresh deliberately leaves the
-  // runtime at a clean Kitchen while restoring the pre-preview storage byte-for-byte.
+  // runtime at a clean Kitchen; entry rebuilds the recovery/intro choice from untouched raw bytes.
   var previewSession = null, previewGeneration = 0, previewLastEnd = null;
   function captureStorage() {
     var out = {};
@@ -127855,13 +127870,14 @@ function spawnDustMote(container) {
   };
   window.__loftPreviewStatus = previewStatus;
   window.__loftPreviewEnd = function (disposition) {
-    disposition = disposition === "fresh" ? "fresh" : "restore";
+    disposition = disposition === "fresh" || disposition === "entry" ? disposition : "restore";
     if (!previewSession) return Promise.resolve({ active: false, changed: false, disposition: previewLastEnd && previewLastEnd.disposition || disposition });
     var owned = previewSession, generation = owned.generation;
     previewSession = null;
     for (var i = owned.teardowns.length - 1; i >= 0; i--) { try { owned.teardowns[i](); } catch (_error) {} }
     return Promise.resolve().then(function () {
       if (disposition === "fresh") resetHunt({ enterPageMode: !!(window.__gameOnlyEntered && window.__gameOnlyEntered()), resetDateTime: false });
+      else if (disposition === "entry") resetHunt({ enterPageMode: false, resetDateTime: false });
       else applyCheckpoint(owned.checkpoint);
     }).then(function () {
       restoreStorage(owned.storage);
@@ -127871,6 +127887,7 @@ function spawnDustMote(container) {
         else localStorage.removeItem(LOFT_CHECKPOINT_KEY);
       } catch (_error) {}
       window.__loftSessionPreviewActive = false;
+      if (disposition === "entry" && !showRecoveryGate(parseResumableCheckpoint(owned.rawCheckpoint))) showHuntIntro();
       if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
       if (window.__autonomousMessageGateChanged) window.__autonomousMessageGateChanged();
       previewLastEnd = { generation: generation, disposition: disposition, endedAt: Date.now() };
@@ -127912,7 +127929,7 @@ function spawnDustMote(container) {
   function showRecoveryGate(saved) {
     var host = document.querySelector(".hunt-viewport");
     if (!saved || !host) return false;
-    removeClickMe(); hideRecoveryGate(); recoverySaved = saved;
+    settleRecoveryEntry(); hideRecoveryGate(); recoverySaved = saved;
     var recoveryArea = document.getElementById("hunt-fullscreen-area");
     if (recoveryArea) recoveryArea.classList.add("recovery-active");
     dockIntroWatchControls(recoveryArea);

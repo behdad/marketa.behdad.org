@@ -17,7 +17,7 @@ var COMMON = [
   "function finalState(){",
   " var road=value(window.loft.roadtrip.status())||{},room=value(window.loft.room.current()),preview=value(window.loft.session.preview.status())||{},app=value(window.loft.app.current())||{};",
   " var score=document.getElementById('tumbala-song-audio'),fire=document.getElementById('entrance-roadtrip-camp');",
-  " var python=value(window.loft.app.python.status())||{};return {room:room,preview:!!preview.active,party:!!window.__gardenPartyOn,roadActive:!!road.active,roadRoute:road.route||null,fireBuilt:!!(fire&&fire.classList.contains('fire-built')),phoneOpen:!!app.phone_open,monitor:app.monitor||null,python:python,arcade:!!(window.__arcadeState&&window.__arcadeState().active),bubbles:!!(window.__bathroomInteractionState&&window.__bathroomInteractionState().bubbles.active),ttt:window.__bedroomTicTacToeState?window.__bedroomTicTacToeState().phase:'idle',frame:!!document.querySelector('#hunt-fullscreen-area.cinematic-running'),cursor:!!document.getElementById('cine-cursor'),scorePaused:!score||score.paused,scoreLoop:!!(score&&score.loop),scoreTime:score?score.currentTime:0,raw:localStorage.getItem('loftCheckpoint:v1'),custom:localStorage.getItem('trailer-test'),max:window.__maxUnlocked?window.__maxUnlocked():null};",
+  " var python=value(window.loft.app.python.status())||{};return {room:room,preview:!!preview.active,party:!!window.__gardenPartyOn,roadActive:!!road.active,roadRoute:road.route||null,fireBuilt:!!(fire&&fire.classList.contains('fire-built')),phoneOpen:!!app.phone_open,monitor:app.monitor||null,python:python,arcade:!!(window.__arcadeState&&window.__arcadeState().active),bubbles:!!(window.__bathroomInteractionState&&window.__bathroomInteractionState().bubbles.active),ttt:window.__bedroomTicTacToeState?window.__bedroomTicTacToeState().phase:'idle',frame:!!document.querySelector('#hunt-fullscreen-area.cinematic-running'),cursor:!!document.getElementById('cine-cursor'),scorePaused:!score||score.paused,scoreLoop:!!(score&&score.loop),scoreTime:score?score.currentTime:0,raw:localStorage.getItem('loftCheckpoint:v1'),custom:localStorage.getItem('trailer-test'),max:window.__maxUnlocked?window.__maxUnlocked():null,clickMe:!!document.getElementById('click-me-overlay'),recovery:!!document.getElementById('loft-recovery-gate'),recoveryPreview:document.getElementById('loft-game-strip').classList.contains('recovery-preview'),started:window.__gameStarted()};",
   "}",
   "function instrumentScore(){var a=document.getElementById('tumbala-song-audio');if(!a||a._trailerPlayOwner)return;a._trailerPlayOwner=a.play;a._trailerPlayCalls=0;a.play=function(){a._trailerPlayCalls++;return a._trailerPlayOwner.call(a);};}",
   "function baseReport(){return {errors:[],duration:0,ended:false,reduced:false,rooms:[],captions:{},arrivals:{},visibleForeignCaptions:[],apps:{},python:{opened:false,ready:false,death:false,killed:false,states:[]},games:{},roads:{},party:false,formal:false,scoreAtRoad:false,scoreAtCamp:false,scorePlayCalls:0,roadExact:false,campExact:false,campFire:false,presentation:false,extinguisher:false,state:null,checkpoint:'{ \\\"trailer\\\": \\\"raw bytes\\\", \\\"spacing\\\": true }'};}",
@@ -50,7 +50,7 @@ var COMMON = [
 var NATURAL = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre><script>(function(){',
   COMMON,
-  "var r=baseReport();r.reduced=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);window.__reportValue=r;boot(function(){return runNatural(r);});",
+  "var r=baseReport();if(new URLSearchParams(location.search).has('saved'))r.checkpoint=JSON.stringify({version:1,savedAt:Date.now(),progress:{room:'garden',maxUnlocked:1,solvedRooms:['kitchen'],seenRooms:['kitchen','garden'],phase2:false,party:false,daylight:true,bbq:false},puzzle:{}},null,2);r.reduced=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);window.__reportValue=r;boot(function(){return runNatural(r);});",
   "})();</script>"
 ].join("\n");
 
@@ -158,11 +158,12 @@ else {
   check(full.visibleForeignCaptions.length === 0, "room/minigame clues never replace narration outside the canonical reset", full.visibleForeignCaptions);
   [["cinema","cine_below"],["bathroom","cine_anywhere"],["bedroom","cine_round"]].forEach(function (pair) { var arrival=full.arrivals[pair[0]],lead=arrival&&full.captions[pair[1]]!=null?arrival.time-full.captions[pair[1]]:null;check(arrival&&arrival.key===pair[1]&&lead>=1950,pair[0]+" narration leads the pan by at least ~2s and survives it",{arrival:arrival,lead:lead}); });
   check(full.extinguisher && full.state.room === "kitchen" && full.state.max === 0, "finale pans to Kitchen and uses canonical extinguisher reset", { event: full.extinguisher, state: full.state });
+  check(full.state.clickMe && !full.state.recovery && !full.state.started, "normal completion with no resumable save returns to CLICK ME", full.state);
   clean(full, "natural finish");
 }
 
 console.log("\nTrailer cinematic — reduced motion:");
-var reduced = lib.runPageSync("loft-day.html", NATURAL, 125000, { patchRaf: true, forceReduce: true, chromeFlags: CINE_CHROME });
+var reduced = lib.runPageSync("loft-day.html", NATURAL, 125000, { patchRaf: true, forceReduce: true, urlSuffix: "?saved=1", chromeFlags: CINE_CHROME });
 if (!reduced) check(false, "reduced reel produced a report");
 else {
   check(reduced.errors.length === 0, "no reduced-motion errors", reduced.errors);
@@ -171,6 +172,7 @@ else {
   check(reduced.python.opened && reduced.python.ready && reduced.python.death && reduced.python.killed, "reduced edit preserves Python's real ready-to-Kill lifecycle", reduced.python);
   check(reduced.autonomous && reduced.autonomous.attempt === false && reduced.autonomous.rewriteCalls === 0 && reduced.autonomous.turnstile.length === 0,
     "reduced Trailer holds autonomous rewrites before Chat or Turnstile starts", reduced.autonomous);
+  check(reduced.state.recovery && reduced.state.recoveryPreview && !reduced.state.clickMe && !reduced.state.started && reduced.state.room === "kitchen" && reduced.state.max === 0, "normal completion reconstructs Welcome back without applying the resumable save", reduced.state);
   clean(reduced, "reduced finish");
 }
 
@@ -212,7 +214,7 @@ var html = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
 check(!/function runFullCinematic|function runReducedCinematic|__cineRoadtripDemo/.test(html), "obsolete inline/fake trailer runners are gone");
 check((html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 0 && /window\.__runCodeScript\("trailer\.js"/.test(html) && !/LoftDayTrailer|loft-day\.trailer\.js/.test(html), "page lazily hands the one canonical Code-visible Trailer file to the general source runner");
 check(!/\bhost\./.test(source), "canonical Trailer has no injected presentation host dependency");
-check(/loft\.trailer\.play\(\)/.test(source) && /loft\.session\.preview\.begin\("trailer"\)/.test(source) && /loft\.game\.reset\("instant"\)/.test(source), "ordinary Trailer source bootstraps its bounded public play and preview lifecycle");
+check(/loft\.trailer\.play\(\)/.test(source) && /loft\.session\.preview\.begin\("trailer"\)/.test(source) && /loft\.game\.reset\("instant"\)/.test(source) && /loft\.trailer\.stop\("entry"\)/.test(source), "ordinary Trailer source bootstraps its bounded public play, preview, and entry-completion lifecycle");
 var normalizedSource = source.replace(/\["tic-tac-toe"\]/g, ".tic-tac-toe");
 var apiCalls = Array.from(new Set(Array.from(normalizedSource.matchAll(/(?:window\.)?loft\.([A-Za-z0-9_.-]+)\s*\(/g), function (match) { return match[1]; }))).sort();
 var expectedApiCalls = ["app.close","app.kill","app.open","app.python.status","bathroom.bubbles.preview","bedroom.tic-tac-toe.preview","camping.fire.light","camping.fire.open","camping.fire.place","game.reset","interaction.activate","office.invaders.preview","party.set","presentation.card.hide","presentation.card.show","presentation.caption.show","presentation.chapter.show","presentation.cut","presentation.point","presentation.reduced.status","roadtrip.preview.show","room.go","session.preview.begin","session.preview.score.play","session.preview.score.stop","trailer.play","trailer.status","trailer.stop"].sort();

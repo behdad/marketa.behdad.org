@@ -166,7 +166,10 @@ Fixed line numbers stay beside the editor; long lines scroll instead of wrap.
 
 The canonical `trailer.js` loads only when played, and Watch Trailer and Code both use its local
 override. Use `await loft.trailer.play()`, `loft.trailer.status()`, and
-`await loft.trailer.stop("restore")`. For apps, `loft.app.close(...)` preserves a session while
+`await loft.trailer.stop("restore")` to interrupt and restore the active visit. Normal Trailer
+completion returns to Welcome back when a resumable save exists, or to CLICK ME otherwise; scripts
+can request that same entry surface with `await loft.trailer.stop("entry")`. For apps,
+`loft.app.close(...)` preserves a session while
 `loft.app.kill(...)` resets it.
 
 ### Fast-forward shortcuts

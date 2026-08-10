@@ -162,6 +162,9 @@ opens the complete keyboard-shortcut card.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 
+An open, idle Office laptop starts a two-scene screensaver reel: the crossed caps and the couple
+asleep in bed. The reel starts in a shuffled order, then alternates evenly until activity wakes it.
+
 The JavaScript console, Code app, and Python runtime expose an extensive typed scripting API under
 the `loft` namespace. Bare `help` or `help(loft)` lists its top-level objects. Drill down with
 `help(loft.weather)`, `help(loft.weather.rain)`, or `help(loft.cuddly.chest.set)`;

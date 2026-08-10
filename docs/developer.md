@@ -501,6 +501,10 @@ Use those owners for ambient loops, autonomous sound, timer-spawned effects, and
 animation frames are throttled. Autonomous one-shot sounds must also require
 `document.hasFocus()`; direct user-triggered sounds may rely on the triggering interaction.
 
+The laptop saver reel follows the same ownership rule: its order is shuffled once at load, its equal
+caps/sleep slots advance only while the Office is attended, and both the cycle timeout and the active
+caps animation frame are paused or cleared by the shared saver lifecycle.
+
 Particle systems must have bounded cardinality. Prefer a fixed population that replenishes itself
 from each particle's animation completion, or cap and remove stale nodes before spawning. An
 unbounded timer plus animation-finish cleanup will accumulate nodes while the tab is throttled and

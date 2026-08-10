@@ -88,10 +88,10 @@ var s = (result && result.structure) || {};
 var w = (result && result.water) || {};
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(s.parent === "garden-potstand-lift" && /\btrip-plant-lift\b/.test(s.liftClass || "") &&
-  s.offsetClass === "garden-potstand-offset" && s.offsetTransform === "translate(7,0)" &&
+  s.offsetClass === "garden-potstand-offset" && s.offsetTransform === "translate(10,0)" &&
   s.transform === "translate(3,0)" && JSON.stringify(s.hit) === JSON.stringify(["106", "196", "68", "98"]) &&
-  s.waterSpot && s.waterSpot.x === 827 && s.waterSpot.y === 180,
-  "the outer offset moves the complete plant and water effect seven units without changing internals", s);
+  s.waterSpot && s.waterSpot.x === 830 && s.waterSpot.y === 180,
+  "the outer offset moves the complete plant and water effect ten units without changing internals", s);
 check(JSON.stringify(s.pot) === JSON.stringify(["126", "204", "28", "24", "4"]) &&
   JSON.stringify(s.legs) === JSON.stringify(["140,228,128,290", "140,228,152,290", "140,228,140,290"]),
   "the white pot and three-leg stand keep their authored size and height", s);
@@ -106,7 +106,7 @@ check(w.drains === 1 && w.afterClick === 1 && w.count === 3 && w.timestamp > 0 &
   "a real plant click and two more waterings still trigger and recover owned overwater state", w);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
-check(/class="garden-potstand-offset" transform="translate\(7,0\)">\s*<g class="trip-plant-lift" id="garden-potstand-lift"><g id="garden-potstand" class="hunt-hit" transform="translate\(3,0\)">\s*<rect x="106" y="196" width="68" height="98" fill="transparent"\/>/.test(source) &&
+check(/class="garden-potstand-offset" transform="translate\(10,0\)">\s*<g class="trip-plant-lift" id="garden-potstand-lift"><g id="garden-potstand" class="hunt-hit" transform="translate\(3,0\)">\s*<rect x="106" y="196" width="68" height="98" fill="transparent"\/>/.test(source) &&
   /class="garden-potstand-variegation"/.test(source) && /class="garden-potstand-midribs"/.test(source),
   "the code-native SVG keeps the established interaction owner and pothos anatomy");
 

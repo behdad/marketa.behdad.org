@@ -10,6 +10,10 @@ var HARNESS = String.raw`<script>
     goToStage("garden");
     var plant = document.getElementById("garden-snakeplant");
     var hit = plant && plant.querySelector('rect[fill="transparent"]');
+    var foliage = plant && plant.querySelector(':scope > g[pointer-events="none"]');
+    var pot = plant && plant.querySelector(':scope > rect:not([fill="transparent"])');
+    var foliageRect = foliage && foliage.getBoundingClientRect();
+    var potRect = pot && pot.getBoundingClientRect();
     var before = __plantWaterState();
     var bottlesBefore = __gardenWaterInventoryState().levels.reduce(function (sum, n) { return sum + n; }, 0);
     plant.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
@@ -23,6 +27,13 @@ var HARNESS = String.raw`<script>
       parent: plant && plant.parentElement && plant.parentElement.id,
       hit: hit && [hit.getAttribute("x"), hit.getAttribute("y"), hit.getAttribute("width"), hit.getAttribute("height")],
       huntHit: plant && plant.classList.contains("hunt-hit"),
+      foliageTransform: foliage && foliage.getAttribute("transform"),
+      foliageHeight: foliage && foliage.getBBox().height,
+      foliageBounds: foliageRect && [foliageRect.left, foliageRect.right, foliageRect.height],
+      pot: pot && [pot.getAttribute("x"), pot.getAttribute("y"), pot.getAttribute("width"), pot.getAttribute("height"), pot.getAttribute("rx")],
+      potBounds: potRect && [potRect.left, potRect.right, potRect.height],
+      potSide: !!(plant && plant.querySelector(".garden-snakeplant-pot-side")),
+      potHighlight: !!(plant && plant.querySelector(".garden-snakeplant-pot-highlight")),
       bloom: !!(plant && plant.querySelector(".trip-bloom-img")),
       acidTrails: document.querySelectorAll('use[href="#garden-snakeplant"]').length,
       spot: gardenPlantSpots["garden-snakeplant"]
@@ -70,6 +81,14 @@ check(r.structure && r.structure.parent === "garden-snakeplant-lift" && r.struct
   r.structure.acidTrails === 2 &&
   r.structure.spot.x === 1015 && r.structure.spot.y === 155,
   "the refined drawing preserves its lift, hit area, bloom layer, and watering spot", r.structure);
+check(r.structure && r.structure.foliageTransform === "translate(338 0) scale(0.8 1) translate(-338 0)" &&
+  r.structure.foliageHeight >= 85 && r.structure.pot && r.structure.pot.join(",") === "318,210,40,22,3" &&
+  r.structure.foliageBounds && r.structure.potBounds &&
+  r.structure.foliageBounds[0] >= r.structure.potBounds[0] - 0.2 &&
+  r.structure.foliageBounds[1] <= r.structure.potBounds[1] + 0.2 &&
+  r.structure.foliageBounds[2] > r.structure.potBounds[2] * 3.5 &&
+  r.structure.potSide && r.structure.potHighlight,
+  "the leaf cluster is exactly 80% wide with its height intact above the unchanged shaded planter", r.structure);
 check(r.water && r.water.before === 0 && r.water.clicked === 1 && r.water.bottleUses === 1 &&
   r.water.neighbor === 0,
   "the plant's existing click owner waters only the snake plant and consumes one bottle use", r.water);

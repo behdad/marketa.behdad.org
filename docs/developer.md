@@ -29,8 +29,9 @@ remain page-owned:
 - `egg-hunt.html` is the canonical invitation/Egg Hunt source. The `egg-hunt`,
   `save-the-dates`, and `save-the-dates.html` names are symlinks to it; only a
   save-the-dates-named URL or the directory root reveals the surrounding invitation.
-- `loft-day.html` is the canonical game source. Its only external authored runtime files are the
-  review-friendly `loft-day.en.js` and `loft-day.cs.js` message dictionaries. The `loft-day`,
+- `loft-day.html` is the canonical game source. Its narrow external authored runtime files are the
+  review-friendly `loft-day.en.js` and `loft-day.cs.js` message dictionaries plus the public
+  `code-snippets/` samples used by the in-game IDE. The `loft-day`,
   `rsvp`, and `rsvp.html` names are symlinks to it; only an RSVP-named URL reveals the surrounding
   invitation content.
 
@@ -63,8 +64,8 @@ of the web root or add an explicit denial rule. Never assume an unlinked file is
 ## Runtime architecture
 
 `loft-day.html` contains the markup, SVG strip, styles, and JavaScript for the whole game. English and
-Czech messages live beside it in `loft-day.en.js` and `loft-day.cs.js`; this deliberate exception to
-the single-file layout keeps translation review independent of the large game source. Most logic
+Czech messages live beside it in `loft-day.en.js` and `loft-day.cs.js`; `code-snippets/` likewise
+keeps reviewable Code examples and the authored Trailer timeline outside the large game source. Most logic
 lives in the final large inline script as a sequence of closures. Those closures expose a small
 number of coordination hooks on `window`; there is intentionally no module bundler and no single
 central store.
@@ -385,6 +386,16 @@ capability rows plus a short primitives/signatures list. Do not add `CONSOLE_HEL
 command index to that payload. Code's model treats the manifest as authoritative; its examples and
 generated drafts use the `loft.*` namespaces and completion metadata.
 
+Code's built-in virtual files are declared by metadata in `code-snippets/manifest.js` and loaded as
+exact same-origin text from their public files. The manifest never embeds source. The sidebar sorts
+the effective built-ins and visitor-created files only while rendering; manifest order and stored
+objects are not rewritten. Editable built-ins stay canonical until a property with their display
+label exists in `localStorage["deskCodeBuiltinOverrides"]`; an empty-string property is a valid
+override. Reset removes that property and reveals the current canonical source. Visitor-created
+files remain separately owned by `deskScripts` / `deskPythonScripts`; do not reintroduce sample
+versions, migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository
+bytes through a test-only resource hook because `file://` cannot fetch siblings.
+
 The Pyodide console installs an embedded `loft.py` module beside the browser Turtle module. On
 `import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
 namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
@@ -444,8 +455,10 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The authored timing and world sequence lives in `loft-day.trailer.js` and uses only the typed Loft API
-actions. The inline entry controller is the narrow privileged presentation host: captions, cards,
+The authored timing and world sequence lives in `code-snippets/trailer.js` and uses only the typed
+Loft API actions. It is both the executable timeline and the exact read-only source shown in Code;
+do not mirror its body in HTML or another sample. The inline entry controller is the narrow
+privileged presentation host: captions, cards,
 cut veil, ghost cursor, trusted-click audio prime, scheduling, and takeover/error teardown. Keep
 that boundary narrow rather than exporting DOM ids or duplicating game renderers for future edits.
 
@@ -617,6 +630,7 @@ references.
 | Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
 | Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
 | Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |
+| Code built-ins | `LOFT_CODE_SNIPPETS`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker` |
 | Typed API | `initLoftApi`, `window.loft.api`, `__loftStateChanged` |
 | Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `PUBLIC_MONITOR_APPS` |
 | Entry/recovery | `urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, `stopCinematic` |

@@ -37,7 +37,7 @@ var COMMON = [
   "}",
   "async function runNatural(r){",
   " localStorage.setItem('loftCheckpoint:v1',r.checkpoint);localStorage.setItem('trailer-test','before');instrumentScore();",
-  " var events=[],off=window.loft.api.subscribe(function(event){events.push(event);}),t0=performance.now(),promise=window.__startCinematic(),guard=0;",
+  " var events=[],off=window.loft.api.subscribe(function(event){events.push(event);}),t0=performance.now(),promise=window.loft.trailer.play(),guard=0;",
   " while(window.__cinematic&&guard++<1800){sample(r,t0);await wait(80);}",
   " await promise;await wait(800);off();r.duration=Math.round(performance.now()-t0-800);r.ended=!window.__cinematic;r.events=events.map(function(e){return e.id;});r.scorePlayCalls=document.getElementById('tumbala-song-audio')._trailerPlayCalls||0;r.extinguisher=r.events.indexOf('game.reset')>=0;r.state=finalState();",
   "}",
@@ -59,8 +59,8 @@ function interruptionHarness(kind) {
     " window.__setMaxUnlocked(3);localStorage.setItem('loftCheckpoint:v1',r.checkpoint);localStorage.setItem('trailer-test','before');",
     kind === "hidden" ? " var forced=false;Object.defineProperty(document,'hidden',{configurable:true,get:function(){return forced;}});" : "",
     kind === "error" ? " window.__weddingTestShouldIgnoreError=function(e){return e&&e.message==='forced trailer error';};" : "",
-    " window.__startCinematic();await wait(" + (kind === "takeover" ? "18000" : "2600") + ");r.started=!!window.__cinematic;",
-    kind === "takeover" ? " await window.__stopCinematic('fresh');" : kind === "hidden" ? " forced=true;document.dispatchEvent(new Event('visibilitychange'));" : " window.dispatchEvent(new ErrorEvent('error',{message:'forced trailer error',error:new Error('forced trailer error')}));",
+    " window.loft.trailer.play();await wait(" + (kind === "takeover" ? "18000" : "2600") + ");r.started=!!window.__cinematic;",
+    kind === "takeover" ? " await window.loft.trailer.stop('fresh');" : kind === "hidden" ? " forced=true;document.dispatchEvent(new Event('visibilitychange'));" : " window.dispatchEvent(new ErrorEvent('error',{message:'forced trailer error',error:new Error('forced trailer error')}));",
     " await wait(1000);r.state=finalState();r.ignored=window.__ignoredWeddingTestErrors||0;",
     "});})();</script>"
   ].join("\n");
@@ -69,7 +69,7 @@ function interruptionHarness(kind) {
 var LAYOUT = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre><script>(function(){',
   "function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}",
-  "window.addEventListener('load',function(){setTimeout(async function(){var r={errors:window.__errs};try{setLang(new URLSearchParams(location.search).get('lang')||'en');window.__startCinematic();await wait(1200);var frame=document.getElementById('hunt-fullscreen-area').getBoundingClientRect(),card=document.querySelector('.cine-card').getBoundingClientRect(),title=document.querySelector('.cine-card-title'),detail=document.querySelector('.cine-card-detail');r.lang=document.documentElement.lang;r.text=[title.textContent.trim(),detail.textContent.trim()];r.geometry={frame:[frame.left,frame.top,frame.right,frame.bottom],card:[card.left,card.top,card.right,card.bottom],vw:innerWidth,vh:innerHeight,overflow:card.left<frame.left-1||card.right>frame.right+1||card.top<frame.top-1||card.bottom>frame.bottom+1};await window.__stopCinematic('restore');}catch(e){window.__errs.push(String(e&&e.stack||e));}r.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(r);},400);});",
+  "window.addEventListener('load',function(){setTimeout(async function(){var r={errors:window.__errs};try{setLang(new URLSearchParams(location.search).get('lang')||'en');window.loft.trailer.play();await wait(1200);var frame=document.getElementById('hunt-fullscreen-area').getBoundingClientRect(),card=document.querySelector('.cine-card').getBoundingClientRect(),title=document.querySelector('.cine-card-title'),detail=document.querySelector('.cine-card-detail');r.lang=document.documentElement.lang;r.text=[title.textContent.trim(),detail.textContent.trim()];r.geometry={frame:[frame.left,frame.top,frame.right,frame.bottom],card:[card.left,card.top,card.right,card.bottom],vw:innerWidth,vh:innerHeight,overflow:card.left<frame.left-1||card.right>frame.right+1||card.top<frame.top-1||card.bottom>frame.bottom+1};await window.loft.trailer.stop('restore');}catch(e){window.__errs.push(String(e&&e.stack||e));}r.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(r);},400);});",
   "})();</script>"
 ].join("\n");
 
@@ -144,10 +144,17 @@ console.log("\nTrailer cinematic — EN/CS desktop + phone-landscape title layou
 });
 
 console.log("\nTrailer cinematic — authored-file boundary:");
-var source = fs.readFileSync(path.join(lib.ROOT, "loft-day.trailer.js"), "utf8");
+var source = fs.readFileSync(path.join(lib.ROOT, "code-snippets", "trailer.js"), "utf8");
 check(!/window\.__|__cineRoadtripDemo|createElementNS|<path|setAttribute\s*\(\s*[\"']d[\"']/.test(source), "external timeline uses typed API primitives, not private hooks or invented SVG geometry");
 check(/roadtrip\.preview\.show\(\{ route: "banff"/.test(source) && /roadtrip\.preview\.show\(\{ route: "camp"/.test(source), "timeline selects both exact renderer-owned routes");
-check(!/function runFullCinematic|function runReducedCinematic|__cineRoadtripDemo/.test(fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8")), "obsolete inline/fake trailer runners are gone");
+var html = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");
+check(!/function runFullCinematic|function runReducedCinematic|__cineRoadtripDemo/.test(html), "obsolete inline/fake trailer runners are gone");
+check((html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 1 && !/loft-day\.trailer\.js/.test(html), "page executes the one canonical Code-visible trailer file");
+var hostCalls = Array.from(new Set(Array.from(source.matchAll(/host\.([A-Za-z]+)/g), function (match) { return match[1]; }))).sort();
+check(hostCalls.join("|") === "announce|caption|card|cut|hideCard|point|reduced|stop|wait", "host dependency is presentation-only and explicitly bounded", hostCalls);
+var apiCalls = Array.from(new Set(Array.from(source.matchAll(/(?:window\.)?loft\.([A-Za-z0-9_.]+)\s*\(/g), function (match) { return match[1]; }))).sort();
+var expectedApiCalls = ["api.perform","app.close","app.open","bathroom.bubbles.preview","camping.fire.light","camping.fire.open","camping.fire.place","game.reset","interaction.activate","office.invaders.preview","party.set","roadtrip.preview.show","room.go","session.preview.score.play","session.preview.score.stop"].sort();
+check(apiCalls.join("|") === expectedApiCalls.join("|"), "every world dependency is a typed Loft capability", apiCalls);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

@@ -6691,6 +6691,12 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-item.active{background:#264032; color:#a7e08a}
 .code-item.unsaved{font-style:italic; color:#8aa88a}
 .code-item.unsaved.active{color:#a7e08a}
+.code-item.builtin{color:#9bb899}
+.code-item.builtin::before{content:"·";flex:none;margin-right:.45px;color:#a7e08a;font-size:2px}
+.code-item.builtin.edited::before{content:"*"}
+.code-item.source{color:#88a8bf}
+.code-item.source::before{content:"◇";color:#a9c9dd;font-size:1.65px}
+.code-item.source.active{color:#b9d9ed;background:#243942}
 .code-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
 .code-main{position:relative; flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
 .code-top{grid-row:1; grid-column:1; display:flex; align-items:center; gap:0.6px; padding:0 5px 0 0} /* Run aligns with the editor's left edge; filename still clears the close control */
@@ -6706,6 +6712,8 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-btn:hover{background:#26332b}
 .code-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
 .code-btn-run.code-btn-stop{color:#e39191} /* ■ stop state while a script is looping (repeat()) */
+.code-wrap button:disabled{opacity:.35;cursor:default}
+.code-wrap.source-readonly .code-name,.code-wrap.source-readonly .code-ta{color:#a9c9dd;background:#10171a}
 .code-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .code-ai-tools{grid-row:3; grid-column:1; display:flex; align-items:center; gap:.5px; min-height:4px; padding:0 1px}
 .code-ai-ask{min-width:0; flex:1; height:3.2px; padding:0 .8px .3px 1.2px; border:.3px solid #2b3a3a; border-radius:.7px; background:#111b17; color:#d8eed5; font:1.7px/3px ui-monospace,Menlo,monospace}
@@ -36705,7 +36713,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <script>var T = {};</script>
 <script src="loft-day.en.js"></script>
 <script src="loft-day.cs.js"></script>
-<script src="loft-day.trailer.js"></script>
+<script src="code-snippets/manifest.js"></script>
+<script src="code-snippets/trailer.js"></script>
 <script>
 // A popup outside the browser's fullscreen element exists in the DOM but cannot paint.
 // Every context-menu builder uses this host so its existing fixed viewport coordinates
@@ -74579,6 +74588,21 @@ setOfficeProgress("pc", false);
       completion: "finite", description: "End a preview and restore the captured visit, or leave a fresh Kitchen runtime.",
       args: { disposition: { type: "string", enum: ["restore", "fresh"], required: true } },
       available: previewActive, run: function (args) { return window.__loftPreviewEnd(args.disposition); } });
+    register({ id: "trailer.status", group: "Utilities / Scripting", kind: "query",
+      description: "Report the authored Trailer player and its advertised duration.", run: function () {
+        return { playing: !!window.__cinematic,
+          duration_ms: window.LoftDayTrailer && window.LoftDayTrailer.duration || 0,
+          reduced_motion: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) };
+      } });
+    register({ id: "trailer.play", group: "Utilities / Scripting", kind: "action", risk: "scene",
+      completion: "finite", description: "Play the canonical authored Trailer inside a reversible preview session.",
+      available: function () { return !window.__cinematic && !previewActive() && typeof window.__startCinematic === "function"; },
+      run: function () { return window.__startCinematic(); } });
+    register({ id: "trailer.stop", group: "Utilities / Scripting", kind: "action", risk: "scene",
+      completion: "finite", description: "Stop the Trailer, restoring the visit by default or leaving a fresh Kitchen.",
+      args: { disposition: { type: "string", enum: ["restore", "fresh"] } },
+      available: function () { return !!window.__cinematic && typeof window.__stopCinematic === "function"; },
+      run: function (args) { return window.__stopCinematic(args.disposition || "restore"); } });
     register({ id: "game.reset", group: "Game", kind: "action", risk: "destructive", completion: "finite",
       description: "Reset through the canonical game owner, optionally showing the extinguisher effect.",
       args: { effect: { type: "string", enum: ["instant", "extinguisher"], required: true } },
@@ -75875,6 +75899,97 @@ setOfficeProgress("pc", false);
   }
   function codeGetRunError(language) { return codeRunErrors[language === "python" ? "python" : "js"] || ""; }
   var CODE_STORE_KEYS = { js: "deskScripts", python: "deskPythonScripts" };
+  var CODE_BUILTIN_OVERRIDE_KEY = "deskCodeBuiltinOverrides";
+  var CODE_BUILTINS = (Array.isArray(window.LOFT_CODE_SNIPPETS) ? window.LOFT_CODE_SNIPPETS : []).map(function (entry) {
+    return {
+      filename: String(entry.filename || ""),
+      path: String(entry.path || ""),
+      language: entry.language === "python" ? "python" : "js",
+      label: String(entry.label || entry.filename || ""),
+      role: entry.role === "source" ? "source" : "example",
+      readOnly: entry.readOnly === true,
+      starter: entry.starter === true,
+      packageDemo: entry.packageDemo === true
+    };
+  }).filter(function (entry) { return entry.filename && entry.path && entry.label; });
+  var codeBuiltinSources = Object.create(null), codeBuiltinErrors = Object.create(null), codeActiveBuiltin = null;
+  function codeHasOwn(object, key) { return Object.prototype.hasOwnProperty.call(object, key); }
+  function readCodeBuiltinOverrides() {
+    try { var raw = localStorage.getItem(CODE_BUILTIN_OVERRIDE_KEY), value = raw ? JSON.parse(raw) : null; return value && typeof value === "object" && !Array.isArray(value) ? value : {}; }
+    catch (e) { return {}; }
+  }
+  function writeCodeBuiltinOverrides(overrides) {
+    try { localStorage.setItem(CODE_BUILTIN_OVERRIDE_KEY, JSON.stringify(overrides)); } catch (e) {}
+  }
+  function codeBuiltinHasOverride(entry) { return codeHasOwn(readCodeBuiltinOverrides(), entry.label); }
+  function codeFindBuiltin(label, language) {
+    var wanted = String(label || ""), lang = language === "python" ? "python" : language === "js" ? "js" : "";
+    for (var i = 0; i < CODE_BUILTINS.length; i++) if (CODE_BUILTINS[i].label === wanted && (!lang || CODE_BUILTINS[i].language === lang)) return CODE_BUILTINS[i];
+    return null;
+  }
+  function codeBuiltinText(entry) {
+    var overrides = readCodeBuiltinOverrides();
+    if (codeHasOwn(overrides, entry.label)) return String(overrides[entry.label]);
+    if (codeHasOwn(codeBuiltinSources, entry.label)) return codeBuiltinSources[entry.label];
+    return codeBuiltinErrors[entry.label] ? "// canonical source could not be loaded" : "// loading canonical source…";
+  }
+  function codeLoadResource(path) {
+    if (typeof window.__codeSnippetResourceLoader === "function") return Promise.resolve(window.__codeSnippetResourceLoader(path));
+    if (typeof window.fetch !== "function") return Promise.reject(new Error("fetch unavailable"));
+    return window.fetch(path, { cache: "no-store" }).then(function (response) {
+      if (!response || !response.ok) throw new Error("HTTP " + (response && response.status));
+      return response.text();
+    });
+  }
+  function codeFetchBuiltin(entry) {
+    return codeLoadResource(entry.path).then(function (source) {
+      codeBuiltinSources[entry.label] = String(source);
+      delete codeBuiltinErrors[entry.label];
+      if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = codeBuiltinSources[entry.label];
+      codeRefreshPicker(codeLastSavedName);
+    }).catch(function (error) {
+      codeBuiltinErrors[entry.label] = String(error && error.message || error || "unavailable");
+      if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = "// canonical source could not be loaded";
+      codeRefreshPicker(codeLastSavedName);
+    });
+  }
+  function codeSyncBuiltinControls() {
+    var builtin = codeActiveBuiltin, locked = !!(builtin && builtin.readOnly);
+    if (codeWrap) codeWrap.classList.toggle("source-readonly", locked);
+    if (codeName) codeName.readOnly = !!builtin;
+    if (codeCode) codeCode.readOnly = locked;
+    if (codeRunBtn) codeRunBtn.disabled = locked;
+    if (codeDelBtn) {
+      codeDelBtn.disabled = !builtin ? false : locked || !codeBuiltinHasOverride(builtin);
+      codeDelBtn.title = builtin ? (locked ? "canonical source" : "reset to canonical") : "delete";
+    }
+    [codeLangJsBtn, codeLangPyBtn].forEach(function (button) { if (button) button.disabled = !!builtin; });
+    [codeAskBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = locked; });
+    if (codeExplainBtn) codeExplainBtn.disabled = false;
+  }
+  function codeLeaveBuiltin() {
+    if (!codeActiveBuiltin) return;
+    codeActiveBuiltin = null;
+    codeSyncBuiltinControls();
+    if (codeAiStatus && /canonical source|built-in/.test(codeAiStatus.textContent)) codeAiSetStatus("ready", false);
+  }
+  function codeLoadBuiltin(entry) {
+    if (!entry) return;
+    stashCodeUnsaved();
+    codeFlushAutoSave();
+    codeFlushDraft();
+    codeActiveBuiltin = entry;
+    codeLanguage = entry.language;
+    codeRememberLanguage();
+    if (codeName) codeName.value = entry.label;
+    if (codeCode) { codeCode.value = codeBuiltinText(entry); try { codeCode.setSelectionRange(0, 0); } catch (e) {} }
+    codeLastSavedName = null;
+    codeLastSavedLanguage = entry.language;
+    codeSyncBuiltinControls();
+    codeAiSetStatus(entry.readOnly ? "canonical source · read only" : (codeBuiltinHasOverride(entry) ? "edited built-in" : "canonical built-in"), false);
+    codeRefreshPicker(entry.label);
+  }
+  CODE_BUILTINS.forEach(codeFetchBuiltin);
   var CODE_LANG_KEY = "deskCodeLanguage";
   function readCodeLanguage() { try { return localStorage.getItem(CODE_LANG_KEY) === "python" ? "python" : "js"; } catch (e) { return "js"; } }
   var codeLanguage = readCodeLanguage();
@@ -75891,6 +76006,7 @@ setOfficeProgress("pc", false);
     try { localStorage.setItem(CODE_STORE_KEYS[lang], JSON.stringify(o)); } catch (e) {}
   }
   function codeNameExistsElsewhere(name, currentName, currentLanguage) {
+    if (codeFindBuiltin(name)) return true;
     return ["js", "python"].some(function (language) {
       if (name === currentName && language === currentLanguage) return false;
       return Object.prototype.hasOwnProperty.call(readScripts(language), name);
@@ -75929,20 +76045,31 @@ setOfficeProgress("pc", false);
   function writeCodeUnsaved(code, language) { try { localStorage.setItem(CODE_UNSAVED_KEY, JSON.stringify({ code: String(code || ""), language: language === "python" ? "python" : "js", saved_at: Date.now() })); } catch (e) {} }
   function clearCodeUnsaved() { try { localStorage.removeItem(CODE_UNSAVED_KEY); } catch (e) {} }
   function stashCodeUnsaved() {
-    if (!codeName || !codeCode || codeName.value.trim() || !codeCode.value) return;
+    if (codeActiveBuiltin || !codeName || !codeCode || codeName.value.trim() || !codeCode.value) return;
     writeCodeUnsaved(codeCode.value, codeLanguage);
   }
   function writeCodeDraft() {
-    if (!codeName || !codeCode) return;
+    if (codeActiveBuiltin || !codeName || !codeCode) return;
     if (!codeName.value.trim() && codeCode.value) writeCodeUnsaved(codeCode.value, codeLanguage);
     try { localStorage.setItem(CODE_DRAFT_KEY, JSON.stringify({ name: codeName.value || "", code: codeCode.value || "", language: codeLanguage, saved_at: Date.now() })); } catch (e) {}
   }
   function clearCodeDraft() { try { localStorage.removeItem(CODE_DRAFT_KEY); } catch (e) {} }
-  function codeScheduleDraft() { clearTimeout(codeDraftTimer); codeDraftTimer = setTimeout(function () { codeDraftTimer = null; writeCodeDraft(); }, 120); }
+  function codeScheduleDraft() { if (codeActiveBuiltin) return; clearTimeout(codeDraftTimer); codeDraftTimer = setTimeout(function () { codeDraftTimer = null; writeCodeDraft(); }, 120); }
   function codeFlushDraft() { clearTimeout(codeDraftTimer); codeDraftTimer = null; writeCodeDraft(); }
-  function scriptNames(language) { return Object.keys(readScripts(language || codeLanguage)).sort(); }
+  function codeDisplayCompare(a, b) {
+    var rawA = String(a.displayName || a.name || ""), rawB = String(b.displayName || b.name || "");
+    var foldedA = rawA.toLowerCase(), foldedB = rawB.toLowerCase();
+    return foldedA < foldedB ? -1 : foldedA > foldedB ? 1 : rawA < rawB ? -1 : rawA > rawB ? 1 :
+      String(a.language || "") < String(b.language || "") ? -1 : String(a.language || "") > String(b.language || "") ? 1 : 0;
+  }
+  function scriptNames(language) { return Object.keys(readScripts(language || codeLanguage)); }
+  function codeRunnableNames(language) {
+    var lang = language === "python" ? "python" : "js", names = scriptNames(lang);
+    CODE_BUILTINS.forEach(function (entry) { if (entry.language === lang && !entry.readOnly) names.push(entry.label); });
+    return names.map(function (name) { return { name: name, language: lang }; }).sort(codeDisplayCompare).map(function (file) { return file.name; });
+  }
   function scriptsListStr(language) {
-    var names = scriptNames(language || "js");
+    var names = codeRunnableNames(language || "js");
     return names.length ? "saved scripts: " + names.join(", ") : "no saved scripts yet.";
   }
   // Rebuild one language-neutral file list. A .js/.py extension selects its runtime when opened;
@@ -75957,11 +76084,10 @@ setOfficeProgress("pc", false);
     ["js", "python"].forEach(function (language) {
       scriptNames(language).forEach(function (name) { files.push({ name: name, language: language }); });
     });
-    files.sort(function (a, b) {
-      if (a.unsaved !== b.unsaved) return a.unsaved ? -1 : 1;
-      var byName = a.name.localeCompare(b.name);
-      return byName || a.language.localeCompare(b.language);
+    CODE_BUILTINS.forEach(function (entry) {
+      files.push({ name: entry.label, displayName: entry.label, language: entry.language, builtin: entry, source: entry.role === "source", edited: codeBuiltinHasOverride(entry) });
     });
+    files.sort(codeDisplayCompare);
     codeList.innerHTML = "";
     if (!files.length) {
       var empty = document.createElement("div");
@@ -75971,15 +76097,19 @@ setOfficeProgress("pc", false);
     }
     files.forEach(function (file) {
       var it = document.createElement("div");
-      var active = file.unsaved
+      var active = file.builtin
+        ? codeActiveBuiltin === file.builtin
+        : file.unsaved
         ? !codeName.value.trim() && file.language === codeLanguage
         : file.name === sel && file.language === codeLastSavedLanguage;
-      it.className = "code-item" + (file.unsaved ? " unsaved" : "") + (active ? " active" : "");
-      it.textContent = file.name;
+      it.className = "code-item" + (file.unsaved ? " unsaved" : "") + (file.builtin ? " builtin" : "") + (file.source ? " source" : "") + (file.edited ? " edited" : "") + (active ? " active" : "");
+      it.textContent = file.displayName || file.name;
+      if (file.builtin) it.title = file.source ? "canonical source · read only" : (file.edited ? "edited built-in" : "canonical built-in");
 
       it.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (file.unsaved) codeLoadUnsaved();
+        if (file.builtin) codeLoadBuiltin(file.builtin);
+        else if (file.unsaved) codeLoadUnsaved();
         else codeLoad(file.name, file.language);
       });
       codeList.appendChild(it);
@@ -75990,6 +76120,7 @@ setOfficeProgress("pc", false);
   // leaving a duplicate. null = the buffer isn't saved under any name yet (fresh/new).
   var codeLastSavedName = null, codeLastSavedLanguage = codeLanguage;
   function codeSetLanguage(language) {
+    if (codeActiveBuiltin) return;
     var next = language === "python" ? "python" : "js";
     if (next === codeLanguage) { codePaintLanguage(); return; }
     codeFlushAutoSave();
@@ -76001,6 +76132,7 @@ setOfficeProgress("pc", false);
   }
   function codeLoad(name, language) {
     stashCodeUnsaved();
+    codeLeaveBuiltin();
     var lang = codeExplicitLanguage(name) || (language === "python" ? "python" : "js");
     codeLanguage = lang; codeRememberLanguage();
     var scr = readScripts(lang), has = Object.prototype.hasOwnProperty.call(scr, name);
@@ -76012,6 +76144,7 @@ setOfficeProgress("pc", false);
   }
   function codeLoadUnsaved() {
     stashCodeUnsaved();
+    codeLeaveBuiltin();
     var unsaved = readCodeUnsaved();
     if (!unsaved) return;
     codeLanguage = unsaved.language === "python" ? "python" : "js";
@@ -76023,6 +76156,7 @@ setOfficeProgress("pc", false);
     codeRefreshPicker(null);
   }
   function codeNew() {
+    codeLeaveBuiltin();
     if (codeName) codeName.value = "";
     if (codeCode) codeCode.value = "";
     codeLastSavedName = null;
@@ -76032,7 +76166,7 @@ setOfficeProgress("pc", false);
     appAutoFocusTextControl(codeName);
   }
   function codeSave() {
-    if (!codeName || !codeCode) return;
+    if (codeActiveBuiltin || !codeName || !codeCode) return;
     var name = codeName.value.trim();
     if (!name) { appAutoFocusTextControl(codeName); return; } // no nameless files
     var inferred = codeExplicitLanguage(name);
@@ -76083,6 +76217,21 @@ setOfficeProgress("pc", false);
   function codeScheduleAutoSave() {
     if (!codeName || !codeCode) return;
     clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
+    if (codeActiveBuiltin) {
+      if (codeActiveBuiltin.readOnly) return;
+      var builtin = codeActiveBuiltin, builtinCode = codeCode.value;
+      codePendingCommit = function () {
+        codeAutoTimer = null; codePendingCommit = null;
+        var overrides = readCodeBuiltinOverrides();
+        overrides[builtin.label] = builtinCode;
+        writeCodeBuiltinOverrides(overrides);
+        if (codeActiveBuiltin === builtin) codeAiSetStatus("edited built-in", true);
+        codeRefreshPicker(builtin.label);
+        codeSyncBuiltinControls();
+      };
+      codeAutoTimer = setTimeout(codePendingCommit, 250);
+      return;
+    }
     var name = codeName.value.trim(), inferred = codeExplicitLanguage(name);
     if (!codeLastSavedName && inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
     if (!name) { stashCodeUnsaved(); codeRefreshPicker(null); return; } // retain, but never persist, a nameless buffer
@@ -76110,6 +76259,7 @@ setOfficeProgress("pc", false);
   // extensionless/.txt imports retain the currently selected language.
   function codeOpenFile(file) {
     if (!file) return;
+    codeLeaveBuiltin();
     var reader = new FileReader();
     reader.onload = function () {
       var text = String(reader.result == null ? "" : reader.result);
@@ -76124,6 +76274,19 @@ setOfficeProgress("pc", false);
     try { reader.readAsText(file); } catch (e) {}
   }
   function codeDelete() {
+    if (codeActiveBuiltin) {
+      if (codeActiveBuiltin.readOnly) return false;
+      clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
+      var entry = codeActiveBuiltin, overrides = readCodeBuiltinOverrides();
+      if (!codeHasOwn(overrides, entry.label)) return false;
+      delete overrides[entry.label];
+      writeCodeBuiltinOverrides(overrides);
+      if (codeCode) codeCode.value = codeBuiltinText(entry);
+      codeAiSetStatus("reset to canonical", true);
+      codeRefreshPicker(entry.label);
+      codeSyncBuiltinControls();
+      return true;
+    }
     if (!codeName) return;
     var name = codeName.value.trim(), scr = readScripts(codeLanguage);
     var known = name && Object.prototype.hasOwnProperty.call(scr, name);
@@ -76145,10 +76308,13 @@ setOfficeProgress("pc", false);
   function codeCopy() {
     if (!codeName || !codeCode) return;
     var cur = codeName.value.trim();
-    var next = window.prompt("Duplicate as", cur ? cur + " copy" : "copy");
+    var base = codeActiveBuiltin ? codeActiveBuiltin.filename : cur;
+    var suggested = /\.(js|py)$/i.test(base) ? base.replace(/\.(js|py)$/i, ".copy.$1") : (base ? base + " copy" : "copy");
+    var next = window.prompt("Duplicate as", suggested);
     if (next == null) return;
     next = String(next).trim();
     if (!next) return;
+    codeLeaveBuiltin();
     codeName.value = next; // becomes the active buffer name
     var inferred = codeExplicitLanguage(next);
     if (inferred) { codeLanguage = inferred; codeRememberLanguage(); }
@@ -76193,6 +76359,7 @@ setOfficeProgress("pc", false);
     return Promise.resolve(true);
   }
   function codeRunCurrent() {
+    if (codeActiveBuiltin && codeActiveBuiltin.readOnly) { codeAiSetStatus("copy canonical source to run", false); return; }
     var name = (codeName && codeName.value.trim()) || (codeLanguage === "python" ? "(python code)" : "(code)");
     var code = codeCode ? codeCode.value : "";
     codeFlushAutoSave(); codeFlushDraft();
@@ -76222,6 +76389,7 @@ setOfficeProgress("pc", false);
     codeAiRequestToken++; codeAiBusy = false; codeAiClosePanel(); codeAiSetStatus("ready", false);
     if (codeAskInput) codeAskInput.value = "";
     [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; });
+    codeSyncBuiltinControls();
   }
   function codeAiLooseString(source, key) {
     var at = source.indexOf('"' + key + '"');
@@ -76279,7 +76447,7 @@ setOfficeProgress("pc", false);
     var note = document.createElement("div"); note.textContent = data.text || "No review returned."; codeAiPanel.appendChild(note);
     codeAiSuggestion = String(data.suggestion || ""); codeAiReplace = data.replace === true || codeAiOperation === "ask";
     codeAiEdits = Array.isArray(data.edits) ? data.edits.filter(function (x) { return x && Number.isFinite(+x.start) && Number.isFinite(+x.end) && typeof x.text === "string"; }).map(function (x) { return { start: Math.max(0, +x.start), end: Math.max(0, +x.end), text: x.text }; }) : null;
-    if (codeAiEdits && codeAiEdits.length) {
+    if (!(codeActiveBuiltin && codeActiveBuiltin.readOnly) && codeAiEdits && codeAiEdits.length) {
       var editTitle = document.createElement("div"); editTitle.textContent = codeAiEdits.length + " proposed edit" + (codeAiEdits.length === 1 ? "" : "s") + ":"; codeAiPanel.appendChild(editTitle);
       var diffTitle = document.createElement("div"); diffTitle.className = "code-ai-diff-title"; diffTitle.textContent = "Preview"; codeAiPanel.appendChild(diffTitle);
       codeAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.className = "code-ai-diff"; var oldText = codeAiSourceCode.slice(edit.start, edit.end); var lines = ["#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]"]; lines.push(oldText ? "- " + oldText.replace(/\n/g, "\n- ") : "- (nothing)"); lines.push(edit.text ? "+ " + edit.text.replace(/\n/g, "\n+ ") : "+ (deleted)"); ep.textContent = lines.join("\n"); codeAiPanel.appendChild(ep); });
@@ -76287,7 +76455,7 @@ setOfficeProgress("pc", false);
       applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!codeCode || codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var out = codeCode.value; var sorted = codeAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { codeAiSetStatus("edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } codeCode.value = out; codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied " + sorted.length + " edits", true); appAutoFocusTextControl(codeCode); });
       codeAiPanel.appendChild(applyEdits);
     }
-    if (codeAiSuggestion) {
+    if (!(codeActiveBuiltin && codeActiveBuiltin.readOnly) && codeAiSuggestion) {
       var apply = document.createElement("button"); apply.className = "code-ai-btn"; apply.type = "button"; apply.textContent = codeAiReplace ? (codeAiStart === codeAiEnd ? "replace script" : "replace selection") : "insert at cursor";
       apply.addEventListener("click", function (e) { e.stopPropagation(); if (!codeAiSuggestion || !codeCode) return; if (codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var a = codeAiStart, b = codeAiEnd; if (codeAiReplace && a === b) { a = 0; b = codeCode.value.length; } codeCode.value = codeAiReplace ? codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(b) : codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(a); codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied", true); appAutoFocusTextControl(codeCode); try { codeCode.setSelectionRange(a + codeAiSuggestion.length, a + codeAiSuggestion.length); } catch (_) {} });
       codeAiPanel.appendChild(apply);
@@ -76299,6 +76467,7 @@ setOfficeProgress("pc", false);
   }
   function codeAiRequest(operation, userRequest) {
     if (codeAiBusy || !codeCode) return;
+    if (codeActiveBuiltin && codeActiveBuiltin.readOnly && operation !== "explain") { codeAiSetStatus("copy canonical source to edit", false); return; }
     var challenge = window.__monitorChatTurnstile;
     var transport = window.fetch, endpoint = window.__monitorChatEndpoint || "https://marketa.behdad.org/chat";
     if (typeof challenge !== "function" || typeof transport !== "function") { codeAiSetStatus("ai unavailable", false); return; }
@@ -76312,7 +76481,7 @@ setOfficeProgress("pc", false);
     }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
       if (requestToken !== codeAiRequestToken) return;
       var raw = body && (body.reply || body.text || ""), data; try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { data = { text: String(raw), suggestion: "" }; } codeAiRender(data || {});
-    }).catch(function (error) { if (requestToken === codeAiRequestToken) codeAiSetStatus(error && error.message === "AI 403" ? "verify again" : "ai unavailable", false); }).finally(function () { if (requestToken !== codeAiRequestToken) return; codeAiBusy = false; [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
+    }).catch(function (error) { if (requestToken === codeAiRequestToken) codeAiSetStatus(error && error.message === "AI 403" ? "verify again" : "ai unavailable", false); }).finally(function () { if (requestToken !== codeAiRequestToken) return; codeAiBusy = false; [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); codeSyncBuiltinControls(); });
   }
   // download the current buffer with the active language's conventional extension.
   function codeDownload() {
@@ -76331,198 +76500,6 @@ setOfficeProgress("pc", false);
     } catch (e) {}
     if (url) setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 0);
   }
-  // First-visit examples are ordinary editable files. They are inserted once, never overwrite
-  // a same-named user file, and stay deleted if the visitor later removes them.
-  var CODE_STARTER_V1 = [
-    "// Typed Loft API ready as the preloaded `loft` global.",
-    "// Typed state changes do not move the view; navigation is explicit:",
-    "loft.party.set(true);",
-    "await loft.room.go(\"garden\");",
-    "// help(loft.party) lists this namespace; capabilities() is machine discovery.",
-    "await loft.caption.show(\"hello from the loft 👋\");",
-    ""
-  ].join("\n");
-  var CODE_STARTER = [
-    "loft.party.set(true);",
-    "await loft.room.go(\"garden\");",
-    "await loft.caption.show(\"hello from the loft 👋\");",
-    ""
-  ].join("\n");
-  var CODE_PY_STARTER = [
-    "import turtle",
-    "",
-    "t = turtle.Turtle()",
-    "for _ in range(4):",
-    "    t.forward(60)",
-    "    t.right(90)",
-    ""
-  ].join("\n");
-  var CODE_PY_HELLO_V1 = [
-    "loft.party.set(True)",
-    "await loft.room.go(\"garden\")",
-    "await loft.caption.show(\"hello from the loft 👋\")",
-    ""
-  ].join("\n");
-  var CODE_PY_HELLO = [
-    "import loft",
-    "",
-    "loft.party.set(True)",
-    "await loft.room.go(\"garden\")",
-    "await loft.caption.show(\"hello from the loft 👋\")",
-    ""
-  ].join("\n");
-  var CODE_PY_LOFT_API = [
-    "import loft",
-    "",
-    "status = loft.game.status()",
-    "print(status)",
-    "",
-    "# Actions start when called; await one when you need its final result.",
-    "loft.weather.rain.set(None)  # release the override back to automatic weather",
-    "# loft.party.set(True)",
-    "# await loft.room.go(\"garden\")",
-    ""
-  ].join("\n");
-  var CODE_PY_SPACE_FILLER = [
-    "import turtle",
-    "t = turtle.Turtle()",
-    "",
-    "def fill(n, s=1):",
-    "    if not n:",
-    "        return",
-    "    t.left(90 * s)",
-    "    fill(n - 1, -s)",
-    "    t.forward(10)",
-    "    t.right(90 * s)",
-    "    fill(n - 1, s)",
-    "    t.forward(10)",
-    "    fill(n - 1, s)",
-    "    t.right(90 * s)",
-    "    t.forward(10)",
-    "    fill(n - 1, -s)",
-    "    t.left(90 * s)",
-    "",
-    "t.speed(10)",
-    "t.pensize(7)",
-    "t.pencolor(\"green\")",
-    "",
-    "t.penup()",
-    "t.goto(-75, -75)",
-    "t.pendown()",
-    "fill(4)",
-    "t.penup()",
-    "",
-    "turtle.done()",
-    ""
-  ].join("\n");
-  var CODE_PY_FRAUNCES_SVG = [
-    "import io",
-    "import uharfbuzz as hb",
-    "from fontTools.ttLib import TTFont",
-    "from fontTools.pens.svgPathPen import SVGPathPen",
-    "from loft import display_svg",
-    "",
-    "data = await googlefonts(\"Fraunces\")",
-    "font = TTFont(io.BytesIO(data))",
-    "glyphs = font.getGlyphSet()",
-    "hb_font = hb.Font(hb.Face(data))",
-    "buffer = hb.Buffer()",
-    "buffer.add_str(\"LoftType\")",
-    "buffer.guess_segment_properties()",
-    "hb.shape(hb_font, buffer)",
-    "extents = hb_font.get_font_extents(\"ltr\")",
-    "ascent, descent = extents.ascender, extents.descender",
-    "",
-    "x = 0",
-    "paths = []",
-    "for info, position in zip(buffer.glyph_infos, buffer.glyph_positions):",
-    "    name = font.getGlyphName(info.codepoint)",
-    "    pen = SVGPathPen(glyphs)",
-    "    glyphs[name].draw(pen)",
-    "    gx = x + position.x_offset",
-    "    gy = position.y_offset",
-    "    paths.append(f'<path d=\"{pen.getCommands()}\" transform=\"translate({gx} {gy})\"/>')",
-    "    x += position.x_advance",
-    "",
-    "height = ascent - descent",
-    "svg = f'''<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {x} {height}\">",
-    "<g transform=\"translate(0 {ascent}) scale(1 -1)\" fill=\"#8e3a4a\">",
-    "{''.join(paths)}",
-    "</g></svg>'''",
-    "display_svg(svg)",
-    ""
-  ].join("\n");
-  var CODE_JS_FRAUNCES_SVG = [
-    "const { hb, font } = await harfbuzz();",
-    "const buffer = hb.createBuffer();",
-    "buffer.addText(\"LoftType\");",
-    "buffer.guessSegmentProperties();",
-    "hb.shape(font, buffer);",
-    "",
-    "const extents = font.hExtents();",
-    "let x = 0;",
-    "const paths = buffer.json().map(glyph => {",
-    "  const path = font.glyphToPath(glyph.g);",
-    "  const transform = `translate(${x + glyph.dx} ${glyph.dy})`;",
-    "  x += glyph.ax;",
-    "  return `<path d=\"${path}\" transform=\"${transform}\"/>`;",
-    "});",
-    "",
-    "const height = extents.ascender - extents.descender;",
-    "const svg = `<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ${x} ${height}\">",
-    "<g transform=\"translate(0 ${extents.ascender}) scale(1 -1)\" fill=\"#8e3a4a\">",
-    "${paths.join(\"\")}",
-    "</g></svg>`;",
-    "display_svg(svg);",
-    ""
-  ].join("\n");
-  var CODE_EXAMPLES_KEY = "deskCodeExamplesV1";
-  var CODE_PY_HELLO_KEY = "deskCodePythonHelloV1";
-  var CODE_HELLO_SYNC_KEY = "deskCodeHelloSyncV2";
-  var CODE_LOFT_API_KEY = "deskCodeLoftApiV1";
-  var CODE_SPACE_FILLER_KEY = "deskCodeSpaceFillerV1";
-  var CODE_FRAUNCES_SVG_KEY = "deskCodeLoftTypeV3";
-  var codeExamplesAdded = { js: false, python: false };
-  function codeSeedExamples() {
-    try {
-      var js = readScripts("js"), py = readScripts("python");
-      if (!localStorage.getItem(CODE_EXAMPLES_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(js, "hello.js")) { js["hello.js"] = CODE_STARTER; codeExamplesAdded.js = true; }
-        if (!Object.prototype.hasOwnProperty.call(py, "square.py")) { py["square.py"] = CODE_PY_STARTER; codeExamplesAdded.python = true; }
-        localStorage.setItem(CODE_EXAMPLES_KEY, "1");
-      }
-      if (!localStorage.getItem(CODE_SPACE_FILLER_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(py, "space-filler.py")) { py["space-filler.py"] = CODE_PY_SPACE_FILLER; codeExamplesAdded.python = true; }
-        localStorage.setItem(CODE_SPACE_FILLER_KEY, "1");
-      }
-      if (!localStorage.getItem(CODE_PY_HELLO_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(py, "hello.py")) { py["hello.py"] = CODE_PY_HELLO; codeExamplesAdded.python = true; }
-        localStorage.setItem(CODE_PY_HELLO_KEY, "1");
-      }
-      if (!localStorage.getItem(CODE_HELLO_SYNC_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(js, "hello.js") || js["hello.js"] === CODE_STARTER_V1) { js["hello.js"] = CODE_STARTER; codeExamplesAdded.js = true; }
-        if (!Object.prototype.hasOwnProperty.call(py, "hello.py") || py["hello.py"] === CODE_PY_HELLO_V1) { py["hello.py"] = CODE_PY_HELLO; codeExamplesAdded.python = true; }
-        localStorage.setItem(CODE_HELLO_SYNC_KEY, "1");
-      }
-      if (!localStorage.getItem(CODE_LOFT_API_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(py, "loft-api.py")) { py["loft-api.py"] = CODE_PY_LOFT_API; codeExamplesAdded.python = true; }
-        localStorage.setItem(CODE_LOFT_API_KEY, "1");
-      }
-      if (!Object.prototype.hasOwnProperty.call(js, "loft-type.js")) {
-        js["loft-type.js"] = CODE_JS_FRAUNCES_SVG; codeExamplesAdded.js = true;
-      }
-      if (!localStorage.getItem(CODE_FRAUNCES_SVG_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(py, "loft-type.py")) {
-          py["loft-type.py"] = CODE_PY_FRAUNCES_SVG; codeExamplesAdded.python = true;
-        } else if (/^from loft[a-z]* import display_svg$/m.test(py["loft-type.py"])) {
-          py["loft-type.py"] = py["loft-type.py"].replace(/^from loft[a-z]* import display_svg$/m, "from loft import display_svg");
-        }
-        localStorage.setItem(CODE_FRAUNCES_SVG_KEY, "1");
-      }
-      writeScripts(js, "js"); writeScripts(py, "python");
-    } catch (e) {}
-  }
-  codeSeedExamples();
   var codeWelcomeShown = { js: false, python: false };
   function codeMaybeShowWelcome() {
     if (codeWelcomeShown[codeLanguage] || !codeCode || !codeName) return;
@@ -76543,6 +76520,7 @@ setOfficeProgress("pc", false);
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone editing
     monitor.classList.add("show-code");
+    codeSyncBuiltinControls();
     codeRefreshPicker(codeName && codeName.value.trim() ? codeName.value.trim() : null);
     // seed (+ focus) in a tick so it runs AFTER any synchronous codeLoad/codeNew from edit() — it then
     // sees the final buffer state and only fills a genuinely blank first-visit slate.
@@ -76607,13 +76585,20 @@ setOfficeProgress("pc", false);
   // Code's storage/openCode; kept OUT of the console-toys region so a parent edit there
   // never collides. Require run("name")/edit("name") — no bare-identifier script calls.
   window.scripts = function () { return scriptsListStr("js"); };
+  function codeResolveScript(name, language) {
+    var key = String(name), lang = language === "python" ? "python" : "js", saved = readScripts(lang);
+    if (codeHasOwn(saved, key)) return { name: key, code: String(saved[key]), language: lang, builtin: null };
+    var builtin = codeFindBuiltin(key, lang);
+    if (!builtin || builtin.readOnly || (!codeBuiltinHasOverride(builtin) && !codeHasOwn(codeBuiltinSources, builtin.label))) return null;
+    return { name: builtin.label, code: codeBuiltinText(builtin), language: lang, builtin: builtin };
+  }
   window.run = function (name) {
     if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr("js");
-    var key = String(name), scr = readScripts("js");
-    if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr("js");
+    var key = String(name), resolved = codeResolveScript(key, "js");
+    if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
     codeStopRepeat(); // a one-shot run supersedes any active loop
-    codeRunCode(key, scr[key]);
-    return "▶ running " + key + "…";
+    codeRunCode(resolved.name, resolved.code);
+    return "▶ running " + resolved.name + "…";
   };
   // repeat("name") / repeat() → run a script on a loop until Esc (or stop()/reset). A compile or
   // runtime error ends the loop (never spins on a broken script); it also pauses while the tab is
@@ -76648,9 +76633,9 @@ setOfficeProgress("pc", false);
       if (codeLanguage === "js" && codeCode && codeCode.value.trim()) { key = (codeName && codeName.value.trim()) || "(code)"; code = codeCode.value; } // no arg → loop the current JS buffer
       else return "repeat(\"name\") — which script? " + scriptsListStr("js");
     } else {
-      key = String(name); var scr = readScripts("js");
-      if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr("js");
-      code = scr[key];
+      key = String(name); var resolved = codeResolveScript(key, "js");
+      if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
+      key = resolved.name; code = resolved.code;
     }
     var tok = ++codeRepeatToken; codeRepeatOn = true;
     codeUpdateRunBtn();
@@ -76667,7 +76652,10 @@ setOfficeProgress("pc", false);
     if (name != null && String(name).trim() !== "") {
       var key = String(name), lang = codeExplicitLanguage(key);
       if (!lang) lang = Object.prototype.hasOwnProperty.call(readScripts("python"), key) ? "python" : "js";
-      codeLoad(key, lang); return "editing \"" + key + "\"";
+      var builtin = codeFindBuiltin(key, lang);
+      if (builtin && !codeHasOwn(readScripts(lang), key)) codeLoadBuiltin(builtin);
+      else codeLoad(key, lang);
+      return "editing \"" + key + "\"";
     }
     codeNew();
     return "code — new script";
@@ -126284,7 +126272,7 @@ function spawnDustMote(container) {
   }
 
   // ── Trailer presentation host ───────────────────────────────────────────────
-  // The authored timeline lives in loft-day.trailer.js. This host owns only the film
+  // The authored timeline lives in code-snippets/trailer.js. This host owns only the film
   // treatment, ghost cursor, trusted-gesture audio prime, and teardown boundary; every
   // world mutation in the timeline goes through the typed Loft API preview transaction.
   var watchBtn = document.getElementById("watch-loft-btn");
@@ -126640,7 +126628,7 @@ function spawnDustMote(container) {
     "cinema.bike": "cinema-bike",
     "cinema.cushion": "cinema-cushion-wine"
   };
-  async function cineInteract(interaction) {
+  async function cinePoint(interaction) {
     var target = CINE_INTERACTION_TARGETS[interaction];
     if (target) {
       cursorGlideTo(target, CURSOR_GLIDE_MS);
@@ -126648,7 +126636,7 @@ function spawnDustMote(container) {
       var point = cursorPointFor(target);
       if (point) { cursorPlace(point.x, point.y); cursorRipple(point.x, point.y); }
     }
-    return window.loft.interaction.activate(interaction);
+    return interaction;
   }
   // The score starts after the trusted Trailer click. Unlock its real recording here with a
   // silent play→pause so WebKit permits the delayed timeline beat. Prime only the track this
@@ -126726,12 +126714,7 @@ function spawnDustMote(container) {
       card: cineShowCard,
       hideCard: cineHideCard,
       cut: cineCutAction,
-      interact: function (interaction) {
-        return cineInteract(interaction).then(function (envelope) {
-          if (!envelope || !envelope.ok) throw new Error("Trailer interaction failed: " + interaction);
-          return envelope.value;
-        });
-      },
+      point: cinePoint,
       stop: stopCinematic
     };
     return window.loft.session.preview.begin("trailer").then(function (begun) {

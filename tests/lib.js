@@ -66,6 +66,20 @@ function hook(opts) {
   ].join("\n");
 }
 
+// `fetch()` cannot read sibling files from a file:// page. Production uses ordinary same-origin
+// fetches; headless scratch pages receive the exact canonical snippet bytes through this test-only
+// resource hook, generated from the repository at run time rather than keeping a second source copy.
+function codeSnippetResourceHook(html) {
+  if (html.indexOf('src="code-snippets/manifest.js"') === -1) return "";
+  var root = path.join(ROOT, "code-snippets"), resources = {};
+  fs.readdirSync(root, { withFileTypes: true }).forEach(function (entry) {
+    if (!entry.isFile()) return;
+    resources["code-snippets/" + entry.name] = fs.readFileSync(path.join(root, entry.name), "utf8");
+  });
+  var serialized = JSON.stringify(resources).replace(/<\/script/gi, "<\\/script");
+  return "<script>window.__codeSnippetResourceLoader=function(path){var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing test resource: '+path));};</script>";
+}
+
 function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
   // --mute-audio: the playthrough click-storms every interactive element and state.js
   // starts beds/dances/songs, so the game's Web Audio actually SOUNDS. --headless=new
@@ -81,17 +95,18 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
 
 function makeScratch(file, harness, hookHtml) {
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
-  var patched = html.replace("<head>", "<head>" + hookHtml).replace("</body>", harness + "\n</body>");
+  var patched = html.replace("<head>", "<head>" + hookHtml + codeSnippetResourceHook(html)).replace("</body>", harness + "\n</body>");
   // Each page gets a private directory so relative authored assets remain relative.
   // Preserve the exact HTML basename: Loft Day's outer RSVP scaffolding is selected
   // positively by an rsvp/rsvp.html pathname, while every other name is game-only.
   var scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-page-"));
   var scratch = path.join(scratchDir, path.basename(file));
-  ["loft-day.en.js", "loft-day.cs.js", "loft-day.trailer.js"].forEach(function (name) {
+  ["loft-day.en.js", "loft-day.cs.js"].forEach(function (name) {
     if (html.indexOf('src="' + name + '"') !== -1) {
       fs.copyFileSync(path.join(ROOT, name), path.join(scratchDir, name));
     }
   });
+  if (html.indexOf('src="code-snippets/') !== -1) fs.cpSync(path.join(ROOT, "code-snippets"), path.join(scratchDir, "code-snippets"), { recursive: true });
   fs.writeFileSync(scratch, patched);
   return scratch;
 }

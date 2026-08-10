@@ -5,11 +5,17 @@
 var fs = require("fs");
 var path = require("path");
 var child = require("child_process");
+var vm = require("vm");
 var lib = require("./lib");
 
 var ROOT = path.join(__dirname, "..");
 var html = fs.readFileSync(path.join(ROOT, "rsvp.html"), "utf8");
 var worker = fs.readFileSync(path.join(ROOT, "chat.js"), "utf8");
+var manifestSource = fs.readFileSync(path.join(ROOT, "code-snippets", "manifest.js"), "utf8");
+var manifestContext = { window: {} };
+vm.runInNewContext(manifestSource, manifestContext);
+var snippets = manifestContext.window.LOFT_CODE_SNIPPETS;
+function snippet(filename) { return fs.readFileSync(path.join(ROOT, "code-snippets", filename), "utf8"); }
 var failures = 0;
 
 function check(ok, label, detail) {
@@ -47,51 +53,29 @@ check(/function pyDrainCodeQueue\(\)[\s\S]*?__loftTurtleCommand\("screen_clear"\
 check(/id="monitor-code-explain"[^>]*>explain<\/button>/.test(html) &&
       /id="monitor-code-ai-status"[^>]*>ready<\/span>/.test(html),
   "Code AI controls use explicit, compact labels");
-check(/js\["hello\.js"\]\s*=\s*CODE_STARTER/.test(html) &&
-      /py\["square\.py"\]\s*=\s*CODE_PY_STARTER/.test(html) &&
-      /CODE_HELLO_SYNC_KEY\s*=\s*"deskCodeHelloSyncV2"/.test(html) &&
-      /loft\.party\.set\(true\)/.test(html) &&
-      /await loft\.room\.go\(\\"garden\\"\)/.test(html) &&
-      /await loft\.caption\.show\(\\"hello from the loft 👋\\"\)/.test(html) &&
-      /for _ in range\(4\):[\s\S]*?t\.forward\(60\)[\s\S]*?t\.right\(90\)/.test(html),
-  "one-time typed hello.js and square.py examples are preloaded without overwriting user files");
-check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
-      /CODE_SPACE_FILLER_KEY\s*=\s*"deskCodeSpaceFillerV1"/.test(html) &&
-      /t\.goto\(-75,\s*-75\)/.test(html) &&
-      /fill\(4\)/.test(html),
-  "the centered space-filler turtle reaches existing players through its own one-time migration");
-check(/py\["hello\.py"\]\s*=\s*CODE_PY_HELLO/.test(html) &&
-      /CODE_PY_HELLO_KEY\s*=\s*"deskCodePythonHelloV1"/.test(html) &&
-      /var CODE_PY_HELLO = \[\s*"import loft"/.test(html) &&
-      /loft\.party\.set\(True\)/.test(html) &&
-      /await loft\.room\.go\(\\"garden\\"\)/.test(html) &&
-      /await loft\.caption\.show\(\\"hello from the loft 👋\\"\)/.test(html),
-  "hello.py mirrors the typed Party, explicit Garden pan and greeting demo without overwriting profiles");
-check(/py\["loft-api\.py"\]\s*=\s*CODE_PY_LOFT_API/.test(html) &&
-      /CODE_LOFT_API_KEY\s*=\s*"deskCodeLoftApiV1"/.test(html) &&
-      /import loft/.test(html) &&
-      /loft\.game\.status\(\)/.test(html) &&
-      /loft\.weather\.rain\.set\(None\)/.test(html) &&
-      /await loft\.room\.go\(\\"garden\\"\)/.test(html),
-  "a capability-driven import-loft example reaches existing Python Code profiles");
-check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
-      /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV3"/.test(html) &&
-      /from loft import display_svg/.test(html) &&
-      /SVGPathPen/.test(html) &&
-      /import uharfbuzz as hb/.test(html) &&
-      /hb\.shape\(hb_font, buffer\)/.test(html) &&
-      /hb_font\.get_font_extents\(\\"ltr\\"\)/.test(html) &&
-      /await googlefonts\(\\"Fraunces\\"\)/.test(html) &&
-      /buffer\.add_str\(\\"LoftType\\"\)/.test(html),
-  "the saved HarfBuzz + FontTools example renders LoftType from Fraunces outlines");
-check(/js\["loft-type\.js"\]\s*=\s*CODE_JS_FRAUNCES_SVG/.test(html) &&
-      /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV3"/.test(html) &&
-      /hasOwnProperty\.call\(js, "loft-type\.js"\)[\s\S]*?if \(!localStorage\.getItem\(CODE_FRAUNCES_SVG_KEY\)\)/.test(html) &&
-      /const \{ hb, font \} = await harfbuzz\(\)/.test(html) &&
-      /buffer\.addText\(\\"LoftType\\"\)/.test(html) &&
-      /font\.glyphToPath\(glyph\.g\)/.test(html) &&
-      /display_svg\(svg\)/.test(html),
-  "the editable harfbuzzjs SVG example reaches existing profiles without a new migration key");
+check(Array.isArray(snippets) && snippets.length === 8 &&
+      snippets.every(function (entry) { return entry.filename && entry.path === "code-snippets/" + entry.filename && entry.label && /^(js|python)$/.test(entry.language) && !Object.prototype.hasOwnProperty.call(entry, "content"); }) &&
+      snippets.map(function (entry) { return entry.label; }).join("|") !== snippets.map(function (entry) { return entry.label; }).sort().join("|"),
+  "the metadata-only snippet manifest names every canonical public file");
+check(/src="code-snippets\/manifest\.js"/.test(html) &&
+      (html.match(/src="code-snippets\/trailer\.js"/g) || []).length === 1 &&
+      !/CODE_STARTER|CODE_PY_STARTER|CODE_PY_HELLO|CODE_PY_LOFT_API|CODE_PY_SPACE_FILLER|CODE_PY_FRAUNCES|CODE_JS_FRAUNCES|deskCodeExamples|deskCodeHelloSync/.test(html),
+  "Code and the Trailer load canonical external files without inline samples or migrations");
+var helloJs = snippet("hello.js"), helloPy = snippet("hello.py"), squarePy = snippet("square.py");
+check(/loft\.party\.set\(true\)/.test(helloJs) && /await loft\.room\.go\("garden"\)/.test(helloJs) && /await loft\.caption\.show\("hello from the loft 👋"\)/.test(helloJs) &&
+      /import loft/.test(helloPy) && /loft\.party\.set\(True\)/.test(helloPy) && /await loft\.room\.go\("garden"\)/.test(helloPy) &&
+      /for _ in range\(4\):[\s\S]*?t\.forward\(60\)[\s\S]*?t\.right\(90\)/.test(squarePy),
+  "the canonical JavaScript/Python hello pair and Turtle square remain authored samples");
+var fillerPy = snippet("space-filler.py"), loftApiPy = snippet("loft-api.py");
+check(/t\.goto\(-75,\s*-75\)/.test(fillerPy) && /fill\(4\)/.test(fillerPy) &&
+      /import loft/.test(loftApiPy) && /loft\.game\.status\(\)/.test(loftApiPy) && /loft\.weather\.rain\.set\(None\)/.test(loftApiPy),
+  "the canonical recursive Turtle and typed Loft API samples remain intact");
+var loftTypePy = snippet("loft-type.py"), loftTypeJs = snippet("loft-type.js");
+check(/from loft import display_svg/.test(loftTypePy) && /SVGPathPen/.test(loftTypePy) && /import uharfbuzz as hb/.test(loftTypePy) &&
+      /await googlefonts\("Fraunces"\)/.test(loftTypePy) && /buffer\.add_str\("LoftType"\)/.test(loftTypePy) &&
+      /const \{ hb, font \} = await harfbuzz\(\)/.test(loftTypeJs) && /buffer\.addText\("LoftType"\)/.test(loftTypeJs) &&
+      /font\.glyphToPath\(glyph\.g\)/.test(loftTypeJs) && /display_svg\(svg\)/.test(loftTypeJs),
+  "both canonical HarfBuzz + Fraunces package demos render LoftType from outlines");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),
@@ -176,9 +160,15 @@ var harness = [
   '<script>',
   '(async function(){',
   '  var out={};',
-  '  localStorage.removeItem("deskScripts"); localStorage.removeItem("deskPythonScripts"); localStorage.removeItem("deskCodeDraft"); localStorage.removeItem("deskCodeLanguage");',
+  '  localStorage.removeItem("deskScripts"); localStorage.removeItem("deskPythonScripts"); localStorage.removeItem("deskCodeDraft"); localStorage.removeItem("deskCodeLanguage"); localStorage.removeItem("deskCodeBuiltinOverrides");',
   '  var mon=document.getElementById("office-monitor"); mon.classList.add("screen-on","show-caps","show-code");',
   '  var name=document.getElementById("monitor-code-name"), code=document.getElementById("monitor-code-code"), py=document.getElementById("monitor-code-lang-py");',
+  '  await new Promise(function(r){setTimeout(r,30)});',
+  '  function codeItem(label){return Array.from(document.querySelectorAll("#monitor-code-list .code-item")).find(function(item){return item.textContent===label;});}',
+  '  var helloItem=codeItem("examples/hello.js");helloItem.click();out.builtinHello=code.value;out.builtinIdentity=name.value;code.value="";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});var emptyOverrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");out.emptyOverride=Object.prototype.hasOwnProperty.call(emptyOverrides,"examples/hello.js")&&emptyOverrides["examples/hello.js"]==="";out.builtinSelectedAfterEdit=codeItem("examples/hello.js").classList.contains("active")&&codeItem("examples/hello.js").classList.contains("edited");document.getElementById("monitor-code-del").click();out.builtinReset=/loft\\.party\\.set\\(true\\)/.test(code.value)&&!Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"examples/hello.js");',
+  '  codeItem("source/trailer.js").click();out.trailer={code:code.value,name:name.value,readonly:code.readOnly&&name.readOnly,runDisabled:document.getElementById("monitor-code-run").disabled,deleteDisabled:document.getElementById("monitor-code-del").disabled};var oldPrompt=window.prompt;window.prompt=function(){return "trailer-copy.js";};document.getElementById("monitor-code-copy").click();window.prompt=oldPrompt;out.trailerCopy=JSON.parse(localStorage.getItem("deskScripts")||"{}")["trailer-copy.js"];',
+  '  window.edit("zebra.js");code.value="window.zebra=1";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});window.edit("Aardvark.js");code.value="window.aardvark=1";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});var labels=Array.from(document.querySelectorAll("#monitor-code-list .code-item")).map(function(item){return item.textContent;});var sorted=labels.slice().sort(function(a,b){var aa=a.toLowerCase(),bb=b.toLowerCase();return aa<bb?-1:aa>bb?1:a<b?-1:a>b?1:0;});out.sortedMerged=labels.join("|")===sorted.join("|")&&labels.includes("examples/hello.js")&&labels.includes("source/trailer.js")&&labels.includes("Aardvark.js")&&labels.includes("zebra.js");out.selectionAfterResort=codeItem("Aardvark.js").classList.contains("active");',
+  '  window.edit();',
   '  py.click(); code.value="print(\\\"turtle time\\\")"; code.dispatchEvent(new Event("input",{bubbles:true}));',
   '  await new Promise(function(r){setTimeout(r,180)});',
   '  out.draftLanguage=JSON.parse(localStorage.getItem("deskCodeDraft")||"{}").language;',
@@ -231,9 +221,15 @@ var harness = [
   '<\/script>',
 ].join("\n");
 
-var state = lib.runPageSync("rsvp.html", harness, 2400, { patchRaf: true, forceHybridPointer: true });
+var state = lib.runPageSync("rsvp.html", harness, 5200, { patchRaf: true, forceHybridPointer: true });
 check(state && !state.error, "headless Code interaction completed", state && state.error);
 if (state && !state.error) {
+  check(state.builtinHello === helloJs && state.builtinIdentity === "examples/hello.js" && state.emptyOverride && state.builtinSelectedAfterEdit && state.builtinReset,
+    "editable built-ins load exact canonical text, preserve empty overrides, stay selected, and reset by deleting the override", state);
+  check(state.trailer && state.trailer.code === snippet("trailer.js") && state.trailer.name === "source/trailer.js" && state.trailer.readonly && state.trailer.runDisabled && state.trailer.deleteDisabled && state.trailerCopy === snippet("trailer.js"),
+    "the executable Trailer is the exact read-only Code source and can be copied into a user file", state.trailer);
+  check(state.sortedMerged && state.selectionAfterResort,
+    "the merged canonical/user file list sorts deterministically at display time without losing selection", state);
   check(state.pythonSaved === 'print("turtle time")' && state.jsUntouched,
     "a named Python buffer autosaves without contaminating legacy JavaScript files", state);
   check(state.languageSwitchPreserves && state.languageSwitchStorage,

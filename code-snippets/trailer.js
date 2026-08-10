@@ -1,4 +1,4 @@
-/* Loft Day's authored trailer timeline. The page owns only presentation mechanics
+/* Loft Day's authored trailer timeline. The page injects only presentation mechanics
    (cards, captions, cuts, cursor, scheduling); every world change below goes through
    the same typed `loft` API exposed to Code, Console, and Python. */
 (function () {
@@ -52,6 +52,11 @@
     await pause(host, hold); // the same caption remains through the move and tableau
   }
 
+  async function interact(host, loft, id) {
+    await host.point(id); // presentation-only ghost cursor; activation stays in the typed API
+    return unwrap(await loft.interaction.activate(id), "Activate " + id);
+  }
+
   async function run(host) {
     var loft = window.loft;
     if (!loft || !loft.session || !loft.session.preview) {
@@ -73,13 +78,13 @@
 
     await announceAndCut(host, t, "cinema", "cine_chapter_open", "cine_below", t.cinema,
       async function () {
-        await host.interact("cinema.bike");
+        await interact(host, loft, "cinema.bike");
         await pause(host, host.reduced ? 500 : 900);
-        await host.interact("cinema.cushion");
+        await interact(host, loft, "cinema.cushion");
       });
 
     await announceAndCut(host, t, "garden", "cine_chapter_unlock", "cine_clues", t.garden,
-      async function () { await host.interact("garden.tensegrity"); });
+      async function () { await interact(host, loft, "garden.tensegrity"); });
 
     await announceAndCut(host, t, "bathroom", "cine_chapter_wander", "cine_anywhere", t.bathroom,
       async function () { unwrap(await loft.bathroom.bubbles.preview(true), "Start bubbles preview"); });
@@ -98,9 +103,9 @@
 
     await announceAndCut(host, t, "cuddly", "cine_chapter_soft", "cine_soft", t.cuddly,
       async function () {
-        await host.interact("cuddly.pan-edge");
+        await interact(host, loft, "cuddly.pan-edge");
         await pause(host, host.reduced ? 450 : 800);
-        await host.interact("cuddly.bolster");
+        await interact(host, loft, "cuddly.bolster");
       });
 
     await announceAndCut(host, t, "garden", "cine_chapter_party", "cine_party", t.party,

@@ -110,8 +110,12 @@ AddType application/manifest+json .webmanifest
   # A new build ships under a new path, so "immutable" is safe.
   <IfModule mod_setenvif.c>
     SetEnvIf Request_URI "^/(pyodide|linux|harfbuzzjs|doom|duke|q3|princejs)/" LOFT_IMMUTABLE
+    # Code's public built-ins are live source, not versioned bundles. Revalidate them with the
+    # page so the IDE never pairs a new manifest with stale sample text.
+    SetEnvIf Request_URI "^/code-snippets/" LOFT_CODE_SNIPPET
   </IfModule>
   Header set Cache-Control "public, max-age=31536000, immutable" env=LOFT_IMMUTABLE
+  Header set Cache-Control "no-cache" env=LOFT_CODE_SNIPPET
 
   # Media + fonts change rarely: a month of edge/browser cache absorbs a spike
   # while still letting an art tweak propagate within weeks.

@@ -173,6 +173,11 @@ The typed room API covers all ten rooms; `loft.bar` is the Kitchen alias and `lo
 Garden alias. State commands leave the current view alone; navigate explicitly with, for example,
 `await loft.room.go("garden")`. The JavaScript console and Code app preload `loft`; no import is
 needed. `await loft.caption.show("hello")` writes a literal scene caption without moving the view.
+Code lists canonical examples under `examples/` alongside visitor-created files. Editing a built-in
+stores a local override; its reset control reveals the current canonical example again. The exact
+authored Trailer is also visible as the read-only `source/trailer.js`. It can be played through
+`await loft.trailer.play()`, inspected with `loft.trailer.status()`, and stopped with
+`await loft.trailer.stop("restore")`.
 
 ### Fast-forward shortcuts
 

@@ -396,15 +396,17 @@ capability rows plus a short primitives/signatures list. Do not add `CONSOLE_HEL
 command index to that payload. Code's model treats the manifest as authoritative; its examples and
 generated drafts use the `loft.*` namespaces and completion metadata.
 
-Code's built-in virtual files are declared by metadata in `code-snippets/manifest.js` and loaded as
-exact same-origin text from their public files. The manifest never embeds source. The sidebar sorts
-the effective built-ins and visitor-created files only while rendering; manifest order and stored
-objects are not rewritten. Editable built-ins stay canonical until a property with their display
-label exists in `localStorage["deskCodeBuiltinOverrides"]`; an empty-string property is a valid
-override. Reset removes that property and reveals the current canonical source. Visitor-created
-files remain separately owned by `deskScripts` / `deskPythonScripts`; do not reintroduce sample
-versions, migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository
-bytes through a test-only resource hook because `file://` cannot fetch siblings.
+Code's canonical virtual files are the filenames in `code-snippets/manifest.js`; language and
+same-origin path derive from each extension/name, and the public file remains the only source body.
+The sidebar always puts the unsaved buffer first, then sorts canonical and visitor-created basenames
+only while rendering; its small icons distinguish ownership without path prefixes. A canonical file
+stays fresh until an own property with its filename exists in
+`localStorage["deskCodeBuiltinOverrides"]`; an empty-string property is a valid override. Reset
+removes that property and reveals the current canonical source. Visitor-created files remain
+separately owned by `deskScripts` / `deskPythonScripts`, and an exact canonical filename is an edit
+of that canonical file rather than a second colliding identity. Do not reintroduce sample versions,
+migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository bytes through
+a test-only resource hook because `file://` cannot fetch siblings.
 
 The Pyodide console installs an embedded `loft.py` module beside the browser Turtle module. On
 `import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python

@@ -180,11 +180,11 @@ needed. Scripts may visit any room and start a Road Trip independently of story 
 on physical room objects still require that room to be open, and an action remains unavailable
 while a conflicting or prerequisite activity is active. `await loft.caption.show("hello")` writes
 a literal scene caption without moving the view.
-Code lists canonical examples under `examples/` alongside visitor-created files. Editing a built-in
-stores a local override; its reset control reveals the current canonical example again. The exact
-authored Trailer is also visible as the read-only `source/trailer.js`. It can be played through
-`await loft.trailer.play()`, inspected with `loft.trailer.status()`, and stopped with
-`await loft.trailer.stop("restore")`.
+Code puts the unsaved buffer first, then lists canonical and visitor-created files by basename;
+their icons distinguish ownership. Editing a canonical file stores a local override, and its reset
+control reveals the current public file again. The authored Trailer is the canonical `trailer.js`.
+It can be played through `await loft.trailer.play()`, inspected with `loft.trailer.status()`, and
+stopped with `await loft.trailer.stop("restore")`.
 
 ### Fast-forward shortcuts
 

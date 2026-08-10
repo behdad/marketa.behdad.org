@@ -6696,11 +6696,9 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-item.unsaved{font-style:italic; color:#8aa88a}
 .code-item.unsaved.active{color:#a7e08a}
 .code-item.builtin{color:#9bb899}
-.code-item.builtin::before{content:"·";flex:none;margin-right:.45px;color:#a7e08a;font-size:2px}
+.code-item.builtin::before{content:"◆";flex:none;margin-right:.45px;color:#82b884;font-size:1.35px}
 .code-item.builtin.edited::before{content:"*"}
-.code-item.source{color:#88a8bf}
-.code-item.source::before{content:"◇";color:#a9c9dd;font-size:1.65px}
-.code-item.source.active{color:#b9d9ed;background:#243942}
+.code-item.user-file::before{content:"";flex:none;width:1.8px;height:1.8px;margin-right:.45px;border:.25px solid #6d8579;border-radius:.25px;box-sizing:border-box}
 .code-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
 .code-main{position:relative; flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
 .code-top{grid-row:1; grid-column:1; display:flex; align-items:center; gap:0.6px; padding:0 5px 0 0} /* Run aligns with the editor's left edge; filename still clears the close control */
@@ -6717,7 +6715,6 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
 .code-btn-run.code-btn-stop{color:#e39191} /* ■ stop state while a script is looping (repeat()) */
 .code-wrap button:disabled{opacity:.35;cursor:default}
-.code-wrap.source-readonly .code-name,.code-wrap.source-readonly .code-ta{color:#a9c9dd;background:#10171a}
 .code-ta{grid-row:2; grid-column:1; min-height:0; resize:none; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; scrollbar-width:none; caret-color:#8fd070}
 .code-ai-tools{grid-row:3; grid-column:1; display:flex; align-items:center; gap:.5px; min-height:4px; padding:0 1px}
 .code-ai-ask{min-width:0; flex:1; height:3.2px; padding:0 .8px .3px 1.2px; border:.3px solid #2b3a3a; border-radius:.7px; background:#111b17; color:#d8eed5; font:1.7px/3px ui-monospace,Menlo,monospace}
@@ -76102,18 +76099,14 @@ setOfficeProgress("pc", false);
   function codeGetRunError(language) { return codeRunErrors[language === "python" ? "python" : "js"] || ""; }
   var CODE_STORE_KEYS = { js: "deskScripts", python: "deskPythonScripts" };
   var CODE_BUILTIN_OVERRIDE_KEY = "deskCodeBuiltinOverrides";
-  var CODE_BUILTINS = (Array.isArray(window.LOFT_CODE_SNIPPETS) ? window.LOFT_CODE_SNIPPETS : []).map(function (entry) {
+  var CODE_BUILTINS = (Array.isArray(window.LOFT_CODE_SNIPPETS) ? window.LOFT_CODE_SNIPPETS : []).map(function (filename) {
+    filename = String(filename || "");
     return {
-      filename: String(entry.filename || ""),
-      path: String(entry.path || ""),
-      language: entry.language === "python" ? "python" : "js",
-      label: String(entry.label || entry.filename || ""),
-      role: entry.role === "source" ? "source" : "example",
-      readOnly: entry.readOnly === true,
-      starter: entry.starter === true,
-      packageDemo: entry.packageDemo === true
+      filename: filename,
+      path: "code-snippets/" + filename,
+      language: /\.py$/i.test(filename) ? "python" : "js"
     };
-  }).filter(function (entry) { return entry.filename && entry.path && entry.label; });
+  }).filter(function (entry) { return entry.filename && /\.(?:js|py)$/i.test(entry.filename); });
   var codeBuiltinSources = Object.create(null), codeBuiltinErrors = Object.create(null), codeActiveBuiltin = null;
   function codeHasOwn(object, key) { return Object.prototype.hasOwnProperty.call(object, key); }
   function readCodeBuiltinOverrides() {
@@ -76123,17 +76116,17 @@ setOfficeProgress("pc", false);
   function writeCodeBuiltinOverrides(overrides) {
     try { localStorage.setItem(CODE_BUILTIN_OVERRIDE_KEY, JSON.stringify(overrides)); } catch (e) {}
   }
-  function codeBuiltinHasOverride(entry) { return codeHasOwn(readCodeBuiltinOverrides(), entry.label); }
-  function codeFindBuiltin(label, language) {
-    var wanted = String(label || ""), lang = language === "python" ? "python" : language === "js" ? "js" : "";
-    for (var i = 0; i < CODE_BUILTINS.length; i++) if (CODE_BUILTINS[i].label === wanted && (!lang || CODE_BUILTINS[i].language === lang)) return CODE_BUILTINS[i];
+  function codeBuiltinHasOverride(entry) { return codeHasOwn(readCodeBuiltinOverrides(), entry.filename); }
+  function codeFindBuiltin(filename, language) {
+    var wanted = String(filename || ""), lang = language === "python" ? "python" : language === "js" ? "js" : "";
+    for (var i = 0; i < CODE_BUILTINS.length; i++) if (CODE_BUILTINS[i].filename === wanted && (!lang || CODE_BUILTINS[i].language === lang)) return CODE_BUILTINS[i];
     return null;
   }
   function codeBuiltinText(entry) {
     var overrides = readCodeBuiltinOverrides();
-    if (codeHasOwn(overrides, entry.label)) return String(overrides[entry.label]);
-    if (codeHasOwn(codeBuiltinSources, entry.label)) return codeBuiltinSources[entry.label];
-    return codeBuiltinErrors[entry.label] ? "// canonical source could not be loaded" : "// loading canonical source…";
+    if (codeHasOwn(overrides, entry.filename)) return String(overrides[entry.filename]);
+    if (codeHasOwn(codeBuiltinSources, entry.filename)) return codeBuiltinSources[entry.filename];
+    return codeBuiltinErrors[entry.filename] ? "// canonical source could not be loaded" : "// loading canonical source…";
   }
   function codeLoadResource(path) {
     if (typeof window.__codeSnippetResourceLoader === "function") return Promise.resolve(window.__codeSnippetResourceLoader(path));
@@ -76145,28 +76138,28 @@ setOfficeProgress("pc", false);
   }
   function codeFetchBuiltin(entry) {
     return codeLoadResource(entry.path).then(function (source) {
-      codeBuiltinSources[entry.label] = String(source);
-      delete codeBuiltinErrors[entry.label];
-      if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = codeBuiltinSources[entry.label];
+      codeBuiltinSources[entry.filename] = String(source);
+      delete codeBuiltinErrors[entry.filename];
+      if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = codeBuiltinSources[entry.filename];
       codeRefreshPicker(codeLastSavedName);
     }).catch(function (error) {
-      codeBuiltinErrors[entry.label] = String(error && error.message || error || "unavailable");
+      codeBuiltinErrors[entry.filename] = String(error && error.message || error || "unavailable");
       if (codeActiveBuiltin === entry && codeCode && !codeBuiltinHasOverride(entry)) codeCode.value = "// canonical source could not be loaded";
       codeRefreshPicker(codeLastSavedName);
     });
   }
   function codeSyncBuiltinControls() {
-    var builtin = codeActiveBuiltin, locked = !!(builtin && builtin.readOnly);
-    if (codeWrap) codeWrap.classList.toggle("source-readonly", locked);
+    var builtin = codeActiveBuiltin;
+    if (codeWrap) codeWrap.classList.remove("source-readonly");
     if (codeName) codeName.readOnly = !!builtin;
-    if (codeCode) codeCode.readOnly = locked;
-    if (codeRunBtn) codeRunBtn.disabled = locked;
+    if (codeCode) codeCode.readOnly = false;
+    if (codeRunBtn) codeRunBtn.disabled = false;
     if (codeDelBtn) {
-      codeDelBtn.disabled = !builtin ? false : locked || !codeBuiltinHasOverride(builtin);
-      codeDelBtn.title = builtin ? (locked ? "canonical source" : "reset to canonical") : "delete";
+      codeDelBtn.disabled = builtin ? !codeBuiltinHasOverride(builtin) : false;
+      codeDelBtn.title = builtin ? "reset to canonical" : "delete";
     }
     [codeLangJsBtn, codeLangPyBtn].forEach(function (button) { if (button) button.disabled = !!builtin; });
-    [codeAskBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = locked; });
+    [codeAskBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; });
     if (codeExplainBtn) codeExplainBtn.disabled = false;
   }
   function codeLeaveBuiltin() {
@@ -76183,13 +76176,13 @@ setOfficeProgress("pc", false);
     codeActiveBuiltin = entry;
     codeLanguage = entry.language;
     codeRememberLanguage();
-    if (codeName) codeName.value = entry.label;
+    if (codeName) codeName.value = entry.filename;
     if (codeCode) { codeCode.value = codeBuiltinText(entry); try { codeCode.setSelectionRange(0, 0); } catch (e) {} }
     codeLastSavedName = null;
     codeLastSavedLanguage = entry.language;
     codeSyncBuiltinControls();
-    codeAiSetStatus(entry.readOnly ? "canonical source · read only" : (codeBuiltinHasOverride(entry) ? "edited built-in" : "canonical built-in"), false);
-    codeRefreshPicker(entry.label);
+    codeAiSetStatus(codeBuiltinHasOverride(entry) ? "edited built-in" : "canonical built-in", false);
+    codeRefreshPicker(entry.filename);
   }
   CODE_BUILTINS.forEach(codeFetchBuiltin);
   var CODE_LANG_KEY = "deskCodeLanguage";
@@ -76259,15 +76252,17 @@ setOfficeProgress("pc", false);
   function codeScheduleDraft() { if (codeActiveBuiltin) return; clearTimeout(codeDraftTimer); codeDraftTimer = setTimeout(function () { codeDraftTimer = null; writeCodeDraft(); }, 120); }
   function codeFlushDraft() { clearTimeout(codeDraftTimer); codeDraftTimer = null; writeCodeDraft(); }
   function codeDisplayCompare(a, b) {
+    if (!!a.unsaved !== !!b.unsaved) return a.unsaved ? -1 : 1;
     var rawA = String(a.displayName || a.name || ""), rawB = String(b.displayName || b.name || "");
     var foldedA = rawA.toLowerCase(), foldedB = rawB.toLowerCase();
     return foldedA < foldedB ? -1 : foldedA > foldedB ? 1 : rawA < rawB ? -1 : rawA > rawB ? 1 :
+      !!a.builtin !== !!b.builtin ? (a.builtin ? -1 : 1) :
       String(a.language || "") < String(b.language || "") ? -1 : String(a.language || "") > String(b.language || "") ? 1 : 0;
   }
   function scriptNames(language) { return Object.keys(readScripts(language || codeLanguage)); }
   function codeRunnableNames(language) {
     var lang = language === "python" ? "python" : "js", names = scriptNames(lang);
-    CODE_BUILTINS.forEach(function (entry) { if (entry.language === lang && !entry.readOnly) names.push(entry.label); });
+    CODE_BUILTINS.forEach(function (entry) { if (entry.language === lang) names.push(entry.filename); });
     return names.map(function (name) { return { name: name, language: lang }; }).sort(codeDisplayCompare).map(function (file) { return file.name; });
   }
   function scriptsListStr(language) {
@@ -76281,13 +76276,13 @@ setOfficeProgress("pc", false);
     if (!codeList) return;
     var files = [];
     var unsaved = readCodeUnsaved();
-    if (!codeName.value.trim() && codeCode.value) unsaved = { code: codeCode.value, language: codeLanguage };
-    if (unsaved && unsaved.code) files.push({ name: "unsaved", language: unsaved.language === "python" ? "python" : "js", unsaved: true });
+    if (!codeName.value.trim()) unsaved = { code: codeCode.value, language: codeLanguage };
+    files.push({ name: "unsaved", language: unsaved && unsaved.language === "python" ? "python" : "js", unsaved: true });
     ["js", "python"].forEach(function (language) {
-      scriptNames(language).forEach(function (name) { files.push({ name: name, language: language }); });
+      scriptNames(language).forEach(function (name) { files.push({ name: name, displayName: name, language: language, userFile: true }); });
     });
     CODE_BUILTINS.forEach(function (entry) {
-      files.push({ name: entry.label, displayName: entry.label, language: entry.language, builtin: entry, source: entry.role === "source", edited: codeBuiltinHasOverride(entry) });
+      files.push({ name: entry.filename, displayName: entry.filename, language: entry.language, builtin: entry, edited: codeBuiltinHasOverride(entry) });
     });
     files.sort(codeDisplayCompare);
     codeList.innerHTML = "";
@@ -76304,9 +76299,11 @@ setOfficeProgress("pc", false);
         : file.unsaved
         ? !codeName.value.trim() && file.language === codeLanguage
         : file.name === sel && file.language === codeLastSavedLanguage;
-      it.className = "code-item" + (file.unsaved ? " unsaved" : "") + (file.builtin ? " builtin" : "") + (file.source ? " source" : "") + (file.edited ? " edited" : "") + (active ? " active" : "");
+      it.className = "code-item" + (file.unsaved ? " unsaved" : "") + (file.builtin ? " builtin" : "") + (file.userFile ? " user-file" : "") + (file.edited ? " edited" : "") + (active ? " active" : "");
       it.textContent = file.displayName || file.name;
-      if (file.builtin) it.title = file.source ? "canonical source · read only" : (file.edited ? "edited built-in" : "canonical built-in");
+      if (file.builtin) it.title = file.edited ? "canonical file · locally edited" : "canonical file";
+      else if (file.userFile) it.title = "your saved file";
+      else it.title = "unsaved buffer";
 
       it.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -76347,8 +76344,7 @@ setOfficeProgress("pc", false);
   function codeLoadUnsaved() {
     stashCodeUnsaved();
     codeLeaveBuiltin();
-    var unsaved = readCodeUnsaved();
-    if (!unsaved) return;
+    var unsaved = readCodeUnsaved() || { code: "", language: codeLanguage };
     codeLanguage = unsaved.language === "python" ? "python" : "js";
     codeRememberLanguage();
     if (codeName) codeName.value = "";
@@ -76420,15 +76416,14 @@ setOfficeProgress("pc", false);
     if (!codeName || !codeCode) return;
     clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
     if (codeActiveBuiltin) {
-      if (codeActiveBuiltin.readOnly) return;
       var builtin = codeActiveBuiltin, builtinCode = codeCode.value;
       codePendingCommit = function () {
         codeAutoTimer = null; codePendingCommit = null;
         var overrides = readCodeBuiltinOverrides();
-        overrides[builtin.label] = builtinCode;
+        overrides[builtin.filename] = builtinCode;
         writeCodeBuiltinOverrides(overrides);
         if (codeActiveBuiltin === builtin) codeAiSetStatus("edited built-in", true);
-        codeRefreshPicker(builtin.label);
+        codeRefreshPicker(builtin.filename);
         codeSyncBuiltinControls();
       };
       codeAutoTimer = setTimeout(codePendingCommit, 250);
@@ -76477,15 +76472,14 @@ setOfficeProgress("pc", false);
   }
   function codeDelete() {
     if (codeActiveBuiltin) {
-      if (codeActiveBuiltin.readOnly) return false;
       clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
       var entry = codeActiveBuiltin, overrides = readCodeBuiltinOverrides();
-      if (!codeHasOwn(overrides, entry.label)) return false;
-      delete overrides[entry.label];
+      if (!codeHasOwn(overrides, entry.filename)) return false;
+      delete overrides[entry.filename];
       writeCodeBuiltinOverrides(overrides);
       if (codeCode) codeCode.value = codeBuiltinText(entry);
       codeAiSetStatus("reset to canonical", true);
-      codeRefreshPicker(entry.label);
+      codeRefreshPicker(entry.filename);
       codeSyncBuiltinControls();
       return true;
     }
@@ -76561,7 +76555,6 @@ setOfficeProgress("pc", false);
     return Promise.resolve(true);
   }
   function codeRunCurrent() {
-    if (codeActiveBuiltin && codeActiveBuiltin.readOnly) { codeAiSetStatus("copy canonical source to run", false); return; }
     var name = (codeName && codeName.value.trim()) || (codeLanguage === "python" ? "(python code)" : "(code)");
     var code = codeCode ? codeCode.value : "";
     codeFlushAutoSave(); codeFlushDraft();
@@ -76649,7 +76642,7 @@ setOfficeProgress("pc", false);
     var note = document.createElement("div"); note.textContent = data.text || "No review returned."; codeAiPanel.appendChild(note);
     codeAiSuggestion = String(data.suggestion || ""); codeAiReplace = data.replace === true || codeAiOperation === "ask";
     codeAiEdits = Array.isArray(data.edits) ? data.edits.filter(function (x) { return x && Number.isFinite(+x.start) && Number.isFinite(+x.end) && typeof x.text === "string"; }).map(function (x) { return { start: Math.max(0, +x.start), end: Math.max(0, +x.end), text: x.text }; }) : null;
-    if (!(codeActiveBuiltin && codeActiveBuiltin.readOnly) && codeAiEdits && codeAiEdits.length) {
+    if (codeAiEdits && codeAiEdits.length) {
       var editTitle = document.createElement("div"); editTitle.textContent = codeAiEdits.length + " proposed edit" + (codeAiEdits.length === 1 ? "" : "s") + ":"; codeAiPanel.appendChild(editTitle);
       var diffTitle = document.createElement("div"); diffTitle.className = "code-ai-diff-title"; diffTitle.textContent = "Preview"; codeAiPanel.appendChild(diffTitle);
       codeAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.className = "code-ai-diff"; var oldText = codeAiSourceCode.slice(edit.start, edit.end); var lines = ["#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]"]; lines.push(oldText ? "- " + oldText.replace(/\n/g, "\n- ") : "- (nothing)"); lines.push(edit.text ? "+ " + edit.text.replace(/\n/g, "\n+ ") : "+ (deleted)"); ep.textContent = lines.join("\n"); codeAiPanel.appendChild(ep); });
@@ -76657,7 +76650,7 @@ setOfficeProgress("pc", false);
       applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!codeCode || codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var out = codeCode.value; var sorted = codeAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { codeAiSetStatus("edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } codeCode.value = out; codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied " + sorted.length + " edits", true); appAutoFocusTextControl(codeCode); });
       codeAiPanel.appendChild(applyEdits);
     }
-    if (!(codeActiveBuiltin && codeActiveBuiltin.readOnly) && codeAiSuggestion) {
+    if (codeAiSuggestion) {
       var apply = document.createElement("button"); apply.className = "code-ai-btn"; apply.type = "button"; apply.textContent = codeAiReplace ? (codeAiStart === codeAiEnd ? "replace script" : "replace selection") : "insert at cursor";
       apply.addEventListener("click", function (e) { e.stopPropagation(); if (!codeAiSuggestion || !codeCode) return; if (codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var a = codeAiStart, b = codeAiEnd; if (codeAiReplace && a === b) { a = 0; b = codeCode.value.length; } codeCode.value = codeAiReplace ? codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(b) : codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(a); codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied", true); appAutoFocusTextControl(codeCode); try { codeCode.setSelectionRange(a + codeAiSuggestion.length, a + codeAiSuggestion.length); } catch (_) {} });
       codeAiPanel.appendChild(apply);
@@ -76669,7 +76662,6 @@ setOfficeProgress("pc", false);
   }
   function codeAiRequest(operation, userRequest) {
     if (codeAiBusy || !codeCode) return;
-    if (codeActiveBuiltin && codeActiveBuiltin.readOnly && operation !== "explain") { codeAiSetStatus("copy canonical source to edit", false); return; }
     var challenge = window.__monitorChatTurnstile;
     var transport = window.fetch, endpoint = window.__monitorChatEndpoint || "https://marketa.behdad.org/chat";
     if (typeof challenge !== "function" || typeof transport !== "function") { codeAiSetStatus("ai unavailable", false); return; }
@@ -76791,8 +76783,8 @@ setOfficeProgress("pc", false);
     var key = String(name), lang = language === "python" ? "python" : "js", saved = readScripts(lang);
     if (codeHasOwn(saved, key)) return { name: key, code: String(saved[key]), language: lang, builtin: null };
     var builtin = codeFindBuiltin(key, lang);
-    if (!builtin || builtin.readOnly || (!codeBuiltinHasOverride(builtin) && !codeHasOwn(codeBuiltinSources, builtin.label))) return null;
-    return { name: builtin.label, code: codeBuiltinText(builtin), language: lang, builtin: builtin };
+    if (!builtin || (!codeBuiltinHasOverride(builtin) && !codeHasOwn(codeBuiltinSources, builtin.filename))) return null;
+    return { name: builtin.filename, code: codeBuiltinText(builtin), language: lang, builtin: builtin };
   }
   window.run = function (name) {
     if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr("js");

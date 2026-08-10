@@ -994,6 +994,24 @@ function checkAudioFadeCloseRace(file, script) {
   }
 }
 
+// The song pipeline is trusted in production. Keep its emergency fallback as an
+// owner-edited source switch, not a visitor-controllable URL parameter.
+function checkSongPipelineKillSwitch(file, script) {
+  if (file !== "loft-day.html") return;
+  var issues = [];
+  if (!/var\s+AUDIO_PIPELINE_ENABLED\s*=\s*(?:true|false)\s*;/.test(script)) {
+    issues.push("AUDIO_PIPELINE_ENABLED source kill switch is missing or no longer a boolean literal");
+  }
+  if (!/var\s+USE_LIVE_ANALYSER\s*=\s*AUDIO_PIPELINE_ENABLED\s*;/.test(script)) {
+    issues.push("USE_LIVE_ANALYSER must read only the source-level AUDIO_PIPELINE_ENABLED switch");
+  }
+  if (/\bpipelineOverride\b/.test(script) || /\.get\(\s*["']pipeline["']\s*\)/.test(script)) {
+    issues.push("public pipeline URL override returned");
+  }
+  if (issues.length) fail(file + ": song pipeline has a source-only kill switch", issues.join("\n"));
+  else pass(file + ": song pipeline has a source-only kill switch");
+}
+
 // Every data-i / data-*-i / data-note-key attribute names a T dictionary key; a
 // typo'd or missing key renders blank text (setLang writes innerHTML from T[key]).
 // Verify each referenced key exists in the en dictionary (cs parity is checked above).
@@ -1539,6 +1557,7 @@ FILES.forEach(function (file) {
     checkParticleTransformOrigin(file, script);
     checkAnimationClassCleanup(file, style, script, html);
     checkAudioFadeCloseRace(file, script);
+    checkSongPipelineKillSwitch(file, script);
     checkI18nKeys(file, script, html);
     checkConsoleCmdRoster(file, script);
     checkParticleSpawnerCaps(file, script);

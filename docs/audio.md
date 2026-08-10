@@ -18,7 +18,7 @@ Safari **hard-caps concurrent `AudioContext`s** (historically ~4, still limited)
 used to construct ~26 (one per ambient bed / projector-music channel / dance / the song
 pipeline / the SFX context). Past the cap, Safari's extra contexts produce **no output at
 all** — so on real Safari there was NO Web Audio sound (both SFX and pipeline-captured
-songs silent; only `?pipeline=off` direct `<audio>` playback was audible). Chrome/Firefox
+songs silent; only the direct native `<audio>` fallback was audible). Chrome/Firefox
 don't cap, so they were fine — but 26 contending hardware streams also glitch on the
 owner's Chrome/Linux box.
 
@@ -461,12 +461,11 @@ An explicit global transport pause is remembered separately: release recreates t
 muted and leaves it held until the player resumes. The owner is intentionally not persisted because
 checkpointed Road Trips restore parked and reclaim foreground only on explicit re-entry.
 
-## Kill switch / overrides (unchanged)
+## Kill switch
 
-- `AUDIO_PIPELINE_ENABLED` (in `ensureAudioGraph`'s block) — owner's kill switch: `false`
-  reverts songs to plain native `<audio>` + the beat-pulse EQ fallback.
-- `?pipeline=on` / `?pipeline=off` — force the pipeline on/off for testing (`off` == kill
-  switch).
+`AUDIO_PIPELINE_ENABLED` (in `ensureAudioGraph`'s block) is the owner's source-level kill
+switch. Set it to `false` and redeploy to revert songs to plain native `<audio>` plus the
+beat-pulse EQ fallback; set it back to `true` and redeploy to restore the pipeline.
 
 ## Adding a new sound
 

@@ -42,9 +42,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       destinationLaneCenterX: Number(spur.getAttribute("data-roadtrip-destination-lane-center-x")),
       joinTangentDx: Number(spur.getAttribute("data-roadtrip-join-tangent-dx")),
       joinTangentDy: Number(spur.getAttribute("data-roadtrip-join-tangent-dy")),
+      outerJoinTangentDx: Number(spur.getAttribute("data-roadtrip-outer-join-tangent-dx")),
+      outerJoinTangentDy: Number(spur.getAttribute("data-roadtrip-outer-join-tangent-dy")),
       junctionInnerX: Number(spur.getAttribute("data-roadtrip-junction-inner-x")),
       junctionRoadRightX: Number(spur.getAttribute("data-roadtrip-junction-road-right-x")),
       junctionOuterX: Number(spur.getAttribute("data-roadtrip-junction-outer-x")),
+      junctionOuterY: Number(spur.getAttribute("data-roadtrip-junction-outer-y")),
       bendInnerX: Number(spur.getAttribute("data-roadtrip-bend-inner-x")),
       bendOuterX: Number(spur.getAttribute("data-roadtrip-bend-outer-x")),
       bendY: Number(spur.getAttribute("data-roadtrip-bend-y")),
@@ -218,15 +221,16 @@ function connectedSpur(visual) {
     visual.junctionOverlap <= 18.1 &&
     Math.abs(visual.junctionRoadRightX - visual.shoulderMouthInnerX -
       visual.junctionOverlap) <= .03 &&
-    visual.junctionOuterX - visual.junctionRoadRightX > .02 &&
-    visual.junctionOuterX - visual.junctionRoadRightX < 5.1 &&
+    visual.junctionOuterX - visual.junctionRoadRightX > 12 &&
+    visual.junctionOuterX - visual.junctionRoadRightX < 30 &&
+    visual.junctionOuterY > visual.junctionY + .2 &&
     visual.innerEdgeStartT >= .35 && visual.innerEdgeStartT <= .42 &&
     visual.bendInnerX < visual.bendOuterX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
     visual.destinationY < visual.bendY && visual.bendY < visual.junctionY &&
     visual.destinationY < visual.innerEdgeStartY &&
     visual.innerEdgeStartY < visual.junctionY - .2 &&
-    Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02 &&
+    Math.abs(visual.outerEdgeStartY - visual.junctionOuterY) <= .02 &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     Number.isFinite(visual.junctionLaneCenterX) && Number.isFinite(visual.destinationLaneCenterX) &&
@@ -264,19 +268,24 @@ function laneCentredApproach(visual) {
 }
 function smoothJoin(visual) {
   if (!Number.isFinite(visual.joinTangentDx) || !Number.isFinite(visual.joinTangentDy) ||
-      visual.joinTangentDy >= -.1) return false;
-  return [visual.asphalt, visual.shoulder, visual.outerEdge].every(function (path) {
+      visual.joinTangentDy >= -.1 || !Number.isFinite(visual.outerJoinTangentDx) ||
+      !Number.isFinite(visual.outerJoinTangentDy) || visual.outerJoinTangentDy >= -.1) return false;
+  return [visual.asphalt, visual.shoulder].every(function (path) {
     var band = cubicBand(path);
     if (!band) return false;
-    var startWidth = band.outer[0].x - band.inner[0].x;
-    var controlWidth = band.outer[1].x - band.inner[1].x;
     return band.inner.concat(band.outer).every(function (point) {
       return Number.isFinite(point.x) && Number.isFinite(point.y);
-    }) && [band.inner, band.outer].every(function (edge) {
-      return Math.abs(edge[1].x - edge[0].x - visual.joinTangentDx) <= .03 &&
-        Math.abs(edge[1].y - edge[0].y - visual.joinTangentDy) <= .03;
-    }) && startWidth > 0 && Math.abs(controlWidth - startWidth) <= .03;
-  });
+    }) && Math.abs(band.inner[1].x - band.inner[0].x - visual.joinTangentDx) <= .03 &&
+      Math.abs(band.inner[1].y - band.inner[0].y - visual.joinTangentDy) <= .03 &&
+      Math.abs(band.outer[1].x - band.outer[0].x - visual.outerJoinTangentDx) <= .03 &&
+      Math.abs(band.outer[1].y - band.outer[0].y - visual.outerJoinTangentDy) <= .03;
+  }) && (function () {
+    var band = cubicBand(visual.outerEdge);
+    return band && [band.inner, band.outer].every(function (edge) {
+      return Math.abs(edge[1].x - edge[0].x - visual.outerJoinTangentDx) <= .03 &&
+        Math.abs(edge[1].y - edge[0].y - visual.outerJoinTangentDy) <= .03;
+    });
+  })();
 }
 function smoothArrivalWidths(visual) {
   return [visual.asphalt, visual.shoulder, visual.innerEdge, visual.outerEdge].every(function (path) {
@@ -330,7 +339,7 @@ function coherentSpurTopology(visual) {
   return visual.innerEdgeStartT >= .35 && visual.innerEdgeStartT <= .42 &&
     visual.innerEdgeStartY < visual.junctionY - .2 &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
-    Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02;
+    Math.abs(visual.outerEdgeStartY - visual.junctionOuterY) <= .02;
 }
 function signsClear(visual) {
   return visual && visual.speedClearances.every(function (gap) {

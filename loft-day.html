@@ -44783,10 +44783,32 @@ window.__entranceRoomOpen = false;
     var junctionInner = junctionRoadRight - junctionOverlap;
     var authoredJunctionOuter = roadtripProjectLateral(junctionPoint, 1.015);
     var junctionOuterWidth = authoredJunctionOuter - junctionRoadRight;
-    // Keep the proven live-edge throat exact; the 2× body width eases in after
-    // this joint. Expanding the mouth itself exposes its closing wedge as a
-    // cutoff triangle against the highway.
-    var junctionOuter = authoredJunctionOuter;
+    // A full-width branch needs a full-width mouth, but its two mouth corners
+    // cannot share one horizontal cut. Walk the outer corner toward the camera
+    // along the live road edge until the opening is 2× wide; the resulting
+    // diagonal throat lies inside the highway asphalt instead of exposing a
+    // cutoff triangle.
+    var targetJunctionOuter = junctionInner +
+      (authoredJunctionOuter - junctionInner) * ROADTRIP_CAMP_SPUR_WIDTH_SCALE;
+    var outerRemainingLow = Math.max(0, junctionPoint.remaining - 12);
+    var outerRemainingHigh = junctionPoint.remaining;
+    for (var outerSearch = 0; outerSearch < 10; outerSearch++) {
+      var outerRemainingMid = (outerRemainingLow + outerRemainingHigh) / 2;
+      var outerSearchPoint = roadtripProject(outerRemainingMid);
+      if (roadtripProjectLateral(outerSearchPoint, 1.015) >= targetJunctionOuter) {
+        outerRemainingLow = outerRemainingMid;
+      } else {
+        outerRemainingHigh = outerRemainingMid;
+      }
+    }
+    var junctionOuterPoint = roadtripProject(outerRemainingLow);
+    // Some camera/lane combinations make the projected highway edge nearly
+    // vertical, so walking it alone cannot create the authored road width.
+    // Keep the depth it supplies for a diagonal merge, but retain the exact
+    // doubled opening in screen space for every lane.
+    var projectedJunctionOuter = roadtripProjectLateral(junctionOuterPoint, 1.015);
+    var junctionOuter = targetJunctionOuter;
+    var junctionOuterY = junctionOuterPoint.y;
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationY = destinationPoint.y;
@@ -44818,6 +44840,9 @@ window.__entranceRoomOpen = false;
     var travelY = destinationY - junctionY;
     var control1Y = junctionY + travelY * .43;
     var control2Y = junctionY + travelY * .82;
+    var outerTravelY = destinationY - junctionOuterY;
+    var outerControl1Y = junctionOuterY + outerTravelY * .43;
+    var outerControl2Y = junctionOuterY + outerTravelY * .82;
     var tangentPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE,
       junctionPoint.remaining + 3));
     var tangentDy = tangentPoint.y - junctionY;
@@ -44825,16 +44850,21 @@ window.__entranceRoomOpen = false;
     var joinControlDy = control1Y - junctionY;
     var joinControlDx = Math.abs(tangentDy) > .001 ?
       tangentDx * joinControlDy / tangentDy : 0;
-    // A shared centre curve plus eased width keeps both road boundaries parallel
-    // through the turn. Equal widths at C1/C2 remove the moving pinches produced
-    // by independently aimed inner and outer Béziers.
+    var outerTangentPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE,
+      junctionOuterPoint.remaining + 3));
+    var outerTangentDy = outerTangentPoint.y - junctionOuterY;
+    var outerTangentDx = roadtripProjectLateral(outerTangentPoint, 1.015) -
+      projectedJunctionOuter;
+    var outerJoinControlDy = outerControl1Y - junctionOuterY;
+    var outerJoinControlDx = Math.abs(outerTangentDy) > .001 ?
+      outerTangentDx * outerJoinControlDy / outerTangentDy : 0;
+    // Each mouth corner follows the live road edge at its own depth, then both
+    // boundaries ease toward one perspective-correct destination band.
     var nearCenter = (junctionInner + junctionOuter) / 2;
-    var nearHalfWidth = (junctionOuter - junctionInner) / 2;
-    var centerControl1 = nearCenter + joinControlDx;
     var centerControl2 = nearCenter + (destinationX - nearCenter) * .76;
     var asphaltBand = {
-      inner: { c1: centerControl1 - nearHalfWidth, c2: centerControl2 - farHalfWidth },
-      outer: { c1: centerControl1 + nearHalfWidth, c2: centerControl2 + farHalfWidth }
+      inner: { c1: junctionInner + joinControlDx, c2: centerControl2 - farHalfWidth },
+      outer: { c1: junctionOuter + outerJoinControlDx, c2: centerControl2 + farHalfWidth }
     };
     var innerControls = asphaltBand.inner;
     var outerControls = asphaltBand.outer;
@@ -44861,9 +44891,9 @@ window.__entranceRoomOpen = false;
         pathInner.c2.toFixed(2) + " " + control2Y.toFixed(2) + " " +
         farInner.toFixed(2) + " " + destinationY.toFixed(2) +
         "L" + farOuter.toFixed(2) + " " + destinationY.toFixed(2) +
-        "C" + pathOuter.c2.toFixed(2) + " " + control2Y.toFixed(2) + " " +
-        pathOuter.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
-        nearOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z";
+        "C" + pathOuter.c2.toFixed(2) + " " + outerControl2Y.toFixed(2) + " " +
+        pathOuter.c1.toFixed(2) + " " + outerControl1Y.toFixed(2) + " " +
+        nearOuter.toFixed(2) + " " + junctionOuterY.toFixed(2) + "Z";
     }
     // Asphalt reaches just inside the live highway edge to make an open merge
     // throat. Its inner paint stripe starts later, where the two roads have
@@ -44892,7 +44922,7 @@ window.__entranceRoomOpen = false;
     var outerEdgeX = cubicTail(junctionOuter, outerControls.c1, outerControls.c2,
       destinationOuter, 0);
     var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, innerEdgeStart);
-    var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
+    var outerEdgeY = cubicTail(junctionOuterY, outerControl1Y, outerControl2Y, destinationY, 0);
     var edgeStartWidth = edgeNearWidth * .72;
     var edgeTailWidth = edgeStartWidth;
     if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset));
@@ -44918,10 +44948,12 @@ window.__entranceRoomOpen = false;
       destinationInner, bendT);
     var bendOuter = cubicPoint(junctionOuter, outerControls.c1, outerControls.c2,
       destinationOuter, bendT);
-    var bendY = cubicPoint(junctionY, control1Y, control2Y, destinationY, bendT);
+    var bendY = (cubicPoint(junctionY, control1Y, control2Y, destinationY, bendT) +
+      cubicPoint(junctionOuterY, outerControl1Y, outerControl2Y, destinationY, bendT)) / 2;
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-inner-x", junctionInner.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-road-right-x", junctionRoadRight.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-outer-x", junctionOuter.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-outer-y", junctionOuterY.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-bend-inner-x", bendInner.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-bend-outer-x", bendOuter.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-bend-y", bendY.toFixed(2));
@@ -44946,6 +44978,8 @@ window.__entranceRoomOpen = false;
       roadtripProjectLateral(destinationPoint, .5).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-join-tangent-dx", joinControlDx.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-join-tangent-dy", joinControlDy.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-outer-join-tangent-dx", outerJoinControlDx.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-outer-join-tangent-dy", outerJoinControlDy.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-near-width", (junctionOuter - junctionInner).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-width-scale",

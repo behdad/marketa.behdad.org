@@ -96197,6 +96197,9 @@ async def localfont(name):
       return keys.indexOf("msg_irene_from") !== -1 || keys.indexOf("msg_hannah_from") !== -1;
     }
     function deliverAutonomousRewritten(id) {
+      // Preview owns a reversible local world. Do not start Chat/Turnstile work whose callbacks
+      // outlive that transaction; the eventual phone-delivery gate is deliberately too late.
+      if (window.__loftSessionPreviewActive || window.__cinematic) return false;
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1 || pendingAuthoredRewrites[id]) return false;
       var m = MESSAGES[id];
       freezeAuthoredMessage(m);
@@ -96317,7 +96320,7 @@ async def localfont(name):
     }
     function drainDeferredAutonomousMessages() {
       if (!deferredAutonomousMessages.length) return 0;
-      if (document.hidden || !document.hasFocus() || window.__cinematic || !playerStarted() || !autonomousMsgOk()) {
+      if (document.hidden || !document.hasFocus() || window.__loftSessionPreviewActive || window.__cinematic || !playerStarted() || !autonomousMsgOk()) {
         scheduleDeferredAutonomousMessages(1000); return 0;
       }
       var deliverAt = -1;
@@ -96331,6 +96334,7 @@ async def localfont(name):
       return delivered;
     }
     window.__deliverAutonomousPhoneMessage = function (id) {
+      if (window.__loftSessionPreviewActive || window.__cinematic) return false;
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false;
       if (!partyTextAllowedToday(id)) return false;
       if (!window.__secondRound) return window.__deliverPhoneMessage(id);
@@ -96365,7 +96369,7 @@ async def localfont(name):
       if (!rosterHoldsOccupants()) scheduleDeferredAutonomousMessages(500);
     };
     window.__flushHeldPhoneMessages = function () {
-      if (!window.__secondRound || !phaseTwoHeldMessages.length) return 0;
+      if (window.__loftSessionPreviewActive || window.__cinematic || !window.__secondRound || !phaseTwoHeldMessages.length) return 0;
       var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
       var delivered = 0;
       held.forEach(function (id) { if (deliverAutonomousRewritten(id)) delivered++; });
@@ -127867,6 +127871,8 @@ function spawnDustMote(container) {
         else localStorage.removeItem(LOFT_CHECKPOINT_KEY);
       } catch (_error) {}
       window.__loftSessionPreviewActive = false;
+      if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
+      if (window.__autonomousMessageGateChanged) window.__autonomousMessageGateChanged();
       previewLastEnd = { generation: generation, disposition: disposition, endedAt: Date.now() };
       return { active: false, changed: true, generation: generation, disposition: disposition,
         checkpointPreserved: (function () { try { return localStorage.getItem(LOFT_CHECKPOINT_KEY) === (owned.checkpointPresent ? owned.rawCheckpoint : null); } catch (_error) { return false; } })() };

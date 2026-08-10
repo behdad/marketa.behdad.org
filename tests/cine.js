@@ -38,10 +38,11 @@ var COMMON = [
   " if(document.querySelector('#hunt-fullscreen-area.cinematic-running #cine-overlay'))r.presentation=true;",
   "}",
   "async function runNatural(r){",
+  " r.autonomousAttempt=null;var rewriteCalls=0;window.__monitorMessageRewrite=function(){rewriteCalls++;return Promise.resolve('message rewrite must not run');};",
   " localStorage.setItem('loftCheckpoint:v1',r.checkpoint);localStorage.setItem('trailer-test','before');instrumentScore();",
   " var events=[],off=window.loft.api.subscribe(function(event){events.push(event);}),t0=performance.now(),promise=window.loft.trailer.play(),guard=0;",
-  " while(window.__cinematic&&guard++<1800){sample(r,t0);await wait(80);}",
-  " await promise;await wait(800);off();r.duration=Math.round(performance.now()-t0-800);r.ended=!window.__cinematic;r.events=events.map(function(e){return e.id;});r.scorePlayCalls=document.getElementById('tumbala-song-audio')._trailerPlayCalls||0;r.extinguisher=r.events.indexOf('game.reset')>=0;r.state=finalState();",
+  " while(window.__cinematic&&guard++<1800){sample(r,t0);if(r.party&&r.autonomousAttempt===null)r.autonomousAttempt=window.__deliverAutonomousPhoneMessage('athena_banter');await wait(80);}",
+  " await promise;await wait(800);off();r.duration=Math.round(performance.now()-t0-800);r.ended=!window.__cinematic;r.events=events.map(function(e){return e.id;});r.scorePlayCalls=document.getElementById('tumbala-song-audio')._trailerPlayCalls||0;r.extinguisher=r.events.indexOf('game.reset')>=0;r.autonomous={attempt:r.autonomousAttempt,rewriteCalls:rewriteCalls,turnstile:performance.getEntriesByType('resource').filter(function(entry){return /turnstile|challenges\\.cloudflare/i.test(entry.name);}).map(function(entry){return entry.name;})};r.state=finalState();",
   "}",
   "function boot(run){window.addEventListener('load',function(){setTimeout(function(){run().catch(function(e){window.__errs.push('harness: '+String(e&&e.stack||e));}).then(function(){finish(window.__reportValue);});},400);});}",
 ].join("\n");
@@ -150,6 +151,8 @@ else {
     "Python reaches its public ready state before the full themed monitor Kill completes", { apps: full.apps, python: full.python, events: full.events });
   check(hasAll(full.games, ["invaders", "bubbles", "ttt"]), "real room minigames appear", full.games);
   check(full.party && !full.formal, "Party appears without a formal/spoiler payoff", { party: full.party, formal: full.formal });
+  check(full.autonomous && full.autonomous.attempt === false && full.autonomous.rewriteCalls === 0 && full.autonomous.turnstile.length === 0,
+    "Trailer holds autonomous rewrites before Chat or Turnstile starts", full.autonomous);
   check(full.roads.banff && full.roads.camp && full.roadExact && full.campExact && full.campFire, "real Road Trip and lit Camping renderers appear", { roads: full.roads, road: full.roadExact, camp: full.campExact, fire: full.campFire });
   check(full.scorePlayCalls >= 2 && full.scoreAtRoad && full.scoreAtCamp, "one looping score covers Road Trip through Camping", { calls: full.scorePlayCalls, road: full.scoreAtRoad, camp: full.scoreAtCamp });
   check(full.visibleForeignCaptions.length === 0, "room/minigame clues never replace narration outside the canonical reset", full.visibleForeignCaptions);
@@ -166,6 +169,8 @@ else {
   check(reduced.reduced && reduced.ended && reduced.duration >= 50000 && reduced.duration <= 115000, "reduced edit is finite and deliberately shorter", { reduced: reduced.reduced, ended: reduced.ended, duration: reduced.duration });
   check(reduced.roads.banff && reduced.roads.camp && reduced.party && hasAll(reduced.games,["bubbles","ttt"]), "reduced edit preserves the real authored beats (motion-heavy Invaders stays suppressed)", { roads: reduced.roads, party: reduced.party, games: reduced.games });
   check(reduced.python.opened && reduced.python.ready && reduced.python.death && reduced.python.killed, "reduced edit preserves Python's real ready-to-Kill lifecycle", reduced.python);
+  check(reduced.autonomous && reduced.autonomous.attempt === false && reduced.autonomous.rewriteCalls === 0 && reduced.autonomous.turnstile.length === 0,
+    "reduced Trailer holds autonomous rewrites before Chat or Turnstile starts", reduced.autonomous);
   clean(reduced, "reduced finish");
 }
 

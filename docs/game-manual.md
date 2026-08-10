@@ -226,6 +226,8 @@ car's remembered transmission choice and returns it to automatic in park.
 - Reduced-motion preferences simplify animation without removing activities.
 - Camera, torch, sharing, fullscreen, installation, and some computer toys depend on browser support
   and permission; denying them does not block the story.
+- The Python toy includes CPython and its starter tools locally. Importing another supported package
+  downloads the matching pinned Pyodide build on first use, so that import needs a connection.
 - If audio is silent, interact with the page once so the browser can enable sound.
 
 The simplest path is also the whole shape of the day: finish the Morning routine, start the Party,

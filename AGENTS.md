@@ -17,8 +17,9 @@ features go inside `egg-hunt.html` unless there's a strong reason not to. (`loft
 follows the same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
 `linux/` — v86 + a repacked ISO carrying hb-shape/Fraunces/emoji; provenance in each
 dir's README. Both are pinned deliverables, not build outputs: don't regenerate or
-"upgrade" them casually, and keep runtime deps zero-CDN — Google Fonts is the one
-allowed exception, owner-confirmed.)
+"upgrade" them casually, and keep runtime deps zero-CDN except for Google Fonts and
+on-demand user imports from the version-pinned official Pyodide package repository —
+both owner-confirmed.)
 
 ## Workflow (read this first)
 

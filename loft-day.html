@@ -81839,14 +81839,12 @@ setOfficeProgress("pc", false);
     browserCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── PYTHON APP ───────────────────────────────────────────────────────────────────
-  // A real CPython REPL: Pyodide (CPython compiled to WebAssembly), self-hosted in
-  // pyodide/ (runtime + the three wheels below; provenance in its README) and
-  // lazy-loaded the first time the app opens — it costs nothing until then and works
-  // fully offline. Input runs through pyodide.runPythonAsync (so top-level await
-  // works); micropip loads alongside the runtime — fonttools and brotli resolve from
-  // the local index via pyodide-lock.json, and visitors can still pull other
-  // pure-Python wheels from PyPI when online. The banner suggests fonttools, the
-  // groom's own library. `clear` is intercepted; everything else is Python.
+  // A real CPython REPL: Pyodide (CPython compiled to WebAssembly), with its runtime and
+  // starter wheels self-hosted in pyodide/ (provenance in its README). Imports absent
+  // from that local set load on demand from the pinned official 314.0.2 repository;
+  // micropip remains available for compatible pure-Python PyPI wheels. Input supports
+  // top-level await. The banner suggests fonttools, the groom's own library. `clear` is
+  // intercepted; everything else is Python.
   var pyOut = document.getElementById("monitor-py-out");
   var pyIn = document.getElementById("monitor-py-in");
   var pyWrap = document.getElementById("monitor-py-wrap");
@@ -81866,6 +81864,7 @@ setOfficeProgress("pc", false);
   var pyBusy = false, pyLastCmd = "";
   var pyCodeQueue = [];
   var PYODIDE_URL = "pyodide/pyodide.js";
+  var PYODIDE_PACKAGE_BASE_URL = "https://cdn.jsdelivr.net/pyodide/v314.0.2/full/";
   var pyTurtleBg = document.getElementById("monitor-py-turtle-bg");
   var pyTurtleFills = document.getElementById("monitor-py-turtle-fills");
   var pyTurtleLines = document.getElementById("monitor-py-turtle-lines");
@@ -82323,7 +82322,12 @@ def colormode(mode=None):
   // the pyodide script (and re-running its whole bundle).
   function initPyodide() {
       var p;
-      try { p = window.loadPyodide({ indexURL: "pyodide/" }); } catch (e) { pyLoadFailed(); return; }
+      try {
+        p = window.loadPyodide({
+          indexURL: "pyodide/",
+          packageBaseUrl: PYODIDE_PACKAGE_BASE_URL
+        });
+      } catch (e) { pyLoadFailed(); return; }
       Promise.resolve(p).then(function (py) {
         // stdout/stderr land in the scrollback, so print() behaves like a real shell
         try {
@@ -82522,6 +82526,14 @@ async def localfont(name):
     if (r && typeof r.destroy === "function") { try { r.destroy(); } catch (e) {} }
     return String(s);
   }
+  function pyRunWithImports(source) {
+    // Pyodide's import scanner resolves only packages named in the pinned lock file;
+    // ordinary stdlib/local imports are no-ops here, while e.g. `import numpy` lazily
+    // fetches the matching official 314.0.2 wheel before CPython evaluates the source.
+    return pyRuntime.loadPackagesFromImports(source).then(function () {
+      return pyRuntime.runPythonAsync(source);
+    });
+  }
   function pyDrainCodeQueue() {
     if (pyBusy || pyLoadState !== "ready" || !pyCodeQueue.length) return;
     var job = pyCodeQueue.shift();
@@ -82531,7 +82543,7 @@ async def localfont(name):
     updatePythonTile();
     pyPrint(">>> run " + job.name, "console-dim");
     window.__loftTurtleCommand("screen_clear");
-    pyRuntime.runPythonAsync(job.code).then(function (r) {
+    pyRunWithImports(job.code).then(function (r) {
       pyBusy = false;
       if (r !== undefined) pyPrint(pyResultText(r));
       pyDrainCodeQueue();
@@ -82565,7 +82577,7 @@ async def localfont(name):
     if (pyLoadState !== "ready") { pyLoadState === "failed" ? pyPrint(pyT("py_fail"), "console-err") : pyPrint(pyT("py_wait"), "console-dim"); return; }
     if (pyBusy) { pyPrint(pyT("py_busy"), "console-dim"); return; } // one run at a time; resubmit when it's done
     pyBusy = true;
-    pyRuntime.runPythonAsync(cmd).then(function (r) {
+    pyRunWithImports(cmd).then(function (r) {
       pyBusy = false;
       if (r !== undefined) pyPrint(pyResultText(r)); // statements and None print nothing, like the real REPL
       pyDrainCodeQueue();

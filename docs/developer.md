@@ -48,6 +48,8 @@ Supporting boundaries are:
 - `DEBUGGING.md`: practical Chrome DevTools Protocol, WebKit, and visual-test recipes.
 - `pyodide/`, `linux/`, `harfbuzzjs/`, `dos/`, `doom/`, `duke/`, and `q3/`: pinned runtime
   deliverables. Treat each as vendored product data, not generated output or an upgrade target.
+  Pyodide's core and starter wheels are local; user imports outside that trimmed set resolve only
+  from the pinned v314.0.2 official package repository configured by `packageBaseUrl`.
 - `princejs/`: the same kind of pinned runtime, but untracked — `./fetch-princejs.sh` restores it
   from upstream at a pinned SHA and applies `princejs-shim.patch` (provenance in the script
   header). `loft-day.html` probes for it and falls back to the upstream GitHub Pages build when the
@@ -319,6 +321,12 @@ a near-square topology from the live `.mines-body` content box above its fixed t
 `ResizeObserver` may refit an untouched deal, but preserves a started deal until the player uses its
 restart control. Unmounting restores the monitor's 16×7 layout. Keep the edge, cell, toolbar, and
 resize-state contract covered in `tests/phone-mines-layout.js`.
+
+The Python app lazy-loads the local Pyodide core. Both REPL input and Code's Python runner pass
+source through `loadPackagesFromImports()` before evaluation, so ordinary imports can fetch an
+unbundled official wheel from the pinned v314.0.2 package CDN. Keep `indexURL` local, keep
+`packageBaseUrl` version-pinned, and do not point automatic import loading at unversioned PyPI;
+explicit `micropip` remains the separate path for compatible pure-Python PyPI packages.
 
 App and minigame state follows the same durable/transient rule as rooms. Preserve a meaningful
 selection or score only when a checkpoint adapter says so; close cameras, calls, dialogs, media,

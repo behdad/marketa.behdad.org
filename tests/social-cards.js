@@ -26,6 +26,14 @@ function dimensions(file) {
   return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 }
 
+var renderer = fs.readFileSync(path.join(root, "tests/social-card-render.html"), "utf8");
+check(/loft-world[^>]+loft-game-strip\.svg/.test(renderer) &&
+  /loft-title[^>]*>Loft Day</.test(renderer),
+  "Loft Day card uses the real espresso kitchen artwork");
+check(/egg-scene loft[^>]+loft-scene\.svg/.test(renderer) &&
+  /egg-scene garden[^>]+garden-scene\.svg/.test(renderer),
+  "Egg Hunt card pairs the two authored scene illustrations");
+
 [
   {
     file: "egg-hunt.html",

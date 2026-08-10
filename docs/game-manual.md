@@ -152,9 +152,10 @@ catalogue with `loft.api.capabilities()`, and read its revision with `loft.api.i
 Controls use explicit reads and writes such as `loft.party.status()` and
 `loft.party.set(true)`. Weather controls accept `set(null)` to restore automatic ownership and
 report `mode()` as `"auto"`, `"on"`, or `"off"`. The room API covers all ten rooms (`loft.bar`
-aliases Kitchen; `loft.party` aliases Garden). State changes do not move the view: navigate with
-`await loft.room.go("garden")`. Scripts may enter any room or start Road Trip outside story
-progression, but room-owned, conflicting, or prerequisite actions remain gated. Use
+aliases Kitchen; `loft.party` aliases Garden). Use `await loft.room.go("garden")` for navigation;
+an explicitly invoked physical room action brings its required room or interactive surface into
+view before it runs. Scripts may enter any room or start Road Trip outside story progression, but
+conflicting, controller, and prerequisite gates remain real. Use
 `loft.api.describe(...)` or typed help to see the current reason and, when one direct API step can
 honestly enable it, a structured remedy. Use `await loft.caption.show("hello")` for a literal caption.
 

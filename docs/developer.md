@@ -371,10 +371,12 @@ remedy locally.
 
 Typed availability describes runtime safety, not story permission. Scripts may navigate to any of
 the ten rooms and open the Entrance car or start Road Trip before those surfaces are unlocked by the
-normal clue trail; the ordinary UI progression gates remain unchanged. Physical room actions still
-require their owning room to be open, and active-surface, finite-action, media-controller,
-transaction, and mutually exclusive activity gates remain real. Cross a story frontier through its
-canonical room or Road Trip controller rather than forging DOM classes or checkpoint fields.
+normal clue trail; the ordinary UI progression gates remain unchanged. Discovery is side-effect-free.
+An explicitly performed physical action routes through the canonical room owner, awaits that room's
+settle lifecycle, and then dispatches its existing interaction owner. Active-session, finite-action,
+media-controller, transaction, and mutually exclusive activity gates remain real. Cross a story
+frontier through its canonical room or Road Trip controller rather than forging DOM classes or
+checkpoint fields.
 
 Every manifest row has a stable `id`, `kind`, ordered `args`/`argOrder`, mechanically derived
 `aliases`, result-envelope schema, and `completion: "instant"|"finite"`. Instant setters apply synchronously even though
@@ -384,11 +386,14 @@ automatic clock/weather/Party owner, `status()` reports the effective boolean, a
 `"auto"`, `"on"`, or `"off"`. The string `"auto"` is invalid. Ordinary boolean controls accept
 only booleans.
 
-Changing state does not implicitly move the visitor. Use `loft.room.go("garden")` for navigation;
-only actions whose purpose is to open a room, device, app, or Road Trip may change the view. Outgoing
-calls, minigames, physical room activities, and Party moments require their owning surface to be open.
-This makes scripts composable and prevents background weather, UV, Party, trip, and prop changes
-from stealing the camera.
+Room-independent state changes leave the view in place. Use `loft.room.go("garden")` for navigation;
+room-bound calls, minigames, props, and Party moments also bring their required visible surface into
+view when explicitly performed. `runInRoom()` serializes only route/settle/owner dispatch, temporarily
+re-enters the initiating action around synchronous owner calls, and never holds global action
+ownership across a wait. It rechecks real gates at queued dispatch, and lower-to-lower actions use
+the canonical lateral navigation owner. This keeps overlapping routed actions ordered without
+merging their state events. A routing refusal becomes an exact `NOT_AVAILABLE` envelope rather than
+a generic failure.
 
 Successful owner transitions call `__loftStateChanged`, which increments `stateVersion` and emits
 `loft:statechange`. If an API action changes the game but subscribers do not hear about it, fix the

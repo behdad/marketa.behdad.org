@@ -73613,6 +73613,12 @@ setOfficeProgress("pc", false);
       Object.keys(extra || {}).forEach(function (key) { detail[key] = extra[key]; });
       return result(false, "failed", detail);
     }
+    function failedAction(error) {
+      if (error && error.loftAvailability) {
+        return fail("NOT_AVAILABLE", error.loftAvailability.reason, { availability: error.loftAvailability });
+      }
+      return fail("FAILED", String(error && error.message || error));
+    }
     function validate(def, args) {
       args = args == null ? {} : args;
       if (!args || typeof args !== "object" || Array.isArray(args)) return { error: fail("INVALID_ARGUMENT", "Arguments must be an object.") };
@@ -73768,7 +73774,7 @@ setOfficeProgress("pc", false);
         var action = { id: id, args: copy(checked.value), source: String(options.source || "api").slice(0, 32), detail: null };
         activeAction = action;
         try { value = def.run(checked.value, options); }
-        catch (error) { activeAction = previousAction; return Promise.resolve(fail("FAILED", String(error && error.message || error))); }
+        catch (error) { activeAction = previousAction; return Promise.resolve(failedAction(error)); }
         activeAction = previousAction;
         // Instant actions mutate before perform() returns; finite actions return a Promise
         // whose settlement remains awaitable. The envelope itself stays uniformly Promise-based.
@@ -73778,7 +73784,7 @@ setOfficeProgress("pc", false);
           // semantic event. Owners that changed synchronously already populated action.detail.
           if (changed && !action.detail) recordChange(id, checked.value, options.source || "api");
           return result(true, "completed", { changed: changed, value: value && Object.prototype.hasOwnProperty.call(value, "value") ? value.value : value });
-        }, function (error) { return fail("FAILED", String(error && error.message || error)); });
+        }, failedAction);
       },
       subscribe: function (listener) {
         if (typeof listener !== "function") return function () {};
@@ -73859,7 +73865,7 @@ setOfficeProgress("pc", false);
         !!(flair && flair.active && typeof window.__flairStop === "function");
     }
     function bartenderAvailable() {
-      return currentRoom() === "kitchen" && !minigameRunning() && !(window.__ambientMaking && window.__ambientMaking()) &&
+      return !minigameRunning() && !(window.__ambientMaking && window.__ambientMaking()) &&
         !(window.__userMixing && window.__userMixing()) && !(window.__bartenderDragging && window.__bartenderDragging());
     }
     function peopleLocations() {
@@ -73893,14 +73899,40 @@ setOfficeProgress("pc", false);
       return blocked(reasons.join(" "), reasons.length === 1 && remedy ? remedy.id : null, remedy && remedy.args);
     }
     function staticBlocked(reason, id, args) { return function () { return blocked(reason, id, args); }; }
-    function roomBlocked(room) {
-      var labels = { bathroom: "Bathroom", bedroom: "Bedroom", cinema: "Cinema", cuddly: "Cuddly room", dungeon: "Dungeon", garden: "Garden", kitchen: "Kitchen", office: "Office", balcony: "Balcony", entrance: "Entrance" };
-      return staticBlocked("The " + labels[room] + " is not open.", "room.go", { room: room });
+    var ROOM_LABELS = { bathroom: "Bathroom", bedroom: "Bedroom", cinema: "Cinema", cuddly: "Cuddly room", dungeon: "Dungeon", garden: "Garden", kitchen: "Kitchen", office: "Office", balcony: "Balcony", entrance: "Entrance" };
+    var LOWER_OPENERS = { bathroom: "__openBathroomRoom", dungeon: "__openGardenPrince", cinema: "__openCinemaRoom", bedroom: "__openBedroomRoom", entrance: "__openEntranceRoom" };
+    var LOWER_CLOSERS = { bathroom: "__closeBathroomRoom", dungeon: "__closeMonitorPrince", cinema: "__closeCinemaRoom", bedroom: "__closeBedroomRoom", entrance: "__closeEntranceRoom" };
+    function roomRouteIssue(name) {
+      var lowerNavigation = window.__lowerRoomNavigationState ? window.__lowerRoomNavigationState() : null;
+      if (lowerNavigation && lowerNavigation.active) return "Lower-floor navigation is still settling.";
+      if (currentRoom() === name) return null;
+      var active = activeLowerRoom();
+      if (active && active !== name && typeof window[LOWER_CLOSERS[active]] !== "function") {
+        return "The " + ROOM_LABELS[name] + " surface cannot be opened because the " + ROOM_LABELS[active] + " surface cannot be closed.";
+      }
+      if (name === "dungeon") {
+        var prince = window.__princeState ? window.__princeState() : null;
+        if (prince && prince.open && !prince.basement) return "The Dungeon surface cannot be opened while Prince is open on the monitor.";
+      }
+      if (UPPER_FOR_LOWER[name]) {
+        if (typeof window[LOWER_OPENERS[name]] !== "function") return "The " + ROOM_LABELS[name] + " surface cannot be opened.";
+        if (active && active !== name && typeof window.__navigateLowerRoom !== "function") return "The " + ROOM_LABELS[name] + " surface cannot be opened.";
+        if (!active && window.currentStageName !== UPPER_FOR_LOWER[name] && typeof window.goToStage !== "function") return "The " + ROOM_LABELS[name] + " surface cannot be opened.";
+        if (name === "bedroom" && window.currentStageName === "office" &&
+            ((window.__monitorZoomed && window.__monitorZoomed()) || (window.__laptopZoomed && window.__laptopZoomed())) &&
+            typeof window.__prepareRoomPan !== "function") return "The Bedroom surface cannot be opened while an Office device owns the view.";
+        return null;
+      }
+      if (window.currentStageName !== name && typeof window.goToStage !== "function") return "The " + ROOM_LABELS[name] + " surface cannot be opened.";
+      return null;
     }
+    function roomRouteReady(name) { return !roomRouteIssue(name); }
+    function roomRouteReason(name) { return roomRouteIssue(name) || "The " + ROOM_LABELS[name] + " surface cannot be opened."; }
     function lowerRoomOpen(name) {
       var owner = UPPER_FOR_LOWER[name];
       if (!owner) return false;
-      if (window.currentStageName !== owner && window.goToStage) window.goToStage(owner);
+      if (window.currentStageName !== owner && window.goToStage &&
+          !window.goToStage(owner, { rosterNavigation: true, recordVisit: false })) return false;
       if (name === "bathroom") return !!(window.__openBathroomRoom && window.__openBathroomRoom());
       if (name === "dungeon") return !!(window.__openGardenPrince && window.__openGardenPrince());
       if (name === "cinema") return !!(window.__openCinemaRoom && window.__openCinemaRoom());
@@ -73919,6 +73951,69 @@ setOfficeProgress("pc", false);
     function settledRoomValue(value, changed) {
       if (!changed) return value;
       return new Promise(function (resolve) { setTimeout(function () { resolve(value); }, 760); });
+    }
+    function unavailableAction(detail) {
+      if (typeof detail === "string") detail = { available: false, reason: detail };
+      detail = copy(detail) || { available: false, reason: "Action is not available in the current game state." };
+      detail.available = false;
+      var error = new Error(detail.reason || "Action is not available in the current game state.");
+      error.loftAvailability = detail;
+      return error;
+    }
+    var roomActionQueue = Promise.resolve();
+    function underAction(action, callback) {
+      var previousAction = activeAction;
+      activeAction = action;
+      try { return callback(); }
+      finally { activeAction = previousAction; }
+    }
+    function requireActionAvailable(action) {
+      if (!action || !definitions[action.id]) return;
+      var detail = availability(definitions[action.id], action.args);
+      if (!detail.available) throw unavailableAction(detail);
+    }
+    function runInRoom(name, callback) {
+      var initiatingAction = activeAction;
+      var dispatch = roomActionQueue.then(function () {
+        requireActionAvailable(initiatingAction);
+        var settle = underAction(initiatingAction, function () {
+          var before = currentRoom(), lower = !!UPPER_FOR_LOWER[name];
+          if (before !== name) {
+            var issue = roomRouteIssue(name), active = activeLowerRoom();
+            if (issue) throw unavailableAction(issue);
+            if (!lower && active && active !== name) {
+              if (!lowerRoomClose(active) || activeLowerRoom()) {
+                throw unavailableAction("The " + ROOM_LABELS[name] + " surface could not be opened because the " + ROOM_LABELS[active] + " surface could not be closed.");
+              }
+            }
+            if (lower) {
+              var owner = UPPER_FOR_LOWER[name];
+              if (active && active !== name) {
+                if (!window.__navigateLowerRoom(owner, null, { unlockLocked: true })) {
+                  throw unavailableAction("The " + ROOM_LABELS[name] + " surface could not be opened.");
+                }
+              } else if (window.currentStageName !== owner && !window.goToStage(owner, { rosterNavigation: true, recordVisit: false })) {
+                throw unavailableAction("The " + ROOM_LABELS[name] + " surface could not be opened.");
+              }
+              if (!active) {
+                if (window.currentStageName === owner && window.__prepareRoomPan) window.__prepareRoomPan();
+                lowerRoomOpen(name);
+              }
+            } else if (window.currentStageName !== name && !window.goToStage(name, { rosterNavigation: true })) {
+              throw unavailableAction("The " + ROOM_LABELS[name] + " surface could not be opened.");
+            }
+          }
+          if (currentRoom() !== name) throw unavailableAction("The " + ROOM_LABELS[name] + " surface could not be opened.");
+          return settledRoomValue(null, before !== name);
+        });
+        return Promise.resolve(settle).then(function () {
+          requireActionAvailable(initiatingAction);
+          // Box the owner's return so a finite lifecycle does not hold the room-dispatch queue.
+          return { value: underAction(initiatingAction, callback) };
+        });
+      });
+      roomActionQueue = dispatch.then(function () {}, function () {});
+      return dispatch.then(function (box) { return box.value; });
     }
     function canonicalRoom(name) { return ROOM_ALIASES[name] || name; }
     function monitorAppState() {
@@ -74294,7 +74389,7 @@ setOfficeProgress("pc", false);
       else {
         var lower = activeLowerRoom();
         if (lower) lowerRoomClose(lower);
-        if (window.goToStage) window.goToStage(room);
+        if (window.goToStage) window.goToStage(room, { rosterNavigation: true });
       }
       var changed = before !== currentRoom();
       return settledRoomValue({ changed: changed, room: currentRoom(), requested: args.room }, changed);
@@ -74326,18 +74421,22 @@ setOfficeProgress("pc", false);
         var before = !!window.candle(args.candle); window.candle(args.candle, args.on); var after = !!window.candle(args.candle);
         return { changed: before !== after, candle: args.candle, on: after };
       } });
-    register({ id: "garden.instrument.play", group: "Garden / Party", kind: "action", risk: "ambient",
-      description: "Play the selected physical instrument while the Garden is open.",
+    register({ id: "garden.instrument.play", group: "Garden / Party", kind: "action", risk: "ambient", completion: "finite",
+      description: "Bring the Garden into view and play the selected physical instrument.",
       args: { instrument: { type: "string", enum: ["guitar", "ukulele"], required: true } },
-      available: function () { return currentRoom() === "garden"; }, unavailable: roomBlocked("garden"), run: function (args) {
-        var fn = window[args.instrument]; if (typeof fn !== "function") throw new Error("The instrument is not ready.");
-        return { instrument: args.instrument, result: fn() };
+      available: function (args) { return roomRouteReady("garden") && typeof window[args.instrument] === "function"; }, unavailable: function (args) {
+        return blockedBy([!roomRouteReady("garden") && roomRouteReason("garden"), typeof window[args.instrument] !== "function" && "The instrument controller is not ready."], null);
+      }, run: function (args) {
+        return runInRoom("garden", function () {
+          return { instrument: args.instrument, result: window[args.instrument]() };
+        });
       } });
-    register({ id: "cuddly.octi.squeeze", group: "Cuddly", kind: "action", risk: "ambient",
-      description: "Squeeze Octi while the Cuddly room is open.",
-      available: function () { return currentRoom() === "cuddly"; }, unavailable: roomBlocked("cuddly"), run: function () {
-      if (typeof window.octi !== "function") throw new Error("Octi is not ready.");
-      return { result: window.octi() };
+    register({ id: "cuddly.octi.squeeze", group: "Cuddly", kind: "action", risk: "ambient", completion: "finite",
+      description: "Bring the Cuddly room into view and squeeze Octi.",
+      available: function () { return roomRouteReady("cuddly") && typeof window.octi === "function"; }, unavailable: function () {
+        return blockedBy([!roomRouteReady("cuddly") && roomRouteReason("cuddly"), typeof window.octi !== "function" && "Octi's controller is not ready."], null);
+      }, run: function () {
+      return runInRoom("cuddly", function () { return { result: window.octi() }; });
     } });
     register({ id: "cuddly.chest.status", group: "Cuddly", kind: "query",
       description: "Report whether Octi is tucked inside the Cuddly chest.", run: function () {
@@ -74351,56 +74450,76 @@ setOfficeProgress("pc", false);
         var after = window.__octiCheckpointCapture ? !!window.__octiCheckpointCapture().inside : false;
         return { changed: before !== after, closed: after };
       } });
-    register({ id: "cuddly.visitor.start", group: "Cuddly", kind: "action", risk: "scene",
-      description: "Invite a Cuddly visitor while that room is open, or send only their text from anywhere.",
+    register({ id: "cuddly.visitor.start", group: "Cuddly", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the Cuddly room into view for a visit, or send only their text without moving rooms.",
       args: { visitor: { type: "string", enum: ["ali", "spencer", "alireza", "bahareh", "ayushi"], required: true },
         mode: { type: "string", enum: ["visit", "text"] } },
-      available: function (args) { return args.mode === "text" || currentRoom() === "cuddly"; }, unavailable: roomBlocked("cuddly"), run: function (args) {
-        if (typeof window.visitors !== "function") throw new Error("Visitors are not ready.");
-        return { visitor: args.visitor, mode: args.mode || "visit", result: window.visitors(args.visitor, args.mode === "text" ? "text" : undefined) };
+      available: function (args) { return typeof window.visitors === "function" && (args.mode === "text" || roomRouteReady("cuddly")); }, unavailable: function (args) {
+        return blockedBy([args.mode !== "text" && !roomRouteReady("cuddly") && roomRouteReason("cuddly"), typeof window.visitors !== "function" && "The visitor controller is not ready."], null);
+      }, run: function (args) {
+        var invoke = function () { return { visitor: args.visitor, mode: args.mode || "visit", result: window.visitors(args.visitor, args.mode === "text" ? "text" : undefined) }; };
+        return args.mode === "text" ? invoke() : runInRoom("cuddly", invoke);
       } });
-    register({ id: "bathroom.fixture.activate", group: "Bathroom", kind: "action", risk: "ambient",
+    register({ id: "bathroom.fixture.activate", group: "Bathroom", kind: "action", risk: "ambient", completion: "finite",
       args: { fixture: { type: "string", enum: ["sink", "mirror", "towel", "stool", "scale", "toilet", "paper", "book", "spare-paper", "espresso", "toothbrushes", "comb", "soap", "cabinet", "tub-fill", "tub-drain"], required: true } },
-      available: function () { return currentRoom() === "bathroom"; }, unavailable: roomBlocked("bathroom"), run: function (args) {
-        if (!window.__activateBathroomProp) throw new Error("The bathroom controls are not ready.");
-        return { fixture: args.fixture, activated: !!window.__activateBathroomProp(args.fixture) };
+      available: function () { return roomRouteReady("bathroom") && typeof window.__activateBathroomProp === "function"; }, unavailable: function () {
+        return blockedBy([!roomRouteReady("bathroom") && roomRouteReason("bathroom"), typeof window.__activateBathroomProp !== "function" && "The Bathroom fixture controller is not ready."], null);
+      }, run: function (args) {
+        return runInRoom("bathroom", function () { return { fixture: args.fixture, activated: !!window.__activateBathroomProp(args.fixture) }; });
       } });
-    register({ id: "dungeon.game.start", group: "Dungeon", kind: "action", risk: "scene", available: function () { return currentRoom() === "dungeon"; }, unavailable: roomBlocked("dungeon"), run: function () {
-      return { started: !!(window.__activateGardenPrince && window.__activateGardenPrince()) };
+    register({ id: "dungeon.game.start", group: "Dungeon", kind: "action", risk: "scene", completion: "finite", available: function () { return roomRouteReady("dungeon") && typeof window.__activateGardenPrince === "function"; }, unavailable: function () {
+      return blockedBy([!roomRouteReady("dungeon") && roomRouteReason("dungeon"), typeof window.__activateGardenPrince !== "function" && "The Dungeon game controller is not ready."], null);
+    }, run: function () {
+      return runInRoom("dungeon", function () { return { started: !!window.__activateGardenPrince() }; });
     } });
     register({ id: "dungeon.game.dismiss", group: "Dungeon", kind: "action", risk: "ambient", available: function () { var s = window.__princeState && window.__princeState(); return !!(s && s.playing); }, unavailable: staticBlocked("The Dungeon game is not running."), run: function () {
       return { dismissed: !!(window.__dismissPrinceBasementGame && window.__dismissPrinceBasementGame()) };
     } });
-    register({ id: "cinema.projector.set", group: "Cinema", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { return currentRoom() === "cinema"; }, unavailable: roomBlocked("cinema"), run: function (args) {
-        var before = window.__cinemaRoomState ? !!window.__cinemaRoomState().powered : false;
-        if (before !== args.on && window.__cinemaProjectorToggle) window.__cinemaProjectorToggle();
-        var after = window.__cinemaRoomState ? !!window.__cinemaRoomState().powered : false;
-        return { changed: before !== after, on: after };
+    register({ id: "cinema.projector.set", group: "Cinema", kind: "action", risk: "ambient", completion: "finite",
+      args: { on: { type: "boolean", required: true } }, available: function () { return roomRouteReady("cinema") && typeof window.__cinemaProjectorToggle === "function"; }, unavailable: function () {
+        return blockedBy([!roomRouteReady("cinema") && roomRouteReason("cinema"), typeof window.__cinemaProjectorToggle !== "function" && "The Cinema projector controller is not ready."], null);
+      }, run: function (args) {
+        return runInRoom("cinema", function () {
+          var before = window.__cinemaRoomState ? !!window.__cinemaRoomState().powered : false;
+          if (before !== args.on) window.__cinemaProjectorToggle();
+          var after = window.__cinemaRoomState ? !!window.__cinemaRoomState().powered : false;
+          return { changed: before !== after, on: after };
+        });
       } });
-    register({ id: "cinema.playback.set", group: "Cinema", kind: "action", risk: "ambient",
-      args: { playing: { type: "boolean", required: true } }, available: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(); return !!(s && s.open && s.video); },
-      unavailable: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(), room = !!(s && s.open), video = !!(s && s.video);
-        return blockedBy([!room && "The Cinema is not open.", !video && "No Cinema film is loaded."], null); }, run: function (args) {
-        var before = !!window.__cinemaRoomState().playing;
-        if (before !== args.playing && window.__cinemaProjectorPlayPause) window.__cinemaProjectorPlayPause();
-        var after = !!window.__cinemaRoomState().playing;
-        return { changed: before !== after, playing: after };
+    register({ id: "cinema.playback.set", group: "Cinema", kind: "action", risk: "ambient", completion: "finite",
+      args: { playing: { type: "boolean", required: true } }, available: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(); return !!(roomRouteReady("cinema") && s && s.video && typeof window.__cinemaProjectorPlayPause === "function"); },
+      unavailable: function () { var s = window.__cinemaRoomState && window.__cinemaRoomState(), video = !!(s && s.video), ready = typeof window.__cinemaProjectorPlayPause === "function";
+        return blockedBy([!roomRouteReady("cinema") && roomRouteReason("cinema"), !video && "No Cinema film is loaded.", !ready && "The Cinema playback controller is not ready."], null); }, run: function (args) {
+        return runInRoom("cinema", function () {
+          var before = !!window.__cinemaRoomState().playing;
+          if (before !== args.playing) window.__cinemaProjectorPlayPause();
+          var after = !!window.__cinemaRoomState().playing;
+          return { changed: before !== after, playing: after };
+        });
       } });
-    register({ id: "cinema.film.next", group: "Cinema", kind: "action", risk: "ambient", available: function () { return currentRoom() === "cinema"; }, unavailable: roomBlocked("cinema"), run: function () {
-      return { advanced: !!(window.__cinemaProjectorNext && window.__cinemaProjectorNext()) };
-    } });
-    register({ id: "cinema.sprinkler.start", group: "Cinema", kind: "action", risk: "ambient", available: function () { return currentRoom() === "cinema"; }, unavailable: roomBlocked("cinema"), run: function () {
-      return { started: !!(window.__cinemaSprinkler && window.__cinemaSprinkler()) };
-    } });
-    register({ id: "bedroom.prop.activate", group: "Bedroom", kind: "action", risk: "ambient",
+    register({ id: "cinema.film.next", group: "Cinema", kind: "action", risk: "ambient", completion: "finite", available: function () { return roomRouteReady("cinema") && typeof window.__cinemaProjectorNext === "function"; }, unavailable: function () {
+      return blockedBy([!roomRouteReady("cinema") && roomRouteReason("cinema"), typeof window.__cinemaProjectorNext !== "function" && "The Cinema film controller is not ready."], null);
+    }, run: function () {
+      return runInRoom("cinema", function () { return { advanced: !!window.__cinemaProjectorNext() }; });
+      } });
+    register({ id: "cinema.sprinkler.start", group: "Cinema", kind: "action", risk: "ambient", completion: "finite", available: function () { return roomRouteReady("cinema") && typeof window.__cinemaSprinkler === "function"; }, unavailable: function () {
+      return blockedBy([!roomRouteReady("cinema") && roomRouteReason("cinema"), typeof window.__cinemaSprinkler !== "function" && "The Cinema sprinkler controller is not ready."], null);
+    }, run: function () {
+      return runInRoom("cinema", function () { return { started: !!window.__cinemaSprinkler() }; });
+      } });
+    register({ id: "bedroom.prop.activate", group: "Bedroom", kind: "action", risk: "ambient", completion: "finite",
       args: { prop: { type: "string", enum: ["sprinkler", "stained-glass", "gear-left", "gear-middle", "gear-right", "wardrobe", "bed", "left-table", "right-table", "left-lamp", "right-lamp"], required: true } },
-      available: function () { return currentRoom() === "bedroom"; }, unavailable: roomBlocked("bedroom"), run: function (args) {
-        return { prop: args.prop, activated: !!(window.__activateBedroomProp && window.__activateBedroomProp("bedroom-" + args.prop)) };
+      available: function () { return roomRouteReady("bedroom") && typeof window.__activateBedroomProp === "function"; }, unavailable: function () {
+        return blockedBy([!roomRouteReady("bedroom") && roomRouteReason("bedroom"), typeof window.__activateBedroomProp !== "function" && "The Bedroom prop controller is not ready."], null);
+      }, run: function (args) {
+        return runInRoom("bedroom", function () { return { prop: args.prop, activated: !!window.__activateBedroomProp("bedroom-" + args.prop) }; });
       } });
-    register({ id: "bedroom.tic-tac-toe.start", group: "Bedroom", kind: "action", risk: "scene", available: function () { return currentRoom() === "bedroom"; }, unavailable: roomBlocked("bedroom"), run: function () {
-      return { started: !!(window.__startBedroomTicTacToe && window.__startBedroomTicTacToe()) };
-    } });
+    register({ id: "bedroom.tic-tac-toe.start", group: "Bedroom", kind: "action", risk: "scene", completion: "finite", available: function () { var s = window.__bedroomTicTacToeState && window.__bedroomTicTacToeState(); return roomRouteReady("bedroom") && typeof window.__startBedroomTicTacToe === "function" && !!(s && (s.phase === "idle" || s.phase === "done")); }, unavailable: function () {
+      var ready = typeof window.__startBedroomTicTacToe === "function", s = window.__bedroomTicTacToeState && window.__bedroomTicTacToeState();
+      return blockedBy([!roomRouteReady("bedroom") && roomRouteReason("bedroom"), !ready && "The Bedroom tic-tac-toe controller is not ready.", s && s.phase !== "idle" && s.phase !== "done" && "Tic-tac-toe is already running."], null);
+    }, run: function () {
+      return runInRoom("bedroom", function () { return { started: !!window.__startBedroomTicTacToe() }; });
+      } });
     register({ id: "bedroom.tic-tac-toe.dismiss", group: "Bedroom", kind: "action", risk: "ambient", available: function () { var s = window.__bedroomTicTacToeState && window.__bedroomTicTacToeState(); return !!(s && s.phase !== "idle"); }, unavailable: staticBlocked("Tic-tac-toe is not running."), run: function () {
       return { dismissed: !!(window.__dismissBedroomTicTacToe && window.__dismissBedroomTicTacToe()) };
     } });
@@ -74409,111 +74528,139 @@ setOfficeProgress("pc", false);
       return { room_open: !!state.open, dashboard_open: !!(state.drive && state.drive.hud),
         car: state.car || {}, drive: state.drive || {} };
     } });
-    register({ id: "car.dashboard.set", group: "Entrance / Car", kind: "action", risk: "scene",
-      description: "Open or close the car dashboard, navigating to the Entrance when opening it.",
-      args: { open: { type: "boolean", required: true } }, run: function (args) {
+    register({ id: "car.dashboard.set", group: "Entrance / Car", kind: "action", risk: "scene", completion: "finite",
+      description: "Open or close the car dashboard, bringing the Entrance into view when opening it.",
+      args: { open: { type: "boolean", required: true } }, available: function (args) {
+        return args.open ? carSurfaceReady() : typeof window.__hideEntrancePorscheDriveHud === "function";
+      }, unavailable: function (args) {
+        return blockedBy([args.open && !carSurfaceReady() && "The car dashboard surface cannot be opened.",
+          !args.open && typeof window.__hideEntrancePorscheDriveHud !== "function" && "The car dashboard controller is not ready."], null);
+      }, run: function (args) {
         var state = entranceState(), before = !!(state.drive && state.drive.hud);
         if (args.open) {
-          if (!state.open) lowerRoomOpen("entrance");
-          if (window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
-        } else if (window.__hideEntrancePorscheDriveHud) window.__hideEntrancePorscheDriveHud();
+          return runInRoom("entrance", function () {
+            if (!before) window.__openEntrancePorscheDriveHud();
+            var after = !!(entranceState().drive && entranceState().drive.hud);
+            return { changed: before !== after, open: after };
+          });
+        }
+        window.__hideEntrancePorscheDriveHud();
         state = entranceState();
-        var after = !!(state.drive && state.drive.hud);
-        return { changed: before !== after, open: after };
+        return { changed: before !== !!(state.drive && state.drive.hud), open: !!(state.drive && state.drive.hud) };
       } });
-    register({ id: "car.engine.set", group: "Entrance / Car", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
-      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
-        var before = !!(entranceState().car || {}).engineOn;
-        if (before !== args.on && window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
-        var after = !!(entranceState().car || {}).engineOn;
-        return { changed: before !== after, on: after };
+    register({ id: "car.engine.set", group: "Entrance / Car", kind: "action", risk: "ambient", completion: "finite",
+      args: { on: { type: "boolean", required: true } }, available: function () { return carSurfaceReady() && typeof window.__toggleEntrancePorscheEngine === "function"; },
+      unavailable: function () { return blockedBy([!carSurfaceReady() && "The car dashboard surface cannot be opened.", typeof window.__toggleEntrancePorscheEngine !== "function" && "The car engine controller is not ready."], null); }, run: function (args) {
+        return runOnCarSurface(function () {
+          var before = !!(entranceState().car || {}).engineOn;
+          if (before !== args.on) window.__toggleEntrancePorscheEngine();
+          var after = !!(entranceState().car || {}).engineOn;
+          return { changed: before !== after, on: after };
+        });
       } });
-    register({ id: "car.transmission.set", group: "Entrance / Car", kind: "action", risk: "ambient",
+    register({ id: "car.transmission.set", group: "Entrance / Car", kind: "action", risk: "ambient", completion: "finite",
       args: { mode: { type: "string", enum: ["auto", "manual"], required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
-      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
-        var before = entranceState().drive.transmission.mode;
-        if (window.__entranceDriveTransmissionMode) window.__entranceDriveTransmissionMode(args.mode, true);
-        var after = entranceState().drive.transmission.mode;
-        return { changed: before !== after, mode: after };
+      available: function () { return carSurfaceReady() && typeof window.__entranceDriveTransmissionMode === "function"; },
+      unavailable: function () { return blockedBy([!carSurfaceReady() && "The car dashboard surface cannot be opened.", typeof window.__entranceDriveTransmissionMode !== "function" && "The car transmission controller is not ready."], null); }, run: function (args) {
+        return runOnCarSurface(function () {
+          var before = entranceState().drive.transmission.mode;
+          window.__entranceDriveTransmissionMode(args.mode, true);
+          var after = entranceState().drive.transmission.mode;
+          return { changed: before !== after, mode: after };
+        });
       } });
-    register({ id: "car.range.set", group: "Entrance / Car", kind: "action", risk: "ambient",
+    register({ id: "car.range.set", group: "Entrance / Car", kind: "action", risk: "ambient", completion: "finite",
       args: { range: { type: "string", enum: ["P", "R", "N", "D"], required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud && s.drive.transmission.mode === "auto"); },
+      available: function () { var s = entranceState(); return !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "auto" && typeof window.__entranceDriveRange === "function" && carSurfaceReady()); },
       unavailable: function () {
-        var s = entranceState(), dashboard = !!(s.open && s.drive && s.drive.hud), automatic = !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "auto");
-        return blockedBy([!dashboard && "The car dashboard is not open.", !automatic && "The automatic transmission is not selected."],
-          !dashboard ? { id: "car.dashboard.set", args: { open: true } } : { id: "car.transmission.set", args: { mode: "auto" } });
+        var s = entranceState(), automatic = !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "auto");
+        var ready = typeof window.__entranceDriveRange === "function", surface = carSurfaceReady();
+        return blockedBy([!automatic && "The automatic transmission is not selected.", !surface && "The car dashboard surface cannot be opened.", !ready && "The car range controller is not ready."],
+          !automatic && ready ? { id: "car.transmission.set", args: { mode: "auto" } } : null);
       }, run: function (args) {
-        var before = entranceState().drive.transmission.range;
-        if (window.__entranceDriveRange) window.__entranceDriveRange(args.range);
-        var after = entranceState().drive.transmission.range;
-        return { changed: before !== after, range: after };
+        return runOnCarSurface(function () {
+          var before = entranceState().drive.transmission.range;
+          window.__entranceDriveRange(args.range);
+          var after = entranceState().drive.transmission.range;
+          return { changed: before !== after, range: after };
+        });
       } });
-    register({ id: "car.gear.set", group: "Entrance / Car", kind: "action", risk: "ambient",
+    register({ id: "car.gear.set", group: "Entrance / Car", kind: "action", risk: "ambient", completion: "finite",
       args: { gear: { type: "integer", min: -1, max: 6, required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud && s.drive.transmission.mode === "manual"); },
+      available: function () { var s = entranceState(); return !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "manual" && typeof window.__entranceDriveShift === "function" && carSurfaceReady()); },
       unavailable: function () {
-        var s = entranceState(), dashboard = !!(s.open && s.drive && s.drive.hud), manual = !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "manual");
-        return blockedBy([!dashboard && "The car dashboard is not open.", !manual && "The manual transmission is not selected."],
-          !dashboard ? { id: "car.dashboard.set", args: { open: true } } : { id: "car.transmission.set", args: { mode: "manual" } });
+        var s = entranceState(), manual = !!(s.drive && s.drive.transmission && s.drive.transmission.mode === "manual");
+        var ready = typeof window.__entranceDriveShift === "function", surface = carSurfaceReady();
+        return blockedBy([!manual && "The manual transmission is not selected.", !surface && "The car dashboard surface cannot be opened.", !ready && "The car gear controller is not ready."],
+          !manual && ready ? { id: "car.transmission.set", args: { mode: "manual" } } : null);
       }, run: function (args) {
-        var before = entranceState().drive.gear;
-        if (window.__entranceDriveShift) window.__entranceDriveShift(args.gear, true);
-        var after = entranceState().drive.gear;
-        return { changed: before !== after, gear: after };
+        return runOnCarSurface(function () {
+          var before = entranceState().drive.gear;
+          window.__entranceDriveShift(args.gear, true);
+          var after = entranceState().drive.gear;
+          return { changed: before !== after, gear: after };
+        });
       } });
-    register({ id: "car.control.set", group: "Entrance / Car", kind: "action", risk: "ambient",
+    register({ id: "car.control.set", group: "Entrance / Car", kind: "action", risk: "ambient", completion: "finite",
       args: { control: { type: "string", enum: ["throttle", "brake", "clutch", "steerLeft", "steerRight"], required: true },
         pressed: { type: "boolean", required: true } },
-      available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
-      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
-        var before = !!entranceState().drive.holds[args.control];
-        if (window.__entranceDriveControl) window.__entranceDriveControl(args.control, args.pressed);
-        var after = !!entranceState().drive.holds[args.control];
-        return { changed: before !== after, control: args.control, pressed: after };
+      available: function () { return carSurfaceReady() && typeof window.__entranceDriveControl === "function"; },
+      unavailable: function () { return blockedBy([!carSurfaceReady() && "The car dashboard surface cannot be opened.", typeof window.__entranceDriveControl !== "function" && "The car control surface is not ready."], null); }, run: function (args) {
+        return runOnCarSurface(function () {
+          var before = !!entranceState().drive.holds[args.control];
+          window.__entranceDriveControl(args.control, args.pressed);
+          var after = !!entranceState().drive.holds[args.control];
+          return { changed: before !== after, control: args.control, pressed: after };
+        });
       } });
-    register({ id: "car.cruise.set", group: "Entrance / Car", kind: "action", risk: "ambient",
-      args: { on: { type: "boolean", required: true } }, available: function () { var s = entranceState(); return !!(s.open && s.drive && s.drive.hud); },
-      unavailable: staticBlocked("The car dashboard is not open.", "car.dashboard.set", { open: true }), run: function (args) {
-        var before = !!entranceState().drive.cruise.active;
-        if (window.__setEntrancePorscheCruiseActive) window.__setEntrancePorscheCruiseActive(args.on);
-        var state = entranceState().drive.cruise;
-        return { changed: before !== !!state.active, on: !!state.active, speed: Number(state.target) || 0 };
+    register({ id: "car.cruise.set", group: "Entrance / Car", kind: "action", risk: "ambient", completion: "finite",
+      args: { on: { type: "boolean", required: true } }, available: function () { return carSurfaceReady() && typeof window.__setEntrancePorscheCruiseActive === "function"; },
+      unavailable: function () { return blockedBy([!carSurfaceReady() && "The car dashboard surface cannot be opened.", typeof window.__setEntrancePorscheCruiseActive !== "function" && "The car cruise controller is not ready."], null); }, run: function (args) {
+        return runOnCarSurface(function () {
+          var before = !!entranceState().drive.cruise.active;
+          window.__setEntrancePorscheCruiseActive(args.on);
+          var state = entranceState().drive.cruise;
+          return { changed: before !== !!state.active, on: !!state.active, speed: Number(state.target) || 0 };
+        });
       } });
-    function prepareRoadtripSurface() {
-      if (currentRoom() !== "entrance") lowerRoomOpen("entrance");
+    function carSurfaceReady() {
       var state = entranceState();
-      if (!(state.drive && state.drive.hud) && window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
-      state = entranceState();
-      return !!(state.open && state.drive && state.drive.hud);
+      return !!(state.open && state.drive && state.drive.hud) ||
+        roomRouteReady("entrance") && typeof window.__openEntrancePorscheDriveHud === "function";
     }
-    register({ id: "roadtrip.start", group: "Road Trip", kind: "action", risk: "scene",
-      description: "Navigate to the car and start a fresh Calgary Road Trip independent of story progress.",
-      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; },
-      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiStart === "function", canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !ready && "The Road Trip controller is not ready."],
+    function runOnCarSurface(callback) {
+      return runInRoom("entrance", function () {
+        var state = entranceState();
+        if (!(state.drive && state.drive.hud) && window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
+        state = entranceState();
+        if (!(state.open && state.drive && state.drive.hud)) throw unavailableAction("The car dashboard surface could not be opened.");
+        return callback();
+      });
+    }
+    register({ id: "roadtrip.start", group: "Road Trip", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the car dashboard into view and start a fresh Calgary Road Trip independent of story progress.",
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function" && carSurfaceReady(); },
+      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiStart === "function", surface = carSurfaceReady(), canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !surface && "The Road Trip dashboard surface cannot be opened.", !ready && "The Road Trip controller is not ready."],
         active && ready && canExit ? { id: "roadtrip.exit", args: {} } : null); }, run: function () {
-        if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
-        return { started: !!window.__entranceRoadtripApiStart("calgary"), roadtrip: roadtripState() };
+        return runOnCarSurface(function () { return { started: !!window.__entranceRoadtripApiStart("calgary"), roadtrip: roadtripState() }; });
       } });
-    register({ id: "roadtrip.chooser.open", group: "Road Trip", kind: "action", risk: "ambient",
-      description: "Navigate to the car and open the route chooser independent of story progress.",
-      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiOpenChooser === "function"; },
-      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiOpenChooser === "function", canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !ready && "The Road Trip route chooser is not ready."],
+    register({ id: "roadtrip.chooser.open", group: "Road Trip", kind: "action", risk: "ambient", completion: "finite",
+      description: "Bring the car dashboard into view and open the route chooser independent of story progress.",
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiOpenChooser === "function" && carSurfaceReady(); },
+      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiOpenChooser === "function", surface = carSurfaceReady(), canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !surface && "The Road Trip dashboard surface cannot be opened.", !ready && "The Road Trip route chooser is not ready."],
         active && ready && canExit ? { id: "roadtrip.exit", args: {} } : null); }, run: function () {
-        if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
-        return { opened: !!window.__entranceRoadtripApiOpenChooser(), roadtrip: roadtripState() };
+        return runOnCarSurface(function () { return { opened: !!window.__entranceRoadtripApiOpenChooser(), roadtrip: roadtripState() }; });
       } });
-    register({ id: "roadtrip.route.start", group: "Road Trip", kind: "action", risk: "scene",
-      description: "Navigate to the car and start the selected route independent of story progress.",
+    register({ id: "roadtrip.route.start", group: "Road Trip", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the car dashboard into view and start the selected route independent of story progress.",
       args: { route: { type: "string", enum: ["calgary", "banff", "abraham"], required: true } },
-      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function"; },
-      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiStart === "function", canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !ready && "The Road Trip controller is not ready."],
+      available: function () { return !roadtripState().active && typeof window.__entranceRoadtripApiStart === "function" && carSurfaceReady(); },
+      unavailable: function () { var active = roadtripState().active, ready = typeof window.__entranceRoadtripApiStart === "function", surface = carSurfaceReady(), canExit = typeof window.__exitEntranceRoadtrip === "function"; return blockedBy([active && "A Road Trip is already active.", !surface && "The Road Trip dashboard surface cannot be opened.", !ready && "The Road Trip controller is not ready."],
         active && ready && canExit ? { id: "roadtrip.exit", args: {} } : null); }, run: function (args) {
-        if (!prepareRoadtripSurface()) throw new Error("The Road Trip dashboard is not ready.");
-        var started = !!window.__entranceRoadtripApiStart(args.route);
-        return { started: started, route: roadtripState().route, requested: args.route };
+        return runOnCarSurface(function () {
+          var started = !!window.__entranceRoadtripApiStart(args.route);
+          return { started: started, route: roadtripState().route, requested: args.route };
+        });
       } });
     register({ id: "roadtrip.pause.set", group: "Road Trip", kind: "action", risk: "ambient",
       args: { on: { type: "boolean", required: true } }, available: function () { return !!roadtripState().active; },
@@ -74761,27 +74908,29 @@ setOfficeProgress("pc", false);
         value: function () { return { active: false, variant: args.variant, room: window.currentStageName || null }; }
       });
     } });
-    register({ id: "garden.dance.request", group: "Garden / Party", kind: "action", risk: "ambient",
-      description: "Request a Party dance; the room-owned slow dance also requires the Garden to be open.",
+    register({ id: "garden.dance.request", group: "Garden / Party", kind: "action", risk: "ambient", completion: "finite",
+      description: "Request a Party dance; a slow dance brings the Garden floor into view.",
       args: { style: { type: "string", enum: DANCES, required: true } },
-      available: function (args) { return !!window.__gardenPartyOn && (args.style !== "slow" || currentRoom() === "garden"); }, unavailable: function (args) {
-        var party = !!window.__gardenPartyOn, room = currentRoom() === "garden", slow = args.style === "slow";
-        return blockedBy([!party && "The Garden Party is not running.", slow && !room && "The Garden is not open."],
-          !party && partySetReady() ? { id: "garden.set", args: { on: true } } : party ? { id: "room.go", args: { room: "garden" } } : null);
+      available: function (args) { var slow = args.style === "slow", ready = slow ? typeof window.slowdance === "function" : typeof window.__requestDance === "function"; return !!window.__gardenPartyOn && ready && (!slow || roomRouteReady("garden")); }, unavailable: function (args) {
+        var slow = args.style === "slow", ready = slow ? typeof window.slowdance === "function" : typeof window.__requestDance === "function";
+        return blockedBy([!window.__gardenPartyOn && "The Garden Party is not running.", slow && !roomRouteReady("garden") && roomRouteReason("garden"), !ready && "The requested dance controller is not ready."],
+          !window.__gardenPartyOn && partySetReady() ? { id: "garden.set", args: { on: true } } : null);
       }, run: function (args) {
-      if (args.style === "slow") { if (window.slowdance) window.slowdance(); }
-      else if (args.style === "fast") { if (window.__requestDance) window.__requestDance("techno"); }
-      else if (window.__requestDance) window.__requestDance(args.style);
-      return { style: args.style, dance: window.__partyDance || null };
+      var invoke = function () {
+        if (args.style === "slow") { if (window.slowdance) window.slowdance(); }
+        else if (args.style === "fast") { if (window.__requestDance) window.__requestDance("techno"); }
+        else if (window.__requestDance) window.__requestDance(args.style);
+        return { style: args.style, dance: window.__partyDance || null };
+      };
+      return args.style === "slow" ? runInRoom("garden", invoke) : invoke();
     } });
-    register({ id: "garden.dj.set", group: "Garden / Party", kind: "action", risk: "ambient",
-      description: "Swap the DJ at the live Party booth while the Garden is open.",
+    register({ id: "garden.dj.set", group: "Garden / Party", kind: "action", risk: "ambient", completion: "finite",
+      description: "Bring the Garden into view and swap the DJ at the live Party booth.",
       args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } },
-      available: function () { return !!window.__gardenPartyOn && currentRoom() === "garden"; }, unavailable: function () {
-        var party = !!window.__gardenPartyOn, room = currentRoom() === "garden";
-        return blockedBy([!party && "The Garden Party is not running.", !room && "The Garden is not open."],
-          !party && partySetReady() ? { id: "garden.set", args: { on: true } } : party ? { id: "room.go", args: { room: "garden" } } : null);
-      }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
+      available: function () { return !!window.__gardenPartyOn && roomRouteReady("garden") && typeof window.dj === "function"; }, unavailable: function () {
+        return blockedBy([!window.__gardenPartyOn && "The Garden Party is not running.", !roomRouteReady("garden") && roomRouteReason("garden"), typeof window.dj !== "function" && "The DJ controller is not ready."],
+          !window.__gardenPartyOn && typeof window.dj === "function" && partySetReady() ? { id: "garden.set", args: { on: true } } : null);
+      }, run: function (args) { return runInRoom("garden", function () { var before = window.__djB ? "danesh" : "sina"; window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; }); } });
     register({ id: "cuddly.projector.set", group: "Cuddly", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"], required: true } }, run: function (args) { var before = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; if (window.__cuddlyProjector) window.__cuddlyProjector.set(args.mode); var after = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { changed: before !== after, mode: after }; } });
     register({ id: "weather.scene.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["clear", "rain", "snow", "thunderstorm", "overcast"], required: true } }, run: function (args) {
       var rain = args.mode === "rain" || args.mode === "thunderstorm", snow = args.mode === "snow", storm = args.mode === "thunderstorm", overcast = args.mode === "overcast";
@@ -74796,17 +74945,16 @@ setOfficeProgress("pc", false);
       if (window.twilight && window.twilight.set) window.twilight.set(args.effect === "twilight");
       return { effect: args.effect, aurora: window.__auroraStatus ? window.__auroraStatus() : null, twilight: window.__setTwilight ? !!window.__setTwilight() : false };
     } });
-    register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene",
-      description: "Start a finite Party moment while the Garden is open, independent of game phase.",
+    register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the Garden into view and start a finite Party moment, independent of game phase.",
       args: { moment: { type: "string", enum: Object.keys(PARTY_MOMENTS), required: true } },
-      available: function () { return currentRoom() === "garden" && !anyPartyMoment(); }, unavailable: function () {
-        var room = currentRoom() === "garden", busy = anyPartyMoment();
-        return blockedBy([!room && "The Garden is not open.", busy && "Another Garden Party moment is still running."],
-          !room && !busy ? { id: "room.go", args: { room: "garden" } } : null);
+      available: function (args) { return !anyPartyMoment() && roomRouteReady("garden") && typeof window[PARTY_MOMENTS[args.moment]] === "function"; }, unavailable: function (args) {
+        var busy = anyPartyMoment(), ready = typeof window[PARTY_MOMENTS[args.moment]] === "function";
+        return blockedBy([busy && "Another Garden Party moment is still running.", !roomRouteReady("garden") && roomRouteReason("garden"), !ready && "The requested Garden Party moment controller is not ready."], null);
       }, run: function (args) {
-      var fn = window[PARTY_MOMENTS[args.moment]];
-      if (typeof fn !== "function") throw new Error("Party moment is not ready.");
-      return Promise.resolve(fn()).then(function () { return { moment: args.moment, completed: true }; });
+      return runInRoom("garden", function () {
+        return Promise.resolve(window[PARTY_MOMENTS[args.moment]]()).then(function () { return { moment: args.moment, completed: true }; });
+      });
     } });
     register({ id: "call.incoming.trigger", kind: "action", risk: "scene", args: { caller: { type: "string", enum: ["madla", "prague"], required: true } }, available: function () { return !callBusy() && typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function"; }, unavailable: function () {
       var busy = callBusy(), ready = typeof window.__madlaRing === "function" && typeof window.__pragueRing === "function";
@@ -74835,26 +74983,25 @@ setOfficeProgress("pc", false);
         value: { caller: args.caller, completed: true }
       });
     } });
-    register({ id: "call.video.start", kind: "action", risk: "scene",
-      description: "Start an Office video call while the Office is open, independent of story progress.",
+    register({ id: "call.video.start", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the Office into view and start a video call, independent of story progress.",
       args: { contact: { type: "string", enum: ["tehran", "california", "prague", "lubeck"], required: true } }, available: function (args) {
-      return currentRoom() === "office" && !callBusy() && videoCallReady(args.contact);
+      return !callBusy() && roomRouteReady("office") && videoCallReady(args.contact);
     }, unavailable: function (args) {
-      var room = currentRoom() === "office", busy = callBusy(), ready = videoCallReady(args.contact);
-      return blockedBy([!room && "The Office is not open.", busy && "Another call is active or ringing.", !ready && "The video-call controller is not ready."],
-        !room && !busy && ready ? { id: "room.go", args: { room: "office" } } : room && busy && ready && callHangupReady() ? { id: "call.hangup", args: {} } : null);
+      var busy = callBusy(), ready = videoCallReady(args.contact);
+      return blockedBy([busy && "Another call is active or ringing.", !roomRouteReady("office") && roomRouteReason("office"), !ready && "The video-call controller is not ready."],
+        busy && ready && callHangupReady() ? { id: "call.hangup", args: {} } : null);
     }, run: function (args) {
-      var live;
-      if (args.contact === "tehran" || args.contact === "california") {
-        live = !!(window.__openMonitorApp && window.__openMonitorApp(args.contact));
-      } else {
-        live = !!(window.__laptopCall && window.__laptopCall(args.contact === "lubeck" ? "lueb" : "prague"));
-      }
-      if (live) syncCallState("outgoing", "ui");
-      if (!live) return { changed: false, contact: args.contact, calling: false };
-      return window.__loftAwaitLifecycle(callBusy, {
-        label: args.contact + " video call", startTimeout: 3000, timeout: Infinity, settle: 900,
-        value: { contact: args.contact, completed: true }
+      return runInRoom("office", function () {
+        var live;
+        if (args.contact === "tehran" || args.contact === "california") live = !!window.__openMonitorApp(args.contact);
+        else live = !!window.__laptopCall(args.contact === "lubeck" ? "lueb" : "prague");
+        if (live) syncCallState("outgoing", "ui");
+        if (!live) return { changed: false, contact: args.contact, calling: false };
+        return window.__loftAwaitLifecycle(callBusy, {
+          label: args.contact + " video call", startTimeout: 3000, timeout: Infinity, settle: 900,
+          value: { contact: args.contact, completed: true }
+        });
       });
     } });
     register({ id: "call.hangup", kind: "action", risk: "ambient", available: callBusy, unavailable: staticBlocked("No call is active or ringing."), run: function () {
@@ -74867,58 +75014,64 @@ setOfficeProgress("pc", false);
       var after = callBusy();
       return { changed: before && !after, scheduled: before && after };
     } });
-    register({ id: "kitchen.cocktail.make", group: "Kitchen / Bar", kind: "action", risk: "scene",
-      description: "Have Pouria make a cocktail at the open Kitchen bar, independent of game phase.",
-      args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: bartenderAvailable, unavailable: function () {
-        var room = currentRoom() === "kitchen", minigame = minigameRunning(), serving = !!((window.__ambientMaking && window.__ambientMaking()) ||
+    register({ id: "kitchen.cocktail.make", group: "Kitchen / Bar", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the Kitchen bar into view and have Pouria make a cocktail, independent of game phase.",
+      args: { drink: { type: "string", enum: Object.keys(COCKTAILS), required: true } }, available: function () { return bartenderAvailable() && roomRouteReady("kitchen") && typeof window.__makeCocktail === "function"; }, unavailable: function () {
+        var minigame = minigameRunning(), serving = !!((window.__ambientMaking && window.__ambientMaking()) ||
           (window.__userMixing && window.__userMixing()) || (window.__bartenderDragging && window.__bartenderDragging()));
-        return blockedBy([!room && "The Kitchen is not open.", minigame && "A minigame is running.", serving && "The Kitchen bar is already serving or mixing a drink."],
-          !room && !minigame && !serving ? { id: "room.go", args: { room: "kitchen" } } : room && minigame && !serving && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
+        return blockedBy([minigame && "A minigame is running.", serving && "The Kitchen bar is already serving or mixing a drink.", !roomRouteReady("kitchen") && roomRouteReason("kitchen"), typeof window.__makeCocktail !== "function" && "The cocktail controller is not ready."],
+          minigame && !serving && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
       }, run: function (args) {
-      if (typeof window.__makeCocktail !== "function") throw new Error("The bar is not ready.");
-      var message = window.__makeCocktail(COCKTAILS[args.drink], true);
-      if (!(window.__ambientMaking && window.__ambientMaking())) throw new Error(String(message));
-      return window.__loftAwaitLifecycle(function () { return !!(window.__ambientMaking && window.__ambientMaking()); }, {
-        label: "cocktail", startTimeout: 0,
-        value: { drink: args.drink, completed: true }
+      return runInRoom("kitchen", function () {
+        if (typeof window.__makeCocktail !== "function") throw new Error("The bar is not ready.");
+        var message = window.__makeCocktail(COCKTAILS[args.drink], true);
+        if (!(window.__ambientMaking && window.__ambientMaking())) throw new Error(String(message));
+        return window.__loftAwaitLifecycle(function () { return !!(window.__ambientMaking && window.__ambientMaking()); }, {
+          label: "cocktail", startTimeout: 0,
+          value: { drink: args.drink, completed: true }
+        });
       });
     } });
-    register({ id: "kitchen.mixer.start", group: "Kitchen / Bar", kind: "action", risk: "scene",
-      description: "Run the hands-on mixer at the open Kitchen bar, independent of game phase.",
-      args: { recipe: { type: "string", enum: ["negroni", "yale"], required: true } }, available: bartenderAvailable, unavailable: function () {
-        var room = currentRoom() === "kitchen", minigame = minigameRunning(), serving = !!((window.__ambientMaking && window.__ambientMaking()) ||
+    register({ id: "kitchen.mixer.start", group: "Kitchen / Bar", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the Kitchen bar into view and run the hands-on mixer, independent of game phase.",
+      args: { recipe: { type: "string", enum: ["negroni", "yale"], required: true } }, available: function () { return bartenderAvailable() && roomRouteReady("kitchen") && typeof window.mixer === "function"; }, unavailable: function () {
+        var minigame = minigameRunning(), serving = !!((window.__ambientMaking && window.__ambientMaking()) ||
           (window.__userMixing && window.__userMixing()) || (window.__bartenderDragging && window.__bartenderDragging()));
-        return blockedBy([!room && "The Kitchen is not open.", minigame && "A minigame is running.", serving && "The Kitchen bar is already serving or mixing a drink."],
-          !room && !minigame && !serving ? { id: "room.go", args: { room: "kitchen" } } : room && minigame && !serving && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
+        return blockedBy([minigame && "A minigame is running.", serving && "The Kitchen bar is already serving or mixing a drink.", !roomRouteReady("kitchen") && roomRouteReason("kitchen"), typeof window.mixer !== "function" && "The mixer controller is not ready."],
+          minigame && !serving && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
       }, run: function (args) {
-      if (typeof window.mixer !== "function") throw new Error("The mixer is not ready.");
-      return Promise.resolve(window.mixer(args.recipe)).then(function () {
-        return { recipe: args.recipe, completed: true };
+      return runInRoom("kitchen", function () {
+        if (typeof window.mixer !== "function") throw new Error("The mixer is not ready.");
+        return Promise.resolve(window.mixer(args.recipe)).then(function () {
+          return { recipe: args.recipe, completed: true };
+        });
       });
     } });
-    register({ id: "minigame.start", kind: "action", risk: "scene",
-      description: "Start a room-owned minigame in its open room, independent of game phase.",
+    register({ id: "minigame.start", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring a minigame's room into view and start it, independent of game phase.",
       args: { game: { type: "string", enum: ["invaders", "flair-catch"], required: true } }, available: function (args) {
       if (minigameRunning()) return false;
-      if (args.game === "flair-catch") return currentRoom() === "kitchen" && typeof window.__startFlairCatch === "function";
-      if (args.game === "invaders") return currentRoom() === "office" && typeof window.__startArcade === "function";
+      if (args.game === "flair-catch") return roomRouteReady("kitchen") && typeof window.__startFlairCatch === "function";
+      if (args.game === "invaders") return roomRouteReady("office") && typeof window.__startArcade === "function";
       return typeof window.__startArcade === "function" || typeof window.__startFlairCatch === "function";
     }, unavailable: function (args) {
       var known = args.game === "invaders" || args.game === "flair-catch", roomName = args.game === "invaders" ? "office" : "kitchen";
-      var running = minigameRunning(), room = !known || currentRoom() === roomName;
+      var running = minigameRunning();
       var ready = args.game === "invaders" ? typeof window.__startArcade === "function" : args.game === "flair-catch" ? typeof window.__startFlairCatch === "function" : false;
-      return blockedBy([running && "A minigame is already running.", known && !room && "The " + (roomName === "office" ? "Office" : "Kitchen") + " is not open.",
+      return blockedBy([running && "A minigame is already running.", known && !roomRouteReady(roomName) && roomRouteReason(roomName),
         known && !ready && "The " + (args.game === "invaders" ? "Invaders" : "Flair Catch") + " controller is not ready.",
         !known && typeof window.__startArcade !== "function" && typeof window.__startFlairCatch !== "function" && "No minigame controller is ready."],
-        known && running && room && ready && minigameStopReady() ? { id: "minigame.stop", args: {} } : known && !running && !room && ready ? { id: "room.go", args: { room: roomName } } : null);
+        known && running && ready && minigameStopReady() ? { id: "minigame.stop", args: {} } : null);
     }, run: function (args) {
-      if (args.game === "invaders") {
-        window.__startArcade();
-      } else {
-        if (window.__setDayNight && !(window.__barUpNow && window.__barUpNow())) window.__setDayNight(true);
-        window.__startFlairCatch();
-      }
-      return { game: args.game, started: true };
+      var roomName = args.game === "invaders" ? "office" : "kitchen";
+      return runInRoom(roomName, function () {
+        if (args.game === "invaders") window.__startArcade();
+        else {
+          if (window.__setDayNight && !(window.__barUpNow && window.__barUpNow())) window.__setDayNight(true);
+          window.__startFlairCatch();
+        }
+        return { game: args.game, started: true };
+      });
     } });
     register({ id: "minigame.stop", kind: "action", risk: "ambient", available: minigameRunning, unavailable: staticBlocked("No minigame is running."), run: function () {
       var before = minigameState(), game = before.active;
@@ -74932,17 +75085,18 @@ setOfficeProgress("pc", false);
       return { changed: !!removed, removed: !!removed, id: args.id };
     } });
     register({ id: "scene.activity.start", kind: "action", risk: "scene", completion: "finite",
-      description: "Start a finite room activity in its open room, independent of game phase.",
+      description: "Bring a finite room activity into view and start it, independent of game phase.",
       args: { activity: { type: "string", enum: ["kids-chase", "butterfly", "rainbow"], required: true } },
-      available: function (args) {
-        return currentRoom() === (args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony");
-      }, unavailable: function (args) {
-        return roomBlocked(args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony")();
+      available: function (args) { var roomName = args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony"; return roomRouteReady(roomName) && typeof window[args.activity === "kids-chase" ? "chase" : args.activity] === "function"; }, unavailable: function (args) {
+        var roomName = args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony";
+        return blockedBy([!roomRouteReady(roomName) && roomRouteReason(roomName), typeof window[args.activity === "kids-chase" ? "chase" : args.activity] !== "function" && "The scene activity controller is not ready."], null);
       }, run: function (args) {
       var fn = args.activity === "kids-chase" ? window.chase : args.activity === "butterfly" ? window.butterfly : window.rainbow;
-      if (typeof fn !== "function") throw new Error("Scene activity is not ready.");
-      return Promise.resolve(fn()).then(function (completion) {
-        return { activity: args.activity, completed: true, result: completion };
+      var roomName = args.activity === "kids-chase" ? "garden" : args.activity === "butterfly" ? "office" : "balcony";
+      return runInRoom(roomName, function () {
+        return Promise.resolve(fn()).then(function (completion) {
+          return { activity: args.activity, completed: true, result: completion };
+        });
       });
     } });
     register({ id: "caption.show", group: "Utilities / Scripting", kind: "action", risk: "ambient",
@@ -75035,8 +75189,8 @@ setOfficeProgress("pc", false);
       } });
 
     // Semantic interactions are deliberately bounded: callers cannot pass a DOM selector or
-    // arbitrary element id. Activation uses the existing interaction owners and is available
-    // only while its room is actually open.
+    // arbitrary element id. Activation brings the owning room into view, then uses its existing
+    // interaction owner.
     var INTERACTIONS = {
       "garden.tensegrity": { room: "garden", element: "garden-tensegrity" },
       "cuddly.pan-edge": { room: "cuddly", element: "cuddly-panedge-hit" },
@@ -75047,22 +75201,24 @@ setOfficeProgress("pc", false);
     var INTERACTION_IDS = Object.keys(INTERACTIONS);
     function interactionInfo(id) {
       var spec = INTERACTIONS[id], node = spec && document.getElementById(spec.element);
-      return spec ? { id: id, room: spec.room, available: !!node && currentRoom() === spec.room } : null;
+      return spec ? { id: id, room: spec.room, available: !!node } : null;
     }
     register({ id: "interaction.get", group: "Utilities / Scripting", kind: "query",
       description: "Inspect one bounded semantic scene interaction.",
       args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } },
       run: function (args) { return interactionInfo(args.interaction); } });
-    register({ id: "interaction.activate", group: "Utilities / Scripting", kind: "action", risk: "ambient",
-      description: "Activate one bounded semantic interaction in the currently open room.",
+    register({ id: "interaction.activate", group: "Utilities / Scripting", kind: "action", risk: "ambient", completion: "finite",
+      description: "Bring the owning room into view and activate one bounded semantic interaction.",
       args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } },
-      available: function (args) { var info = interactionInfo(args.interaction); return !!(info && info.available); },
-      unavailable: function (args) { var info = interactionInfo(args.interaction); return info && document.getElementById(INTERACTIONS[args.interaction].element) ? roomBlocked(info.room)() : blocked("The interaction is not ready."); },
+      available: function (args) { var info = interactionInfo(args.interaction); return !!(info && info.available && roomRouteReady(info.room)); },
+      unavailable: function (args) { var info = interactionInfo(args.interaction); return blockedBy([info && !roomRouteReady(info.room) && roomRouteReason(info.room), !(info && info.available) && "The interaction is not ready."], null); },
       run: function (args) {
         var spec = INTERACTIONS[args.interaction], node = spec && document.getElementById(spec.element);
         if (!node) throw new Error("Interaction is not ready.");
-        node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
-        return { activated: true, interaction: args.interaction, room: spec.room };
+        return runInRoom(spec.room, function () {
+          node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+          return { activated: true, interaction: args.interaction, room: spec.room };
+        });
       } });
 
     // Editorial primitives stay semantic and finite: authored scripts can select only the
@@ -75100,46 +75256,52 @@ setOfficeProgress("pc", false);
       description: "Move the Trailer pointer to one bounded semantic interaction without activating it.",
       args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } }, available: presentationReady, unavailable: presentationBlocked,
       run: function (args) { return window.__loftPresentation.point(args.interaction).then(function () { return { interaction: args.interaction }; }); } });
-    register({ id: "bathroom.bubbles.preview", group: "Bathroom", kind: "action", risk: "scene",
+    register({ id: "bathroom.bubbles.preview", group: "Bathroom", kind: "action", risk: "scene", completion: "finite",
       description: "Start or stop the real bubble-pop board inside a preview session.",
-      args: { on: { type: "boolean", required: true } }, available: function (args) { return previewActive() && (!args.on || currentRoom() === "bathroom"); }, unavailable: function (args) {
-        var preview = previewActive(), room = currentRoom() === "bathroom", needsRoom = !!args.on;
-        return blockedBy([!preview && "No preview session is active.", needsRoom && !room && "The Bathroom is not open."],
-          !preview && (!needsRoom || room) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : preview && needsRoom && !room ? { id: "room.go", args: { room: "bathroom" } } : null);
+      args: { on: { type: "boolean", required: true } }, available: function (args) { var ready = args.on ? !!document.getElementById("bathroom-tub") : typeof window.__dismissBathroomBubbleHunt === "function"; return previewActive() && ready && (!args.on || roomRouteReady("bathroom")); }, unavailable: function (args) {
+        var ready = args.on ? !!document.getElementById("bathroom-tub") : typeof window.__dismissBathroomBubbleHunt === "function";
+        return blockedBy([!previewActive() && "No preview session is active.", args.on && !roomRouteReady("bathroom") && roomRouteReason("bathroom"), !ready && "The Bathroom bubble controller is not ready."],
+          !previewActive() && ready && (!args.on || roomRouteReady("bathroom")) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : null);
       }, run: function (args) {
-        var tub = document.getElementById("bathroom-tub");
-        if (args.on) {
-          if (currentRoom() !== "bathroom") throw new Error("Open the Bathroom first.");
+        var invoke = function () {
+          var tub = document.getElementById("bathroom-tub");
+          if (args.on) {
           if (tub) tub.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
           if (window.__loftPreviewOwn && window.__dismissBathroomBubbleHunt) window.__loftPreviewOwn(window.__dismissBathroomBubbleHunt);
-        } else if (window.__dismissBathroomBubbleHunt) window.__dismissBathroomBubbleHunt();
-        return { on: args.on };
+          } else if (window.__dismissBathroomBubbleHunt) window.__dismissBathroomBubbleHunt();
+          return { on: args.on };
+        };
+        return args.on ? runInRoom("bathroom", invoke) : invoke();
       } });
-    register({ id: "bedroom.tic-tac-toe.preview", group: "Bedroom", kind: "action", risk: "scene",
+    register({ id: "bedroom.tic-tac-toe.preview", group: "Bedroom", kind: "action", risk: "scene", completion: "finite",
       description: "Start or dismiss the real tic-tac-toe board inside a preview session.",
-      args: { on: { type: "boolean", required: true } }, available: function (args) { return previewActive() && (!args.on || currentRoom() === "bedroom"); }, unavailable: function (args) {
-        var preview = previewActive(), room = currentRoom() === "bedroom", needsRoom = !!args.on;
-        return blockedBy([!preview && "No preview session is active.", needsRoom && !room && "The Bedroom is not open."],
-          !preview && (!needsRoom || room) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : preview && needsRoom && !room ? { id: "room.go", args: { room: "bedroom" } } : null);
+      args: { on: { type: "boolean", required: true } }, available: function (args) { var ready = args.on ? typeof window.__startBedroomTicTacToe === "function" : typeof window.__dismissBedroomTicTacToe === "function"; return previewActive() && ready && (!args.on || roomRouteReady("bedroom")); }, unavailable: function (args) {
+        var ready = args.on ? typeof window.__startBedroomTicTacToe === "function" : typeof window.__dismissBedroomTicTacToe === "function";
+        return blockedBy([!previewActive() && "No preview session is active.", args.on && !roomRouteReady("bedroom") && roomRouteReason("bedroom"), !ready && "The Bedroom tic-tac-toe controller is not ready."],
+          !previewActive() && ready && (!args.on || roomRouteReady("bedroom")) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : null);
       }, run: function (args) {
-        if (args.on) {
-          if (currentRoom() !== "bedroom") throw new Error("Open the Bedroom first.");
+        var invoke = function () {
+          if (args.on) {
           if (window.__startBedroomTicTacToe) window.__startBedroomTicTacToe();
           if (window.__loftPreviewOwn && window.__dismissBedroomTicTacToe) window.__loftPreviewOwn(window.__dismissBedroomTicTacToe);
-        } else if (window.__dismissBedroomTicTacToe) window.__dismissBedroomTicTacToe();
-        return { on: args.on, state: window.__bedroomTicTacToeState ? window.__bedroomTicTacToeState() : null };
+          } else if (window.__dismissBedroomTicTacToe) window.__dismissBedroomTicTacToe();
+          return { on: args.on, state: window.__bedroomTicTacToeState ? window.__bedroomTicTacToeState() : null };
+        };
+        return args.on ? runInRoom("bedroom", invoke) : invoke();
       } });
-    register({ id: "office.invaders.preview", group: "Office / Devices", kind: "action", risk: "scene",
+    register({ id: "office.invaders.preview", group: "Office / Devices", kind: "action", risk: "scene", completion: "finite",
       description: "Run or stop the real invaders board under preview-owned score isolation.",
-      args: { on: { type: "boolean", required: true } }, available: function (args) { return previewActive() && (!args.on || currentRoom() === "office"); }, unavailable: function (args) {
-        var preview = previewActive(), room = currentRoom() === "office", needsRoom = !!args.on;
-        return blockedBy([!preview && "No preview session is active.", needsRoom && !room && "The Office is not open."],
-          !preview && (!needsRoom || room) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : preview && needsRoom && !room ? { id: "room.go", args: { room: "office" } } : null);
+      args: { on: { type: "boolean", required: true } }, available: function (args) { var ready = typeof window.__previewArcadeDemo === "function"; return previewActive() && ready && (!args.on || roomRouteReady("office")); }, unavailable: function (args) {
+        var ready = typeof window.__previewArcadeDemo === "function";
+        return blockedBy([!previewActive() && "No preview session is active.", args.on && !roomRouteReady("office") && roomRouteReason("office"), !ready && "The Invaders preview controller is not ready."],
+          !previewActive() && ready && (!args.on || roomRouteReady("office")) && typeof window.__loftPreviewBegin === "function" ? { id: "session.preview.begin", args: {} } : null);
       }, run: function (args) {
-        if (args.on && currentRoom() !== "office") throw new Error("Open the Office first.");
-        if (window.__previewArcadeDemo) window.__previewArcadeDemo(args.on);
-        if (args.on && window.__loftPreviewOwn) window.__loftPreviewOwn(function () { if (window.__previewArcadeDemo) window.__previewArcadeDemo(false); });
-        return { on: args.on, state: window.__arcadeState ? window.__arcadeState() : null };
+        var invoke = function () {
+          if (window.__previewArcadeDemo) window.__previewArcadeDemo(args.on);
+          if (args.on && window.__loftPreviewOwn) window.__loftPreviewOwn(function () { if (window.__previewArcadeDemo) window.__previewArcadeDemo(false); });
+          return { on: args.on, state: window.__arcadeState ? window.__arcadeState() : null };
+        };
+        return args.on ? runInRoom("office", invoke) : invoke();
       } });
     register({ id: "roadtrip.preview.show", group: "Road Trip", kind: "action", risk: "scene", completion: "finite",
       description: "Show an exact renderer-owned Road Trip route or campsite within a preview transaction.",

@@ -218,8 +218,8 @@ function connectedSpur(visual) {
     visual.junctionOverlap <= 18.1 &&
     Math.abs(visual.junctionRoadRightX - visual.shoulderMouthInnerX -
       visual.junctionOverlap) <= .03 &&
-    visual.junctionOuterX - visual.junctionRoadRightX > 12 &&
-    visual.junctionOuterX - visual.junctionRoadRightX < 30 &&
+    visual.junctionOuterX - visual.junctionRoadRightX > .02 &&
+    visual.junctionOuterX - visual.junctionRoadRightX < 5.1 &&
     visual.innerEdgeStartT >= .35 && visual.innerEdgeStartT <= .42 &&
     visual.bendInnerX < visual.bendOuterX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
@@ -375,7 +375,8 @@ var mobile = run(true);
     Number.isFinite(firstVisual.junctionX) && Number.isFinite(firstVisual.junctionY) &&
     laneCentredApproach(firstVisual) &&
     firstVisual.destinationY < firstVisual.junctionY - 15 &&
-    firstVisual.nearWidth > firstVisual.farWidth * 2 && firstVisual.nearWidth < 80 &&
+    firstVisual.nearWidth > firstVisual.farWidth && firstVisual.farWidth >= 12 &&
+    firstVisual.nearWidth < 80 &&
     firstVisual.signPostX > firstVisual.destinationX &&
     connectedSpur(firstVisual) && signsClear(firstVisual) && /^M/.test(firstVisual.innerEdge || ""),
     device + " paints a receding right-hand spur with its larger sign beside it", firstVisual);

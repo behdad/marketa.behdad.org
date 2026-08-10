@@ -76429,7 +76429,10 @@ setOfficeProgress("pc", false);
         : file.name === sel && file.language === codeLastSavedLanguage;
       it.className = "code-item" + (file.unsaved ? " unsaved" : "") + (file.builtin ? " builtin" : "") + (file.userFile ? " user-file" : "") + (file.edited ? " edited" : "") + (active ? " active" : "");
       it.textContent = file.displayName || file.name;
-      if (file.builtin) it.title = file.edited ? "canonical file · locally edited" : "canonical file";
+      if (file.builtin) {
+        it.dataset.codeBuiltin = file.builtin.filename;
+        it.title = file.edited ? "canonical file · locally edited" : "canonical file";
+      }
       else if (file.userFile) it.title = "your saved file";
       else it.title = "unsaved buffer";
 
@@ -76599,20 +76602,32 @@ setOfficeProgress("pc", false);
     };
     try { reader.readAsText(file); } catch (e) {}
   }
+  function codeResetBuiltinOverride(entry) {
+    if (!entry) return false;
+    var overrides = readCodeBuiltinOverrides();
+    if (!codeHasOwn(overrides, entry.filename)) return false;
+    var active = codeActiveBuiltin === entry;
+    delete overrides[entry.filename];
+    if (!writeCodeBuiltinOverrides(overrides)) return false;
+    // A pending save exists only for the active built-in. Cancel it after the durable delete
+    // succeeds, before it can put the just-reset override back.
+    if (active) { clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null; }
+    if (active && codeCode) codeSetBuffer(codeBuiltinText(entry));
+    codeRefreshPicker(active ? entry.filename : codeLastSavedName);
+    if (active) { codeAiSetStatus("reset to canonical", true); codeSyncBuiltinControls(); }
+    if (!codeHasOwn(codeBuiltinSources, entry.filename)) codeFetchBuiltin(entry).catch(function () {});
+    return true;
+  }
+  window.__resetMonitorCodeBuiltin = function (filename) {
+    var entry = codeFindBuiltin(filename);
+    if (!entry || !codeBuiltinHasOverride(entry)) return false;
+    var lang = document.documentElement.lang, strings = T[lang] || T.en;
+    var prompt = String(strings.code_reset_file_confirm || T.en.code_reset_file_confirm).replace("{filename}", entry.filename);
+    if (!window.confirm(prompt)) return false;
+    return codeResetBuiltinOverride(entry);
+  };
   function codeDelete() {
-    if (codeActiveBuiltin) {
-      clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
-      var entry = codeActiveBuiltin, overrides = readCodeBuiltinOverrides();
-      if (!codeHasOwn(overrides, entry.filename)) return false;
-      delete overrides[entry.filename];
-      writeCodeBuiltinOverrides(overrides);
-      if (codeCode) codeSetBuffer(codeBuiltinText(entry));
-      if (!codeHasOwn(codeBuiltinSources, entry.filename)) codeFetchBuiltin(entry).catch(function () {});
-      codeAiSetStatus("reset to canonical", true);
-      codeRefreshPicker(entry.filename);
-      codeSyncBuiltinControls();
-      return true;
-    }
+    if (codeActiveBuiltin) return codeResetBuiltinOverride(codeActiveBuiltin);
     if (!codeName) return;
     var name = codeName.value.trim(), scr = readScripts(codeLanguage);
     var known = name && Object.prototype.hasOwnProperty.call(scr, name);
@@ -80174,9 +80189,16 @@ setOfficeProgress("pc", false);
       var chatText = app.cls === "show-chat" ? chatTextTarget(target) : null;
       var targetEl = target && (target.nodeType === 1 ? target : target.parentElement);
       var codeFiles = app.cls === "show-code" && targetEl && targetEl.closest && targetEl.closest(".code-side");
+      var editedBuiltinRow = codeFiles && targetEl.closest(".code-item.builtin.edited");
       var onEq = app.cls === "show-nowplaying" && targetEl && targetEl.closest &&
         targetEl.closest("#monitor-manual-eq, #monitor-eq-hit, #monitor-logo-nowplaying .eq-bar");
       if (codeFiles) {
+        if (editedBuiltinRow) {
+          var builtinFilename = editedBuiltinRow.dataset.codeBuiltin;
+          items.push(makeItem("ctx-reset-code-file ctx-danger", FILES_RESET_ICO,
+            tr("code_reset_file").replace("{filename}", builtinFilename),
+            function () { window.__resetMonitorCodeBuiltin(builtinFilename); }, false));
+        }
         items.push(makeItem("ctx-reset-files ctx-danger", FILES_RESET_ICO, tr("code_reset_files"), "__resetMonitorCodeFiles", false));
       }
       if (edit && edit.target) {
@@ -80275,6 +80297,7 @@ setOfficeProgress("pc", false);
     document.addEventListener("contextmenu", function (e) {
       var app = activeMonitorApp();
       if (!app || !monitorBezel) return;
+      if (contextIsOnMonitor(e)) return; // real screen/rim descendants keep their precise target for the app-specific menu
       var glass = document.getElementById("office-monitor-bg");
       if (!glass) return;
       var b = monitorBezel.getBoundingClientRect(), g = glass.getBoundingClientRect();

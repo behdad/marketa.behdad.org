@@ -183,8 +183,9 @@ a literal scene caption without moving the view.
 Code puts the unsaved buffer first, then lists canonical and visitor-created files by basename;
 the unsaved buffer and untouched default snippets are italic, while overridden defaults and user
 files are upright. Tooltips identify exact ownership—never icons or colors. Editing a canonical
-file stores a local override, and its reset control reveals the current public file again. The
-file sidebar's **Reset files…** context-menu action, after confirmation, clears every saved file,
+file stores a local override; right-click its edited filename to reset only that local edit, or use
+its reset control to reveal the current public file directly. The file sidebar's broader **Reset
+files…** context-menu action, after confirmation, clears every saved file,
 local canonical edit, and draft, then returns Code to its canonical list plus a blank unsaved
 buffer. The editor keeps fixed line numbers beside the native code field; long lines scroll
 horizontally rather than soft-wrapping. The authored Trailer is the canonical `trailer.js`.

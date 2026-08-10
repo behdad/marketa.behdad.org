@@ -169,6 +169,8 @@ T["en"] = {
   "clk_playtime": "You’ve been in the loft for",
   "code_email_intro": "Hi Markéta & Behdad!\n\nLook what I built in the loft — run it in the office computer's Code app:",
   "code_email_subject": "Look what I built!",
+  "code_reset_file": "Reset “{filename}”…",
+  "code_reset_file_confirm": "Reset “{filename}”? Only your local edit to this file will be lost.",
   "code_reset_files": "Reset files…",
   "code_reset_files_confirm": "Reset all Code files and edits? This cannot be undone.",
   "console_hint": "Open the drop-down console",

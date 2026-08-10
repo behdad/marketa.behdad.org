@@ -417,8 +417,14 @@ an already-present override, including an empty one, wins. Do not reintroduce sa
 migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository bytes through
 a test-only resource hook because `file://` cannot fetch siblings.
 
-The Code sidebar's `Reset files…` context action calls `__resetMonitorCodeFiles` after a native
-confirmation. It removes only `deskScripts`, `deskPythonScripts`, `deskCodeBuiltinOverrides`,
+Only an edited `.code-item.builtin` row exposes the filename-specific context action. Its
+`data-code-builtin` identity is passed to `__resetMonitorCodeBuiltin`, whose native confirmation
+then removes exactly that own override property. An active row also cancels its pending autosave,
+repaints from the lazily loaded canonical source, and keeps the row selected; inactive resets do
+not disturb the current buffer. The minus control shares the same `codeResetBuiltinOverride` path.
+
+The Code sidebar's broader `Reset files…` context action calls `__resetMonitorCodeFiles` after a
+native confirmation. It removes only `deskScripts`, `deskPythonScripts`, `deskCodeBuiltinOverrides`,
 `deskCodeUnsaved`, `deskCodeDraft`, and `deskCodeLanguage`; it also cancels pending Code saves,
 runs/repeats, queued Code-to-Python handoffs, and remembered Code errors. It must not reset either
 runtime, installed Python packages, Linux state, or unrelated game/browser storage.

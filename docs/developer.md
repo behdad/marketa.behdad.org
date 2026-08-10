@@ -314,6 +314,12 @@ App focus is constrained on touch devices. Follow `appTouchConstrained` and
 `appAutoFocusTextControl`: opening an app on mobile must not automatically summon the software
 keyboard unless the user explicitly chose a text control.
 
+Phone Mines moves the monitor's shared board node into `.pm-mines-host`. `sizePhoneMines()` derives
+a near-square topology from the live `.mines-body` content box above its fixed toolbar; the
+`ResizeObserver` may refit an untouched deal, but preserves a started deal until the player uses its
+restart control. Unmounting restores the monitor's 16×7 layout. Keep the edge, cell, toolbar, and
+resize-state contract covered in `tests/phone-mines-layout.js`.
+
 App and minigame state follows the same durable/transient rule as rooms. Preserve a meaningful
 selection or score only when a checkpoint adapter says so; close cameras, calls, dialogs, media,
 intervals, and one-shot games during reset or restore.

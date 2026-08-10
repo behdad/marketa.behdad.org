@@ -118,6 +118,8 @@ If you are unsure what comes next:
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
 - Phone and tablet apps leave text fields unfocused so the software keyboard does not cover the
   content. Tap the exact field when you want to type.
+- Phone Mines fills the space above its bottom toolbar. Tap a cell to reveal it, press and hold to
+  place a flag, and use `↻` to restart; the ring count and timer stay beside it in the same toolbar.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
   of the pedal slider holds speed; its outer zones accelerate or brake.
 

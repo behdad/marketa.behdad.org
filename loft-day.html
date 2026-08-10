@@ -7009,11 +7009,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .mines-cell.n7{color:#453a31}
 .mines-cell.n8{color:#716455}
 .mines-side{flex:1; grid-column:2; grid-row:1; display:flex; flex-direction:column; align-items:center; gap:1.6px; padding-top:13px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
-.mines-face{width:9px; height:8px; display:flex; align-items:center; justify-content:center; font-size:5px; line-height:1; border-radius:1px; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
+.mines-face{appearance:none; width:9px; height:8px; display:flex; align-items:center; justify-content:center; padding:0; border:0; font:700 5px/1 sans-serif; color:#453a31; border-radius:1px; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
 .mines-face:active{box-shadow:inset 0.7px 0.7px 0 rgba(69,58,49,0.38), inset -0.7px -0.7px 0 rgba(255,255,255,0.72)}
 .classics-back{appearance:none;border:0;border-radius:1px;background:#a9a294;color:#453a31;width:19px;height:4.5px;padding:0;font:700 2.3px/1 sans-serif;box-shadow:inset .4px .4px 0 rgba(255,255,255,.55);cursor:pointer}
 .classics-back:hover,.classics-back:focus-visible{background:#8e3a4a;color:#fffdf8;outline:none}
 .mines-lcd{width:19px; box-sizing:border-box; text-align:center; padding:0.8px 0 0.6px; background:#241d18; color:#e0604e; font-family:ui-monospace,Menlo,monospace; font-size:3.2px; line-height:1; letter-spacing:0.3px; border-radius:0.6px; box-shadow:inset 0.5px 0.5px 0 rgba(0,0,0,0.6)}
+.mines-count{display:flex; align-items:center; justify-content:center; gap:.6px}
+.mines-ring{flex:none; font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif; font-size:2.8px; line-height:1}
 .mines-msg{grid-column:1/3; grid-row:1; place-self:center; max-width:88px; display:none; box-sizing:border-box; background:rgba(255,253,248,0.95); border:0.4px solid #8a8272; border-radius:1.5px; padding:1.8px 3px; font-size:3.2px; line-height:1.4; text-align:center}
 .mines-wrap.done .mines-msg{display:block}
 /* Compact Klondike: grid stacking supplies card overlap without positioned layers, while
@@ -9189,17 +9191,25 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-music .pmm-play{width:58px; height:58px; border-radius:50%; border:none; background:var(--wine); color:#fff; font-size:23px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(142,58,74,.35)}
 .pm-music .pmm-skip{width:44px; height:44px; border-radius:50%; border:none; background:var(--cream); color:var(--wine); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--rule)}
 .pm-music .pmm-skip:active, .pm-music .pmm-play:active{transform:scale(.94)}
-/* transform is NOT set here — sizePhoneMines() computes a per-device scale so the board
-   fills the pocket-screen width (replaces the old hardcoded scale(3.2)). Origin stays
-   top-center so the width fills symmetrically and the height grows straight down. */
-.pm-mines-host{display:flex; flex-direction:column; align-items:center; gap:5px; transform-origin:top center; width:fit-content; margin:6px auto 0}
-/* the monitor's side panel is a full-height column with a left divider; on the pocket
-   phone it becomes a compact face+counters row (no flex-grow gap, no divider line). Its
-   natural width is kept ≤ the 8-col board (8×6=48px) so the BOARD is the host's widest
-   element — that's what the uniform scale stretches to the screen width. */
-.pm-mines-host .mines-side{flex:none; flex-direction:row; gap:4px; padding-top:0; box-shadow:none; align-items:center}
-.pm-mines-host .mines-side .mines-lcd{width:13px} /* 9(face)+4+13+4+13 = 43px < 48px board */
-.pm-mines-host .mines-msg{position:static; left:auto; top:auto; width:auto; max-width:48px; margin-top:2px} /* cap to board width so a win/lose banner can't grow the fit-content host and re-center the scaled board */
+/* Mines owns its app body's whole content box. The board is a real responsive grid rather
+   than a transform-scaled 6px monitor surface, so it can meet every edge without growing a
+   phantom scroll area. JS chooses near-square row/column counts for the live phone aspect. */
+.phone-app-body.mines-body{overflow:hidden; padding:0; scrollbar-gutter:auto}
+.pm-mines-host{--mines-cell:36px; width:100%; height:100%; min-height:0; display:grid; grid-template:minmax(0,1fr) 56px/100%; margin:0; background:#cfc9bb}
+.pm-mines-host .mines-board{grid-column:1; grid-row:1; width:100%; height:100%; min-height:0}
+.pm-mines-host .mines-cell{min-width:0; min-height:0; font-size:clamp(13px,calc(var(--mines-cell) * .48),26px)}
+.pm-mines-host .mines-cell.flag,.pm-mines-host .mines-cell.ring{font-size:clamp(13px,calc(var(--mines-cell) * .55),28px)}
+/* One compact toolbar owns all three controls. Equal-height inset tiles and one border
+   treatment make reset, rings-left and time read as a single instrument panel. */
+.pm-mines-host .mines-side{grid-column:1; grid-row:2; width:100%; height:56px; display:grid; grid-template-columns:44px minmax(0,1fr) minmax(0,1fr); align-items:center; gap:6px; padding:6px 8px; border-top:1px solid #a9a294; box-sizing:border-box; background:#cfc9bb; box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
+.pm-mines-host .mines-face,.pm-mines-host .mines-lcd{width:100%; height:44px; min-width:0; box-sizing:border-box; border:1px solid #8a8272; border-radius:8px; box-shadow:inset 0 1px 0 rgba(255,255,255,.34)}
+.pm-mines-host .mines-face{font-size:26px; background:#e8e2d5; touch-action:manipulation}
+.pm-mines-host .mines-face:hover{background:#f2ecdf}
+.pm-mines-host .mines-face:focus{outline:none}
+.pm-mines-host .mines-face:focus-visible{outline:2px solid var(--wine); outline-offset:-3px}
+.pm-mines-host .mines-lcd{display:flex; align-items:center; justify-content:center; gap:6px; padding:0 8px; background:#241d18; color:#e0604e; font-size:clamp(18px,6vw,24px); line-height:1; letter-spacing:.08em}
+.pm-mines-host .mines-ring{font-size:clamp(17px,5vw,22px)}
+.pm-mines-host .mines-msg{grid-column:1; grid-row:1; place-self:center; width:auto; max-width:80%; margin:0; padding:8px 12px; border-width:1px; border-radius:8px; font-size:14px}
 /* calculator: a right-aligned readout over a 4-col key grid, wine accents */
 .phone-calc{display:flex; flex-direction:column; gap:6px; height:100%}
 .phone-calc .pc-display{flex:none; min-height:40px; display:flex; align-items:flex-end; justify-content:flex-end; padding:6px 12px; background:var(--paper); border:1px solid var(--rule); border-radius:14px; font-family:"Fraunces",serif; font-size:28px; line-height:1.05; color:var(--ink); overflow:hidden; word-break:break-all; text-align:right}
@@ -76176,16 +76186,19 @@ setOfficeProgress("pc", false);
   function minesSetLayout(cols, rows, count) {
     MINES_COLS = cols; MINES_ROWS = rows; MINES_COUNT = count;
     if (minesBoardEl) {
-      minesBoardEl.style.gridTemplateColumns = "repeat(" + cols + ",6px)";
-      minesBoardEl.style.width = (cols * 6) + "px";
-      minesBoardEl.style.height = (rows * 6) + "px";
+      minesBoardEl.setAttribute("data-mines-cols", cols);
+      minesBoardEl.setAttribute("data-mines-rows", rows);
+      minesBoardEl.style.gridTemplateColumns = "repeat(" + cols + "," + (__minesInPhone ? "minmax(0,1fr)" : "6px") + ")";
+      minesBoardEl.style.gridTemplateRows = "repeat(" + rows + "," + (__minesInPhone ? "minmax(0,1fr)" : "6px") + ")";
+      minesBoardEl.style.width = __minesInPhone ? "100%" : (cols * 6) + "px";
+      minesBoardEl.style.height = __minesInPhone ? "100%" : (rows * 6) + "px";
     }
   }
   var minesGrid = [], minesCells = [];
   var minesSeeded = false; // session retention: the board (mines/opens/flags/win-lose) survives a close+reopen; a first-ever open or a Kill/reset deals fresh
   var minesPlaced = false, minesOver = false, minesFlags = 0, minesOpened = 0;
   var minesStartTs = 0, minesElapsed = 0, minesTimer = null, minesMsgKey = "";
-  var minesBoardEl = null, minesFaceEl = null, minesCountEl = null, minesTimeEl = null, minesMsgEl = null;
+  var minesBoardEl = null, minesFaceEl = null, minesCountEl = null, minesCountDigitsEl = null, minesTimeEl = null, minesMsgEl = null;
   function minesNeighbors(i) {
     var r = Math.floor(i / MINES_COLS), c = i % MINES_COLS, out = [];
     for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
@@ -76196,7 +76209,7 @@ setOfficeProgress("pc", false);
     return out;
   }
   function minesPad(n) { return n < 0 ? "-" + (-n < 10 ? "0" : "") + (-n) : (n < 100 ? "0" : "") + (n < 10 ? "0" : "") + n; }
-  function minesPaintCount() { if (minesCountEl) minesCountEl.textContent = "💍 " + minesPad(MINES_COUNT - minesFlags); }
+  function minesPaintCount() { if (minesCountDigitsEl) minesCountDigitsEl.textContent = minesPad(MINES_COUNT - minesFlags); }
   function minesPaintTime() { if (minesTimeEl) minesTimeEl.textContent = minesPad(minesElapsed); }
   function minesStopTimer() { if (minesTimer) { clearInterval(minesTimer); minesTimer = null; } }
   function minesTick() { minesElapsed = Math.min(999, Math.floor((Date.now() - minesStartTs) / 1000)); minesPaintTime(); }
@@ -76217,6 +76230,7 @@ setOfficeProgress("pc", false);
   window.refreshMinesText = function () {
     if (minesFaceEl) {
       var faceKey = minesOver ? "game_play_again" : "game_new";
+      minesFaceEl.setAttribute("title", mailT(faceKey));
     }
     if (minesMsgKey && minesMsgEl) {
       minesMsgEl.innerHTML = mailT(minesMsgKey === "mines_win" ? "game_cleared" : "game_over") +
@@ -76245,7 +76259,7 @@ setOfficeProgress("pc", false);
     minesPlaced = false; minesOver = false; minesFlags = 0; minesOpened = 0;
     minesElapsed = 0; minesMsgKey = "";
     minesWrap.classList.remove("done");
-    minesFaceEl.textContent = "🙂";
+    minesFaceEl.textContent = "↻";
     minesBoardEl.innerHTML = "";
     for (var i = 0; i < MINES_COLS * MINES_ROWS; i++) {
       minesGrid.push({ mine: false, open: false, flag: false, n: 0 });
@@ -76277,7 +76291,7 @@ setOfficeProgress("pc", false);
     minesOver = true;
     minesTick();
     minesStopTimer();
-    minesFaceEl.textContent = "😵";
+    minesFaceEl.textContent = "↻";
     for (var i = 0; i < minesGrid.length; i++) {
       if (!minesGrid[i].mine) continue;
       var el = minesCells[i];
@@ -76293,7 +76307,7 @@ setOfficeProgress("pc", false);
     minesOver = true;
     minesTick();
     minesStopTimer();
-    minesFaceEl.textContent = "😎";
+    minesFaceEl.textContent = "↻";
     for (var i = 0; i < minesGrid.length; i++) {
       if (minesGrid[i].mine && !minesGrid[i].flag) { minesGrid[i].flag = true; minesCells[i].classList.add("flag"); minesCells[i].textContent = "🚩"; }
     }
@@ -76343,20 +76357,32 @@ setOfficeProgress("pc", false);
     var minesSide = document.createElement("div");
     minesSide.className = "mines-side";
     minesWrap.appendChild(minesSide);
-    minesFaceEl = document.createElement("div");
+    minesFaceEl = document.createElement("button");
+    minesFaceEl.type = "button";
     minesFaceEl.className = "mines-face";
-    minesFaceEl.setAttribute("tabindex", "0");
     minesSide.appendChild(minesFaceEl);
     minesCountEl = document.createElement("div");
-    minesCountEl.className = "mines-lcd";
+    minesCountEl.className = "mines-lcd mines-count";
+    var minesRingEl = document.createElement("span");
+    minesRingEl.className = "mines-ring";
+    minesRingEl.textContent = "💍";
+    minesCountDigitsEl = document.createElement("span");
+    minesCountDigitsEl.className = "mines-digits";
+    minesCountEl.appendChild(minesRingEl);
+    minesCountEl.appendChild(minesCountDigitsEl);
     minesSide.appendChild(minesCountEl);
     minesTimeEl = document.createElement("div");
-    minesTimeEl.className = "mines-lcd";
+    minesTimeEl.className = "mines-lcd mines-timer";
     minesSide.appendChild(minesTimeEl);
     minesMsgEl = document.createElement("div");
     minesMsgEl.className = "mines-msg";
     minesWrap.appendChild(minesMsgEl);
-    minesFaceEl.addEventListener("click", function (e) { e.stopPropagation(); minesNewGame(); playLaptopClickSound("office-monitor"); });
+    minesFaceEl.addEventListener("click", function (e) {
+      e.stopPropagation();
+      minesNewGame();
+      if (__minesInPhone && minesPhoneHost) sizePhoneMines(minesPhoneHost, 0);
+      playLaptopClickSound("office-monitor");
+    });
     window.refreshMinesText();
     minesWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // screen taps never reach the monitor's boot gag
     minesWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
@@ -77822,30 +77848,37 @@ setOfficeProgress("pc", false);
   });
   // Phone Mines re-places this one HTML board into the pocket screen and back — the
   // monitor and phone never show it at once (different rooms), so they share the node.
-  var __minesInPhone = false, minesPhoneHost = null;
-  // The board's cells (and their number/flag glyphs) are fixed-px, so to make the phone
-  // board FILL the pocket-screen width we uniform-scale the whole host by
-  // availableWidth / naturalWidth (replacing the old hardcoded 3.2×). A scaled host still
-  // contributes its full VISUAL size to the app-body's scrollable overflow, so a tall
-  // board simply makes the app-body scroll — no explicit height needed (setting one would
-  // be scaled again and balloon the scroll region). Cells stay SQUARE (all width-derived);
-  // the board's height just follows from its rows and is never stretched to the viewport.
+  var __minesInPhone = false, minesPhoneHost = null, minesPhoneObserver = null;
+  // Fit near-square cells to the board area left above the fixed toolbar. A 34px floor
+  // preserves the old phone's useful cell target on short screens; roomier phones settle
+  // near the original game density instead of inflating a small fixed deal.
   function sizePhoneMines(host, tries) {
     if (!host || !host.parentNode) return;
-    host.style.transform = "none"; // measure the board at its natural (unscaled) size
     var body = host.parentNode; // .phone-app-body — fills the pocket screen
-    var avail = body.clientWidth; // full screen-inner width; symmetric padding overrun causes no scrollbars
-    var natW = host.getBoundingClientRect().width;
-    if (!avail || !natW) { // .phone-app is display:none until showScreen("app"), so mount-time reads 0 — retry a few frames
+    var availW = body.clientWidth;
+    var availH = body.clientHeight - (minesSide ? minesSide.offsetHeight : 0);
+    if (!availW || availH <= 0) { // .phone-app is hidden until showScreen("app"), so mount-time reads 0
       if ((tries || 0) < 8) requestAnimationFrame(function () { sizePhoneMines(host, (tries || 0) + 1); });
       return;
     }
-    host.style.transform = "scale(" + (avail / natW) + ")";
-    // a tall board can add a vertical scrollbar (desktop UA scrollbars have width), which
-    // narrows clientWidth — re-fit once so the board lands flush with the screen edge
-    // instead of overflowing it (no-op under mobile overlay scrollbars).
-    var avail2 = body.clientWidth;
-    if (Math.abs(avail2 - avail) > 0.5) host.style.transform = "scale(" + (avail2 / natW) + ")";
+    var targetCell = Math.sqrt((availW * availH) / 96);
+    targetCell = Math.max(34, Math.min(54, targetCell));
+    var cols = Math.max(5, Math.min(24, Math.round(availW / targetCell)));
+    var rows = Math.max(4, Math.min(24, Math.round(availH / targetCell)));
+    var count = Math.max(1, Math.round(cols * rows * 0.15));
+    var changed = cols !== MINES_COLS || rows !== MINES_ROWS || count !== MINES_COUNT;
+    var hasProgress = minesPlaced || minesFlags || minesOpened || minesOver;
+    if (changed && hasProgress) {
+      // Rotation must not silently throw away a live deal. Keep its topology/state and
+      // only refit the existing cells; the next explicit restart adopts the new aspect.
+      host.style.setProperty("--mines-cell", Math.min(availW / MINES_COLS, availH / MINES_ROWS) + "px");
+      return;
+    }
+    host.style.setProperty("--mines-cell", Math.min(availW / cols, availH / rows) + "px");
+    if (changed) {
+      minesSetLayout(cols, rows, count);
+      minesNewGame(); // a changed topology needs a fresh deal; resize callbacks are stable after this pass
+    }
   }
   function minesPhoneResize() {
     if (__minesInPhone && minesPhoneHost && minesPhoneHost.parentNode) sizePhoneMines(minesPhoneHost, 0);
@@ -77859,7 +77892,11 @@ setOfficeProgress("pc", false);
     minesPhoneHost = host;
     minesSetLayout(8, 10, 12); // short portrait board for the pocket screen (fits short androids)
     minesNewGame();
-    sizePhoneMines(host, 0); // scales to fill the screen width (retries via rAF until the app screen is laid out)
+    if (window.ResizeObserver) {
+      minesPhoneObserver = new ResizeObserver(function () { sizePhoneMines(host, 0); });
+      minesPhoneObserver.observe(host.parentNode);
+    }
+    sizePhoneMines(host, 0);
   };
   window.__phoneUnmountMines = function () {
     if (!minesWrap || !__minesInPhone) return;
@@ -77867,6 +77904,7 @@ setOfficeProgress("pc", false);
     if (host) while (host.firstChild) minesWrap.appendChild(host.firstChild);
     __minesInPhone = false;
     minesPhoneHost = null;
+    if (minesPhoneObserver) { minesPhoneObserver.disconnect(); minesPhoneObserver = null; }
     minesStopTimer();
     minesSetLayout(16, 7, 17); // restore the monitor's wide board
     minesNewGame();
@@ -88242,6 +88280,7 @@ async def localfont(name):
       shell.querySelector(".pah-title").textContent = tr(titleKey);
       var body = shell.querySelector(".phone-app-body");
       body.classList.toggle("messages-body", id === "messages");
+      body.classList.toggle("mines-body", id === "mines");
       body.scrollTop = 0;
       body.innerHTML = "";
       builder(body);

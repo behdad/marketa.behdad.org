@@ -60,8 +60,9 @@ check(s.external && s.external.comments.join("|") === "first comment|nested repl
   "bounded descendants render in thread order through the safe rich-text tree", s.external);
 check(s.original && s.original.opened.length === 1 &&
   s.original.opened[0].url === "https://example.com/read" &&
-  s.original.opened[0].target === "_blank",
-  "only Open original uses the phone’s guarded external-tab path", s.original);
+  s.original.opened[0].target === "_blank" &&
+  s.original.opened[0].features === "noopener",
+  "only Open original uses the phone’s opener-isolated external-tab path", s.original);
 check(s.back && s.back.rows === 2 && s.back.app && s.back.topCalls === 1,
   "phone Back returns from detail to the cached list", s.back);
 check(s.self && !s.self.landing && /Hello readers/.test(s.self.story) && s.self.links === 1 &&

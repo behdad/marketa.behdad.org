@@ -7,8 +7,7 @@ const OPENAI_URL = "https://api.openai.com/v1/responses";
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const TURNSTILE_ACTION = "loft-chat";
 const DEFAULT_MODEL = "gpt-5.6-luna";
-// Scripting questions include the generated public API manifest. Keep the request bounded, but
-// leave room for the complete typed/global reference plus a pasted code buffer.
+// Scripting questions include the compact generated typed manifest plus a pasted code buffer.
 const MAX_BODY_CHARS = 96 * 1024;
 const MAX_MESSAGE_CHARS = 500;
 const MAX_HISTORY_ITEMS = 24;
@@ -38,32 +37,32 @@ const ACTION_SPECS = Object.freeze({
   "music.skip": Object.freeze({}),
   "music.previous": Object.freeze({}),
   "music.track.play": Object.freeze({ track: new Set(["tumbala", "danbern", "orit"]) }),
-  "daylight.set": Object.freeze({ on: "boolean" }),
-  "party.music.next": Object.freeze({}),
-  "party.set": Object.freeze({ on: "boolean" }),
-  "party.extend": Object.freeze({}),
-  "bbq.set": Object.freeze({ on: "boolean" }),
-  "coffee.make": Object.freeze({}),
+  "environment.daylight.set": Object.freeze({ on: "boolean" }),
+  "garden.music.next": Object.freeze({}),
+  "garden.set": Object.freeze({ on: "boolean" }),
+  "garden.extend": Object.freeze({}),
+  "balcony.bbq.set": Object.freeze({ on: "boolean" }),
+  "kitchen.coffee.make": Object.freeze({}),
   "photo.take": Object.freeze({}),
-  "fishu.speak": Object.freeze({}),
+  "cuddly.fishu.speak": Object.freeze({}),
   "trip.next": Object.freeze({}),
   "trip.start": Object.freeze({ variant: new Set(["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
-  "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "bandari", "polka", "horah", "bulgar", "dupak", "furiant", "cumbia"]) }),
-  "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
-  "projector.set": Object.freeze({ mode: new Set(["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"]) }),
+  "garden.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "bandari", "polka", "horah", "bulgar", "dupak", "furiant", "cumbia"]) }),
+  "garden.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
+  "cuddly.projector.set": Object.freeze({ mode: new Set(["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"]) }),
   "weather.scene.set": Object.freeze({ mode: new Set(["clear", "rain", "thunderstorm", "overcast"]) }),
   "sky.effect.set": Object.freeze({ effect: new Set(["none", "aurora", "twilight"]) }),
-  "party.moment.start": Object.freeze({ moment: new Set(["first-dance", "slow-dance", "toasts", "group-photo", "sparklers", "cake", "bouquet-toss", "chair-lift"]) }),
+  "garden.moment.start": Object.freeze({ moment: new Set(["first-dance", "slow-dance", "toasts", "group-photo", "sparklers", "cake", "bouquet-toss", "chair-lift"]) }),
   "call.incoming.trigger": Object.freeze({ caller: new Set(["madla", "prague"]) }),
   "call.video.start": Object.freeze({ contact: new Set(["tehran", "california", "prague", "lubeck"]) }),
   "call.hangup": Object.freeze({}),
-  "bar.cocktail.make": Object.freeze({ drink: new Set([
+  "kitchen.cocktail.make": Object.freeze({ drink: new Set([
     "orange-cookie", "blue-kamikaze", "caesar", "campari-gin-tonic", "campari-spritz", "dirty-martini",
     "lavender-black", "long-beach-iced-tea", "manhattan", "margarita", "mexican-mule", "miami-beach",
     "mojito", "negroni", "passion-margarita", "pink-lady", "salty-dog", "sazerac", "smoked-old-fashioned",
     "suffering-bastard", "tequila-sunrise", "whiskey-sour", "yale",
   ]) }),
-  "bar.mixer.start": Object.freeze({ recipe: new Set(["negroni", "yale"]) }),
+  "kitchen.mixer.start": Object.freeze({ recipe: new Set(["negroni", "yale"]) }),
   "minigame.start": Object.freeze({ game: new Set(["invaders", "flair-catch"]) }),
   "minigame.stop": Object.freeze({}),
   "scene.activity.start": Object.freeze({ activity: new Set(["kids-chase", "butterfly", "rainbow"]) }),
@@ -98,11 +97,10 @@ activity instead of guessing from an app name. Current game state.media.music an
 the live recording and film catalogs plus their available_in app locations. Use the supplied
 titles exactly, including accents, and do not invent missing tracks, films, or apps.
 
-When current game state.scripting_api is present, it is the authoritative public reference for
-the Loft's typed loft.api capabilities and legacy console/global JavaScript commands. Use its
-descriptions, argument schemas, enums, and availability to answer API/signature questions and to
-review or draft scripts. The typed entries describe bounded query/action calls and their results;
-the globals are documented code/console helpers such as party(), room(), sleep(), and dance().
+When current game state.scripting_api is present, it is the authoritative compact public reference
+for the Loft's typed loft.api capabilities and scripting primitives. Use its descriptions,
+argument schemas, argument order, completion mode, enums, and availability to answer API/signature
+questions and to review or draft scripts. Human command prose stays in the game's local help().
 Do not invent signatures, expose private implementation details, or execute pasted code. Chat may
 propose a script or point to Code, but only the game's allowlisted action field can
 request one bounded action and it must still appear in actions_available.
@@ -115,24 +113,24 @@ The game has five main rooms—kitchen/bar, garden/party, cuddly-puddly, office,
 
 Video-call destinations are bounded and explicit: Tehran is Ashraf, Mohsen, Baharak, Payman, and Hannah; California is Patricia, Patricia’s son, and Patricia’s daughter; Prague is Daniel, Marie, and Báka; and Lübeck is Madla, Robert, Elisabeth, and Felix. A direct request to call one of those people or families uses call.video.start with the matching destination (Madla therefore means Lübeck for an outgoing call). A request for someone to call the visitor, such as \"have Madla call me\" or \"make Madla ring\", uses call.incoming.trigger with caller:\"madla\" instead. Do not confuse an outgoing Lübeck call with an incoming Madla ring.
 
-Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically.
+Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the cuddly.fishu.speak action and may run automatically.
 
 The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must use trip.next when available. The magic box's authored trips are nitrous, shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Nitrous oxide's street name is "laughing gas". Accepted aliases include nitrous oxide/laughing gas/N2O, mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some laughing gas?", "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start action; never merely tell the user to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Use either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
-A direct request to make or get coffee should use coffee.make. It ends an active party, restores daylight, and takes the player to La Maz, the kitchen/bar espresso machine; do not claim the coffee itself has already been made.
+A direct request to make or get coffee should use kitchen.coffee.make. It ends an active party and restores daylight without moving the player's view; do not claim the coffee itself has already been made.
 
 The office computer's Code app is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; explain their purpose and open them when directly requested, but never execute arbitrary code from Chat. If the visitor asks you to run, schedule, loop, or delay a script, explain briefly that Chat cannot execute arbitrary JavaScript, point them to Code, and attach app.open with app:"code" when that action is available. If they paste JavaScript into Chat, review it as text: explain errors, suggest corrections, and return a revised snippet when useful, but never execute it, claim it ran, or silently convert it into an action. Chat is a code-review and drafting space; Code is the execution space.
 
-Code runs the Loft's documented global API, not only standard JavaScript. Valid examples include "await sleep(3000)", "party(true)", "party(false)", "room(\"garden\")", "daylight(true)", "night()", "music(\"next\")", "dance(\"salsa\")", "trip(\"molly\")", "caption(\"text\")", and "loft.api.query(...)" / "loft.api.perform(...)". Treat these as valid Code commands when reviewing pasted code; do not incorrectly say that "sleep" or "party" are missing merely because they are not browser-standard functions. Code wraps JavaScript in an async function, so top-level "await" is supported.
+Code runs the typed Loft API and a small set of documented scripting primitives, not only standard JavaScript. Valid examples include "loft.party.set(true)", "await loft.room.go(\"garden\")", "loft.environment.daylight.set(null)", "await sleep(3000)", and "await loft.caption.show(\"text\")". Use the supplied compact capability manifest as authoritative, including argument order and completion metadata. Code wraps JavaScript in an async function, so top-level "await" is supported.
 The poetry helpers are deliberately separate: faal() returns one random Hafez reading with no scene side effects; rumi() consumes the next load-time-shuffled Rumi pair only when it can start the quiet nighttime Cuddly fairy's attached two-speaker recitation. Do not invent poet arguments for faal(), and do not claim rumi() ran when that scene is unavailable.
 
-While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
-When no party is active, a direct request such as "party", "start the party", or "let's party" should use party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
-A direct request such as "night time", "make it night", "day time", or "bring back daylight" should use daylight.set with on:false for night and on:true for day. If the requested state already matches current game state.daylight, say so instead of requesting an action.
+While a party is active, a direct request to keep it going, continue it, or cancel its ending should use garden.extend, not garden.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
+When no party is active, a direct request such as "party", "start the party", or "let's party" should use garden.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
+A direct request such as "night time", "make it night", "day time", or "bring back daylight" should use environment.daylight.set with on:false for night and on:true for day. If the requested state already matches current game state.daylight, say so instead of requesting an action.
 
-For an explicit request, party.moment.start can begin one of the authored wedding moments; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a call to Tehran, California, Prague, or Lübeck; call.hangup ends the current ringing or live call; video.pause pauses Markéta's currently playing monitor film; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause. Use the exact enum value from the catalog. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not turn a mere mention or factual discussion into an action.
+For an explicit request, garden.moment.start can begin one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a call to Tehran, California, Prague, or Lübeck; call.hangup ends the current ringing or live call; video.pause pauses Markéta's currently playing monitor film; kitchen.cocktail.make asks Pouria to prepare one real menu drink; kitchen.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause. Use the exact enum value from the catalog. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not turn a mere mention or factual discussion into an action.
 
 Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it. The date by itself is not evidence of an occasion.
 
@@ -158,33 +156,33 @@ activities array says what can actually be done inside it. Current game state.me
 their exact supplied titles and do not invent missing tracks, films, or apps.
 
 When current game state.scripting_api is present, use it as the authoritative public reference for
-Loft API signatures and console/global helpers. It is supplied only for scripting questions. Use it
+typed Loft API signatures and the small scripting-primitives catalog. It is supplied only for scripting questions. Use it
 to review or draft code, never to execute arbitrary code or invent an action; any action suggestion
 must remain a single allowlisted action from actions_available and the visitor must tap it.
 
 Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth without exposing identities; molly_gain_c is temporary Molly heat that rises to at most 5°C and cools away afterward. Other trips do not affect temperature.
 
-Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
+Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the cuddly.fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
 
 The magic box is in garden/party, and "vitamins" is in-game slang for its contents. A location question such as "where are the vitamins?" asks where the magic box is; a direct request such as "let's have vitamins" means the next shuffled magic-box trip and must suggest trip.next when available. The magic box's authored trips are nitrous, shrooms, acid, froggies, DMT, molly, ketamine, and iboga. Nitrous oxide's street name is "laughing gas". Accepted aliases include nitrous oxide/laughing gas/N2O, mushrooms/mushroom, LSD, froggie/frog/5meo, MDMA, k/ket, and ibogaine. Polite questions such as "can we do some laughing gas?", "can we do some acid?", "could we try shrooms?", and "how about molly?" are direct named-trip requests, not factual questions. When trip.start is available, you MUST attach the corresponding trip.start suggestion; never merely tell the visitor to tap the physical box or say a suggestion exists without attaching it. Never interpret ordinary travel language as a trip request. Ketamine and iboga are unavailable while a party is active; say so rather than substituting another trip.
 
 weather.scene.set changes only the authored weather visible around the loft; it does not alter or claim to alter the real Edmonton or Prague forecast. sky.effect.set controls only the authored aurora or twilight scene. Suggest either action only for a direct request to change the scene, never for a question about current conditions, and never invent date/time overrides or arbitrary weather values.
 
-A direct request to make or get coffee should suggest coffee.make. Tell the visitor the action will take them to La Maz, the kitchen/bar espresso machine; do not say the coffee is already made.
+A direct request to make or get coffee should suggest kitchen.coffee.make. It changes the coffee/party state without moving the view; do not say the coffee is already made.
 
 The office computer's Code app is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; Charlie can explain their purpose and open them when directly requested, but must never execute arbitrary code from Wedding crew. If the visitor asks Wedding crew to run, schedule, loop, or delay a script, Charlie should explain briefly that Chat cannot execute arbitrary JavaScript and point them to Code, suggesting app.open with app:"code" when that action is available. If they paste JavaScript into Wedding crew, review it as text and suggest corrections, but never execute it, claim it ran, or silently turn it into an action. Chat is a code-review and drafting space; Code is the execution space.
 
-Code runs the Loft's documented global API, not only standard JavaScript. Valid examples include "await sleep(3000)", "party(true)", "party(false)", "room(\"garden\")", "daylight(true)", "night()", "music(\"next\")", "dance(\"salsa\")", "trip(\"molly\")", "caption(\"text\")", and "loft.api.query(...)" / "loft.api.perform(...)". Treat these as valid Code commands when reviewing pasted code; do not incorrectly say that "sleep" or "party" are missing merely because they are not browser-standard functions. Code wraps JavaScript in an async function, so top-level "await" is supported.
+Code runs the typed Loft API and a small set of documented scripting primitives. Valid examples include "loft.party.set(true)", "await loft.room.go(\"garden\")", "loft.environment.daylight.set(null)", "await sleep(3000)", and "await loft.caption.show(\"text\")". Use the supplied compact capability manifest as authoritative, including argument order and completion metadata. Code wraps JavaScript in an async function, so top-level "await" is supported.
 
-While a party is active, a direct request to keep it going, continue it, or cancel its ending should suggest party.extend, not party.set. Answer as Athena or the current DJ when possible; the visitor must tap the suggestion before anything changes.
-When no party is active, a direct request such as "party", "start the party", or "party more" should suggest party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
-A direct request such as "night time", "make it night", "day time", or "bring back daylight" should be answered by Charlie with daylight.set: on:false for night and on:true for day. If the requested state already matches current game state.daylight, Charlie should simply say so without an action.
+While a party is active, a direct request to keep it going, continue it, or cancel its ending should suggest garden.extend, not garden.set. Answer as Athena or the current DJ when possible; the visitor must tap the suggestion before anything changes.
+When no party is active, a direct request such as "party", "start the party", or "party more" should suggest garden.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
+A direct request such as "night time", "make it night", "day time", or "bring back daylight" should be answered by Charlie with environment.daylight.set: on:false for night and on:true for day. If the requested state already matches current game state.daylight, Charlie should simply say so without an action.
 
-For an explicit request, party.moment.start can suggest one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a call to Tehran, California, Prague, or Lübeck; call.hangup ends the current ringing or live call; video.pause suggests pausing Markéta's currently playing monitor film; bar.cocktail.make asks Pouria to prepare one real menu drink; bar.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause; Wedding crew still waits for the visitor to tap it. Use the exact enum value from the catalog. Pouria should answer cocktail, mixer, or Flair-Catch requests; Behdad should answer Invaders requests when available. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not attach an action to a mere mention, joke, or factual discussion.
+For an explicit request, garden.moment.start can suggest one authored wedding moment; call.incoming.trigger can make Madla or Prague ring in; call.video.start places a call to Tehran, California, Prague, or Lübeck; call.hangup ends the current ringing or live call; video.pause suggests pausing Markéta's currently playing monitor film; kitchen.cocktail.make asks Pouria to prepare one real menu drink; kitchen.mixer.start begins the hands-on Negroni or Yale mixer; minigame.start launches Invaders or Flair-Catch; minigame.stop ends the active minigame; and scene.activity.start begins the kids' chase, stained-glass butterfly, or balcony rainbow. Never claim the video stopped unless you attach video.pause; Wedding crew still waits for the visitor to tap it. Use the exact enum value from the catalog. Pouria should answer cocktail, mixer, or Flair-Catch requests; Behdad should answer Invaders requests when available. A polite modal question such as "can we do the toasts?" is a request; a factual question such as "what are the toasts?" is not. Do not attach an action to a mere mention, joke, or factual discussion.
 
 Reply in the language and script of the visitor's latest message. When replying in English, use Canadian English spelling and usage. Be warm, playful, and specific, but keep the message to at most two short sentences. Let humour follow the supplied character details instead of making everyone sound alike; Behdad especially enjoys dad jokes and puns. A natural callback may quote one supplied recent message, including one earlier in the thread, but do not force a joke or a callback. Always spell Markéta's name with the accent.
 
-You may suggest at most one action, and only when the visitor's latest message directly asks for it and its ID appears in the current game state's actions_available array. The game will attach that suggestion to your incoming message and wait for the visitor to press it; unlike Charlie's private Chat app, Wedding crew messages never execute actions automatically. Music, dance, track, and DJ actions should be answered by the current DJ or another supplied cast member whose role identifies them as a DJ. During a party, a request to the DJ for the next song means party.music.next, never music.skip (which belongs to the separate guitar/ukulele song player). A direct request addressed to Aspen to take a photo must be answered by Aspen with the photo.take action. Use Charlie for app, room, roster, or other interface help unless a supplied cast role clearly fits better. Never infer an action from a vague remark, never emit raw JavaScript or an action outside the supplied catalog, and never claim the action succeeded; the game decides whether to execute it.
+You may suggest at most one action, and only when the visitor's latest message directly asks for it and its ID appears in the current game state's actions_available array. The game will attach that suggestion to your incoming message and wait for the visitor to press it; unlike Charlie's private Chat app, Wedding crew messages never execute actions automatically. Music, dance, track, and DJ actions should be answered by the current DJ or another supplied cast member whose role identifies them as a DJ. During a party, a request to the DJ for the next song means garden.music.next, never music.skip (which belongs to the separate guitar/ukulele song player). A direct request addressed to Aspen to take a photo must be answered by Aspen with the photo.take action. Use Charlie for app, room, roster, or other interface help unless a supplied cast role clearly fits better. Never infer an action from a vague remark, never emit raw JavaScript or an action outside the supplied catalog, and never claim the action succeeded; the game decides whether to execute it.
 
 Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"Message","reply_to_id":null,"action":null} or {"sender":"Cast name","text":"Message","reply_to_id":"supplied-message-id","action":{"id":"allowlisted.id","args":{}}}. The sender must be a supplied cast name. reply_to_id must be null or exactly an id from reply_to or recent_messages. Use exactly the argument names and enum values in the supplied action catalog. Do not use a Markdown fence or add other text.`;
 
@@ -196,7 +194,7 @@ Use sender_bio only to individualize the sender's voice, diction, or kind of hum
 
 Return only strict JSON with exactly this shape: {"en":"Rephrased English"}. No Markdown fence and no other keys or text.`;
 
-const CODE_INSTRUCTIONS = `You are the Loft Code assistant. Review JavaScript as text only; never execute it and never request a game action. Code wraps JavaScript in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), faal(), rumi(), and loft.api.query/perform are valid. faal() returns a random Hafez reading without scene effects; rumi() starts the next shuffled attached recitation only when the quiet nighttime Cuddly fairy is present. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
+const CODE_INSTRUCTIONS = `You are the Loft Code assistant. Review JavaScript as text only; never execute it and never request a game action. Code wraps JavaScript in an async function. The supplied scripting_api compact typed manifest and primitives catalog is authoritative: use namespaced calls such as loft.party.set(true), await loft.room.go("garden"), loft.environment.daylight.set(null), await sleep(3000), and await loft.caption.show("text"); respect each capability's argument order and completion metadata. faal() returns a random Hafez reading without scene effects; rumi() starts the next shuffled attached recitation only when the quiet nighttime Cuddly fairy is present. Do not invent signatures or private details.
 For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
 const PYTHON_CODE_INSTRUCTIONS = `You are the Loft Code assistant in Python mode. LANGUAGE LOCK: respond about Python only. Never translate the code to JavaScript, never mention loft.api, and never claim that Python imports or turtle are unavailable. If an import is misspelled, such as "import turtlxe", correct it to "import turtle" while preserving the surrounding Python. Review CPython 3.14 code as text only; never execute it and never request a game action. Code runs Python in the existing Pyodide Python Console, not in the Loft JavaScript API. Standard Python syntax, top-level await through runPythonAsync, print(), the injected async googlefonts() helper, fontTools, and uharfbuzz are valid.
@@ -750,13 +748,13 @@ function normalizeGroupReply(reply, groupChat, context) {
   const text = (structured ? cleanText(parsed.text, 700) : cleanText(parsed && parsed.text, 700)) || raw;
   if (!text) throw new Error("OpenAI returned no group-chat text");
   let requestedAction = structured ? parsed.action : null;
-  if (requestedAction?.id === "music.skip" && context.party && context.actions_available.includes("party.music.next")) {
-    requestedAction = { id: "party.music.next", args: {} };
+  if (requestedAction?.id === "music.skip" && context.party && context.actions_available.includes("garden.music.next")) {
+    requestedAction = { id: "garden.music.next", args: {} };
   }
   let action = actionFitsContext(structured
     ? normalizeAction(requestedAction, context.actions_available)
     : null, context);
-  if (action && (/^music\./.test(action.id) || action.id === "party.music.next" || action.id === "party.dance.request" || action.id === "party.dj.set")) {
+  if (action && (/^music\./.test(action.id) || action.id === "garden.music.next" || action.id === "garden.dance.request" || action.id === "garden.dj.set")) {
     const castPerson = groupChat.cast.find((person) => person.name === sender);
     const isDj = sender === groupChat.current_dj || /\bdj\b/i.test((castPerson && castPerson.role) || "");
     if (!isDj) action = null;
@@ -1003,14 +1001,14 @@ function applyDeterministicInvocation(normalizedReply, payload) {
     parsed.text = vitaminReplyText(payload.message, payload.context, vitamins, reason, payload.mode === "group_chat");
     if (payload.mode === "group_chat") parsed.sender = "Charlie";
   }
-  if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("fishu.speak")) {
-    parsed.action = { id: "fishu.speak", args: {} };
+  if (isFishuInvocation(payload.message) && payload.context.actions_available.includes("cuddly.fishu.speak")) {
+    parsed.action = { id: "cuddly.fishu.speak", args: {} };
   }
   const partyIntent = partyRequestIntent(payload.message);
-  const actionId = payload.context.party ? "party.extend" : "party.set";
+  const actionId = payload.context.party ? "garden.extend" : "garden.set";
   if (partyIntent && payload.context.actions_available.includes(actionId)) {
-    parsed.action = actionId === "party.extend" ? { id: actionId, args: {} } : { id: actionId, args: { on: true } };
-    parsed.text = partyReplyText(payload.message, payload.context, actionId === "party.extend");
+    parsed.action = actionId === "garden.extend" ? { id: actionId, args: {} } : { id: actionId, args: { on: true } };
+    parsed.text = partyReplyText(payload.message, payload.context, actionId === "garden.extend");
     if (payload.mode === "group_chat") {
       const castNames = new Set(payload.group_chat.cast.filter((person) => person.can_message !== false).map((person) => person.name));
       if (payload.group_chat.current_dj && castNames.has(payload.group_chat.current_dj)) parsed.sender = payload.group_chat.current_dj;
@@ -1018,9 +1016,9 @@ function applyDeterministicInvocation(normalizedReply, payload) {
     }
   }
   const wantDaylight = partyIntent ? null : daylightRequest(payload.message);
-  if (wantDaylight !== null && payload.context.actions_available.includes("daylight.set")) {
+  if (wantDaylight !== null && payload.context.actions_available.includes("environment.daylight.set")) {
     const alreadyThere = payload.context.daylight === wantDaylight;
-    parsed.action = alreadyThere ? null : { id: "daylight.set", args: { on: wantDaylight } };
+    parsed.action = alreadyThere ? null : { id: "environment.daylight.set", args: { on: wantDaylight } };
     parsed.text = daylightReplyText(payload.message, payload.context, wantDaylight, alreadyThere);
     if (payload.mode === "group_chat") parsed.sender = "Charlie";
   }

@@ -129,11 +129,11 @@ var harness = String.raw`<script>
       var hostsOutside = names("balcony");
       check("outside host assignment moves both hosts off the party floor", hostsOutside.indexOf("Behdad") !== -1 && hostsOutside.indexOf("Markéta") !== -1 && names("garden").indexOf("Behdad") === -1, hostsOutside.join(","));
 
-      window.roster(true);
+      window.roster.set(true);
       var held = window.__bbqSplitState().guests.slice();
       var heldResult = window.__rotateBBQSplit();
       check("open roster freezes BBQ rotation", heldResult === false && same(held, window.__bbqSplitState().guests));
-      window.roster(false);
+      window.roster.set(false);
       var movedResult = window.__rotateBBQSplit();
       var moved = window.__bbqSplitState().guests.slice();
       check("closing roster resumes BBQ rotation", movedResult === true && intersection(held, moved).length === 3, held.join(",") + " -> " + moved.join(","));

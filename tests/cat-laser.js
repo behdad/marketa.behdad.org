@@ -11,31 +11,31 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     cat.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 }));
   }
   var cat = document.getElementById("witchy-chest-cat");
-  window.laser(false);
+  window.laser.set(false);
   dblclick(cat);
-  report.steps.stowed = window.laser();
+  report.steps.stowed = window.laser.status();
 
   window.goToStage("kitchen");
-  window.cat(true);
+  window.cat.set(true);
   cat.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
-  report.steps.single = window.laser();
+  report.steps.single = window.laser.status();
   dblclick(document.getElementById("stage-kitchen"));
-  report.steps.bareFirst = window.laser();
+  report.steps.bareFirst = window.laser.status();
   dblclick(document.getElementById("stage-kitchen"));
-  report.steps.bareSecond = window.laser();
+  report.steps.bareSecond = window.laser.status();
   dblclick(cat);
-  report.steps.firstDouble = window.laser();
+  report.steps.firstDouble = window.laser.status();
   dblclick(cat);
-  report.steps.secondDouble = window.laser();
+  report.steps.secondDouble = window.laser.status();
 
   window.__homeCat("cuddly", true);
   dblclick(cat);
-  report.steps.offRoom = window.laser();
+  report.steps.offRoom = window.laser.status();
 
   window.__homeCat("kitchen", true);
   document.getElementById("witchy-chest-cat-walk").classList.remove("roaming", "roaming-sm");
   dblclick(cat);
-  report.steps.notRoaming = window.laser();
+  report.steps.notRoaming = window.laser.status();
 
   document.getElementById("__report").textContent = JSON.stringify(report);
 })();

@@ -24,7 +24,7 @@ var HARNESS = [
   "ctx(pan);button('.ctx-solve').click();S('solve_advanced',document.getElementById('kitchen-lamarzocco').classList.contains('powered-on'));",
   "window.goToStage('garden');await sleep(800);var guitar=document.getElementById('garden-guitar');",
   "S('garden_prevented',ctx(guitar));S('garden_items',items());closeMenus();S('garden_room',window.currentStageName);",
-  "window.__secondRound=true;window.goToStage('office');await sleep(800);if(window.computer)window.computer(true);if(window.__monitorZoomIn)window.__monitorZoomIn();await sleep(20);",
+  "window.__secondRound=true;window.goToStage('office');await sleep(800);if(window.computer)window.computer.set(true);if(window.__monitorZoomIn)window.__monitorZoomIn();await sleep(20);",
   "var vp=document.querySelector('.hunt-viewport').getBoundingClientRect(),officeStage=document.getElementById('stage-office');S('layer_prevented',ctx(officeStage,vp.left+vp.width/2,vp.top+vp.height/2));S('layer_items',items());button('.ctx-escape').click();await sleep(30);S('escape_zoomed',window.__monitorZoomed&&window.__monitorZoomed());S('escape_room',window.currentStageName);",
   "window.goToStage('kitchen');await sleep(800);S('phase2_kitchen_prevented',ctxView(pan));S('phase2_kitchen_items',items());",
   "window.__secondRound=false;window.__setMaxUnlocked(0);document.documentElement.lang='cs';S('czech_prevented',ctxView(pan));S('czech_items',items());",

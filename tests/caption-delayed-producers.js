@@ -22,10 +22,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     await sleep(150); report.steps.outletReentry = snap();
 
     window.__setOfficeProgress("prague", true); window.__setOfficeProgress("pc", false);
-    window.goToStage("office"); window.computer(true); window.goToStage("garden");
+    window.goToStage("office"); window.computer.set(true); window.goToStage("garden");
     await sleep(3150); report.steps.monitorLeave = snap();
 
-    window.computer(false); window.__setOfficeProgress("pc", false); window.computer(true);
+    window.computer.set(false); window.__setOfficeProgress("pc", false); window.computer.set(true);
     window.goToStage("kitchen"); window.goToStage("office"); window.setCaption("office_call", true);
     await sleep(3150); report.steps.monitorReentry = snap();
   } catch (error) { report.errors.push(String(error && error.stack || error)); }

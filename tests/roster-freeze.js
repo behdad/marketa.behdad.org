@@ -39,7 +39,7 @@ var harness = String.raw`<script>
     window.__startGardenChase(true);
     var liveRunner = document.querySelector('[id^="garden-kid-"].chasing');
     var liveCross = liveRunner && liveRunner.querySelector(".gk-run");
-    window.roster(true);
+    window.roster.set(true);
     var rosterClose = document.querySelector(".roster-close");
     var rosterCloseRect = rosterClose && rosterClose.getBoundingClientRect();
     check("the roster has a plainly sized circular dismiss control",
@@ -91,7 +91,7 @@ var harness = String.raw`<script>
         getComputedStyle(booth).animationName !== "roster-person-wiggle",
       getComputedStyle(dj).animationName + "/" + getComputedStyle(booth).animationName);
 
-    window.roster(false);
+    window.roster.set(false);
     check("closing the roster resumes the same chase timeline",
       liveCross && state(liveCross) === "running" &&
         !document.getElementById("loft-game-strip").classList.contains("roster-freeze-runners"),
@@ -100,7 +100,7 @@ var harness = String.raw`<script>
     check("closing the roster removes its freeze", !stage.classList.contains("roster-freeze") && state(aliPart) === "running",
       state(aliPart));
 
-    window.roster(true);
+    window.roster.set(true);
     backdrop.dispatchEvent(new MouseEvent("click", {
       bubbles: true,
       clientX: aliRect.left + aliRect.width / 2,

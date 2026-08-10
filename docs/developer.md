@@ -334,13 +334,38 @@ intervals, and one-shot games during reset or restore.
 
 ### Typed API and console
 
-`initLoftApi()` installs API version 3 at `window.loft.api`. Its public surface is:
+`initLoftApi()` installs API version 4 at `window.loft.api`. Its public surface is:
 
-- `capabilities(options)` for the discoverable action/query catalogue;
+- `capabilities(options)` for the discoverable, alphabetically keyed action/query catalogue;
+- `groups()` for the stable, alphabetically sorted capability groups;
 - `describe(id, args)` for one capability's validated shape and current availability;
 - `query(id, args)` for structured reads;
 - `perform(id, args, options)` for validated actions;
 - `subscribe(listener)` for state notifications.
+
+Version 4 covers all ten rooms and the Entrance car, Road Trip, and Camping controllers in addition
+to the established party, media, apps, calls, weather, minigames, and album surfaces. Room ids stay
+canonical in results. The same registry mechanically creates discoverable JavaScript namespaces:
+`loft.kitchen`, `loft.cuddly.chest`, `loft.roadtrip`, and so on. `loft.bar === loft.kitchen` and
+`loft.party === loft.garden`; aliases never create duplicate capabilities or noncanonical results.
+`help(loft.kitchen)` and `help(loft.cuddly.chest)` resolve by registry object identity, not object
+stringification. Bare `help` (and `help(loft)`) lists only immediate top-level namespaces;
+namespace help drills down one level at a time, and callable help prints one exact typed signature.
+Legacy console prose remains available only through direct string lookup, such as `help("dance")`.
+`capabilities()` remains the complete structured machine discovery surface.
+
+Every manifest row has a stable `id`, `kind`, ordered `args`/`argOrder`, mechanically derived
+`aliases`, result-envelope schema, and `completion: "instant"|"finite"`. Instant setters apply synchronously even though
+`api.perform()` returns a uniform Promise envelope; finite room pans and lifecycles are awaitable.
+Environment owners accept exactly `true`, `false`, or `null`: `null` releases the override to the
+automatic clock/weather/Party owner, `status()` reports the effective boolean, and `mode()` reports
+`"auto"`, `"on"`, or `"off"`. The string `"auto"` is invalid. Ordinary boolean controls accept
+only booleans.
+
+Changing state does not implicitly move the visitor. Use `loft.room.go("garden")` for navigation;
+only actions whose purpose is to open a room, device, app, call, Road Trip, or minigame may change
+the view. This makes scripts composable and prevents background weather, UV, Party, trip, and prop
+changes from stealing the camera.
 
 Successful owner transitions call `__loftStateChanged`, which increments `stateVersion` and emits
 `loft:statechange`. If an API action changes the game but subscribers do not hear about it, fix the
@@ -349,6 +374,16 @@ owner transition; do not make the API mutate a DOM projection directly.
 The in-game JavaScript console is a separate human-facing interface. Its command roster
 `CONSOLE_CMDS` and help table `CONSOLE_HELP` must remain in parity. Internal `__…` hooks may change as
 the implementation changes; do not document them as a compatibility promise to external clients.
+Boolean console controls are frozen command objects: `rain.status()` reads, while
+`rain.set(true|false)` strictly sets and returns the resulting state. Device commands add named
+operations such as `phone.open("messages")`; numeric variants likewise use named methods, such as
+`wildfires.intensity(0.5)` and `aurora.intensity(7)`. The former callable boolean syntax is not
+supported by a compatibility shim.
+
+`__chatApiManifest()` is the compact machine boundary for JavaScript Code assistance: typed
+capability rows plus a short primitives/signatures list. Do not add `CONSOLE_HELP` or the human
+command index to that payload. Code's model treats the manifest as authoritative; its examples and
+generated drafts use the `loft.*` namespaces and completion metadata.
 
 ### Chat Worker boundary
 
@@ -388,13 +423,21 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The cinematic runner stays inline with that controller: its cut/caption/cursor/entry/recovery
-dependencies are closure-local, so extracting it would require a broad game-to-trailer ABI and make
-the canonical page depend on optional trailer code. Its Road Trip ending crosses only the narrow
-`__cineRoadtripDemo("highway"|"camp"|false)` adapter. That adapter owns presentation attributes and
-restores them exactly; it must not start transport/audio loops, call dev shortcuts, advance Road Trip
-or Camping state, or checkpoint. `tests/cine.js` drives canonical `loft-day.html` and covers both
-tableaux, player-state isolation, score/reprise ownership, spoilers, and every teardown path.
+The current cinematic runner remains inline with that controller. A future
+`loft-day.trailer.js` should drive world state through the public API; only captions, cards, camera
+moves, cursor choreography, and scheduling stay privileged presentation code.
+
+`session.preview` is the general reversible boundary for scripted presentations. `begin()` captures
+the semantic checkpoint, raw checkpoint bytes, and the complete browser store; generation-owned
+teardowns stop preview effects. `end("restore")` returns to the captured visit, while
+`end("fresh")` leaves a clean Kitchen runtime. Both restore the pre-preview browser store and raw
+recovery checkpoint byte-for-byte. Preview mode suppresses checkpoint, progression/reward, Album,
+notification, and external/destructive writes; hide, pagehide, and uncaught-error paths restore
+automatically. Public preview helpers activate the real room, minigame, Road Trip, Camping, and
+score owners rather than duplicating renderer geometry or audio.
+
+`tests/cine.js` continues to cover the inline reel. `tests/api-preview.js` covers the public
+transaction, exact Road Trip renderer, write isolation, restore, and clean-fresh disposition.
 
 `loftSessionExport` and `loftSessionImport` are deliberately narrower than a full checkpoint: they
 move progress and puzzle state without exporting bulky or personal app data. Do not broaden that

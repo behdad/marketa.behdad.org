@@ -292,10 +292,10 @@ actionCase = await normalizedPrivateReply(
 check(actionCase.reply.action?.id === "call.video.start" && actionCase.reply.action.args.contact === "california", "relationship-only California family members resolve to California", actionCase);
 
 const fullActionList = [
-  "app.open", "bar.cocktail.make", "bar.mixer.start", "bbq.set", "call.hangup", "call.incoming.trigger", "call.video.start",
-  "coffee.make", "daylight.set", "fishu.speak", "minigame.start", "minigame.stop", "music.pause", "music.play", "music.previous",
-  "music.skip", "music.track.play", "party.dance.request", "party.dj.set", "party.extend", "party.moment.start",
-  "party.music.next", "party.set", "photo.take", "projector.set", "room.go", "roster.set", "scene.activity.start",
+  "app.open", "kitchen.cocktail.make", "kitchen.mixer.start", "balcony.bbq.set", "call.hangup", "call.incoming.trigger", "call.video.start",
+  "kitchen.coffee.make", "environment.daylight.set", "cuddly.fishu.speak", "minigame.start", "minigame.stop", "music.pause", "music.play", "music.previous",
+  "music.skip", "music.track.play", "garden.dance.request", "garden.dj.set", "garden.extend", "garden.moment.start",
+  "garden.music.next", "garden.set", "photo.take", "cuddly.projector.set", "room.go", "roster.set", "scene.activity.start",
   "trip.next", "trip.start", "video.pause", "not.real",
 ];
 actionCase = await normalizedPrivateReply(
@@ -306,7 +306,7 @@ actionCase = await normalizedPrivateReply(
 check(actionCase.reply.action?.id === "trip.start" && actionCase.reply.action.args.variant === "acid" && captures.at(-1).body.instructions.includes('"trip.start"') && !captures.at(-1).body.instructions.includes('"not.real"'), "all canonical actions survive sanitization even when trip.start sorts after the former 24-item cap", actionCase);
 
 actionCase = await normalizedPrivateReply(
-  JSON.stringify({ text: "No scripts.", action: { id: "javascript.eval", args: { code: "party()" } } }),
+  JSON.stringify({ text: "No scripts.", action: { id: "javascript.eval", args: { code: "loft.party.set(true)" } } }),
   { actions_available: ["javascript.eval"] },
 );
 check(actionCase.reply.text === "No scripts." && actionCase.reply.action === null, "unknown action IDs, including raw-JavaScript escape hatches, are discarded", actionCase);
@@ -335,8 +335,8 @@ actionCase = await normalizedPrivateReply(
 );
 check(actionCase.reply.action === null, "a canonical action is discarded when the browser did not advertise it as currently available", actionCase);
 
-for (const id of ["music.previous", "daylight.set", "party.music.next", "party.set", "party.extend", "bbq.set", "coffee.make", "photo.take", "trip.next", "trip.start", "call.hangup", "minigame.stop", "video.pause"]) {
-  const args = id === "daylight.set" || id === "party.set" || id === "bbq.set" ? { on: true } : id === "trip.start" ? { variant: "molly" } : {};
+for (const id of ["music.previous", "environment.daylight.set", "garden.music.next", "garden.set", "garden.extend", "balcony.bbq.set", "kitchen.coffee.make", "photo.take", "trip.next", "trip.start", "call.hangup", "minigame.stop", "video.pause"]) {
+  const args = id === "environment.daylight.set" || id === "garden.set" || id === "balcony.bbq.set" ? { on: true } : id === "trip.start" ? { variant: "molly" } : {};
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Doing that.", action: { id, args } }),
     { actions_available: [id] },
@@ -350,15 +350,15 @@ check(actionCase.reply.text === "Just a normal answer." && actionCase.reply.acti
 for (const variant of ["Fishu!", "Phishu!", "fisu", "Fišü"]) {
   actionCase = await normalizedPrivateReply(
     JSON.stringify({ text: "Puff!", action: null }),
-    { actions_available: ["fishu.speak"] },
+    { actions_available: ["cuddly.fishu.speak"] },
     variant,
   );
-  check(actionCase.reply.action?.id === "fishu.speak" && Object.keys(actionCase.reply.action.args).length === 0, `${variant} deterministically invokes Fishu`, actionCase);
+  check(actionCase.reply.action?.id === "cuddly.fishu.speak" && Object.keys(actionCase.reply.action.args).length === 0, `${variant} deterministically invokes Fishu`, actionCase);
 }
 
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "Just a fish.", action: null }),
-  { actions_available: ["fishu.speak"] },
+  { actions_available: ["cuddly.fishu.speak"] },
   "fish",
 );
 check(actionCase.reply.action === null, "similar words do not accidentally invoke Fishu", actionCase);
@@ -441,19 +441,19 @@ check(groupVitaminRequestReply.sender === "Charlie" && /tap this/i.test(groupVit
 
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "The party is winding down.", action: null }),
-  { party: false, actions_available: ["party.set"] },
+  { party: false, actions_available: ["garden.set"] },
   "party",
 );
-check(actionCase.reply.action?.id === "party.set" && actionCase.reply.action.args.on === true && !/winding|last song/i.test(actionCase.reply.text), "a direct party request cannot hallucinate a wind-down while the party is off", actionCase);
+check(actionCase.reply.action?.id === "garden.set" && actionCase.reply.action.args.on === true && !/winding|last song/i.test(actionCase.reply.text), "a direct party request cannot hallucinate a wind-down while the party is off", actionCase);
 
 actionCase = await normalizedPrivateReply(
   JSON.stringify({ text: "When would you like it?", action: null }),
-  { party: false, actions_available: ["party.set"] },
+  { party: false, actions_available: ["garden.set"] },
   "when is the party?",
 );
 check(actionCase.reply.action === null, "an informational party question is not converted into an action", actionCase);
 
-openAIReply = JSON.stringify({ sender: "Danesh", text: "Here you go.", reply_to_id: "reply_user_1", action: { id: "party.dance.request", args: { style: "slow" } } });
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Here you go.", reply_to_id: "reply_user_1", action: { id: "garden.dance.request", args: { style: "slow" } } });
 const groupResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -462,7 +462,7 @@ const groupResponse = await worker.fetch(makeRequest("/chat", {
     message: "DJ, slow song please.",
     turnstile_token: "second-turnstile-token",
     history: [{ role: "assistant", text: "Charlie's private history must not leak." }],
-    context: { room: "garden", phase: 2, party: true, party_elapsed_seconds: 222.4, actions_available: ["party.dance.request"] },
+    context: { room: "garden", phase: 2, party: true, party_elapsed_seconds: 222.4, actions_available: ["garden.dance.request"] },
     group_chat: {
       reply_to: { id: "jukebox", sender: "Danesh", text: "Requests are open.", reactions: ["👍", "not-allowed"] },
       current_dj: "Danesh",
@@ -481,7 +481,7 @@ const groupResponse = await worker.fetch(makeRequest("/chat", {
 const groupResult = await groupResponse.json();
 const groupReply = JSON.parse(groupResult.reply);
 const groupCapture = captures.at(-1);
-check(groupResponse.status === 200 && groupReply.sender === "Danesh" && groupReply.text === "Here you go." && groupReply.reply_to_id === "reply_user_1" && groupReply.action?.id === "party.dance.request" && groupReply.action?.args?.style === "slow", "a directly requested DJ action and valid earlier-message quote survive strict group-reply normalization", groupResult);
+check(groupResponse.status === 200 && groupReply.sender === "Danesh" && groupReply.text === "Here you go." && groupReply.reply_to_id === "reply_user_1" && groupReply.action?.id === "garden.dance.request" && groupReply.action?.args?.style === "slow", "a directly requested DJ action and valid earlier-message quote survive strict group-reply normalization", groupResult);
 check(groupCapture.body.input.length === 1 && groupCapture.body.input[0].content === "DJ, slow song please.", "group mode does not forward Charlie's private history", groupCapture.body.input);
 check(/"reactions":\["👍"\]/.test(groupCapture.body.instructions) && /"reactions":\["❤️"\]/.test(groupCapture.body.instructions) && !/not-allowed|"bad"/.test(groupCapture.body.instructions), "the group responder receives only the supported deduplicated reactions");
 check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"party_elapsed_seconds":222/.test(groupCapture.body.instructions) && /skip capitalization or punctuation/.test(groupCapture.body.instructions) && /Pouria is the working bartender and remains sober/.test(groupCapture.body.instructions) && /"current_dj":"Danesh"/.test(groupCapture.body.instructions) && /"playtime":\{"seconds":3723,"display":"1h 2m"\}/.test(groupCapture.body.instructions) && /"name":"Markéta"/.test(groupCapture.body.instructions) && /"kitchen":\["Pouria"\]/.test(groupCapture.body.instructions) && !/attic/.test(groupCapture.body.instructions), "the separate group persona receives elapsed-party tone guidance, playtime, current DJ, all-room locations, and sanitized cast context");
@@ -542,14 +542,14 @@ const partyOffResponse = await worker.fetch(makeRequest("/chat", {
     mode: "group_chat",
     message: "who wants to party more?",
     turnstile_token: "party-off-token",
-    context: { room: "office", phase: 2, party: false, actions_available: ["party.set"] },
+    context: { room: "office", phase: 2, party: false, actions_available: ["garden.set"] },
     group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }, { name: "Athena", role: "wedding boss" }] },
   }),
 }), makeEnv());
 const partyOffReply = JSON.parse((await partyOffResponse.json()).reply);
-check(partyOffReply.sender === "Danesh" && partyOffReply.action?.id === "party.set" && partyOffReply.action.args.on === true && !/last song|winding down/i.test(partyOffReply.text), "crew chat grounds a party-more request in the actual off state", partyOffReply);
+check(partyOffReply.sender === "Danesh" && partyOffReply.action?.id === "garden.set" && partyOffReply.action.args.on === true && !/last song|winding down/i.test(partyOffReply.text), "crew chat grounds a party-more request in the actual off state", partyOffReply);
 
-openAIReply = JSON.stringify({ sender: "Danesh", text: "One more round.", reply_to_id: null, action: { id: "party.set", args: { on: true } } });
+openAIReply = JSON.stringify({ sender: "Danesh", text: "One more round.", reply_to_id: null, action: { id: "garden.set", args: { on: true } } });
 const partyOnResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -557,12 +557,12 @@ const partyOnResponse = await worker.fetch(makeRequest("/chat", {
     mode: "group_chat",
     message: "keep the party going",
     turnstile_token: "party-on-token",
-    context: { room: "garden", phase: 2, party: true, actions_available: ["party.extend", "party.set"] },
+    context: { room: "garden", phase: 2, party: true, actions_available: ["garden.extend", "garden.set"] },
     group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
   }),
 }), makeEnv());
 const partyOnReply = JSON.parse((await partyOnResponse.json()).reply);
-check(partyOnReply.action?.id === "party.extend", "crew chat converts an active-party continuation request to the explicit extension action", partyOnReply);
+check(partyOnReply.action?.id === "garden.extend", "crew chat converts an active-party continuation request to the explicit extension action", partyOnReply);
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "Night vibes—and this last song is glowing.", reply_to_id: null, action: null });
 const nightResponse = await worker.fetch(makeRequest("/chat", {
@@ -572,14 +572,14 @@ const nightResponse = await worker.fetch(makeRequest("/chat", {
     mode: "group_chat",
     message: "night time",
     turnstile_token: "night-token",
-    context: { room: "office", phase: 2, party: false, daylight: true, actions_available: ["daylight.set"] },
+    context: { room: "office", phase: 2, party: false, daylight: true, actions_available: ["environment.daylight.set"] },
     group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
   }),
 }), makeEnv());
 const nightReply = JSON.parse((await nightResponse.json()).reply);
-check(nightReply.sender === "Charlie" && nightReply.action?.id === "daylight.set" && nightReply.action.args.on === false && !/last song|night vibes/i.test(nightReply.text), "a concise night request comes from Charlie with an actionable state change", nightReply);
+check(nightReply.sender === "Charlie" && nightReply.action?.id === "environment.daylight.set" && nightReply.action.args.on === false && !/last song|night vibes/i.test(nightReply.text), "a concise night request comes from Charlie with an actionable state change", nightReply);
 
-openAIReply = JSON.stringify({ sender: "Danesh", text: "Night again.", reply_to_id: null, action: { id: "daylight.set", args: { on: false } } });
+openAIReply = JSON.stringify({ sender: "Danesh", text: "Night again.", reply_to_id: null, action: { id: "environment.daylight.set", args: { on: false } } });
 const alreadyNightResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -587,7 +587,7 @@ const alreadyNightResponse = await worker.fetch(makeRequest("/chat", {
     mode: "group_chat",
     message: "night time",
     turnstile_token: "already-night-token",
-    context: { room: "office", phase: 2, party: false, daylight: false, actions_available: ["daylight.set"] },
+    context: { room: "office", phase: 2, party: false, daylight: false, actions_available: ["environment.daylight.set"] },
     group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
   }),
 }), makeEnv());
@@ -673,12 +673,12 @@ const djNextResponse = await worker.fetch(makeRequest("/chat", {
     mode: "group_chat",
     message: "DJ, next song please.",
     turnstile_token: "dj-next-token",
-    context: { room: "garden", phase: 2, party: true, actions_available: ["party.music.next"] },
+    context: { room: "garden", phase: 2, party: true, actions_available: ["garden.music.next"] },
     group_chat: { current_dj: "Danesh", cast: [{ name: "Danesh", role: "DJ" }] },
   }),
 }), makeEnv());
 const djNextReply = JSON.parse((await djNextResponse.json()).reply);
-check(djNextReply.sender === "Danesh" && djNextReply.action?.id === "party.music.next", "a stale DJ music.skip response is normalized to the party-tune transport", djNextReply);
+check(djNextReply.sender === "Danesh" && djNextReply.action?.id === "garden.music.next", "a stale DJ music.skip response is normalized to the party-tune transport", djNextReply);
 
 openAIReply = JSON.stringify({ sender: "Aspen", text: "Hold still!", reply_to_id: null, action: { id: "photo.take", args: {} } });
 const aspenResponse = await worker.fetch(makeRequest("/chat", {
@@ -731,7 +731,7 @@ const wrongRoleResponse = await worker.fetch(makeRequest("/chat", {
 const wrongRoleReply = JSON.parse((await wrongRoleResponse.json()).reply);
 check(wrongRoleReply.sender === "Athena" && wrongRoleReply.reply_to_id === null && wrongRoleReply.action === null, "music actions from a non-DJ sender and invented quote targets are discarded", wrongRoleReply);
 
-openAIReply = JSON.stringify({ text: "Uses the Loft party command.", suggestion: "party(true);", replace: false, edits: [] });
+openAIReply = JSON.stringify({ text: "Uses the Loft party command.", suggestion: "loft.party.set(true);", replace: false, edits: [] });
 const javascriptCodeResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -741,34 +741,33 @@ const javascriptCodeResponse = await worker.fetch(makeRequest("/chat", {
     turnstile_token: "javascript-code-token",
     context: {
       scripting_api: {
-        version: "loft-api-3",
+        version: "loft-api-4",
         runtime: "JavaScript in the Loft Code app; top-level await is valid.",
-        typed: [{ id: "party.set", kind: "action", args: { on: { type: "boolean" } } }],
-        globals: {
-          party: "party(true) — start the party",
-          music: 'music("marketa-czech") — play Čí že sú to koně',
-        },
+        typed: [{ id: "garden.set", kind: "action", args: { on: { type: "boolean" } }, argOrder: ["on"], completion: "instant" }],
+        primitives: [{ signature: "sleep(ms)", result: "Promise<void>" }],
       },
     },
     code: {
       language: "javascript",
       operation: "complete",
-      source: "party(",
+      source: "loft.party.set(",
       selected: "",
-      selection_start: 6,
-      selection_end: 6,
-      cursor: 6,
+      selection_start: 10,
+      selection_end: 10,
+      cursor: 10,
     },
   }),
 }), makeEnv());
 const javascriptCodeReply = JSON.parse((await javascriptCodeResponse.json()).reply);
-check(javascriptCodeResponse.status === 200 && javascriptCodeReply.suggestion === "party(true);",
+check(javascriptCodeResponse.status === 200 && javascriptCodeReply.suggestion === "loft.party.set(true);",
   "JavaScript Code assistance keeps the normalized reply envelope", javascriptCodeReply);
 check(/Loft scripting API \(JSON data\)/.test(captured.body.instructions) &&
   /"runtime":"JavaScript in the Loft Code app; top-level await is valid\."/.test(captured.body.instructions) &&
-  /"party":"party\(true\) — start the party"/.test(captured.body.instructions) &&
-  captured.body.instructions.includes('"music":"music(\\"marketa-czech\\") — play Čí že sú to koně"'),
-  "JavaScript Code receives live console command names, usage help, and calling context", captured.body.instructions);
+  /"argOrder":\["on"\]/.test(captured.body.instructions) &&
+  /"completion":"instant"/.test(captured.body.instructions) &&
+  /"signature":"sleep\(ms\)"/.test(captured.body.instructions) &&
+  !/"globals":/.test(captured.body.instructions),
+  "JavaScript Code receives the compact typed manifest and calling context", captured.body.instructions);
 
 openAIReply = JSON.stringify({ text: "Draws a square.", suggestion: "", replace: false, edits: [] });
 const pythonCodeResponse = await worker.fetch(makeRequest("/chat", {

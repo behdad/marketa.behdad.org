@@ -72,8 +72,8 @@ function setupScript(body) {
     };
     window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
     // Camping deliberately clears its own visible sky without erasing the shared weather
-    // override. Reapply the night after overcast(), whose normal console contract selects day.
-    window.overcast(true);
+    // override. Reapply the night after overcast.set(true), whose normal console contract selects day.
+    window.overcast.set(true);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
     window.__setDayNight(true);
     await wait(120);

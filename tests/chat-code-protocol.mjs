@@ -18,12 +18,14 @@ function parse(reply, code = {}) {
 }
 
 console.log("Code edit protocol:");
-const code = "await sleep(10000);\nmadla();\nparty(true);";
+const code = 'await sleep(10000);\nawait loft.call.incoming.trigger("madla");\nloft.party.set(true);';
+const callStart = code.indexOf("loft.call.incoming.trigger");
+const callEnd = callStart + 'loft.call.incoming.trigger("madla")'.length;
 const valid = parse({ text: "Insert the call before the party.", edits: [
   { start: 0, end: 0, text: "// delayed call\n" },
-  { start: 19, end: 27, text: "call(\"lubeck\")" },
+  { start: callStart, end: callEnd, text: 'loft.call.video.start("lubeck")' },
 ] }, { source: code });
-check(valid.edits.length === 2 && valid.edits[0].start === 0 && valid.edits[1].end === 27, "valid non-overlapping edits survive normalization", valid);
+check(valid.edits.length === 2 && valid.edits[0].start === 0 && valid.edits[1].end === callEnd, "valid non-overlapping edits survive normalization", valid);
 check(valid.suggestion === "" && valid.replace === false, "multi-edit response remains separate from legacy suggestion fields", valid);
 
 const overlap = parse({ text: "bad", edits: [{ start: 1, end: 8, text: "x" }, { start: 7, end: 10, text: "y" }] }, { source: code });
@@ -37,8 +39,8 @@ check(malformed.edits.length === 0, "malformed edit entries invalidate the batch
 const coerced = parse({ text: "bad", edits: [{ start: "0", end: 0, text: "x" }] }, { source: code });
 check(coerced.edits.length === 0, "string offsets are not coerced into edits", coerced.edits);
 
-const legacy = parse({ text: "replace this", suggestion: "party(true);", replace: true }, { source: code });
-check(legacy.suggestion === "party(true);" && legacy.replace === true && Array.isArray(legacy.edits) && legacy.edits.length === 0, "legacy suggestion/replace replies remain compatible", legacy);
+const legacy = parse({ text: "replace this", suggestion: "loft.party.set(true);", replace: true }, { source: code });
+check(legacy.suggestion === "loft.party.set(true);" && legacy.replace === true && Array.isArray(legacy.edits) && legacy.edits.length === 0, "legacy suggestion/replace reply fields remain compatible", legacy);
 
 const nested = JSON.parse(normalizeCodeReply(JSON.stringify({
   text: JSON.stringify({

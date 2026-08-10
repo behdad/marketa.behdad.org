@@ -162,6 +162,18 @@ opens the complete keyboard-shortcut card.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 
+The console accepts JavaScript and a discoverable game API. Bare `help` lists only the top-level
+`loft` namespaces. Drill down with `help(loft.weather)`, `help(loft.weather.rain)`, or
+`help(loft.cuddly.chest.set)`; direct legacy lookup such as `help("dance")` still works.
+`capabilities()` returns the complete structured typed catalogue and
+`loftstatus()` returns a compact game-state snapshot. On/off commands use explicit reads and
+writes—for example, `party.status()` and `party.set(true)`. Weather/environment controls also accept
+`set(null)` to resume automatic ownership and expose `mode()` as `"auto"`, `"on"`, or `"off"`.
+The typed room API covers all ten rooms; `loft.bar` is the Kitchen alias and `loft.party` is the
+Garden alias. State commands leave the current view alone; navigate explicitly with, for example,
+`await loft.room.go("garden")`. The JavaScript console and Code app preload `loft`; no import is
+needed. `await loft.caption.show("hello")` writes a literal scene caption without moving the view.
+
 ### Fast-forward shortcuts
 
 - `Shift` + `P`: unlock and start the Party.

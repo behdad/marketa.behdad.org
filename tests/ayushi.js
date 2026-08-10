@@ -68,7 +68,7 @@ var harness = String.raw`<script>
             cuddlyUse.getAttribute("xlink:href") === "#garden-ayushi-avatar")));
         window.__resetCuddlyVisitors();
 
-        window.party(true);
+        window.garden.set(true);
         window.__duoArrive("ayushi");
         await sleep(150);
         var here = window.__whoIsHere("garden").filter(function (p) { return p.key === "ayushi"; })[0];

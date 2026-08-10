@@ -13,7 +13,7 @@ addEventListener("load", function () {
     try {
       document.hasFocus = function () { return true; };
       window.__unlockAllRooms();
-      window.party(true);
+      window.garden.set(true);
       window.goToStage("garden");
       var head = document.getElementById("garden-dj-headbang");
       var trigger = document.getElementById("garden-dj-request");

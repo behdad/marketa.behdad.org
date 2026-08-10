@@ -27,7 +27,7 @@ var HARNESS = [
   "    var mon=document.getElementById('office-monitor'),pc=document.getElementById('office-pc-desk-trio');pc.classList.add('on');mon.classList.add('here','screen-on','show-caps');window.__openMonitorApp('calendar');await sleep(40);",
   "    var host=document.getElementById('monitor-cal-body'),mToday=host&&host.querySelector('.calx-today');",
   "    S('monitorToday',{button:button(mToday),open:mon.classList.contains('show-calendar')});",
-  "    if(window.phone)window.phone(false);await sleep(280);if(window.goToStage)window.goToStage('cuddly');",
+  "    if(window.phone)window.phone.set(false);await sleep(280);if(window.goToStage)window.goToStage('cuddly');",
   "    window.setLang('en');history.replaceState(null,'',location.pathname+'?date=2031-02-03&keep=1');",
   "    if(window.__calReapplyDateTime)window.__calReapplyDateTime();await sleep(30);",
   "    var dateNav=document.querySelector('.loft-datenav'),reset=document.getElementById('loft-datereset');",

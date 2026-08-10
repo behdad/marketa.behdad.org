@@ -64,7 +64,7 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
           caption: caption.textContent,
           toasts: document.querySelectorAll(".season-toast").length
         };
-        window.overcast(true);
+        window.overcast.set(true);
         window.__setDayNight(true);
         await new Promise(function (resolve) { setTimeout(resolve, 80); });
         var cloudStars = stars.querySelectorAll(".entrance-roadtrip-camp-cloud-star");
@@ -82,7 +82,7 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
           sunPointer: getComputedStyle(sun).pointerEvents,
           moonPointer: getComputedStyle(moon).pointerEvents
         };
-        window.overcast(false);
+        window.overcast.set(false);
         window.__applySeason("winter", true);
         await new Promise(function (resolve) { setTimeout(resolve, 40); });
         report.winter = {

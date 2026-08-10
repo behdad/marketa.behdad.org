@@ -53,7 +53,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return prevented;
   }
   function clearNight() {
-    window.storm(false); window.rain(false); window.snow(false); window.overcast(false);
+    window.storm.set(false); window.rain.set(false); window.snow.set(false); window.overcast.set(false);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
     window.__setDayNight(true);
   }

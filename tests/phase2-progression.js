@@ -23,7 +23,7 @@ var harness = String.raw`<script>
     await sleep(850);
     check("a stale phase-one completion cannot pan in phase two",
       staleResult === false && window.currentStageName === "garden", window.currentStageName);
-    if (window.party && window.party()) window.party(false);
+    if (window.party && window.party.status()) window.garden.set(false);
     if (window.__setDayNight) window.__setDayNight(false);
     if (window.__setKitchenCoffeeState) window.__setKitchenCoffeeState({ step: "spent", rounds: 1 });
     if (window.__setSeenRooms) window.__setSeenRooms(["kitchen"]); // isolate the room caption from the first-visit progress flash
@@ -56,11 +56,11 @@ var harness = String.raw`<script>
       JSON.stringify({ kitchen: kitchenWalker, clicks: grinderClicks, caption: window.__captionKey(), retired: retiredWalkers }));
 
     window.goToStage("garden");
-    var partyBefore = !!(window.party && window.party());
+    var partyBefore = !!(window.party && window.party.status());
     var activated = window.__activateCurrentRoom();
     check("the room activation key toggles the Garden's main Party activity",
-      activated === true && !partyBefore && !!(window.party && window.party()), String(activated));
-    if (window.party && window.party()) window.party(false);
+      activated === true && !partyBefore && !!(window.party && window.party.status()), String(activated));
+    if (window.party && window.party.status()) window.garden.set(false);
     check("phase-one clue targets and nudges are retired",
       window.__gardenClueTarget() === null && window.__cuddlyDoorNeeded() === false &&
       !document.getElementById("office-pc-desk-trio").classList.contains("inviting") &&

@@ -13,13 +13,13 @@ var HARNESS = [
   ' function begin(){events=[];return api.stateVersion;}function finish(v){return {delta:api.stateVersion-v,events:events.slice(),last:events[events.length-1]||null};}',
   ' var v=begin(),beforeProjector=window.__cuddlyProjector.channel();window.__cuddlyProjector.set(beforeProjector==="stars"?"off":"stars");var projectorDirect=finish(v);',
   ' v=begin();window.__cuddlyProjector.set(window.__cuddlyProjector.channel());var projectorNoop=finish(v);',
-  ' window.goToStage("office");events=[];v=api.stateVersion;var projectorTypedResult=await api.perform("projector.set",{mode:"totoro"},{source:"test"});var projectorTyped=finish(v);',
+  ' window.goToStage("office");events=[];v=api.stateVersion;var projectorTypedResult=await api.perform("cuddly.projector.set",{mode:"totoro"},{source:"test"});var projectorTyped=finish(v);',
   ' v=begin();var beforeRain=!!window.__wxRain;window.__setBalconyRain(!beforeRain,"test-direct");var weatherDirect=finish(v);',
   ' v=begin();window.__setBalconyRain(!!window.__wxRain,"test-direct");var weatherNoop=finish(v);',
   ' v=begin();var weatherTypedResult=await api.perform("weather.scene.set",{mode:"thunderstorm"},{source:"test"});var weatherTyped=finish(v);',
   ' window.goToStage("balcony");events=[];v=api.stateVersion;document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click",{bubbles:true}));var bbqDirect=finish(v);',
-  ' v=begin();var bbqTypedResult=await api.perform("bbq.set",{on:false},{source:"test"});var bbqTyped=finish(v);',
-  ' v=begin();var bbqNoopResult=await api.perform("bbq.set",{on:false},{source:"test"});var bbqNoop=finish(v);',
+  ' v=begin();var bbqTypedResult=await api.perform("balcony.bbq.set",{on:false},{source:"test"});var bbqTyped=finish(v);',
+  ' v=begin();var bbqNoopResult=await api.perform("balcony.bbq.set",{on:false},{source:"test"});var bbqNoop=finish(v);',
   ' window.goToStage("office");events=[];v=api.stateVersion;window.__startArcade();var gameStart=finish(v);',
   ' v=begin();var gameStopResult=await api.perform("minigame.stop",{},{source:"test"});var gameStop=finish(v);',
   ' v=begin();var rec=window.__albumAddRoom("garden",true);var albumAdd=finish(v);',
@@ -41,8 +41,8 @@ var HARNESS = [
   ' v=begin();window.__toggleMonitorVideo();await wait(30);var videoPlay=finish(v);',
   ' v=begin();var videoPauseResult=await api.perform("video.pause",{},{source:"test"});await wait(30);var videoPause=finish(v);',
   ' v=begin();var videoPauseAgain=await api.perform("video.pause",{},{source:"test"});await wait(30);var videoNoop=finish(v);',
-  ' Object.keys(TRIP_DURATIONS).forEach(function(key){TRIP_DURATIONS[key]=120;});v=begin();var tripNextResult=await api.perform("trip.next",{},{source:"test"});await wait(30);var tripNext=finish(v),tripState=api.query("trip.status");',
-  ' window.__maxUnlocked=oldMax;off();S("state",{version:api.version,projectorDirect:projectorDirect,projectorNoop:projectorNoop,projectorTyped:projectorTyped,projectorTypedResult:projectorTypedResult,weatherDirect:weatherDirect,weatherNoop:weatherNoop,weatherTyped:weatherTyped,weatherTypedResult:weatherTypedResult,bbqDirect:bbqDirect,bbqTyped:bbqTyped,bbqTypedResult:bbqTypedResult,bbqNoop:bbqNoop,bbqNoopResult:bbqNoopResult,gameStart:gameStart,gameStop:gameStop,gameStopResult:gameStopResult,albumAdd:albumAdd,albumRemove:albumRemove,albumRemoveResult:albumRemoveResult,albumNoop:albumNoop,albumRemoveAgain:albumRemoveAgain,madlaPhase1:madlaPhase1,madlaParty:madlaParty,rang:rang,callRing:callRing,callDismiss:callDismiss,appOpen:appOpen,appNavigate:appNavigate,appNoop:appNoop,appNoopResult:appNoopResult,appClose:appClose,phoneCallAnswer:phoneCallAnswer,phoneCallEnd:phoneCallEnd,delayedHangupResult:delayedHangupResult,delayedHangupImmediate:delayedHangupImmediate,delayedHangupDone:delayedHangupDone,musicPlay:musicPlay,musicPlayResult:musicPlayResult,musicPause:musicPause,musicPauseResult:musicPauseResult,videoPlay:videoPlay,videoPause:videoPause,videoPauseResult:videoPauseResult,videoNoop:videoNoop,videoPauseAgain:videoPauseAgain,tripNext:tripNext,tripNextResult:tripNextResult,tripState:tripState,media:api.query("media.status"),calls:api.query("calls.status"),games:api.query("minigames.status")});',
+  ' Object.keys(TRIP_DURATIONS).forEach(function(key){TRIP_DURATIONS[key]=120;});var tripRoomBefore=window.currentStageName;v=begin();var tripNextResult=await api.perform("trip.next",{},{source:"test"});await wait(30);var tripNext=finish(v),tripState=api.query("trip.status"),tripRoomAfter=window.currentStageName;',
+  ' window.__maxUnlocked=oldMax;off();S("state",{version:api.version,projectorDirect:projectorDirect,projectorNoop:projectorNoop,projectorTyped:projectorTyped,projectorTypedResult:projectorTypedResult,weatherDirect:weatherDirect,weatherNoop:weatherNoop,weatherTyped:weatherTyped,weatherTypedResult:weatherTypedResult,bbqDirect:bbqDirect,bbqTyped:bbqTyped,bbqTypedResult:bbqTypedResult,bbqNoop:bbqNoop,bbqNoopResult:bbqNoopResult,gameStart:gameStart,gameStop:gameStop,gameStopResult:gameStopResult,albumAdd:albumAdd,albumRemove:albumRemove,albumRemoveResult:albumRemoveResult,albumNoop:albumNoop,albumRemoveAgain:albumRemoveAgain,madlaPhase1:madlaPhase1,madlaParty:madlaParty,rang:rang,callRing:callRing,callDismiss:callDismiss,appOpen:appOpen,appNavigate:appNavigate,appNoop:appNoop,appNoopResult:appNoopResult,appClose:appClose,phoneCallAnswer:phoneCallAnswer,phoneCallEnd:phoneCallEnd,delayedHangupResult:delayedHangupResult,delayedHangupImmediate:delayedHangupImmediate,delayedHangupDone:delayedHangupDone,musicPlay:musicPlay,musicPlayResult:musicPlayResult,musicPause:musicPause,musicPauseResult:musicPauseResult,videoPlay:videoPlay,videoPause:videoPause,videoPauseResult:videoPauseResult,videoNoop:videoNoop,videoPauseAgain:videoPauseAgain,tripNext:tripNext,tripNextResult:tripNextResult,tripState:tripState,tripRoomBefore:tripRoomBefore,tripRoomAfter:tripRoomAfter,media:api.query("media.status"),calls:api.query("calls.status"),games:api.query("minigames.status")});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -56,20 +56,20 @@ function one(step, id, source) {
   return step && step.delta === 1 && step.events.length === 1 && step.events[0].id === id && (!source || step.events[0].source === source);
 }
 
-console.log("rsvp.html API v3 semantic state events:");
+console.log("loft-day.html API v4 semantic state events:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 8500, { patchRaf: true, forceMotion: true, chromeFlags: "--autoplay-policy=no-user-gesture-required" });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps.state || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.version === 3, "API advertises state-event contract version 3", s.version);
+check(s.version === 4, "API advertises state-event contract version 4", s.version);
 check(one(s.projectorDirect, "media.projector", "internal"), "direct projector changes publish one owner event", s.projectorDirect);
 check(s.projectorNoop.delta === 0 && s.projectorNoop.events.length === 0, "repeating the projector mode is a true no-op", s.projectorNoop);
-check(one(s.projectorTyped, "projector.set", "test") && s.projectorTypedResult.ok && s.projectorTypedResult.changed, "typed projector navigation and mode changes coalesce", { step: s.projectorTyped, result: s.projectorTypedResult });
+check(one(s.projectorTyped, "cuddly.projector.set", "test") && s.projectorTypedResult.ok && s.projectorTypedResult.changed, "typed projector navigation and mode changes coalesce", { step: s.projectorTyped, result: s.projectorTypedResult });
 check(one(s.weatherDirect, "environment.weather", "test-direct"), "direct weather-layer changes publish one owner event", s.weatherDirect);
 check(s.weatherNoop.delta === 0 && s.weatherNoop.events.length === 0, "repeating a weather layer is a true no-op", s.weatherNoop);
 check(one(s.weatherTyped, "weather.scene.set", "test") && s.weatherTypedResult.ok && s.weatherTypedResult.changed, "multi-layer typed weather changes coalesce", { step: s.weatherTyped, result: s.weatherTypedResult });
 check(one(s.bbqDirect, "bbq.change", "ui") && s.bbqDirect.last.args.on && s.bbqDirect.last.args.open, "the smoker's first physical control publishes one complete BBQ transition", s.bbqDirect);
-check(one(s.bbqTyped, "bbq.set", "test") && s.bbqTypedResult.ok && s.bbqTypedResult.changed, "typed BBQ shutdown coalesces lid and fire changes", { step: s.bbqTyped, result: s.bbqTypedResult });
+check(one(s.bbqTyped, "balcony.bbq.set", "test") && s.bbqTypedResult.ok && s.bbqTypedResult.changed, "typed BBQ shutdown coalesces lid and fire changes", { step: s.bbqTyped, result: s.bbqTypedResult });
 check(s.bbqNoop.delta === 0 && s.bbqNoop.events.length === 0 && s.bbqNoopResult.ok && !s.bbqNoopResult.changed, "repeating the BBQ state is a true no-op", { step: s.bbqNoop, result: s.bbqNoopResult });
 check(one(s.gameStart, "minigame.change", "ui"), "direct minigame start publishes its lifecycle", s.gameStart);
 check(one(s.gameStop, "minigame.stop", "test") && s.gameStopResult.ok && s.gameStopResult.changed, "typed minigame stop coalesces its owner event", { step: s.gameStop, result: s.gameStopResult });
@@ -93,7 +93,7 @@ check(s.videoPlay.events.filter(function(event){return event.id === "media.video
 check(s.videoPause.events.filter(function(event){return event.id === "video.pause" && event.source === "test";}).length === 1 && s.videoPauseResult.ok && s.videoPauseResult.changed && !s.videoPauseResult.value.playing, "typed video pause coalesces its media event", { step: s.videoPause, result: s.videoPauseResult });
 check(s.videoNoop.delta === 0 && s.videoNoop.events.length === 0 && !s.videoPauseAgain.ok && s.videoPauseAgain.code === "NOT_AVAILABLE", "video pause is not advertised or executed once playback is already paused", { step: s.videoNoop, result: s.videoPauseAgain });
 check(s.media.ok && s.media.value.video && !s.media.value.video.playing, "combined media status exposes bounded video playback state", s.media);
-check(s.tripNext.events.filter(function(event){return event.id === "trip.next" && event.source === "test";}).length === 1 && s.tripNextResult.ok && s.tripNextResult.changed && s.tripNextResult.value.room === "garden" && !s.tripNextResult.value.active && s.tripState.ok && !s.tripState.value.active && s.tripState.value.variant === null, "typed next-trip action follows the magic box sequence and settles only after the trip ends", { step: s.tripNext, result: s.tripNextResult, state: s.tripState });
+check(s.tripNext.events.filter(function(event){return event.id === "trip.next" && event.source === "test";}).length === 1 && s.tripNextResult.ok && s.tripNextResult.changed && s.tripNextResult.value.room === s.tripRoomBefore && s.tripRoomAfter === s.tripRoomBefore && !s.tripNextResult.value.active && s.tripState.ok && !s.tripState.value.active && s.tripState.value.variant === null, "typed next-trip action keeps the visitor's room and settles only after the trip ends", { step: s.tripNext, result: s.tripNextResult, state: s.tripState, before: s.tripRoomBefore, after: s.tripRoomAfter });
 check(s.calls.ok && s.calls.value.laptop && typeof s.calls.value.laptop.active === "boolean" && s.games.ok && s.games.value.invaders && typeof s.games.value.invaders.score === "number", "call and minigame queries expose bounded lifecycle detail", { calls: s.calls, games: s.games });
 
 console.log("");

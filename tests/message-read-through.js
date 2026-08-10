@@ -13,7 +13,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' window.__secondRound=true;["pouria","cue_mail","invaders","cue_calendar"].forEach(function(id){window.__deliverPhoneMessage(id);if(window.__hideMessageThumb)window.__hideMessageThumb();});',
-  ' window.phone("messages");await sleep(80);',
+  ' window.phone.open("messages");await sleep(80);',
   ' document.querySelector(".pm-msg-row[data-message-id=cue_mail]").click();await sleep(30);S("row",state());',
   ' context("invaders");document.querySelector(".ctx-reaction").click();await sleep(30);S("reaction",state());',
   ' context("cue_mail");document.querySelector(".message-read-ctx .ctx-open").click();await sleep(30);S("hole",state());',

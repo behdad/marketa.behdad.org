@@ -101,7 +101,7 @@ var HARNESS = String.raw`<script>
     if (window.__closePhoneModal) window.__closePhoneModal(true);
     await sleep(250);
     window.__gardenPartyOn = true;
-    window.roster(true);
+    window.roster.set(true);
     var rosterAutonomous = window.__deliverAutonomousPhoneMessage("cue_mail");
     var rosterDirect = window.__deliverPhoneMessage("cue_calendar");
     step("roster_hold", {
@@ -113,7 +113,7 @@ var HARNESS = String.raw`<script>
       badge: !!document.querySelector(".msg-badge.show"),
       balconyBadge: document.getElementById("balcony-phone-badge").style.display
     });
-    window.roster(false);
+    window.roster.set(false);
     window.__flushDeferredPhoneMessages();
     step("roster_release", {
       autonomousDelivered: window.__phoneMessageReceived("cue_mail"),

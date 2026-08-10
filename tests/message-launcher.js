@@ -13,9 +13,9 @@ var HARNESS = [
   'async function run(){',
   ' var badge=document.querySelector(".msg-badge");S("empty",{exists:!!badge,shown:!!(badge&&badge.classList.contains("show"))});',
   ' window.__secondRound=true;window.__deliverPhoneMessage("cue_mail");if(window.__hideMessageThumb)window.__hideMessageThumb();await sleep(30);badge=document.querySelector(".msg-badge");S("unread",{shown:badge.classList.contains("show"),idle:badge.classList.contains("idle"),text:badge.textContent.trim()});',
-  ' window.__runMsgAction("cue_mail");await sleep(30);if(window.phone)window.phone(false);await sleep(260);var badgeIcon=badge.querySelector("svg[data-phone-vector-icon=chat]");S("read",{shown:badge.classList.contains("show"),idle:badge.classList.contains("idle"),icon:!!badgeIcon&&!badgeIcon.querySelector("use")});',
+  ' window.__runMsgAction("cue_mail");await sleep(30);if(window.phone)window.phone.set(false);await sleep(260);var badgeIcon=badge.querySelector("svg[data-phone-vector-icon=chat]");S("read",{shown:badge.classList.contains("show"),idle:badge.classList.contains("idle"),icon:!!badgeIcon&&!badgeIcon.querySelector("use")});',
   ' badge.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);var shell=document.querySelector(".phone-shell");S("launch",{phone:!!document.querySelector(".phone-backdrop.show"),app:shell&&shell.classList.contains("pm-app"),title:shell&&shell.querySelector(".pah-title")&&shell.querySelector(".pah-title").textContent});',
-  ' if(window.__resetPhoneApps)window.__resetPhoneApps();if(window.phone)window.phone(false);await sleep(260);S("reset",{shown:badge.classList.contains("show"),idle:badge.classList.contains("idle")});',
+  ' if(window.__resetPhoneApps)window.__resetPhoneApps();if(window.phone)window.phone.set(false);await sleep(260);S("reset",{shown:badge.classList.contains("show"),idle:badge.classList.contains("idle")});',
   '}',
   '})();</script>'
 ].join("\n");

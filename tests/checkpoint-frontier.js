@@ -19,7 +19,7 @@ function harness(bbqOn) {
     ' report.before={gate:!!gate,room:before.progress.room,max:before.progress.maxUnlocked,solved:before.progress.solvedRooms,bbq:before.progress.bbq};',
     ' gate.querySelector(".loft-recovery-btn.primary").click();',
     ' var smoker=document.getElementById("balcony-smoker"),dots=[].slice.call(document.querySelectorAll(".hunt-dot"));',
-    ' report.after={room:window.currentStageName,max:window.__maxUnlocked(),solved:window.__solvedRooms(),bbq:!!window.bbq(),open:smoker.classList.contains("open"),smoking:smoker.classList.contains("smoking"),locked:dots.map(function(dot){return dot.classList.contains("locked");}),storedMax:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).progress.maxUnlocked};',
+    ' report.after={room:window.currentStageName,max:window.__maxUnlocked(),solved:window.__solvedRooms(),bbq:!!window.bbq.status(),open:smoker.classList.contains("open"),smoking:smoker.classList.contains("smoking"),locked:dots.map(function(dot){return dot.classList.contains("locked");}),storedMax:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).progress.maxUnlocked};',
     '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
     'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},250);});',
     '})();</script>'

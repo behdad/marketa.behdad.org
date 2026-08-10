@@ -38,7 +38,7 @@ check(s.room_action.room === "kitchen" && !s.room_action.phone && s.room_action.
 check(s.app_action.cocktails && s.app_back.messages && !s.app_back.home, "an authored phone-app link returns to Messages through Back", {action:s.app_action,back:s.app_back});
 check(s.app_back.used && s.app_back.background === "rgba(0, 0, 0, 0)", "a successful reusable action returns with its burgundy button fill cleared", s.app_back);
 check(s.failure.room === "kitchen" && s.failure.phone && s.failure.messages && /couldn.t do/i.test(s.failure.error || "") && s.failure.retry && !s.failure.used, "an unavailable authored action stays burgundy and retryable", s.failure);
-check(!s.moment.phone && s.moment.calls.includes("first-dance") && s.moment.events.some(function(event){return event.id === "party.moment.start" && event.args.moment === "first-dance" && event.source === "messages-chat";}), "an authored party moment executes through its typed semantic action", s.moment);
+check(!s.moment.phone && s.moment.calls.includes("first-dance") && s.moment.events.some(function(event){return event.id === "garden.moment.start" && event.args.moment === "first-dance" && event.source === "messages-chat";}), "an authored party moment executes through its typed semantic action", s.moment);
 check(/LEGACY_TYPED_MSG_ACTIONS[\s\S]*"room:kitchen"[\s\S]*firstdance/.test(source), "the legacy room and party-moment vocabulary remains adapted", null);
 
 console.log("");

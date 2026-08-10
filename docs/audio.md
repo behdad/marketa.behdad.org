@@ -188,6 +188,12 @@ folded into this.
 
 ## Focus/visibility gating (the "crickets/crane rule") — preserved
 
+API preview sessions treat score playback as transaction-owned audio. Starting a preview score
+snapshots and pauses all four real song elements, plays one selected loop through the existing
+media/audio graph, and registers generation-scoped teardown. Ending, hiding, page-hiding, or
+aborting the preview stops that loop and restores each song's prior time, loop, volume, and playing
+state; a clean-fresh ending stops preview ownership without leaking another audio context.
+
 - **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, projector hum,
   Porsche idle/drivetrain, road bed, and driving loop,
   campsite fire/lake/weather, AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and

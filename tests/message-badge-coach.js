@@ -20,7 +20,7 @@ var HARNESS = [
   ' var dismiss=document.querySelector(".msg-badge-coach-dismiss");if(dismiss)dismiss.click();await sleep(40);var retired=window.__checkpointPhoneCapture();S("dismissed",snap());',
   ' window.__resetPhoneApps();window.__checkpointPhoneRestore(retired);window.__repeatMsgBadgeCoach();await sleep(60);S("restoreDismissed",snap());',
   ' window.__resetPhoneApps();window.__deliverPhoneMessage("cue_mail");if(window.__hideMessageThumb)window.__hideMessageThumb();window.__repeatMsgBadgeCoach();await sleep(60);S("reset",snap());',
-  ' window.phone("messages");await sleep(100);S("opened",snap());window.__closePhoneModal(true);await sleep(280);window.__repeatMsgBadgeCoach();S("afterOpened",snap());',
+  ' window.phone.open("messages");await sleep(100);S("opened",snap());window.__closePhoneModal(true);await sleep(280);window.__repeatMsgBadgeCoach();S("afterOpened",snap());',
   '}',
   '})();</script>'
 ].join("\n");

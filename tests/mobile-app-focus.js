@@ -20,7 +20,7 @@ var HARNESS = [
   ' window.__openPhoneAppHere("notes");await sleep(40);S("notesOpen",active());var notes=document.querySelector(".pmn-pad");notes.focus();S("notesTap",active());',
   ' window.__openPhoneAppHere("browser");await sleep(40);S("phoneBrowserOpen",active());var phoneUrl=document.querySelector(".pbrow-url-in");phoneUrl.focus();S("phoneBrowserTap",active());',
   ' window.__openPhoneAppHere("calendar");await sleep(40);var calToggle=document.querySelector(".calx-search-btn");calToggle.click();await sleep(40);S("phoneCalendarSearch",active());var phoneCal=document.querySelector(".calx-search-input");phoneCal.focus();S("phoneCalendarTap",active());',
-  ' window.phone(false);await sleep(260);window.goToStage("office");await sleep(80);var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(40);',
+  ' window.phone.set(false);await sleep(260);window.goToStage("office");await sleep(80);var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(40);',
   ' window.__openMonitorApp("chat");await sleep(110);S("chatOpen",active());var chat=document.getElementById("monitor-chat-input");chat.focus();S("chatTap",active());',
   ' window.__closeTopMonitorApp();mon.classList.add("show-caps");window.__openMonitorApp("console");await sleep(90);S("consoleOpen",active());',
   ' window.__closeTopMonitorApp();mon.classList.add("show-caps");window.__openMonitorApp("code");await sleep(90);S("codeOpen",active());',

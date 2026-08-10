@@ -64,7 +64,7 @@ var harness = String.raw`<script>
   window.addEventListener("load", function () {
     setTimeout(function () {
       (async function () {
-        window.party(true);
+        window.garden.set(true);
         await sleep(20); // deferred room coordination settles without nesting inside party startup
         var firstRooms = occupancy();
         var balconySocial = firstRooms.balcony.filter(function (name) {

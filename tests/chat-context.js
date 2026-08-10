@@ -106,10 +106,10 @@ check(sources.media && sources.media.music.catalog.some(function (track) { retur
 check(sources.calls && sources.calls.tehran.join(",") === "Ashraf,Mohsen,Baharak,Payman,Hannah" && sources.calls.prague.join(",") === "Daniel,Marie,Báka",
   "Charlie receives the canonical Tehran and Prague call rosters", sources.calls);
 check(sources.ordinaryApps && sources.ordinaryApps.length === 0 && sources.broadChars < 50000, "ordinary chat carries no app dump and the broadest retrieval stays below the request cap", { apps: sources.ordinaryApps, chars: sources.broadChars });
-check(sources.api && sources.api.typed && sources.api.typed.some(function (entry) { return entry.id === "party.set" && entry.kind === "action" && entry.args.on.type === "boolean"; }) &&
-  sources.api.globals && /party\(true\)/.test(sources.api.globals.party) && /sleep\(ms\)/.test(sources.api.globals.sleep) &&
-  /top-level await/.test(sources.api.runtime) && Object.keys(sources.api.globals).length === sources.commandCount,
-  "scripting questions receive the live console roster, usage help, and Code calling context", sources.api && { typed: sources.api.typed && sources.api.typed.length, globals: sources.api.globals && Object.keys(sources.api.globals).length });
+check(sources.api && sources.api.typed && sources.api.typed.some(function (entry) { return entry.id === "garden.set" && entry.kind === "action" && entry.args.on.type === "boolean" && entry.argOrder[0] === "on" && entry.completion === "instant"; }) &&
+  sources.api.primitives && sources.api.primitives.some(function (entry) { return /sleep\(ms\)/.test(entry.signature); }) &&
+  /top-level await/.test(sources.api.runtime) && !Object.prototype.hasOwnProperty.call(sources.api, "globals"),
+  "scripting questions receive the compact typed manifest and Code calling context", sources.api && { typed: sources.api.typed && sources.api.typed.length, primitives: sources.api.primitives && sources.api.primitives.length });
 check(env.daylight === false && env.environment && env.environment.eclipse === "solar" && env.environment.uv && env.environment.rain && env.environment.storm && env.environment.overcast, "live environment reports night, eclipse, UV, and weather layers", env.environment);
 check(env.weather && env.weather.edmonton.temperature_c === 21.6 && env.weather.prague.temperature_c === 13.2 && env.weather.edmonton.forecast.length === 3 && env.weather.prague.forecast.length === 3, "Edmonton and Prague current weather plus three-day forecasts share the apps' model", env.weather);
 check(s.csCatalog && s.csCatalog.monitor.some(function (a) { return a.id === "weather" && a.label === "počasí"; }) && s.csCatalog.phone.some(function (a) { return a.id === "notes" && a.label === "vzkazy"; }), "app catalog labels follow the current Czech UI", s.csCatalog);

@@ -28,7 +28,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return target && target.id;
   }
   function clearNight() {
-    window.storm(false); window.rain(false); window.snow(false); window.overcast(false);
+    window.storm.set(false); window.rain.set(false); window.snow.set(false); window.overcast.set(false);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
     window.__setDayNight(true);
   }
@@ -273,7 +273,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             window.__setDayNight(false);
             setTimeout(function () {
               try {
-                window.overcast(true);
+                window.overcast.set(true);
                 if (window.__applyBalconyWeather) window.__applyBalconyWeather();
                 click(document.getElementById("entrance-roadtrip-camp-sky-hit"));
                 report.dayOpen = snap().state.sunsetting ? "sunset" : false;
@@ -349,7 +349,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                                 report.exited = snap();
                                 click(document.querySelector('[data-roadtrip-reentry-choice="camp"]'));
                                 report.preservedArrival = snap();
-                                window.overcast(false); clearNight();
+                                window.overcast.set(false); clearNight();
                               } catch (error) { report.errors.push(String(error && error.stack || error)); }
                               finish();
                             }, 180);

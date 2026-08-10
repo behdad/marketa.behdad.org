@@ -49,7 +49,7 @@ check(/id="monitor-code-explain"[^>]*>explain<\/button>/.test(html) &&
   "Code AI controls use explicit, compact labels");
 check(/js\["hello\.js"\]\s*=\s*CODE_STARTER/.test(html) &&
       /py\["square\.py"\]\s*=\s*CODE_PY_STARTER/.test(html) &&
-      /caption\(\\"hello from the loft/.test(html) &&
+      /loft\.caption\.show\(\\"hello from the loft/.test(html) &&
       /for _ in range\(4\):[\s\S]*?t\.forward\(60\)[\s\S]*?t\.right\(90\)/.test(html),
   "one-time editable hello.js and square.py examples are preloaded without overwriting user files");
 check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
@@ -191,7 +191,7 @@ var harness = [
   '  out.codeReturned=mon.classList.contains("show-code"); out.failedStatus=document.getElementById("monitor-code-ai-status").textContent;',
   '  var aiBody=null;window.__monitorChatTurnstile=function(){return Promise.resolve("code-test-token");};window.fetch=function(_url,opts){aiBody=JSON.parse(opts.body);return Promise.resolve(new Response(JSON.stringify({reply:JSON.stringify({text:"reviewed",suggestion:"",replace:false,edits:[]})}),{status:200,headers:{"Content-Type":"application/json"}}));};',
   '  document.getElementById("monitor-code-explain").click();await new Promise(function(r){setTimeout(r,100)});',
-  '  var api=aiBody&&aiBody.context&&aiBody.context.scripting_api;out.codeAiApi={mode:aiBody&&aiBody.mode,language:aiBody&&aiBody.code&&aiBody.code.language,party:api&&api.globals&&api.globals.party,music:api&&api.globals&&api.globals.music,runtime:api&&api.runtime,globals:api&&Object.keys(api.globals).length,commands:window.__loftCommands().length};',
+  '  var api=aiBody&&aiBody.context&&aiBody.context.scripting_api,typed=api&&api.typed||[];out.codeAiApi={mode:aiBody&&aiBody.mode,language:aiBody&&aiBody.code&&aiBody.code.language,party:typed.find(function(x){return x.id==="garden.set"}),caption:typed.find(function(x){return x.id==="caption.show"}),runtime:api&&api.runtime,globals:api&&Object.prototype.hasOwnProperty.call(api,"globals"),capabilities:typed.length,commands:window.loft.api.capabilities().length};',
   '  mon.classList.remove("show-code","show-console"); mon.classList.add("here","show-caps","show-python");',
   '  out.pyGfxInitiallyHidden=!document.getElementById("monitor-py-view-toggle").classList.contains("has-graphics");',
   '  document.getElementById("monitor-python").classList.add("turtle-view"); var gfx=document.getElementById("monitor-py-turtle"),gfxClicks=0;',
@@ -228,9 +228,11 @@ if (state && !state.error) {
   check(state.consoleDismissed && state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
     "Dismiss leaves Code closed while the separate Back returns to it without overwriting failure status", state);
   check(state.codeAiApi && state.codeAiApi.mode === "code_assist" && state.codeAiApi.language === "js" &&
-      /party\(true\)/.test(state.codeAiApi.party) && /marketa-czech/.test(state.codeAiApi.music) &&
-      /top-level await/.test(state.codeAiApi.runtime) && state.codeAiApi.globals === state.codeAiApi.commands,
-    "the JavaScript coder receives the shared live console roster, usage help, and async calling context", state.codeAiApi);
+      state.codeAiApi.party && state.codeAiApi.party.aliases.includes("party.set") &&
+      state.codeAiApi.caption && state.codeAiApi.caption.argOrder.join(",") === "text" &&
+      /top-level await/.test(state.codeAiApi.runtime) && !state.codeAiApi.globals &&
+      state.codeAiApi.capabilities === state.codeAiApi.commands,
+    "the JavaScript coder receives the compact typed manifest and async calling context", state.codeAiApi);
   check(state.gfxOwned,
     "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
   check(state.pyGfxInitiallyHidden && state.svgDisplay && state.svgClears,

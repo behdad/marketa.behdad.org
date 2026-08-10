@@ -46,12 +46,12 @@ async function ask(reply, actions, mode = "private") {
 
 console.log("Cloudflare Worker safe action catalog:");
 const cases = [
-  ["party.moment.start", { moment: "group-photo" }],
+  ["garden.moment.start", { moment: "group-photo" }],
   ["call.incoming.trigger", { caller: "madla" }],
   ["call.video.start", { contact: "lubeck" }],
   ["call.hangup", {}],
-  ["bar.cocktail.make", { drink: "negroni" }],
-  ["bar.mixer.start", { recipe: "yale" }],
+  ["kitchen.cocktail.make", { drink: "negroni" }],
+  ["kitchen.mixer.start", { recipe: "yale" }],
   ["minigame.start", { game: "flair-catch" }],
   ["minigame.stop", {}],
   ["video.pause", {}],
@@ -67,15 +67,15 @@ for (const [id, args] of cases) {
 
 let reply = await ask({ text: "No.", action: { id: "minigame.start", args: { game: "doom" } } }, ["minigame.start"]);
 check(reply.action === null, "an unlisted game is rejected", reply);
-reply = await ask({ text: "No.", action: { id: "bar.cocktail.make", args: { drink: "beer" } } }, ["bar.cocktail.make"]);
+reply = await ask({ text: "No.", action: { id: "kitchen.cocktail.make", args: { drink: "beer" } } }, ["kitchen.cocktail.make"]);
 check(reply.action === null, "a drink outside the authored menu is rejected", reply);
 reply = await ask({ text: "No.", action: { id: "weather.scene.set", args: { mode: "hail" } } }, ["weather.scene.set"]);
 check(reply.action === null, "an arbitrary weather value is rejected", reply);
 reply = await ask({ text: "No.", action: { id: "sky.effect.set", args: { effect: "solar-eclipse" } } }, ["sky.effect.set"]);
 check(reply.action === null, "an unlisted sky effect is rejected", reply);
-reply = await ask({ sender: "Pouria", text: "Tap this and I’ll mix it.", reply_to_id: null, action: { id: "bar.cocktail.make", args: { drink: "mojito" } } }, ["bar.cocktail.make"], "group_chat");
-check(reply.sender === "Pouria" && reply.action?.id === "bar.cocktail.make", "Wedding crew keeps the action as a suggestion for the Messages UI", reply);
-check(/party\.moment\.start/.test(capturedInstructions) && /call\.incoming\.trigger/.test(capturedInstructions) && /bar\.cocktail\.make/.test(capturedInstructions) && /minigame\.start/.test(capturedInstructions) && /weather\.scene\.set/.test(capturedInstructions) && /sky\.effect\.set/.test(capturedInstructions) && /can we do the toasts\?/.test(capturedInstructions) && /what are the toasts\?/.test(capturedInstructions) && /Do not attach an action to a mere mention/.test(capturedInstructions) && /does not alter or claim to alter the real Edmonton or Prague forecast/.test(capturedInstructions), "the model receives the bounded catalog and distinguishes scene controls from factual weather questions");
+reply = await ask({ sender: "Pouria", text: "Tap this and I’ll mix it.", reply_to_id: null, action: { id: "kitchen.cocktail.make", args: { drink: "mojito" } } }, ["kitchen.cocktail.make"], "group_chat");
+check(reply.sender === "Pouria" && reply.action?.id === "kitchen.cocktail.make", "Wedding crew keeps the action as a suggestion for the Messages UI", reply);
+check(/garden\.moment\.start/.test(capturedInstructions) && /call\.incoming\.trigger/.test(capturedInstructions) && /kitchen\.cocktail\.make/.test(capturedInstructions) && /minigame\.start/.test(capturedInstructions) && /weather\.scene\.set/.test(capturedInstructions) && /sky\.effect\.set/.test(capturedInstructions) && /can we do the toasts\?/.test(capturedInstructions) && /what are the toasts\?/.test(capturedInstructions) && /Do not attach an action to a mere mention/.test(capturedInstructions) && /does not alter or claim to alter the real Edmonton or Prague forecast/.test(capturedInstructions), "the model receives the bounded catalog and distinguishes scene controls from factual weather questions");
 
 console.log("");
 if (failures) { console.log(`${failures} check(s) failed.`); process.exit(1); }

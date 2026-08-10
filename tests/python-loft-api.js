@@ -104,6 +104,7 @@ async function main() {
     "    assert result is None",
     "    return output.getvalue().rstrip('\\n')",
     "assert rendered_help() == 'JS HELP ROOT'",
+    "assert rendered_help(loft) == 'JS HELP ROOT'",
     "assert rendered_help(loft.weather) == 'JS HELP weather'",
     "assert rendered_help(loft.weather.rain) == 'JS HELP weather.rain'",
     "assert rendered_help(loft.weather.rain.set) == 'JS HELP weather.rain.set'",

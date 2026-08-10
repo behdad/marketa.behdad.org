@@ -82899,6 +82899,7 @@ setOfficeProgress("pc", false);
 import builtins as _builtins
 import keyword as _keyword
 import js as _js
+import sys as _sys
 from pyodide.ffi import JsNull as _JsNull
 from pyodide.ffi import JsProxy as _JsProxy
 from pyodide.ffi import jsnull as _jsnull
@@ -83173,6 +83174,8 @@ _original_help = getattr(_builtins.help, "__loft_original__", _builtins.help)
 def _loft_help(target=_HELP_MISSING):
     """Show Loft drilldown help, while preserving Python help for other objects."""
     if target is _HELP_MISSING:
+        text = _decode(_js.window.help())
+    elif target is _sys.modules.get(__name__):
         text = _decode(_js.window.help())
     elif isinstance(target, _Namespace):
         text = _decode(_js.window.help(target._path))
@@ -83457,9 +83460,7 @@ def colormode(mode=None):
       py.FS.writeFile("/home/pyodide/loft/turtle.py", PY_TURTLE_MODULE);
       py.FS.writeFile("/home/pyodide/loft/loft.py", PY_LOFT_MODULE);
       py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)\nsys.modules.pop('loft', None)");
-      pyPrint(">>> import loft", "console-dim");
       py.runPython("import loft");
-      pyPrint("typed Loft API ready — loft.game.status() · loft.party.set(True)", "console-dim");
     } catch (e) { pyPrint("Python modules could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
   }
   function pyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
@@ -83628,6 +83629,8 @@ async def localfont(name):
           .then(function () {
             pyLoadState = "ready";
             pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
+            pyPrint(">>> import loft", "console-dim");
+            pyPrint("typed Loft API ready — loft.game.status() · loft.party.set(True)", "console-dim");
             pyPrint(">>> import turtle  # browser graphics", "console-dim");
             pyDrainCodeQueue();
           });

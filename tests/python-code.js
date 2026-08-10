@@ -138,6 +138,8 @@ check(/installPythonModules\(py\)/.test(html) &&
       /function pyDisplaySvg/.test(html) &&
       /sys\.path\.insert\(0,p\)/.test(html),
   "the API, Turtle and sanitized SVG modules are installed before user Python imports them");
+check(/pyLoadState\s*=\s*"ready";[\s\S]*?pyPrint\(">>> import loft", "console-dim"\)[\s\S]*?typed Loft API ready/.test(html),
+  "the completed Python boot transcript leaves the automatic import loft line visible");
 check(/typed Loft API ready as the imported `loft` module/.test(html) &&
       /typed Loft API ready as the preloaded `loft` global/.test(html),
   "empty Python and JavaScript Code buffers explain their respective Loft API boot modes");

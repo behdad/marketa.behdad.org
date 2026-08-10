@@ -73569,7 +73569,7 @@ setOfficeProgress("pc", false);
       kitchen: "Kitchen / Bar", media: "Media", message: "Office / Devices", messages: "Office / Devices",
       minigame: "Games", minigames: "Games", music: "Media", office: "Office / Devices",
       party: "Garden / Party", people: "People / Animals", person: "People / Animals", photo: "Album / Photos",
-      projector: "Media", roadtrip: "Road Trip", room: "Rooms", scene: "Weather / Environment",
+      presentation: "Presentation / Trailer", projector: "Media", roadtrip: "Road Trip", room: "Rooms", scene: "Weather / Environment",
       roster: "Roster", sky: "Weather / Environment", tattoos: "Album / Photos", trip: "Trips", video: "Media",
       volume: "Media", weather: "Weather / Environment"
     };
@@ -73758,6 +73758,8 @@ setOfficeProgress("pc", false);
       "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah", "danbern", "oritshimoni", "charlie"
     ];
     var PHONE_APPS = ["messages", "album", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"];
+    var MONITOR_API_APPS = ["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "clock", "tattoo", "classics", "mines", "pacman", "prince", "life", "shoot", "doom", "code", "console", "python", "linux", "snake", "weather", "system", "about", "help", "credits"];
+    var APP_API_IDS = MONITOR_API_APPS.concat(PHONE_APPS).concat(["photos"]).filter(function (app, index, all) { return all.indexOf(app) === index; });
     var TRACKS = { tumbala: 0, danbern: 1, orit: 2 };
     var DANCES = ["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "bandari", "polka", "horah", "bulgar", "dupak", "furiant", "cumbia"];
     var TRIPS = ["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"];
@@ -74807,6 +74809,29 @@ setOfficeProgress("pc", false);
         }
         return { changed: closed.length > 0, closed: closed, current: currentAppState() };
       } });
+    register({ id: "app.kill", group: "Office / Devices", kind: "action", risk: "scene", completion: "finite",
+      description: "Force-stop a phone or monitor app through its real Kill/reset lifecycle.",
+      args: { app: { type: "string", enum: APP_API_IDS, required: true },
+        device: { type: "string", enum: ["current", "phone", "monitor"] } }, run: function (args) {
+        var requested = args.app, phoneApp = requested === "photos" ? "album" : requested;
+        var monitorApp = requested === "mines" ? "classics" : requested === "doom" ? "shoot" : requested;
+        var visibleMonitor = monitorApp === "chrome" ? "browser" : monitorApp;
+        var before = currentAppState(), device = args.device || "current";
+        if (device === "current") {
+          if (before.phone_open && before.phone === phoneApp) device = "phone";
+          else if (before.monitor === visibleMonitor || (window.__monitorAppRunning && window.__monitorAppRunning(monitorApp))) device = "monitor";
+          else device = PHONE_APPS.indexOf(phoneApp) >= 0 ? "phone" : "monitor";
+        }
+        if (device === "phone") {
+          if (PHONE_APPS.indexOf(phoneApp) < 0 || !window.__killPhoneApp || !window.__killPhoneApp(phoneApp)) throw new Error("That app is not available on the phone.");
+          return { changed: true, app: phoneApp, device: "phone", current: currentAppState() };
+        }
+        if (MONITOR_API_APPS.indexOf(requested) < 0 || !window.__killMonitorApp || !window.__killMonitorApp(monitorApp)) throw new Error("That app is not available on the monitor.");
+        return window.__loftAwaitLifecycle(function () { return currentAppState().monitor === visibleMonitor; }, {
+          label: "monitor app Kill", startTimeout: 600, timeout: 7000, settle: 60,
+          value: function () { return { changed: true, app: monitorApp, device: "monitor", current: currentAppState() }; }
+        });
+      } });
 
     // Semantic interactions are deliberately bounded: callers cannot pass a DOM selector or
     // arbitrary element id. Activation uses the existing interaction owners and is available
@@ -74837,6 +74862,40 @@ setOfficeProgress("pc", false);
         node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
         return { activated: true, interaction: args.interaction, room: spec.room };
       } });
+
+    // Editorial primitives stay semantic and finite: authored scripts can select only the
+    // translated Trailer cards/captions/chapters and the bounded interaction vocabulary above.
+    // Geometry, overlay DOM and transition timing remain owned by the cinematic renderer.
+    var PRESENTATION_CAPTIONS = ["cine_open", "cine_arcade", "cine_below", "cine_clues", "cine_anywhere", "cine_phone", "cine_round", "cine_soft", "cine_party", "cine_road", "cine_camp", "cine_signoff"];
+    var PRESENTATION_CHAPTERS = ["cine_chapter_jump", "cine_chapter_open", "cine_chapter_unlock", "cine_chapter_wander", "cine_chapter_round", "cine_chapter_soft", "cine_chapter_party", "cine_chapter_road", "cine_chapter_camp"];
+    function presentationReady() { return !!window.__cinematic && !!window.__loftPresentation; }
+    register({ id: "presentation.reduced.status", group: "Presentation / Trailer", kind: "query",
+      description: "Report whether reduced-motion presentation timing is active.", run: function () {
+        return { on: !!(window.__loftPresentation ? window.__loftPresentation.reduced() : window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) };
+      } });
+    register({ id: "presentation.card.show", group: "Presentation / Trailer", kind: "action", risk: "ambient",
+      description: "Show a canonical translated Trailer title or final card.",
+      args: { card: { type: "string", enum: ["title", "final"], required: true } }, available: presentationReady,
+      run: function (args) { window.__loftPresentation.cardShow(args.card); return { card: args.card, visible: true }; } });
+    register({ id: "presentation.card.hide", group: "Presentation / Trailer", kind: "action", risk: "ambient",
+      description: "Hide the current Trailer card.", available: presentationReady,
+      run: function () { window.__loftPresentation.cardHide(); return { visible: false }; } });
+    register({ id: "presentation.caption.show", group: "Presentation / Trailer", kind: "action", risk: "ambient",
+      description: "Show one canonical translated Trailer caption.",
+      args: { caption: { type: "string", enum: PRESENTATION_CAPTIONS, required: true } }, available: presentationReady,
+      run: function (args) { window.__loftPresentation.caption(args.caption); return { caption: args.caption }; } });
+    register({ id: "presentation.chapter.show", group: "Presentation / Trailer", kind: "action", risk: "ambient",
+      description: "Show one canonical translated Trailer chapter heading.",
+      args: { chapter: { type: "string", enum: PRESENTATION_CHAPTERS, required: true } }, available: presentationReady,
+      run: function (args) { window.__loftPresentation.chapter(args.chapter); return { chapter: args.chapter }; } });
+    register({ id: "presentation.cut", group: "Presentation / Trailer", kind: "action", risk: "ambient", completion: "finite",
+      description: "Take the canonical Trailer veil out or bring it back in around public state changes.",
+      args: { phase: { type: "string", enum: ["out", "in"], required: true } }, available: presentationReady,
+      run: function (args) { return window.__loftPresentation.cut(args.phase).then(function () { return { phase: args.phase }; }); } });
+    register({ id: "presentation.point", group: "Presentation / Trailer", kind: "action", risk: "ambient", completion: "finite",
+      description: "Move the Trailer pointer to one bounded semantic interaction without activating it.",
+      args: { interaction: { type: "string", enum: INTERACTION_IDS, required: true } }, available: presentationReady,
+      run: function (args) { return window.__loftPresentation.point(args.interaction).then(function () { return { interaction: args.interaction }; }); } });
     register({ id: "bathroom.bubbles.preview", group: "Bathroom", kind: "action", risk: "scene",
       description: "Start or stop the real bubble-pop board inside a preview session.",
       args: { on: { type: "boolean", required: true } }, available: previewActive, run: function (args) {
@@ -80030,9 +80089,12 @@ setOfficeProgress("pc", false);
       return buildMenu(app, x, y, target);
     };
     function killDesktopApp(appObj, host) {
-      var id = appObj.id;
-      var hookName = (host && host.kill) || MONITOR_APP_KILLS[id];
-      if (!hookName) return;
+      killMonitorApp(appObj.id, host && host.kill);
+    }
+    function killMonitorApp(id, overrideHook) {
+      id = monitorRegistryId(id);
+      var hookName = overrideHook || MONITOR_APP_KILLS[id];
+      if (!hookName) return false;
       markMonitorAppKilled(id, true);
       // A normal close kept the session but removed its foreground class. Put that layer
       // back for the duration of the existing themed Kill; runtime gags need this too, or
@@ -80041,8 +80103,11 @@ setOfficeProgress("pc", false);
       var cls = MONITOR_APP_CLASSES[id];
       if (cls) monitor.classList.add(cls);
       var fn = window[hookName];
-      if (fn) fn();
+      if (typeof fn !== "function") return false;
+      fn();
+      return true;
     }
+    window.__killMonitorApp = function (id) { return killMonitorApp(id); };
     // Desktop (show-caps) menu for a right-clicked dock icon: Open always. Kill appears only
     // after that app has run in this powered-on session; runtime hosts additionally need their
     // real engine-running predicate.
@@ -90215,6 +90280,14 @@ async def localfont(name):
       if (id === "music") { if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) window.__phoneMusicToggle(); if (window.__resetManualEq) window.__resetManualEq(); } // pause playback + flatten the manual EQ the visitor dialed in
     }
     function stopApp(id) { resetAppState(id); if (shell && shell.classList.contains("pm-home")) renderHome(); } // Stop = force-stop: clear state, icon stays
+    window.__killPhoneApp = function (id) {
+      if (!phoneAppById(id)) return false;
+      var wasCurrent = isOpen() && currentApp === id;
+      stopApp(id);
+      if (wasCurrent) showHome();
+      if (window.__syncLoftAppState) window.__syncLoftAppState("killed", "ui");
+      return true;
+    };
     function uninstallApp(id) { // empty this app's slot (leaves a blank gap — others don't shift); a reset/reload brings it back
       ensurePhoneSlots();
       resetAppState(id); // uninstall is also a "kill" — a reinstall opens fresh
@@ -126827,14 +126900,15 @@ function spawnDustMote(container) {
       cineBeat(ms, function () { resolve(!!window.__cinematic); });
     });
   }
-  async function cineCutAction(action) {
+  async function cineCutPhase(phase) {
     if (!window.__cinematic) return false;
     var overlay = ensureCineOverlay(), host = cursorHost();
-    cursorHide();
-    if (overlay) overlay.classList.add("cine-cut");
-    if (host) host.classList.add("cine-cutting");
-    if (!await cineWait(320)) return false;
-    await action();
+    if (phase === "out") {
+      cursorHide();
+      if (overlay) overlay.classList.add("cine-cut");
+      if (host) host.classList.add("cine-cutting");
+      return cineWait(320);
+    }
     // Room/minigame setup may publish its own clue while the veil is opaque. Reassert the
     // authored narration before revealing the cut so it remains readable through the pan.
     if (cineLastCaptionKey) paintCineCaption(cineLastCaptionKey);
@@ -126842,6 +126916,11 @@ function spawnDustMote(container) {
     if (overlay) overlay.classList.remove("cine-cut");
     if (host) host.classList.remove("cine-cutting");
     return true;
+  }
+  async function cineCutAction(action) {
+    if (!await cineCutPhase("out")) return false;
+    await action();
+    return cineCutPhase("in");
   }
   var CINE_INTERACTION_TARGETS = {
     "garden.tensegrity": "garden-tensegrity",
@@ -126860,6 +126939,18 @@ function spawnDustMote(container) {
     }
     return interaction;
   }
+  window.__loftPresentation = Object.freeze({
+    reduced: function () { return reduceMotion; },
+    cardShow: function (mode) {
+      if (mode === "final") cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_detail", "cine_final_note");
+      else cineShowCard("title", "cine_title_kicker", "cine_title", "cine_title_sub");
+    },
+    cardHide: cineHideCard,
+    caption: paintCineCaption,
+    chapter: cineChapter,
+    cut: cineCutPhase,
+    point: cinePoint
+  });
   // The score starts after the trusted Trailer click. Unlock its real recording here with a
   // silent play→pause so WebKit permits the delayed timeline beat. Prime only the track this
   // cut actually uses: strict browsers may unlock just one media element per gesture.

@@ -185,6 +185,9 @@ their icons distinguish ownership. Editing a canonical file stores a local overr
 control reveals the current public file again. The authored Trailer is the canonical `trailer.js`.
 It can be played through `await loft.trailer.play()`, inspected with `loft.trailer.status()`, and
 stopped with `await loft.trailer.stop("restore")`.
+While the Trailer is active, `loft.presentation` exposes its bounded translated cards, captions,
+cuts, and pointer. `loft.app.close(...)` preserves an app session; `loft.app.kill(...)` instead runs
+the phone reset or monitor's full themed Kill and completes only after that process has stopped.
 
 ### Fast-forward shortcuts
 

@@ -7,6 +7,7 @@ var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
+  'async function ready(test,label,timeout){var started=performance.now();while(performance.now()-started<(timeout||3000)){if(test())return true;await new Promise(function(resolve){setTimeout(resolve,40);});}throw new Error(label+" did not become ready");}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push(String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},350);});',
   'async function run(){',
   ' var api=window.loft.api,oldMax=window.__maxUnlocked;window.__maxUnlocked=function(){return 4;};',
@@ -21,6 +22,12 @@ var HARNESS = [
   ' var noRoom=await api.perform("room.go",{room:"office"},{source:"test"});var noopRoom={delta:api.stateVersion-v2,eventCount:events.length,result:noRoom};events=[];',
   ' var balcony=document.getElementById("stage-balcony"),wasNight=!!(balcony&&balcony.classList.contains("dusk")),v3=api.stateVersion;window.__setDayNight(!wasNight);var daylight={delta:api.stateVersion-v3,event:events[events.length-1]};events=[];',
   ' var v4=api.stateVersion,party=await api.perform("garden.set",{on:true},{source:"test"});var typedParty={delta:api.stateVersion-v4,events:events.slice(),result:party};off();if(window.__setPartyMode)window.__setPartyMode(false,true);window.__maxUnlocked=oldMax;S("versions",{directRoom:directRoom,typedRoom:typedRoom,noopRoom:noopRoom,daylight:daylight,typedParty:typedParty,stateVersion:api.stateVersion});',
+  ' var monitor=document.getElementById("office-monitor");if(window.computer&&!window.computer.status())window.computer.set(true);await ready(function(){var current=api.query("app.current");return current.ok&&current.value.monitor==="desktop"&&monitor&&monitor.classList.contains("screen-on")&&!monitor.classList.contains("show-fedora");},"PC desktop",3000);',
+  ' var lifeOpen=await api.perform("app.open",{app:"life"},{source:"test"});await ready(function(){var current=api.query("app.current");return current.ok&&current.value.monitor==="life"&&window.__monitorAppRunning&&window.__monitorAppRunning("life");},"Life",1200);var lifeBefore=api.query("app.current"),killStart=performance.now(),lifeKill=await api.perform("app.kill",{app:"life",device:"monitor"},{source:"test"}),lifeAfter=api.query("app.current");',
+  ' var notesOpen=await api.perform("app.open",{app:"notes"},{source:"test"});await ready(function(){var current=api.query("app.current");return current.ok&&current.value.phone_open&&current.value.phone==="notes";},"phone Notes",800);var notesBefore=api.query("app.current"),notesKill=await api.perform("app.kill",{app:"notes",device:"phone"},{source:"test"}),notesAfter=api.query("app.current");S("kill",{pcReady:true,open:lifeOpen,before:lifeBefore,kill:lifeKill,after:lifeAfter,duration:performance.now()-killStart,running:window.__monitorAppRunning&&window.__monitorAppRunning("life"),phone:{open:notesOpen,before:notesBefore,kill:notesKill,after:notesAfter}});',
+  ' var reduced=api.query("presentation.reduced.status"),trailerRun=api.perform("trailer.play",{},{source:"test"});await ready(function(){var preview=api.query("session.preview.status"),overlay=document.getElementById("cine-overlay");return !!(window.__cinematic&&preview.ok&&preview.value.active&&overlay);},"Trailer presentation",2600);',
+  ' var card=await api.perform("presentation.card.show",{card:"final"},{source:"test"}),caption=await api.perform("presentation.caption.show",{caption:"cine_signoff"},{source:"test"}),chapter=await api.perform("presentation.chapter.show",{chapter:"cine_chapter_camp"},{source:"test"}),cutOut=await api.perform("presentation.cut",{phase:"out"},{source:"test"}),overlay=document.getElementById("cine-overlay"),cutWasOut=!!(overlay&&overlay.classList.contains("cine-cut")),cutIn=await api.perform("presentation.cut",{phase:"in"},{source:"test"}),point=await api.perform("presentation.point",{interaction:"cinema.bike"},{source:"test"});',
+  ' var presentationView={final:!!(overlay&&overlay.classList.contains("cine-final")),caption:(document.getElementById("hunt-caption")||{}).textContent||"",chapter:overlay&&overlay.querySelector(".cine-chapter")&&overlay.querySelector(".cine-chapter").textContent||"",chapterShown:!!(overlay&&overlay.querySelector(".cine-chapter.show")),cutWasOut:cutWasOut,cutCleared:!!(overlay&&!overlay.classList.contains("cine-cut"))};var trailerStop=await api.perform("trailer.stop",{disposition:"restore"},{source:"test"}),previewAfter=api.query("session.preview.status");S("presentation",{reduced:reduced,card:card,caption:caption,chapter:chapter,cutOut:cutOut,cutIn:cutIn,point:point,view:presentationView,stop:trailerStop,stopped:!window.__cinematic&&previewAfter.ok&&!previewAfter.value.active,runStarted:!!trailerRun});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -32,9 +39,11 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html expanded typed API:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3500, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 12000, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var q = result.steps.queries || {}, v = result.steps.versions || {};
+var kill = result.steps.kill || {};
+var presentation = result.steps.presentation || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(q.info.ok && !Object.prototype.hasOwnProperty.call(q.info.value, "version") && Number.isInteger(q.info.value.stateVersion) && q.caps.ok && q.caps.value.every(function (cap) { return cap.kind === "query" && typeof cap.group === "string"; }), "API self-description reports its state revision, groups, and filtered capabilities", { info: q.info, count: q.caps && q.caps.value && q.caps.value.length });
 check(q.describe.ok && q.describe.value.args.limit.type === "integer" && q.describe.value.args.limit.max === 12 && q.describe.value.args_checked.limit === 12 && !q.badDescribe.ok, "describe exposes and enforces numeric bounds", { good: q.describe, bad: q.badDescribe });
@@ -48,6 +57,12 @@ check(v.typedRoom.delta === 1 && v.typedRoom.event.id === "room.go" && v.typedRo
 check(v.noopRoom.delta === 0 && v.noopRoom.eventCount === 0 && v.noopRoom.result.ok && !v.noopRoom.result.changed, "no-op room actions do not advance the revision", v.noopRoom);
 check(v.daylight.delta === 1 && v.daylight.event.id === "environment.daylight", "direct daylight changes advance the revision", v.daylight);
 check(v.typedParty.delta === 1 && v.typedParty.events.length === 1 && v.typedParty.events[0].id === "garden.set" && v.typedParty.events[0].source === "test", "composite typed actions coalesce central mutations into one revision", v.typedParty);
+check(kill.pcReady && kill.open && kill.open.ok && kill.before && kill.before.value.monitor === "life" && kill.kill && kill.kill.ok && kill.kill.value.device === "monitor" && kill.after && kill.after.value.monitor !== "life" && !kill.running && kill.duration >= 2200,
+  "app.kill awaits the real monitor Kill/reset lifecycle instead of aliasing Close", kill);
+check(kill.phone && kill.phone.open && kill.phone.open.ok && kill.phone.before && kill.phone.before.value.phone === "notes" && kill.phone.kill && kill.phone.kill.ok && kill.phone.kill.value.device === "phone" && kill.phone.after && kill.phone.after.value.phone_open && kill.phone.after.value.phone === "home",
+  "app.kill delegates phone force-stop to the phone owner and returns to its launcher", kill.phone);
+check(presentation.reduced && presentation.reduced.ok && typeof presentation.reduced.value.on === "boolean" && [presentation.card,presentation.caption,presentation.chapter,presentation.cutOut,presentation.cutIn,presentation.point,presentation.stop].every(function (entry) { return entry && entry.ok; }) && presentation.view && presentation.view.final && presentation.view.caption && presentation.view.chapter && presentation.view.chapterShown && presentation.view.cutWasOut && presentation.view.cutCleared && presentation.point.value.interaction === "cinema.bike" && presentation.stopped,
+  "presentation.* drives only the active Trailer's bounded cards, captions, chapters, cuts, and pointer, then restores cleanly", presentation);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

@@ -475,12 +475,18 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The authored timing and world sequence lives in `code-snippets/trailer.js` and uses only the typed
-Loft API actions. It is both the executable timeline and the exact read-only source shown in Code;
-do not mirror its body in HTML or another sample. The inline entry controller is the narrow
-privileged presentation host: captions, cards,
-cut veil, ghost cursor, trusted-click audio prime, scheduling, and takeover/error teardown. Keep
-that boundary narrow rather than exporting DOM ids or duplicating game renderers for future edits.
+The authored timing and world sequence lives in `code-snippets/trailer.js` and uses typed Loft API
+actions. It is both the executable timeline and the editable canonical file shown in Code; do not
+mirror its body in HTML or another sample. The inline entry controller remains the narrow privileged
+presentation host for the current reel: captions, cards, cut veil, ghost cursor, trusted-click audio
+priming, scheduling, and takeover/error teardown.
+
+Public `presentation.*` actions expose only translated cards/captions/chapters, two finite cut
+phases, and the fixed semantic `interaction.*` targets while a Trailer preview is active; overlay
+DOM and geometry remain private. `app.kill` delegates to the phone reset owner or the monitor's real
+themed Kill lifecycle instead of pretending Close is a Kill, and its finite monitor result settles
+only after that lifecycle finishes. Do not export arbitrary selectors or duplicate
+game/presentation renderers.
 
 `session.preview` is the general reversible boundary for scripted presentations. `begin()` captures
 the semantic checkpoint, raw checkpoint bytes, and the complete browser store; generation-owned

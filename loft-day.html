@@ -6092,6 +6092,18 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
   65%{transform:rotate(1.5deg)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-waterbottle.rattling #kitchen-waterbottle-inner{animation:none}}
+/* A direct tap on the empty bottle gets its own nested transform owner, so the
+   one-shot composes with the outer wrapper's pan-strike/rattle reactions. */
+#kitchen-empty-waterbottle-wiggle{transform-box:fill-box; transform-origin:50% 100%}
+#kitchen-empty-waterbottle-wiggle.empty-wiggle{animation:kitchen-empty-waterbottle-wiggle .52s ease-in-out}
+@keyframes kitchen-empty-waterbottle-wiggle{
+  0%,100%{transform:translateX(0) rotate(0)}
+  20%{transform:translateX(-.65px) rotate(-3.5deg)}
+  45%{transform:translateX(.5px) rotate(2.6deg)}
+  68%{transform:translateX(-.35px) rotate(-1.5deg)}
+  86%{transform:translateX(.2px) rotate(.7deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-empty-waterbottle-wiggle.empty-wiggle{animation:none}}
 /* a falling pan smashing onto the water bottle / kettle / SodaStream jolts it: a quick
    down-hit then a damped rock, pivoting at each object's base (its own inner wrapper —
    kettle gets one below). After the .rattling/.fizzing rules so it wins on co-occurrence. */
@@ -15380,10 +15392,12 @@ section{margin:1.9rem 0}
 <g id="kitchen-waterbottle" class="hunt-hit" transform="translate(25,0)">
 <rect x="120" y="164" width="26" height="70" fill="transparent"/>
 <g id="kitchen-waterbottle-inner">
+<g id="kitchen-empty-waterbottle-wiggle">
 <path d="M124 230 L124 196 Q124 186 130 182 L130 172 Q130 168 133 168 Q136 168 136 172 L136 182 Q142 186 142 196 L142 230 Z" fill="#4a7a9e" stroke="#35586e" stroke-width="1.5"/>
 <g id="kitchen-waterbottle-liquid-groove"><path id="kitchen-waterbottle-liquid" d="M126 230 L126 198 Q126 190 130 187 L136 187 Q140 190 140 198 L140 230 Z" fill="#bfe0ee" opacity="0.6"/></g>
 <rect x="127" y="197" width="2.4" height="30" rx="1.2" fill="#e4f1f7" opacity="0.5" pointer-events="none"/>
 <path id="kitchen-waterbottle-crack" class="kitchen-crack" d="M128 190 L134 205 L129 220" fill="none" stroke="#eee" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+</g>
 </g>
 </g>
 </g>
@@ -64181,7 +64195,33 @@ function quickReversalGesture(action) {
   if (waterbottle) {
     var waterBottleLeft = 4;
     var waterBottleLiquid = document.getElementById("kitchen-waterbottle-liquid");
+    var emptyWaterBottleWiggle = document.getElementById("kitchen-empty-waterbottle-wiggle");
+    var emptyWaterBottleWiggleGeneration = 0, emptyWaterBottleWiggleTimer = null;
+    function clearEmptyWaterBottleWiggle() {
+      emptyWaterBottleWiggleGeneration++;
+      clearTimeout(emptyWaterBottleWiggleTimer);
+      emptyWaterBottleWiggleTimer = null;
+      if (emptyWaterBottleWiggle) emptyWaterBottleWiggle.classList.remove("empty-wiggle");
+    }
+    function triggerEmptyWaterBottleWiggle() {
+      if (waterBottleBroken || waterBottleLeft > 0 || !emptyWaterBottleWiggle) return false;
+      clearEmptyWaterBottleWiggle();
+      var generation = emptyWaterBottleWiggleGeneration;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (generation !== emptyWaterBottleWiggleGeneration) return;
+          emptyWaterBottleWiggle.classList.add("empty-wiggle");
+          emptyWaterBottleWiggleTimer = setTimeout(clearEmptyWaterBottleWiggle, 680);
+        });
+      });
+      return true;
+    }
+    if (emptyWaterBottleWiggle) emptyWaterBottleWiggle.addEventListener("animationend", function (event) {
+      if (event.animationName !== "kitchen-empty-waterbottle-wiggle") return;
+      clearEmptyWaterBottleWiggle();
+    });
     function setKitchenWaterLevel(level, leaking) {
+      clearEmptyWaterBottleWiggle();
       waterBottleLeft = Math.max(0, Math.min(4, level));
       if (waterBottleLiquid) {
         waterBottleLiquid.style.transition = leaking && !panFallReducedMotion() ? "transform 2.8s ease-in" : "";
@@ -64194,7 +64234,7 @@ function quickReversalGesture(action) {
       if (waterBottleLeft > 0) {
         setKitchenWaterLevel(waterBottleLeft - 1, false);
         if (window.__checkpointChanged) window.__checkpointChanged();
-      }
+      } else triggerEmptyWaterBottleWiggle();
     }
     waterbottle.addEventListener("click", clinkWaterBottle);
     waterbottle.addEventListener("keydown", function (e) {

@@ -162,12 +162,12 @@ opens the complete keyboard-shortcut card.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 
-The console accepts JavaScript and a discoverable game API. Bare `help` lists only the top-level
-`loft` namespaces. Drill down with `help(loft.weather)`, `help(loft.weather.rain)`, or
-`help(loft.cuddly.chest.set)`; direct legacy lookup such as `help("dance")` still works.
-`capabilities()` returns the complete structured typed catalogue and
-`loftstatus()` returns a compact game-state snapshot. On/off commands use explicit reads and
-writes—for example, `party.status()` and `party.set(true)`. Weather/environment controls also accept
+The JavaScript console, Code app, and Python runtime expose an extensive typed scripting API under
+the `loft` namespace. Bare `help` or `help(loft)` lists its top-level objects. Drill down with
+`help(loft.weather)`, `help(loft.weather.rain)`, or `help(loft.cuddly.chest.set)`;
+`loft.api.capabilities()` returns the complete structured catalogue. On/off commands use explicit
+reads and writes—for example, `loft.party.status()` and `loft.party.set(true)`.
+Weather/environment controls also accept
 `set(null)` to resume automatic ownership and expose `mode()` as `"auto"`, `"on"`, or `"off"`.
 The typed room API covers all ten rooms; `loft.bar` is the Kitchen alias and `loft.party` is the
 Garden alias. State commands leave the current view alone; navigate explicitly with, for example,
@@ -199,7 +199,8 @@ await loft.room.go("garden") # wait for a finite action to finish
 ```
 
 Queries return normal Python values. Actions begin when called and can be awaited when their final
-result matters. A failed query or awaited action raises `loft.LoftError`. Use `loft.capabilities()`
+result matters. A failed query or awaited action raises `loft.LoftError`. Use
+`loft.api.capabilities()`
 for the current compact catalogue; new typed capabilities appear through the same module without a
 separate Python binding. Automatic environment control is restored with `None`, not the string
 `"auto"`. `help()` prints the top-level Loft namespace map; drill down with, for example,

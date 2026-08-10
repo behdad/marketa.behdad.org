@@ -49,14 +49,29 @@ check(/id="monitor-code-explain"[^>]*>explain<\/button>/.test(html) &&
   "Code AI controls use explicit, compact labels");
 check(/js\["hello\.js"\]\s*=\s*CODE_STARTER/.test(html) &&
       /py\["square\.py"\]\s*=\s*CODE_PY_STARTER/.test(html) &&
-      /loft\.caption\.show\(\\"hello from the loft/.test(html) &&
+      /loft\.party\.set\(true\)/.test(html) &&
+      /await loft\.room\.go\(\\"garden\\"\)/.test(html) &&
+      /await loft\.caption\.show\(\\"hello from the loft 👋\\"\)/.test(html) &&
       /for _ in range\(4\):[\s\S]*?t\.forward\(60\)[\s\S]*?t\.right\(90\)/.test(html),
-  "one-time editable hello.js and square.py examples are preloaded without overwriting user files");
+  "one-time typed hello.js and square.py examples are preloaded without overwriting user files");
 check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
       /CODE_SPACE_FILLER_KEY\s*=\s*"deskCodeSpaceFillerV1"/.test(html) &&
       /t\.goto\(-75,\s*-75\)/.test(html) &&
       /fill\(4\)/.test(html),
   "the centered space-filler turtle reaches existing players through its own one-time migration");
+check(/py\["hello\.py"\]\s*=\s*CODE_PY_HELLO/.test(html) &&
+      /CODE_PY_HELLO_KEY\s*=\s*"deskCodePythonHelloV1"/.test(html) &&
+      /loft\.party\.set\(True\)/.test(html) &&
+      /await loft\.room\.go\(\\"garden\\"\)/.test(html) &&
+      /await loft\.caption\.show\(\\"hello from the loft 👋\\"\)/.test(html),
+  "hello.py mirrors the typed Party, explicit Garden pan and greeting demo without overwriting profiles");
+check(/py\["loft-api\.py"\]\s*=\s*CODE_PY_LOFT_API/.test(html) &&
+      /CODE_LOFT_API_KEY\s*=\s*"deskCodeLoftApiV1"/.test(html) &&
+      /import loft/.test(html) &&
+      /loft\.game\.status\(\)/.test(html) &&
+      /loft\.weather\.rain\.set\(None\)/.test(html) &&
+      /await loft\.room\.go\(\\"garden\\"\)/.test(html),
+  "a capability-driven import-loft example reaches existing Python Code profiles");
 check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
       /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV3"/.test(html) &&
       /from loft import display_svg/.test(html) &&
@@ -103,7 +118,7 @@ check(/pyReturnToCode[\s\S]*?paintPythonClose[\s\S]*?openPython\(true\)/.test(ht
       /consoleReturnToCode[\s\S]*?paintConsoleClose[\s\S]*?openConsole\(true\)/.test(html),
   "Code-launched Python and JavaScript consoles expose a Back path");
 
-var turtleMatch = /var PY_TURTLE_MODULE = `([\s\S]*?)`;\n  function installPythonTurtle/.exec(html);
+var turtleMatch = /var PY_TURTLE_MODULE = `([\s\S]*?)`;\n  function installPythonModules/.exec(html);
 check(!!turtleMatch, "a self-hosted browser Turtle compatibility module is embedded");
 check(/<g id="monitor-py-turtle">[\s\S]*?<svg[\s\S]*?id="monitor-py-turtle-lines"/.test(html) &&
       /PY_TURTLE_NODE_LIMIT\s*=\s*6000/.test(html),
@@ -115,12 +130,17 @@ check(/<g id="monitor-console-svg">[\s\S]*?<svg[\s\S]*?id="monitor-console-svg-d
 check(/class", "py-turtle-cursor"/.test(html) &&
       /py-turtle-cursor-shell/.test(html),
   "Turtle drawings end with a turtle-shaped SVG cursor");
-check(/installPythonTurtle\(py\)/.test(html) &&
+check(/installPythonModules\(py\)/.test(html) &&
       /loft\.py/.test(html) &&
+      /py\.runPython\("import loft"\)/.test(html) &&
+      /typed Loft API ready/.test(html) &&
       /def clear_canvas\(\):/.test(html) &&
       /function pyDisplaySvg/.test(html) &&
       /sys\.path\.insert\(0,p\)/.test(html),
-  "the Turtle and sanitized SVG modules are installed before user Python imports them");
+  "the API, Turtle and sanitized SVG modules are installed before user Python imports them");
+check(/typed Loft API ready as the imported `loft` module/.test(html) &&
+      /typed Loft API ready as the preloaded `loft` global/.test(html),
+  "empty Python and JavaScript Code buffers explain their respective Loft API boot modes");
 
 if (turtleMatch) {
   var smoke = [

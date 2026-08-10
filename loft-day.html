@@ -76187,7 +76187,7 @@ setOfficeProgress("pc", false);
     var a = codeCode.selectionStart || 0, b = codeCode.selectionEnd || a;
     codeAiStart = a; codeAiEnd = b; codeAiSourceCode = codeCode.value;
     var context = typeof window.__chatContext === "function" ? window.__chatContext("Code " + operation) : { scripting_api: null };
-    if (codeLanguage === "python") context.scripting_api = null; // Python gets its own bounded runtime/turtle context from the Worker payload.
+    if (codeLanguage === "python") context.scripting_api = null; // Python gets compact import-loft guidance from the Worker, never the human console help dictionary.
     Promise.resolve(challenge()).then(function (token) {
       return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "code_assist", turnstile_token: token, context: context, code: { language: codeLanguage, operation: operation, request: userRequest || "", source: codeCode.value, selected: codeCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: codeGetRunError(codeLanguage) } }) });
     }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
@@ -76230,6 +76230,24 @@ setOfficeProgress("pc", false);
     "for _ in range(4):",
     "    t.forward(60)",
     "    t.right(90)",
+    ""
+  ].join("\n");
+  var CODE_PY_HELLO = [
+    "loft.party.set(True)",
+    "await loft.room.go(\"garden\")",
+    "await loft.caption.show(\"hello from the loft 👋\")",
+    ""
+  ].join("\n");
+  var CODE_PY_LOFT_API = [
+    "import loft",
+    "",
+    "status = loft.game.status()",
+    "print(status)",
+    "",
+    "# Actions start when called; await one when you need its final result.",
+    "loft.weather.rain.set(None)  # release the override back to automatic weather",
+    "# loft.party.set(True)",
+    "# await loft.room.go(\"garden\")",
     ""
   ].join("\n");
   var CODE_PY_SPACE_FILLER = [
@@ -76326,6 +76344,8 @@ setOfficeProgress("pc", false);
     ""
   ].join("\n");
   var CODE_EXAMPLES_KEY = "deskCodeExamplesV1";
+  var CODE_PY_HELLO_KEY = "deskCodePythonHelloV1";
+  var CODE_LOFT_API_KEY = "deskCodeLoftApiV1";
   var CODE_SPACE_FILLER_KEY = "deskCodeSpaceFillerV1";
   var CODE_FRAUNCES_SVG_KEY = "deskCodeLoftTypeV3";
   var codeExamplesAdded = { js: false, python: false };
@@ -76340,6 +76360,14 @@ setOfficeProgress("pc", false);
       if (!localStorage.getItem(CODE_SPACE_FILLER_KEY)) {
         if (!Object.prototype.hasOwnProperty.call(py, "space-filler.py")) { py["space-filler.py"] = CODE_PY_SPACE_FILLER; codeExamplesAdded.python = true; }
         localStorage.setItem(CODE_SPACE_FILLER_KEY, "1");
+      }
+      if (!localStorage.getItem(CODE_PY_HELLO_KEY)) {
+        if (!Object.prototype.hasOwnProperty.call(py, "hello.py")) { py["hello.py"] = CODE_PY_HELLO; codeExamplesAdded.python = true; }
+        localStorage.setItem(CODE_PY_HELLO_KEY, "1");
+      }
+      if (!localStorage.getItem(CODE_LOFT_API_KEY)) {
+        if (!Object.prototype.hasOwnProperty.call(py, "loft-api.py")) { py["loft-api.py"] = CODE_PY_LOFT_API; codeExamplesAdded.python = true; }
+        localStorage.setItem(CODE_LOFT_API_KEY, "1");
       }
       if (!Object.prototype.hasOwnProperty.call(js, "loft-type.js")) {
         js["loft-type.js"] = CODE_JS_FRAUNCES_SVG; codeExamplesAdded.js = true;
@@ -76362,7 +76390,7 @@ setOfficeProgress("pc", false);
     if (codeCode.value !== "" || (codeName.value || "").trim() !== "") return; // buffer already has content or a name
     codeWelcomeShown[codeLanguage] = true;
     codeCode.value = codeLanguage === "python" ?
-      "# Welcome to Loft Code — your AI-assisted JavaScript/Python IDE." :
+      "# Welcome to Loft Code — typed Loft API ready as the imported `loft` module." :
       "// Welcome to Loft Code — typed Loft API ready as the preloaded `loft` global.";
     writeCodeUnsaved(codeCode.value, codeLanguage);
     codeLastSavedName = null;
@@ -82938,16 +82966,295 @@ setOfficeProgress("pc", false);
     return true;
   };
   var PY_LOFT_MODULE = `
-"""Native SVG output for the Loft's Python graphics display."""
+"""Python access to the Loft's public API and native SVG graphics display."""
+import builtins as _builtins
+import keyword as _keyword
 import js as _js
+from pyodide.ffi import JsNull as _JsNull
+from pyodide.ffi import JsProxy as _JsProxy
+from pyodide.ffi import jsnull as _jsnull
+from pyodide.ffi import to_js as _to_js
+
+
+class LoftError(RuntimeError):
+    """A validated Loft API request that could not be completed."""
+
+    def __init__(self, capability, code, message):
+        self.capability = capability
+        self.code = code or "FAILED"
+        self.message = message or "The Loft API request failed."
+        super().__init__("{}: {} ({})".format(capability, self.message, self.code))
+
+
+def _decode(value):
+    """Turn the API's JSON-shaped JS values into ordinary Python values."""
+    if isinstance(value, _JsNull):
+        return None
+    if isinstance(value, _JsProxy):
+        proxy = value
+        try:
+            value = proxy.to_py()
+        finally:
+            try:
+                proxy.destroy()
+            except Exception:
+                pass
+    if isinstance(value, _JsNull):
+        return None
+    if isinstance(value, dict):
+        return {str(key): _decode(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_decode(item) for item in value)
+    return value
+
+
+def _encode(value, path="argument"):
+    """Build JSON-shaped values while preserving Python None as JavaScript null."""
+    if value is None:
+        return _jsnull
+    if isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_encode(item, "{}[]".format(path)) for item in value]
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError("{} keys must be strings".format(path))
+            out[key] = _encode(item, "{}.{}".format(path, key))
+        return out
+    raise TypeError("{} must contain only JSON values".format(path))
+
+
+def _js_object(value):
+    return _to_js(_encode(value), dict_converter=_js.Object.fromEntries,
+                  create_pyproxies=False)
+
+
+def _python_name(name):
+    name = name.replace("-", "_")
+    return name + "_" if _keyword.iskeyword(name) else name
+
+
+def _unwrap(capability, response):
+    response = _decode(response)
+    if not isinstance(response, dict):
+        raise LoftError(capability, "INVALID_RESPONSE", "The Loft API returned an invalid response.")
+    if not response.get("ok"):
+        raise LoftError(capability, response.get("code"), response.get("message"))
+    return response.get("value")
+
+
+class _Pending:
+    """An already-started Loft action; await it to receive its final value."""
+
+    __slots__ = ("_capability", "_promise")
+
+    def __init__(self, capability, promise):
+        self._capability = capability
+        self._promise = promise
+
+    async def _finish(self):
+        try:
+            response = await self._promise
+        except Exception as error:
+            raise LoftError(self._capability, "JS_ERROR", str(error)) from error
+        return _unwrap(self._capability, response)
+
+    def __await__(self):
+        return self._finish().__await__()
+
+    def __repr__(self):
+        return "<Loft action {} started; await for result>".format(self._capability)
+
+
+class _Namespace:
+    __slots__ = ("_path", "_children", "_capability")
+
+    def __init__(self, path=""):
+        self._path = path
+        self._children = {}
+        self._capability = None
+
+    def __getattr__(self, name):
+        child = self._children.get(name)
+        if child is None:
+            _refresh()
+            child = _lookup(self._path, name)
+        if child is None:
+            raise AttributeError("No Loft API namespace or capability named {!r}".format(name))
+        return child
+
+    def __getitem__(self, name):
+        return getattr(self, _python_name(str(name)))
+
+    def __dir__(self):
+        return sorted(set(self._children) | set(super().__dir__()))
+
+    def __call__(self, *args, **kwargs):
+        if self._capability is None:
+            raise TypeError("{} is a Loft API namespace, not a capability".format(self._path or "loft"))
+        return _call(self._capability, args, kwargs)
+
+    @property
+    def description(self):
+        return (self._capability or {}).get("description", "")
+
+    def __repr__(self):
+        if self._capability:
+            return "<Loft {} {}>".format(self._capability.get("kind", "capability"), self._path)
+        return "<Loft namespace {}>".format(self._path or "loft")
+
+
+_api = None
+_root = _Namespace()
+_manifest = []
+
+
+def _connect():
+    global _api
+    try:
+        _api = _js.window.loft.api
+    except Exception as error:
+        raise RuntimeError("The Loft API is not available in this page.") from error
+
+
+def _lookup(path, name):
+    node = _root
+    if path:
+        for part in path.split("."):
+            node = node._children.get(_python_name(part))
+            if node is None:
+                return None
+    return node._children.get(name)
+
+
+def _install_at(identifier, definition):
+    if not isinstance(identifier, str) or not identifier:
+        return
+    node = _root
+    path = []
+    for raw_part in identifier.split("."):
+        path.append(raw_part)
+        name = _python_name(raw_part)
+        child = node._children.get(name)
+        if child is None:
+            child = node._children[name] = _Namespace(".".join(path))
+        node = child
+    node._capability = definition
+
+
+def _install(definition):
+    _install_at(definition.get("id"), definition)
+    for alias in definition.get("aliases") or []:
+        _install_at(alias, definition)
+
+
+def _refresh():
+    global _manifest
+    if _api is None:
+        _connect()
+    manifest = _decode(_api.capabilities())
+    if not isinstance(manifest, list):
+        raise RuntimeError("The Loft API capability manifest is invalid.")
+    _root._children.clear()
+    _manifest = manifest
+    for definition in manifest:
+        if isinstance(definition, dict):
+            _install(definition)
+    return len(_manifest)
+
+
+def refresh():
+    """Refresh namespaces after capabilities are registered at runtime."""
+    return _refresh()
+
+
+def capabilities():
+    """Return the current compact capability manifest as ordinary Python data."""
+    _refresh()
+    return _decode(_manifest)
+
+
+def _bind(definition, positional, keywords):
+    schema = definition.get("args") or {}
+    names = list(definition.get("argOrder") or schema)
+    if (len(positional) == 1 and isinstance(positional[0], dict) and not keywords
+            and set(positional[0]).issubset(schema)):
+        values = dict(positional[0])
+    else:
+        if len(positional) > len(names):
+            raise TypeError("{}() takes at most {} positional argument{}".format(
+                definition["id"], len(names), "" if len(names) == 1 else "s"))
+        values = {names[index]: value for index, value in enumerate(positional)}
+        python_names = {_python_name(name): name for name in names}
+        for key, value in keywords.items():
+            raw_key = python_names.get(key)
+            if raw_key is None:
+                raise TypeError("{}() got an unexpected keyword argument {!r}".format(definition["id"], key))
+            if raw_key in values:
+                raise TypeError("{}() got multiple values for {!r}".format(definition["id"], raw_key))
+            values[raw_key] = value
+    unknown = [key for key in values if key not in schema]
+    if unknown:
+        raise TypeError("{}() got an unexpected argument {!r}".format(definition["id"], unknown[0]))
+    return _js_object(values)
+
+
+def _call(definition, positional, keywords):
+    identifier = definition["id"]
+    arguments = _bind(definition, positional, keywords)
+    if definition.get("kind") == "query":
+        try:
+            response = _api.query(identifier, arguments)
+        except Exception as error:
+            raise LoftError(identifier, "JS_ERROR", str(error)) from error
+        return _unwrap(identifier, response)
+    if definition.get("kind") == "action":
+        promise = _api.perform(identifier, arguments, _js_object({"source": "python"}))
+        return _Pending(identifier, promise)
+    raise LoftError(identifier, "INVALID_CAPABILITY", "Unsupported capability kind.")
+
 
 def display_svg(source):
-    """Fit an SVG document into the graphics display."""
+    """Fit a sanitized SVG document into the Python graphics display."""
     if not getattr(_js, "__loftTurtleCommand")("svg", str(source)):
         raise ValueError("display_svg() needs a valid SVG document")
 
+
 def clear_canvas():
+    """Clear the Python graphics display."""
     getattr(_js, "__loftTurtleCommand")("screen_clear")
+
+
+def __getattr__(name):
+    return getattr(_root, name)
+
+
+def __dir__():
+    return sorted(set(globals()) | set(dir(_root)))
+
+
+_HELP_MISSING = object()
+_original_help = getattr(_builtins.help, "__loft_original__", _builtins.help)
+
+
+def _loft_help(target=_HELP_MISSING):
+    """Show Loft drilldown help, while preserving Python help for other objects."""
+    if target is _HELP_MISSING:
+        text = _decode(_js.window.help())
+    elif isinstance(target, _Namespace):
+        text = _decode(_js.window.help(target._path))
+    else:
+        return _original_help(target)
+    _builtins.print(text)
+
+
+_loft_help.__loft_original__ = _original_help
+_refresh()
+_builtins.help = _loft_help
 `;
   var PY_TURTLE_MODULE = `
 """A compact browser Turtle implementation for the Loft's Pyodide console."""
@@ -83215,13 +83522,16 @@ def colormode(mode=None):
     _colormode = float(mode)
     return _colormode
 `;
-  function installPythonTurtle(py) {
+  function installPythonModules(py) {
     try {
       py.FS.mkdirTree("/home/pyodide/loft");
       py.FS.writeFile("/home/pyodide/loft/turtle.py", PY_TURTLE_MODULE);
       py.FS.writeFile("/home/pyodide/loft/loft.py", PY_LOFT_MODULE);
-      py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)");
-    } catch (e) { pyPrint("Turtle could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
+      py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)\nsys.modules.pop('loft', None)");
+      pyPrint(">>> import loft", "console-dim");
+      py.runPython("import loft");
+      pyPrint("typed Loft API ready — loft.game.status() · loft.party.set(True)", "console-dim");
+    } catch (e) { pyPrint("Python modules could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
   }
   function pyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function updatePythonTile() {
@@ -83276,7 +83586,7 @@ def colormode(mode=None):
         return py.loadPackage("micropip").then(function () { return py.runPythonAsync("import micropip"); }).then(function () { return py; }, function () { return py; });
       }).then(function (py) {
         pyRuntime = py;
-        installPythonTurtle(py);
+        installPythonModules(py);
         try { pyReprFn = py.runPython("repr"); } catch (e) {}
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}

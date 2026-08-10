@@ -385,6 +385,27 @@ capability rows plus a short primitives/signatures list. Do not add `CONSOLE_HEL
 command index to that payload. Code's model treats the manifest as authoritative; its examples and
 generated drafts use the `loft.*` namespaces and completion metadata.
 
+The Pyodide console installs an embedded `loft.py` module beside the browser Turtle module. On
+`import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
+namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
+there is no second capability roster to synchronize.
+Queries return ordinary Python dictionaries, lists, and scalars. Actions start immediately and
+return an awaitable result, so a setter can be issued directly while a finite action can be awaited.
+The bridge recursively converts Python `None` to JavaScript `null`—Pyodide otherwise converts a bare
+`None` argument to `undefined`—and converts returned `null` values back to `None`. Invalid or failed
+API results raise `loft.LoftError` when read or awaited. The module calls only discovered typed ids;
+it does not expose arbitrary JavaScript evaluation or private `window.__…` hooks.
+
+Importing `loft` installs a narrow `builtins.help` adapter: no-argument help and `_Namespace`
+targets print the same recursive `window.help` text as JavaScript, while every non-Loft target
+delegates to Python's original helper. The adapter carries its original helper through module reloads
+so a Python restart, reimport, or refresh cannot stack wrappers.
+
+Keep the Python Code-assistant prompt compact. It describes `import loft` and a few representative
+forms while the runtime manifest supplies discovery; do not send the large human console help table
+or hand-maintain a Python command list. `tests/python-loft-api.js` exercises the bridge against the
+repository's pinned Pyodide runtime, including null conversion and Promise/error behavior.
+
 ### Chat Worker boundary
 
 The browser builds bounded live context in `__chatContext` and sends it through `askChat` to

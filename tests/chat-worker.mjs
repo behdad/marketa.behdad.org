@@ -797,9 +797,13 @@ check(captured.body.max_output_tokens === 4000,
 check(/CPython 3\.14/.test(captured.body.instructions) &&
       /LANGUAGE LOCK/.test(captured.body.instructions) &&
       /browser-compatible turtle/.test(captured.body.instructions) &&
+      /import loft/.test(captured.body.instructions) &&
+      /loft\.weather\.rain\.set\(None\)/.test(captured.body.instructions) &&
+      /help\(loft\.weather\) drills down/.test(captured.body.instructions) &&
+      /never suggest the string "auto"/.test(captured.body.instructions) &&
       /Do not suggest tkinter/.test(captured.body.instructions) &&
       !/"name":"party"/.test(captured.body.instructions),
-  "Python Code receives its bounded runtime/Turtle prompt without the Loft JavaScript API",
+  "Python Code receives compact runtime/Turtle/import-loft guidance without a copied API roster",
   captured.body.instructions.slice(0, 500));
 
 openAIReply = JSON.stringify({

@@ -183,6 +183,29 @@ needed. `await loft.caption.show("hello")` writes a literal scene caption withou
 Plain `P` and `R` have no global shortcut. Restart remains available from the visible reset control
 and the console.
 
+### Python scripting
+
+The Office Python Console imports the preinstalled `loft` module while it boots, so Python files in
+Code can use it immediately. Its namespaces follow the same typed API as the JavaScript console
+without exposing private page internals:
+
+```python
+import loft
+
+status = loft.game.status()
+loft.party.set(True)
+loft.weather.rain.set(None)  # release the override to automatic weather
+await loft.room.go("garden") # wait for a finite action to finish
+```
+
+Queries return normal Python values. Actions begin when called and can be awaited when their final
+result matters. A failed query or awaited action raises `loft.LoftError`. Use `loft.capabilities()`
+for the current compact catalogue; new typed capabilities appear through the same module without a
+separate Python binding. Automatic environment control is restored with `None`, not the string
+`"auto"`. `help()` prints the top-level Loft namespace map; drill down with, for example,
+`help(loft.weather)` and `help(loft.weather.rain)`. Python's normal help remains available for
+non-Loft objects such as `help(str)`.
+
 ### Driving
 
 - `Enter`: start the engine when it is off.

@@ -7,7 +7,10 @@ var HARNESS = [
   '<script>(function(){window.addEventListener("load",function(){setTimeout(function(){',
   'var qs=window.__quizQuestions&&window.__quizQuestions();window.__quizReset();var run=window.__quizRunQuestions();',
   'var ids={};(qs||[]).forEach(function(q){q.a.forEach(function(a){a.who.forEach(function(w){ids[w]=1;});});});',
-  'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,questions:qs,run:run,ids:Object.keys(ids)});',
+  'var oldRandom=Math.random;Math.random=function(){return 0;};window.__openPhoneAppHere("quiz");run=window.__quizRunQuestions();',
+  'var picks={quiz_q2:4,quiz_q6:3,quiz_q7:1};run.forEach(function(key,step){var answers=document.querySelectorAll(".pm-quiz-ans");if(Object.prototype.hasOwnProperty.call(picks,key))answers[picks[key]].click();if(step===run.length-1)Math.random=function(){return .7;};document.querySelector(Object.prototype.hasOwnProperty.call(picks,key)?".pm-quiz-actions .pm-btn:not(.ghost)":".pm-quiz-actions .pm-btn.ghost").click();});',
+  'var en={name:document.querySelector(".pm-quiz-name").textContent,fun:document.querySelector(".pm-quiz-fun").textContent};setLang("cs");var cs={name:document.querySelector(".pm-quiz-name").textContent,fun:document.querySelector(".pm-quiz-fun").textContent};Math.random=oldRandom;',
+  'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,questions:qs,run:run,ids:Object.keys(ids),en:en,cs:cs});',
   '},250);});})();</script>'
 ].join("\n");
 var r = lib.runPageSync("rsvp.html", HARNESS, 2500, { patchRaf: true });
@@ -24,6 +27,8 @@ check(run.length === 6 && new Set(run).size === 6 && run.every(function(q){retur
 check(qs.every(function(q){return q.a.length >= 5;}), "every question offers at least five choices");
 check(expected.every(function(id){return ids.indexOf(id) >= 0;}), "all canonical participants, including every child, are quiz outcomes", expected.filter(function(id){return ids.indexOf(id)<0;}));
 check(qs.filter(function(q){return q.multi;}).every(function(q){return q.a.every(function(a){return Array.isArray(a.who);});}), "multi-select scoring targets are explicit participant arrays");
+check(r.en && r.en.name === "Patricia’s son" && r.en.fun === "loves the Lada", "Patricia’s son result uses the authored English name and fun fact", r.en);
+check(r.cs && r.cs.name === "Patriciin syn" && r.cs.fun === "miluje Ladu", "Patricia’s son result relocalizes through the canonical Czech labels", r.cs);
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }
 console.log("All checks passed.");

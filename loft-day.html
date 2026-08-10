@@ -94674,11 +94674,13 @@ async def localfont(name):
         { k: "quiz_q8a4", who: ["bahareh", "irene", "hannah"] },
         { k: "quiz_q8a5", who: ["pouria", "ali", "goli", "spencer", "jay", "lauren", "alireza", "sina", "danesh"] } ] }
     ];
-    var QUIZ_NAMES = { marketa: "Markéta", behdad: "behdad" }; // display names; everyone else is the key title-cased
+    var QUIZ_NAMES = { marketa: "Markéta", behdad: "behdad" }; // proper-case exceptions; relationship labels use the shared person-name owner
     // Test/console introspection stays read-only: the quiz uses the same public roster ids as
     // the people cards, so coverage checks cannot drift into a second private data source.
     window.__quizQuestions = function () { return QUIZ_QUESTIONS.map(function (q) { return { q: q.q, multi: !!q.multi, a: q.a.map(function (a) { return { k: a.k, who: a.who.slice() }; }) }; }); };
-    function quizName(w) { return QUIZ_NAMES[w] || (w.charAt(0).toUpperCase() + w.slice(1)); }
+    function quizName(w) {
+      return personDisplayName(w, QUIZ_NAMES[w] || (w.charAt(0).toUpperCase() + w.slice(1)));
+    }
     var quizSelections = [], quizRunQuestions = [];
     function quizReset() {
       quizStep = 0; quizTally = {}; quizResult = null; quizSelections = [];
@@ -94725,7 +94727,7 @@ async def localfont(name):
         wrap.appendChild(nm);
         var fun = document.createElement("div");
         fun.className = "pm-quiz-fun";
-        fun.innerHTML = tr("fun_" + quizResult);
+        fun.innerHTML = tr("fun_" + quizResult.replace(/-/g, "_"));
         wrap.appendChild(fun);
         var again = document.createElement("button");
         again.type = "button";

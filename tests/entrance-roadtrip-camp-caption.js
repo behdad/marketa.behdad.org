@@ -130,18 +130,18 @@ check(afterLanguageRoundTrip.route === "camp" &&
 
 var completed = result && result.completed || {};
 check(completed.key === "entrance_roadtrip_stew_invite" &&
-  completed.text === "Let’s cook some stew." && completed.blinking,
+  completed.text === "Let’s make some stew." && completed.blinking,
   "the completed fire briefly invites the player to cook", completed);
 
 var steady = result && result.steady || {};
 check(steady.route === "camp" && steady.key === "entrance_roadtrip_stew_invite" &&
-  steady.text === "Let’s cook some stew." && !steady.blinking,
+  steady.text === "Let’s make some stew." && !steady.blinking,
   "the cooking invitation becomes steady without turning into an opener", steady);
 
 var afterContinue = result && result.afterContinue || {};
 check(afterContinue.route === "camp" && !afterContinue.resumePending &&
   afterContinue.key === "entrance_roadtrip_stew_invite" &&
-  afterContinue.text === "Let’s cook some stew." &&
+  afterContinue.text === "Let’s make some stew." &&
   afterContinue.captionVisibility === "visible" && afterContinue.pauseDialog === "none",
   "Continue restores Camping directly with its lit-fire cooking invitation", afterContinue);
 

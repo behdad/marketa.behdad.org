@@ -581,7 +581,7 @@ T["cs"] = {
     "entrance_roadtrip_stew_curry_second": "pasta",
     "entrance_roadtrip_stew_garlic": "Česnek",
     "entrance_roadtrip_stew_ginger": "Zázvor",
-    "entrance_roadtrip_stew_invite": "Pojďme uvařit něco dobrého v kotlíku.",
+    "entrance_roadtrip_stew_invite": "Pojďme si udělat něco dobrého v kotlíku.",
     "entrance_roadtrip_stew_lamb": "Jehněčí",
     "entrance_roadtrip_stew_missing": "Přidej jeden protein a jeden základ.",
     "entrance_roadtrip_stew_mushrooms": "Houby",

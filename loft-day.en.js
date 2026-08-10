@@ -581,7 +581,7 @@ T["en"] = {
     "entrance_roadtrip_stew_curry_second": "paste",
     "entrance_roadtrip_stew_garlic": "Garlic",
     "entrance_roadtrip_stew_ginger": "Ginger",
-    "entrance_roadtrip_stew_invite": "Let’s cook some stew.",
+    "entrance_roadtrip_stew_invite": "Let’s make some stew.",
     "entrance_roadtrip_stew_lamb": "Lamb",
     "entrance_roadtrip_stew_missing": "Add one protein and one base.",
     "entrance_roadtrip_stew_mushrooms": "Mushrooms",

@@ -413,12 +413,12 @@ capability rows plus a short primitives/signatures list. Do not add `CONSOLE_HEL
 command index to that payload. Code's model treats the manifest as authoritative; its examples and
 generated drafts use the `loft.*` namespaces and completion metadata.
 
-Code's canonical virtual files are the filenames in `code-snippets/manifest.js`; language and
-same-origin path derive from each extension/name, and the public file remains the only source body.
-IONOS otherwise treats `.py` as CGI, so `code-snippets/.htaccess` removes that inherited handler
-inside this source-only directory and serves Python files as `text/x-python`; do not remove or
-broaden that override. `tests/check.js` keeps every manifest filename present and this static-file
-contract intact.
+Code's canonical virtual-file descriptors live in `code-snippets/manifest.js`; each pairs the
+visitor-facing `.js` / `.py` filename (which determines language) with its one same-origin source
+path. IONOS executes raw `.py` extension components as CGI, so every physical and requested source
+uses a handler-safe `*-js.txt` / `*-py.txt` transport while Code still presents the conventional
+filename. `tests/check.js` keeps every descriptor exact, unique, present, and free of duplicate or
+raw `.js` / `.py` source files, and locks the content-versioned manifest load.
 The sidebar always puts the unsaved buffer first, then sorts canonical and visitor-created basenames
 only while rendering. Unsaved and untouched canonical filenames are italic; edited canonical and
 visitor-created filenames are upright, with exact ownership tooltips and no path prefixes. A
@@ -512,14 +512,15 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The authored timing and world sequence lives in `code-snippets/trailer.js` and calls only public
-typed `loft.*` capabilities plus ordinary JavaScript timing. It is both the executable timeline and
-the editable canonical file shown in Code; do not mirror its body in HTML or another sample. The
-manifest exposes only its name: first activation resolves the local built-in override or lazily
-fetches the canonical bytes, then uses the same async JavaScript source runner as Code and
-`run("name")`. The ordinary script requests `loft.trailer.play()` when run outside an active reel and
-opens its preview transaction itself once activated; the IDE has no Trailer filename branch. The
-inline entry controller keeps overlay DOM, geometry, trusted-click audio priming, and takeover/error
+The authored timing and world sequence lives in the `code-snippets/trailer-js.txt` transport and
+calls only public typed `loft.*` capabilities plus ordinary JavaScript timing. It is both the
+executable timeline and the editable canonical file shown in Code; do not mirror its body in HTML or
+another sample. The manifest exposes only its transport path: first activation resolves the local
+built-in override or lazily fetches the canonical bytes, then uses the same async JavaScript source
+runner as Code and `run("name")`. The ordinary script requests `loft.trailer.play()` when run outside
+an active reel and opens its preview transaction itself once activated; the IDE has no Trailer
+filename branch. The inline entry controller keeps overlay DOM, geometry, trusted-click audio
+priming, and takeover/error
 teardown private.
 
 Public `presentation.*` actions expose only translated cards/captions/chapters, two finite cut

@@ -120,7 +120,7 @@ function clean(r, disposition) {
 console.log("Trailer cinematic — lazy ordinary-script activation:");
 var lazy = lib.runPageSync("loft-day.html", LAZY, 7000, { patchRaf: true, forceMotion: true, chromeFlags: CINE_CHROME });
 check(lazy && lazy.errors.length === 0, "lazy activation has no uncaught errors", lazy && lazy.errors);
-check(lazy && lazy.before.length === 0 && lazy.requests.filter(function (path) { return path === "code-snippets/trailer.js"; }).length === 1,
+check(lazy && lazy.before.length === 0 && lazy.requests.filter(function (path) { return path === "code-snippets/trailer-js.txt"; }).length === 1,
   "the page requests Trailer source only on first activation and reuses that lazy load", lazy && { before: lazy.before, requests: lazy.requests });
 check(lazy && lazy.cancelled && lazy.cancelled.stop && lazy.cancelled.inactive,
   "Stop during the lazy load cancels execution without a delayed restart", lazy && lazy.cancelled);
@@ -207,7 +207,7 @@ console.log("\nTrailer cinematic — EN/CS desktop + phone-landscape title layou
 });
 
 console.log("\nTrailer cinematic — authored-file boundary:");
-var source = fs.readFileSync(path.join(lib.ROOT, "code-snippets", "trailer.js"), "utf8");
+var source = fs.readFileSync(path.join(lib.ROOT, "code-snippets", "trailer-js.txt"), "utf8");
 check(!/window\.__|__cineRoadtripDemo|createElementNS|<path|setAttribute\s*\(\s*[\"']d[\"']/.test(source), "external timeline uses typed API primitives, not private hooks or invented SVG geometry");
 check(/roadtrip\.preview\.show\(\{ route: "banff"/.test(source) && /roadtrip\.preview\.show\(\{ route: "camp"/.test(source), "timeline selects both exact renderer-owned routes");
 var html = fs.readFileSync(path.join(lib.ROOT, "loft-day.html"), "utf8");

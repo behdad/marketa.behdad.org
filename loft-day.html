@@ -36785,7 +36785,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <script>var T = {};</script>
 <script src="loft-day.en.js?v=dict-304968b3d836"></script>
 <script src="loft-day.cs.js?v=dict-69f78faf8767"></script>
-<script src="code-snippets/manifest.js"></script>
+<script src="code-snippets/manifest.js?v=transport-14a884e4ef38"></script>
 <script>
 // A popup outside the browser's fullscreen element exists in the DOM but cannot paint.
 // Every context-menu builder uses this host so its existing fixed viewport coordinates
@@ -76568,14 +76568,18 @@ setOfficeProgress("pc", false);
   function codeGetRunError(language) { return codeRunErrors[language === "python" ? "python" : "js"] || ""; }
   var CODE_STORE_KEYS = { js: "deskScripts", python: "deskPythonScripts" };
   var CODE_BUILTIN_OVERRIDE_KEY = "deskCodeBuiltinOverrides";
-  var CODE_BUILTINS = (Array.isArray(window.LOFT_CODE_SNIPPETS) ? window.LOFT_CODE_SNIPPETS : []).map(function (filename) {
-    filename = String(filename || "");
+  var CODE_BUILTINS = (Array.isArray(window.LOFT_CODE_SNIPPETS) ? window.LOFT_CODE_SNIPPETS : []).map(function (descriptor) {
+    var filename = String(descriptor && descriptor.filename || "");
+    var transport = String(descriptor && descriptor.path || "");
     return {
       filename: filename,
-      path: "code-snippets/" + filename,
+      path: transport,
       language: /\.py$/i.test(filename) ? "python" : "js"
     };
-  }).filter(function (entry) { return entry.filename && /\.(?:js|py)$/i.test(entry.filename); });
+  }).filter(function (entry) {
+    return /^[A-Za-z0-9][A-Za-z0-9_-]*\.(?:js|py)$/.test(entry.filename) &&
+      /^code-snippets\/[A-Za-z0-9][A-Za-z0-9_-]*-(?:js|py)\.txt$/.test(entry.path);
+  });
   var codeBuiltinSources = Object.create(null), codeBuiltinErrors = Object.create(null), codeBuiltinLoads = Object.create(null), codeActiveBuiltin = null;
   function codeHasOwn(object, key) { return Object.prototype.hasOwnProperty.call(object, key); }
   function readCodeBuiltinOverrides() {
@@ -127186,8 +127190,8 @@ function spawnDustMote(container) {
   }
 
   // ── Trailer presentation host ───────────────────────────────────────────────
-  // The authored timeline lives in code-snippets/trailer.js. This host owns only the film
-  // treatment, ghost cursor, trusted-gesture audio prime, and teardown boundary; every
+  // The authored timeline lives in the code-snippets/trailer-js.txt transport. This host owns
+  // only the film treatment, ghost cursor, trusted-gesture audio prime, and teardown boundary; every
   // world mutation in the timeline goes through the typed Loft API preview transaction.
   var watchBtn = document.getElementById("watch-loft-btn");
   var skipBtn = document.getElementById("watch-skip-btn");

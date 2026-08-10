@@ -476,33 +476,52 @@ function checkLiteralLocalAssets() {
   else pass("literal local asset references resolve (" + refs.size + ")");
 }
 
-// IONOS treats .py as CGI unless the closest directory opts out. Code built-ins are public
-// source assets fetched by their canonical filenames, so every manifest row must exist and the
-// directory must keep Python source on Apache's static-file path.
+// IONOS gives every .py extension component its CGI handler. Keep visitor-facing .js/.py names
+// separate from their one physical *-js.txt/*-py.txt transport so every source is served statically.
 function checkCodeSnippetDelivery() {
   var dir = path.join(ROOT, "code-snippets");
   var manifest = fs.readFileSync(path.join(dir, "manifest.js"), "utf8");
   var list = /LOFT_CODE_SNIPPETS\s*=\s*Object\.freeze\(\s*(\[[\s\S]*?\])\s*\)/.exec(manifest);
-  var names = [];
-  try { names = list ? JSON.parse(list[1]) : []; } catch (_error) {}
+  var entries = [];
+  try { entries = list ? JSON.parse(list[1]) : []; } catch (_error) {}
   var issues = [];
-  if (!names.length) issues.push("manifest has no parseable filenames");
-  if (new Set(names).size !== names.length) issues.push("manifest repeats a filename");
-  names.forEach(function (name) {
-    if (typeof name !== "string" || path.basename(name) !== name || !/\.(?:js|py)$/.test(name)) {
-      issues.push("invalid canonical filename: " + JSON.stringify(name));
-    } else if (!fs.existsSync(path.join(dir, name)) || !fs.statSync(path.join(dir, name)).isFile()) {
-      issues.push("missing canonical file: " + name);
+  var token = "transport-" + crypto.createHash("sha256").update(manifest).digest("hex").slice(0, 12);
+  var html = fs.readFileSync(path.join(ROOT, "loft-day.html"), "utf8");
+  if (html.indexOf('src="code-snippets/manifest.js?v=' + token + '"') === -1) {
+    issues.push("loft-day.html manifest cache token must be " + token);
+  }
+  if (!entries.length) issues.push("manifest has no parseable descriptors");
+  var filenames = entries.map(function (entry) { return entry && entry.filename; });
+  var transports = entries.map(function (entry) { return entry && entry.path; });
+  if (new Set(filenames).size !== filenames.length) issues.push("manifest repeats a canonical filename");
+  if (new Set(transports).size !== transports.length) issues.push("manifest repeats a transport path");
+  var expectedFiles = new Set(["manifest.js"]);
+  entries.forEach(function (entry) {
+    var filename = entry && entry.filename, transport = entry && entry.path;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
+        typeof filename !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]*\.(?:js|py)$/.test(filename)) {
+      issues.push("invalid canonical descriptor: " + JSON.stringify(entry));
+      return;
+    }
+    var expected = "code-snippets/" + filename.replace(/\.(js|py)$/, "-$1.txt");
+    if (transport !== expected) {
+      issues.push("source transport for " + filename + " must be " + expected);
+      return;
+    }
+    expectedFiles.add(path.basename(transport));
+    var source = path.join(ROOT, transport);
+    if (!fs.existsSync(source) || !fs.statSync(source).isFile()) {
+      issues.push("missing source transport: " + transport);
     }
   });
-  var htaccess = fs.readFileSync(path.join(dir, ".htaccess"), "utf8");
-  if (!/^\s*RemoveHandler\s+\.py\s*$/mi.test(htaccess) ||
-      !/^\s*RemoveType\s+\.py\s*$/mi.test(htaccess) ||
-      !/^\s*AddType\s+text\/x-python\s+\.py\s*$/mi.test(htaccess)) {
-    issues.push("code-snippets/.htaccess must force .py onto the static text path");
-  }
+  fs.readdirSync(dir, { withFileTypes: true }).filter(function (entry) { return entry.isFile(); }).forEach(function (entry) {
+    if (!expectedFiles.has(entry.name)) issues.push("unmanifested or duplicate source file: code-snippets/" + entry.name);
+  });
+  expectedFiles.forEach(function (name) {
+    if (!fs.existsSync(path.join(dir, name))) issues.push("missing expected source file: code-snippets/" + name);
+  });
   if (issues.length) fail("canonical Code files have a public static-delivery contract", issues.join("\n"));
-  else pass("canonical Code files have a public static-delivery contract (" + names.length + " files)");
+  else pass("canonical Code files have a public static-delivery contract (" + entries.length + " files)");
 }
 
 // Recurring historical bug (fixed 3x: 4886f92, dd525fe, 6650508): an SVG element

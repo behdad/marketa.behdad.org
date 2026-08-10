@@ -70,7 +70,7 @@ function hook(opts) {
 // fetches; headless scratch pages receive the exact canonical snippet bytes through this test-only
 // resource hook, generated from the repository at run time rather than keeping a second source copy.
 function codeSnippetResourceHook(html) {
-  if (html.indexOf('src="code-snippets/manifest.js"') === -1) return "";
+  if (html.indexOf('src="code-snippets/manifest.js') === -1) return "";
   var root = path.join(ROOT, "code-snippets"), resources = {};
   fs.readdirSync(root, { withFileTypes: true }).forEach(function (entry) {
     if (!entry.isFile()) return;
@@ -100,6 +100,7 @@ function makeScratch(file, harness, hookHtml) {
   // those query-bearing local scripts as missing, so scratch pages remove only the already-
   // check.js-verified cache query while retaining the exact copied dictionary bytes.
   patched = patched.replace(/(<script src="loft-day\.(?:en|cs)\.js)\?v=[^"]+("><\/script>)/g, "$1$2");
+  patched = patched.replace(/(<script src="code-snippets\/manifest\.js)\?v=[^"]+("><\/script>)/g, "$1$2");
   // Each page gets a private directory so relative authored assets remain relative.
   // Preserve the exact HTML basename: Loft Day's outer RSVP scaffolding is selected
   // positively by an rsvp/rsvp.html pathname, while every other name is game-only.

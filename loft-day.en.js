@@ -175,7 +175,7 @@ window.__loftMessages["en"] = {
   "console_hint": "Open the drop-down console",
   "console_hint_close": "Close the drop-down console",
   "console_laser": "bzzzt — red dot on the loose, shadowing your cursor. double-click the roaming cat again to call it off. good luck, cat.",
-  "console_welcome": "   loft console — real JavaScript; typed Loft API ready as `loft`. try: loft.help() · ? keyboard shortcuts",
+  "console_welcome": "Loft Console — real JavaScript; typed Loft API ready as `loft`. try: `help loft`",
   "contact": "Questions? Write to us:",
   "credits_codesigner": "co-designer",
   "credits_codesigner_translator": "co-designer | Czech translator",

@@ -146,8 +146,11 @@ shuffled starting order until activity wakes it. Its unmarked top-left bezel cor
 advances the reel, like the matching monitor control.
 
 The JavaScript console, Code, and Python share the typed `loft` scripting API. JavaScript preloads
-it. Use `loft.help()` for top-level objects, drill down with `loft.help(loft.weather)`, list the
-catalogue with `loft.api.capabilities()`, and read its revision with `loft.api.info()`.
+it. In either JavaScript console, use `help loft` for top-level objects and `help loft.weather` to
+drill down; the equivalent JavaScript calls are `loft.help()` and `loft.help(loft.weather)`. List
+the catalogue with `loft.api.capabilities()`, and read its revision with `loft.api.info()`.
+`clear`, `exit`, and `quit` remain console controls. Bare `ls` points visitors to the Linux app;
+other shell commands are ordinary JavaScript errors.
 
 Controls use explicit reads and writes such as `loft.party.status()` and
 `loft.party.set(true)`. Weather controls accept `set(null)` to restore automatic ownership and

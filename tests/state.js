@@ -712,7 +712,7 @@ var PROBE_HARNESS = [
   "    ok('console discovery: backtick reveals the pull-tab', !!consoleTab && has('loft-console-hint', 'discovered') && getComputedStyle(consoleTab).display !== 'none');",
   "    ok('console discovery: the same backtick opens the drop-down console', !!(window.__dropTermOpen && window.__dropTermOpen()));",
   "    var droptermIn = el('dropterm-in'), droptermOut = el('dropterm-out');",
-  "    ok('console discovery: console welcome advertises ? keyboard shortcuts', !!droptermOut && droptermOut.textContent.indexOf('?') >= 0 && /keyboard shortcuts/i.test(droptermOut.textContent));",
+  "    ok('console discovery: console welcome advertises the help loft shorthand', !!droptermOut && droptermOut.textContent.indexOf('Loft Console — real JavaScript; typed Loft API ready as `loft`. try: `help loft`') >= 0);",
   "    if (droptermIn) { droptermIn.value = ''; droptermIn.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true })); }",
   "    ok('console discovery: bare ? at the drop-down prompt opens keyboard shortcuts', !!document.querySelector('.kbd-backdrop'));",
   "    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));",

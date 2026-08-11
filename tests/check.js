@@ -1189,9 +1189,9 @@ function checkConsoleOutClipSlack(file, style) {
   else fail(file + ": .console-out clip-slack invariant broken", issues.join("\n"));
 }
 
-// The console is real JavaScript with one app-owned public root. Guard against rebuilding the
-// deleted command dialect beside `loft.*`: completion comes from the live Loft tree, help is a
-// Loft method, and the evaluator has no private-controller shortcut path.
+// The console is real JavaScript with one app-owned public root. Its bounded language sugar is
+// `help loft...`; clear/exit/quit own session lifecycle, and bare ls only redirects visitors.
+// Guard against rebuilding the deleted command dialect or reaching private controllers.
 function checkConsoleCmdRoster(file, script) {
   if (file !== "loft-day.html" || !script) return;
   var retired = ["CONSOLE_HELP", "CONSOLE_CMDS", "CONSOLE_CMDS_BARE", "CONSOLE_ALIASES"].filter(function (name) {
@@ -1206,7 +1206,12 @@ function checkConsoleCmdRoster(file, script) {
   if (!run) fail(file + ": consoleRun body not found for public-API boundary check");
   else if (/controllers\.|window\.__loftControllers|\b(?:birthday|party|season|sharecard)\s*\(/.test(run[1])) {
     fail(file + ": consoleRun contains a private or legacy app-command shortcut");
-  } else pass(file + ": consoleRun evaluates JavaScript without a private command dialect");
+  } else if (!/helpCommand\s*=\s*c\.match\(\/\^help\\s\+/.test(run[1]) ||
+             run[1].indexOf('consolePrint(window.loft.help(helpTarget == null ? helpCommand[1] : helpTarget))') < 0 ||
+             run[1].indexOf('if (c === "ls")') < 0 ||
+             run[1].indexOf('This is a JavaScript console. Try the Linux app instead.') < 0) {
+    fail(file + ": bounded help/ls console behavior is missing");
+  } else pass(file + ": consoleRun keeps only bounded help/ls sugar over ordinary JavaScript");
 }
 
 // The two shared particle spawners (spawnSteamWisps, spawnMusicNotes) have autonomous

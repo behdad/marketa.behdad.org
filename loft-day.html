@@ -651,6 +651,19 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 @keyframes balcony-key-turn{0%{rotate:0deg}58%{rotate:34deg}100%{rotate:12deg}}
 @keyframes balcony-key-turn-used{0%{rotate:12deg}58%{rotate:42deg}100%{rotate:12deg}}
 @keyframes balcony-key-glint{0%,18%,100%{opacity:0}46%{opacity:.92}68%{opacity:.22}}
+#office-bedroom-zzz .office-sleep-mark{opacity:1;translate:0 0}
+#office-bedroom-zzz .office-sleep-mark:nth-child(1){--sleep-x:-1px;--sleep-y:-12px}
+#office-bedroom-zzz .office-sleep-mark:nth-child(2){--sleep-x:1px;--sleep-y:-13px}
+#office-bedroom-zzz .office-sleep-mark:nth-child(3){--sleep-x:-1px;--sleep-y:-14px}
+#office-bedroom-marker.bedroom-zzz-breathing .office-sleep-mark{
+  animation:office-sleep-breath .52s ease-out both;
+}
+#office-bedroom-marker.bedroom-zzz-breathing .office-sleep-mark:nth-child(2){animation-delay:.05s}
+#office-bedroom-marker.bedroom-zzz-breathing .office-sleep-mark:nth-child(3){animation-delay:.1s}
+@keyframes office-sleep-breath{
+  0%,18%{opacity:1;translate:0 0}
+  100%{opacity:0;translate:var(--sleep-x) var(--sleep-y)}
+}
 .lower-room-marker.portal-insisting{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
 #balcony-entrance-marker.portal-insisting{transform-box:view-box;transform-origin:158px 108.5px}
 #cuddly-cinema-ticket.portal-insisting{animation:none}
@@ -659,6 +672,7 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 @media (prefers-reduced-motion:reduce){
   .lower-room-marker.portal-insisting{animation:none}
   #kitchen-bathroom-marker.bathroom-sign-swinging #kitchen-bathroom-sign{animation:none}
+  #office-bedroom-marker.bedroom-zzz-breathing .office-sleep-mark{animation:none}
   #garden-dungeon-door,#garden-dungeon-door-cast{transition:none}
   #balcony-entrance-marker.key-turning #balcony-golden-key-turn,
   #balcony-entrance-marker.key-turning #balcony-entrance-key-glint{animation:none}
@@ -25199,12 +25213,19 @@ section{margin:1.9rem 0}
 <g x="300" y="150" width="26" fill="#9a4a34" class="wall-brick"><rect x="300" y="150" width="26" height="13"/><path class="wall-brick-edge light" d="M300.7 162.3V150.7H325.3"/><path class="wall-brick-edge shade" d="M325.3 150.7V162.3H300.7"/></g>
 <rect id="office-plaster-bg" x="470" y="18" width="210" height="282" fill="#ece5d4"/>
 <line x1="470" y1="18" x2="470" y2="300" stroke="#c9bfa8" stroke-width="3"/>
-<g id="office-bedroom-marker" class="hunt-hit lower-room-marker" tabindex="-1"
-   font-family="Fraunces,serif" font-style="italic" font-weight="700" fill="#56514e">
+<g id="office-bedroom-marker" class="hunt-hit lower-room-marker" tabindex="-1">
 <rect x="638" y="176" width="40" height="58" fill="transparent"/>
-<text x="645" y="226" font-size="15">Z</text>
-<text x="656" y="208" font-size="11">z</text>
-<text x="664" y="191" font-size="9">z…</text>
+<g id="office-bedroom-zzz" fill="none" stroke="#56514e" stroke-linecap="round" stroke-linejoin="round">
+<g class="office-sleep-mark" transform="rotate(-3 650 219)">
+<path d="M643 213Q649 211.5 655 213Q651 218.5 646 224Q652 222.5 657 224" stroke-width="2.8"/>
+</g>
+<g class="office-sleep-mark" transform="rotate(4 660 203)">
+<path d="M655 198.5Q659 197.5 663.5 199Q661 202.5 657.5 207Q661.5 206 665 207" stroke-width="2.25"/>
+</g>
+<g class="office-sleep-mark" transform="rotate(-5 668 187)">
+<path d="M664 183.5Q667.5 182.8 671 184Q669 186.5 666 190Q669.5 189.2 672.5 190" stroke-width="1.85"/>
+</g>
+</g>
 </g>
 <rect id="office-floor-bg" x="0" y="300" width="680" height="40" fill="#cf9a5f"/>
 <line x1="0" y1="318" x2="680" y2="318" stroke="#b57f47" stroke-width="1.5"/>
@@ -113133,6 +113154,36 @@ function spawnDustMote(container) {
     return true;
   }
   syncBathroomSign(false);
+  var officeBedroomZzzTimer = null;
+  var officeBedroomZzzEntering = false;
+  function resetOfficeBedroomZzz() {
+    clearTimeout(officeBedroomZzzTimer);
+    officeBedroomZzzTimer = null;
+    officeBedroomZzzEntering = false;
+    var marker = document.getElementById("office-bedroom-marker");
+    if (marker) marker.classList.remove("bedroom-zzz-breathing");
+  }
+  function enterOfficeBedroomZzz(open) {
+    if (officeBedroomZzzEntering) return true;
+    var marker = document.getElementById("office-bedroom-marker");
+    if (!marker) return !!open();
+    officeBedroomZzzEntering = true;
+    marker.classList.remove("bedroom-zzz-breathing");
+    void marker.getBBox();
+    marker.classList.add("bedroom-zzz-breathing");
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    clearTimeout(officeBedroomZzzTimer);
+    officeBedroomZzzTimer = setTimeout(function () {
+      officeBedroomZzzTimer = null;
+      open();
+      officeBedroomZzzEntering = false;
+      marker.classList.remove("bedroom-zzz-breathing");
+    }, reduced ? 1 : 620);
+    return true;
+  }
+  if (window.__registerTransientResetHook) {
+    window.__registerTransientResetHook("office-bedroom-zzz", resetOfficeBedroomZzz);
+  }
   var gardenDungeonDoorTimer = null;
   var gardenDungeonDoorEntering = false;
   function syncGardenDungeonDoor(cancelOpening) {
@@ -114177,7 +114228,10 @@ function spawnDustMote(container) {
       return window.__openCinemaRoom && window.__openCinemaRoom();
     }],
     ["office-bedroom-marker", function () {
-      return window.__openBedroomRoom && window.__openBedroomRoom();
+      return enterOfficeBedroomZzz(function () {
+        var bedroom = lowerRoomForStage("office");
+        return bedroom && bedroom.open();
+      });
     }],
     ["balcony-entrance-marker", function () {
       return enterBalconyEntrance(function () {

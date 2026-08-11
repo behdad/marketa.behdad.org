@@ -415,32 +415,43 @@ narration logs only to the browser developer console.
 Tab completion walks the live Loft object—including after the `help ` prefix—and Code autocomplete
 shows every immediate child of the object at the caret in its scrollable list. Selecting a namespace
 drills into it instead of flattening or truncating the tree. `window.loft` is the sole app-authored
-public Window root. Split-script data and implementation/test integration may use descriptive
-`window.__…` names, but those are private and may change without compatibility notice. The runtime
-`tests/global-surface.js` snapshot compares own and inherited baseline descriptor/value identities,
-distinguishes delete-revealed browser named properties from authored DOM-valued properties, and
-fails on any non-`loft`, non-`__…` app-owned property. Its hostile run proves baseline replacement,
-the DOM-valued disguise, and a public property added to `Window.prototype` all fail.
-`tests/global-static-audit.js` uses the Acorn parser bundled with Node—no download or install—and a
-conservative finite abstract-value model per lexical binding. It keeps Window, Window prototypes,
-the safe `loft`/private subtrees, Object/Reflect meta callables, finite strings, and unknown values
-distinct while propagating branches, patterns, aliases, defaults, rest/spread, destructured callable
-members, nested members, finite computed names, arrays, and ordinary callbacks. Definite sequential
-member assignments—including unconditional nested blocks and constant branches—replace earlier
-values, while runtime-dependent writes remain a conservative union. Program lexical bindings and
-sloppy Annex-B block functions
-count as bare public surface even though they are absent from `Reflect.ownKeys(window)`; loop and
-switch lexical environments remain local. Call-site analysis gives sloppy plain calls Window
-`this`, preserves strict and arrow semantics, evaluates member, `.call`, `.apply`, and `.bind`
-receivers, and preserves Window timer/listener semantics through aliases. Sloppy Promise callbacks
-receive Window through ordinary `this` substitution; strict callbacks do not. Bare `loft`, browser
-`top`/`parent`/`frames` self chains, and `document.defaultView` are modeled explicitly. Shared
-`Object.prototype` paths below otherwise-safe objects remain hazardous,
-while an authored child constructor such as `window.loft.Widget.prototype` stays safe. Meta writes
-normalize direct, destructured, call/apply/bind, recursively composed `Reflect.apply`, and bound,
-direct, or Reflect-assisted Function-call uncurrying forms.
-Dynamic names must remain a finite set of private or temporary-vendor names through every mutation;
-otherwise they fail closed. Safe descendants such as `window.loft.Widget.prototype` remain allowed.
+public Window root.
+
+### Window ownership constraints
+
+Treat these as source-authoring rules, not properties to infer from whether a test happens to pass:
+
+- Add public behavior beneath `window.loft`; never introduce another public Window root.
+- Use lexical closure state for implementation. A descriptive `window.__…` hook is allowed only for
+  cross-closure integration or diagnostics; it is private, unstable, and must never become a user API.
+- Do not declare application `var`, `let`, `const`, `function`, or `class` bindings at classic-script
+  Program scope. `var`/function declarations become Window properties, while top-level lexical
+  declarations create bare globals that a Window-key inventory cannot see. Wrap authored code in an
+  IIFE or place it inside an existing closure. Loop and switch-local bindings are fine.
+- `window`, `globalThis`, top-level/sloppy `this`, `self`, `top`, `parent`, `frames`, and
+  `document.defaultView` all reach the same browser global for this rule. Do not pass one through
+  aliases, object/rest patterns, callbacks, timers, Promises, or meta-call machinery and then mutate it.
+- Do not add, replace, or delete properties on Window, `Window.prototype`, `Object.prototype`, or a
+  shared prototype reachable through `loft.__proto__`. This includes `Object.*`, `Reflect.*`,
+  `.call`/`.apply`/`.bind`, computed keys, destructuring targets, updates, and deletes. Authored child
+  prototypes such as `window.loft.Widget.prototype` are ordinary private implementation objects and
+  may be used normally.
+- Never replace or remove a browser baseline property such as `window.open`, even temporarily. Never
+  publish a public-looking property and delete it before the final inventory. A transient global is
+  still a contract violation.
+- Computed Window keys are allowed only when analysis proves a finite set of `__…` private names or
+  a specifically owned temporary vendor name. Prefer explicit literal private properties.
+- DOM ids may create browser named properties. Code must use DOM lookup APIs rather than bare named
+  globals; the runtime gate recognizes a named property only when delete/reveal and descriptor checks
+  prove the browser owns it. An authored DOM-valued property is not exempt.
+
+`tests/global-surface.js` compares own and inherited baseline descriptors, verifies named properties,
+and inventories the final Window. `tests/global-static-audit.js` is a conservative zero-network Acorn
+check for transient and lexical violations that runtime inventory cannot observe. It is defense in
+depth, not a soundness proof for arbitrary JavaScript: novel data-flow syntax can require a new
+fixture, and conservative analysis can reject safe code. Review changes against the rules above;
+do not weaken or endlessly generalize the analyzer merely to accommodate avoidable clever syntax.
+
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before
 injection. One generation-owned record retains that capture together with its script node, listeners,
 watchdog, and settlement. Success, error, timeout, cancellation, and reset all release it idempotently,

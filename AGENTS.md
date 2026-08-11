@@ -242,11 +242,11 @@ both owner-confirmed.)
   the sun's rays hit opacity 0 by setting `--smoke:1` by hand — but `--smoke` is a random `.5–1`
   roll that *never reaches 1*, so on a real smoky day the rays sat at ~45% and the owner saw them
   plainly. Both proofs were true and worthless. When a feature is driven by a rolled/derived
-  value, **drive it the way the app does** (`season("smoky")`, `?date=`) and read the value back
+  value, **drive it the way the app does** (`loft.environment.season.set("smoky")`, `?date=`) and read the value back
   before asserting on what it produces; only sweep the raw variable as a *supplement*, to show the
   curve's shape.
 - **A synchronous `requestAnimationFrame` monkeypatch (`cb()` inline) blows the stack** on any
-  rAF-driven *loop* — "Maximum call stack size exceeded" out of `season()`/`goToStage()` is the
+  rAF-driven *loop* — "Maximum call stack size exceeded" out of `loft.environment.season.set()`/`__goToStage()` is the
   patch recursing, not an app bug. The documented patch is for rAF-double *class adds*; for
   anything that reschedules itself, patch to `setTimeout(cb, 16)` the way `play.js` does.
 

@@ -61,16 +61,17 @@ Before migration on final main:
 Candidate repeated runtime result (two strict and two report runs):
 
 - 0 forbidden globals.
-- 1,666 private `__*` globals.
+- 1,670 private `__*` globals.
 - 2,794 verified browser named-element globals.
 
 `node tests/global-static-audit.js` is the durable zero-network AST gate. It uses Node's bundled
-Acorn, resolves Window and meta-operation aliases, rejects public or unclassified dynamic writes,
-and runs checked-in hostile fixtures for baseline replacement, computed/destructuring writes,
-`Object.assign`, property definitions, Reflect, and delete. The four dynamic-private helper owners
-are an explicit narrow allowlist. `tests/global-surface.js` separately compares runtime baseline
-descriptors/identities and proves authored DOM-valued properties cannot claim the named-element
-exception.
+Acorn, resolves lexical Window and meta-operation aliases, and rejects public or unclassified
+dynamic writes across ordinary, loop, destructuring, nested prototype, `.call`/`.apply`, Object,
+and Reflect forms. Checked-in hostile fixtures reproduce every reviewed bypass. Dynamic names are
+accepted only when lexical binding and direct-call propagation proves a finite private or temporary
+vendor name; there is no filename/function-name exception. `tests/global-surface.js` separately
+compares own and inherited runtime baseline descriptors/identities and proves authored DOM-valued
+properties cannot claim the named-element exception or hide public state on `Window.prototype`.
 
 ## Validation completed
 
@@ -90,11 +91,11 @@ exception.
   Python Code, Python Loft API, drop-down terminal, console, status API, and whole-file Code reset.
   The per-file Code-reset runner produced the exact same output bytes as exact main, including its
   one inherited EN/CS confirmation fixture mismatch.
-- Two final strict Window-surface runs and two final report runs passed: each report found exactly
-  0 forbidden, 1,666 private `__*`, and 2,794 verified named-element globals.
+- Final strict and report Window-surface runs passed: the report found exactly 0 forbidden,
+  1,670 private `__*`, and 2,794 verified named-element globals.
 - The durable AST audit and every hostile fixture pass with no public or unclassified dynamic
-  Window write. Runtime hostile probes reject baseline replacement and an authored DOM-valued
-  global while the ordinary page retains its zero-forbidden surface.
+  Window write. Runtime hostile probes reject baseline replacement, an authored DOM-valued global,
+  and inherited public surface while the ordinary page retains its zero-forbidden surface.
 - Final `check.js`, `state.js`, source `node --check`, and `git diff --check` passed.
 
 ## Manual matrix completed

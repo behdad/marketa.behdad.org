@@ -411,13 +411,15 @@ roster, prose alias table, or compatibility globals; Tab completion walks the li
 Code autocomplete combines that tree with the typed manifest. `window.loft` is the sole app-authored
 public Window root. Split-script data and implementation/test integration may use descriptive
 `window.__…` names, but those are private and may change without compatibility notice. The runtime
-`tests/global-surface.js` snapshot compares baseline descriptor/value identities, distinguishes
-delete-revealed browser named properties from authored DOM-valued properties, and fails on any
-non-`loft`, non-`__…` app-owned property. Its hostile run proves both baseline replacement and the
-DOM-valued disguise fail. `tests/global-static-audit.js` uses the Acorn parser bundled with Node—no
-download or install—to resolve Window/Object/Reflect aliases and reject assignment, update, delete,
-destructuring, computed, `Object.assign`, property-definition, and Reflect meta-writes. Unresolved
-dynamic Window writes fail closed outside four narrowly reviewed private-owner helpers.
+`tests/global-surface.js` snapshot compares own and inherited baseline descriptor/value identities,
+distinguishes delete-revealed browser named properties from authored DOM-valued properties, and
+fails on any non-`loft`, non-`__…` app-owned property. Its hostile run proves baseline replacement,
+the DOM-valued disguise, and a public property added to `Window.prototype` all fail.
+`tests/global-static-audit.js` uses the Acorn parser bundled with Node—no download or install—to
+resolve lexical Window/Object/Reflect aliases and reject assignment, update, delete, loop and
+destructuring targets, computed and prototype-chain writes, `Object.assign`, property definitions,
+Reflect meta-writes, and meta-method `.call`/`.apply`. Dynamic names must resolve through lexical
+bindings and direct call sites to finite private or temporary-vendor names; otherwise they fail closed.
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before
 injection. One generation-owned record retains that capture together with its script node, listeners,
 watchdog, and settlement. Success, error, timeout, cancellation, and reset all release it idempotently,

@@ -25,11 +25,12 @@ var staticAudit = require("./global-static-audit");
 var REPORT_ONLY = process.argv.slice(2).includes("--report");
 var NAMED_PROBE = "weddingTestNamedWindowProbe";
 var AUTHORED_DOM_PROBE = "weddingAuthoredDomProbe";
+var INHERITED_PROBE = "weddingPrototypeLeak";
 
 var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
-  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
+  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
   'function ownKeys(){return Reflect.ownKeys(window);}',
   'function safeValue(name){try{return {ok:true,value:window[name]};}catch(error){return {ok:false,error:String(error&&error.message||error)};}}',
   'function includesNode(collection,node){try{for(var i=0;i<collection.length;i++)if(collection[i]===node)return true;}catch(error){}return false;}',
@@ -86,6 +87,15 @@ var HARNESS = [
   '  report.baselineCount=Array.isArray(baseline)?baseline.length:0;',
   '  var baselineSet=new Set(Array.isArray(baseline)?baseline:[]);',
   '  var probe=document.createElement("div");probe.id=' + JSON.stringify(NAMED_PROBE) + ';probe.hidden=true;document.body.appendChild(probe);',
+  '  var prototypeBaseline=window.__weddingTestWindowBaselineDescriptors.prototypeBaseline||[],currentPrototype=Object.getPrototypeOf(window);',
+  '  prototypeBaseline.forEach(function(record,index){',
+  '   var baselinePrototype=record[0],baselineMap=new Map(record[1]||[]);if(currentPrototype!==baselinePrototype){report.forbidden.push({name:"[[Prototype:"+index+"]]",prototypeReplacement:true});currentPrototype=currentPrototype&&Object.getPrototypeOf(currentPrototype);return;}',
+  '   var currentKeys=Reflect.ownKeys(currentPrototype),currentSet=new Set(currentKeys);currentKeys.forEach(function(key){var name=String(key),before=baselineMap.get(key),after=Object.getOwnPropertyDescriptor(currentPrototype,key);if(typeof key==="string"&&key.indexOf("__")===0)return;if(!before)report.forbidden.push({name:name,inheritedAddition:true});else if(!sameDescriptor(before,after))report.forbidden.push({name:name,inheritedReplacement:true});});',
+  '   baselineMap.forEach(function(_descriptor,key){if(!currentSet.has(key))report.forbidden.push({name:String(key),inheritedRemoval:true});});',
+  '   currentPrototype=Object.getPrototypeOf(currentPrototype);',
+  '  });',
+  '  if(currentPrototype)report.forbidden.push({name:"[[Prototype:extra]]",prototypeAddition:true});',
+  '  report.prototypeResolution=window.__weddingPrototypeResolution||null;',
   '  var names=ownKeys(),namedSeen=Object.create(null);report.finalCount=names.length;',
   '  for(var i=0;i<names.length;i++){',
   '   var key=names[i];if(baselineSet.has(key)){var currentDescriptor=null;try{currentDescriptor=Object.getOwnPropertyDescriptor(window,key);}catch(error){}var baselineDescriptor=baselineDescriptors.get(key);if(!sameDescriptor(baselineDescriptor,currentDescriptor))report.forbidden.push({name:String(key),baselineReplacement:true,shape:descriptorShape(key,safeValue(key).value)});continue;}',
@@ -241,6 +251,8 @@ var hostile = lib.runPageSync("loft-day.html", HARNESS + [
   'window.open=function authoredReplacement(){};',
   'var authoredNode=document.createElement("div");authoredNode.id=' + JSON.stringify(AUTHORED_DOM_PROBE) + ';document.body.appendChild(authoredNode);',
   'Object.defineProperty(window,' + JSON.stringify(AUTHORED_DOM_PROBE) + ',{configurable:true,enumerable:false,writable:false,value:authoredNode});',
+  'window.__proto__.' + INHERITED_PROBE + '={public:true};',
+  'window.__weddingPrototypeResolution={windowValue:window.' + INHERITED_PROBE + '.public===true,bareValue:' + INHERITED_PROBE + '.public===true};',
   '</script>'
 ].join("\n"), 6500, {
   captureWindowBaseline: true,
@@ -249,6 +261,8 @@ var hostile = lib.runPageSync("loft-day.html", HARNESS + [
 });
 check(hostile && hostile.forbidden.some(function (entry) { return entry.name === "open" && entry.baselineReplacement; }), "runtime gate rejects replacement of a baseline native", hostile && hostile.forbidden);
 check(hostile && hostile.forbidden.some(function (entry) { return entry.name === AUTHORED_DOM_PROBE; }), "runtime gate rejects an authored DOM-valued Window property", hostile && hostile.forbidden);
+check(hostile && hostile.forbidden.some(function (entry) { return entry.name === INHERITED_PROBE && entry.inheritedAddition; }), "runtime gate rejects inherited public application surface", hostile && hostile.forbidden);
+check(hostile && hostile.prototypeResolution && hostile.prototypeResolution.windowValue && hostile.prototypeResolution.bareValue, "hostile inherited property resolves through window.name and bare name", hostile && hostile.prototypeResolution);
 
 console.log("");
 if (failures) {

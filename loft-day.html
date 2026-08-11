@@ -628,6 +628,18 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 #cuddly-cinema-ticket .cinema-ticket-used{display:none}
 #cuddly-cinema-ticket.ticket-used .cinema-ticket-intact{display:none}
 #cuddly-cinema-ticket.ticket-used .cinema-ticket-used{display:inline}
+#kitchen-bathroom-sign{
+  --bathroom-sign-rest:0deg;
+  transform-box:fill-box;transform-origin:50% 8%;rotate:var(--bathroom-sign-rest);
+}
+#kitchen-bathroom-marker.bathroom-sign-visited #kitchen-bathroom-sign{--bathroom-sign-rest:-3deg}
+#kitchen-bathroom-marker.bathroom-sign-swinging #kitchen-bathroom-sign{
+  animation:bathroom-sign-swing .52s cubic-bezier(.22,.72,.28,1) both;
+}
+@keyframes bathroom-sign-swing{
+  0%,100%{rotate:var(--bathroom-sign-rest)}
+  24%{rotate:9deg}50%{rotate:-7deg}74%{rotate:4deg}
+}
 .lower-room-marker.portal-insisting{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
 #balcony-entrance-marker.portal-insisting{transform-box:view-box;transform-origin:158px 108.5px}
 #cuddly-cinema-ticket.portal-insisting{animation:none}
@@ -635,6 +647,7 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 @keyframes lower-portal-insist{0%,100%{rotate:0deg;translate:0 0}22%{rotate:-4deg;translate:-1px 0}48%{rotate:3deg;translate:1px 0}72%{rotate:-2deg;translate:-.5px 0}}
 @media (prefers-reduced-motion:reduce){
   .lower-room-marker.portal-insisting{animation:none}
+  #kitchen-bathroom-marker.bathroom-sign-swinging #kitchen-bathroom-sign{animation:none}
   #garden-dungeon-door,#garden-dungeon-door-cast{transition:none}
 }
 #entrance-room[hidden]{display:none}
@@ -16525,7 +16538,7 @@ section{margin:1.9rem 0}
 <!-- Shared kitchen/bar bathroom portal: placed above the party-bar overlay so the WC sign
      remains visible and usable after the kitchen turns into the bar. -->
 <g id="kitchen-bathroom-marker" class="hunt-hit lower-room-marker" tabindex="-1">
-<g transform="translate(0 -20) translate(16.5 88) scale(1.1) translate(-16.5 -88)">
+<g id="kitchen-bathroom-sign" transform="translate(0 -20) translate(16.5 88) scale(1.1) translate(-16.5 -88)">
 <rect x="2" y="76" width="29" height="33" fill="transparent"/>
 <rect x="4" y="79" width="25" height="29" rx="2" fill="#fff" stroke="#211d1a" stroke-width="1.2"/>
 <g fill="#111" stroke="#111" stroke-linecap="round" stroke-linejoin="round">
@@ -113017,6 +113030,7 @@ function spawnDustMote(container) {
     (Array.isArray(names) ? names : []).forEach(function (name) {
       if (ROOM_IDS.indexOf(name) !== -1) seenRooms[name] = true;
     });
+    syncBathroomSign(true);
     syncGardenDungeonDoor(true);
     if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
@@ -113054,6 +113068,7 @@ function spawnDustMote(container) {
   function markRoomSeen(name, options) {
     if (ROOM_IDS.indexOf(name) === -1 || roomSeen(name) || window.__cinematic) return false;
     seenRooms[name] = true;
+    syncBathroomSign(false);
     syncGardenDungeonDoor(false);
     if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__checkpointChanged) window.__checkpointChanged();
@@ -113062,6 +113077,40 @@ function spawnDustMote(container) {
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(name, seenRoomList().length);
     return true;
   }
+  var bathroomSignTimer = null;
+  var bathroomSignEntering = false;
+  function syncBathroomSign(cancelOpening) {
+    var marker = document.getElementById("kitchen-bathroom-marker");
+    if (!marker) return false;
+    if (cancelOpening && bathroomSignEntering) {
+      clearTimeout(bathroomSignTimer);
+      bathroomSignTimer = null;
+      bathroomSignEntering = false;
+    }
+    marker.classList.toggle("bathroom-sign-visited", roomSeen("bathroom"));
+    if (!bathroomSignEntering) marker.classList.remove("bathroom-sign-swinging");
+    return roomSeen("bathroom");
+  }
+  function enterBathroomSign(open) {
+    if (bathroomSignEntering) return true;
+    var marker = document.getElementById("kitchen-bathroom-marker");
+    if (!marker) return !!open();
+    bathroomSignEntering = true;
+    marker.classList.remove("bathroom-sign-swinging");
+    void marker.getBBox();
+    marker.classList.add("bathroom-sign-swinging");
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    clearTimeout(bathroomSignTimer);
+    bathroomSignTimer = setTimeout(function () {
+      bathroomSignTimer = null;
+      var entered = !!open();
+      bathroomSignEntering = false;
+      syncBathroomSign(false);
+      if (!entered) marker.classList.remove("bathroom-sign-swinging");
+    }, reduced ? 1 : 520);
+    return true;
+  }
+  syncBathroomSign(false);
   var gardenDungeonDoorTimer = null;
   var gardenDungeonDoorEntering = false;
   function syncGardenDungeonDoor(cancelOpening) {
@@ -114058,7 +114107,10 @@ function spawnDustMote(container) {
   window.__closeLowerPortalContextMenu = closeLowerPortalMenu;
   [
     ["kitchen-bathroom-marker", function () {
-      return window.__openBathroomRoom && window.__openBathroomRoom();
+      return enterBathroomSign(function () {
+        var bathroom = lowerRoomForStage("kitchen");
+        return bathroom && bathroom.open();
+      });
     }],
     ["garden-dungeon-marker", function () {
       return enterGardenDungeon(function () {

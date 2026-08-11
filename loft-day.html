@@ -75152,8 +75152,11 @@ setOfficeProgress("pc", false);
         return { changed: before.id !== selected.id || (!before.started && selected.started), id: selected.id, name: selected.name, message: message };
       } });
     register({ id: "calendar.birthday.cake", kind: "action", risk: "scene", description: "Bring the appropriate cake scene to one birthday person.",
-      args: { person: { type: "string", minLength: 1, maxLength: 80, required: true } }, available: function () { return typeof controllers.cake === "function"; }, unavailable: staticBlocked("The cake controller is not ready."), run: function (args) {
+      args: { person: { type: "string", minLength: 1, maxLength: 80, required: true } }, available: function () { return typeof controllers.cake === "function" && typeof controllers.birthday === "function"; }, unavailable: function () {
+        return blockedBy([typeof controllers.cake !== "function" && "The cake controller is not ready.", typeof controllers.birthday !== "function" && "The birthday controller is not ready."], null);
+      }, run: function (args) {
         var message = controllers.cake(args.person);
+        if (typeof message !== "string" || !message.trim()) throw new Error("The birthday cake controller did not complete the request.");
         if (/^(?:cake people|no birthday)/i.test(String(message))) throw new Error(String(message));
         return { person: String(args.person).toLowerCase().trim(), message: message };
       } });
@@ -75266,8 +75269,9 @@ setOfficeProgress("pc", false);
     registerOverride("sky.twilight", "Weather / Environment", "twilight");
     register({ id: "weather.wildfires.intensity", group: "Weather / Environment", kind: "action", risk: "ambient",
       description: "Pin wildfire smoke to an exact intensity from clear (0) to severe (1).",
-      args: { level: { type: "number", min: 0, max: 1, required: true } }, run: function (args) {
-        if (!controllers.wildfires || typeof controllers.wildfires.intensity !== "function") throw new Error("The wildfire controller is not ready.");
+      args: { level: { type: "number", min: 0, max: 1, required: true } },
+      available: function () { return !!(controllers.wildfires && typeof controllers.wildfires.intensity === "function"); },
+      unavailable: staticBlocked("The wildfire intensity controller is not ready."), run: function (args) {
         var level = controllers.wildfires.intensity(args.level);
         return { level: level, on: level > 0 };
       } });
@@ -75277,8 +75281,9 @@ setOfficeProgress("pc", false);
       } });
     register({ id: "sky.aurora.intensity", group: "Weather / Environment", kind: "action", risk: "scene",
       description: "Pin the aurora to a planetary Kp intensity from 0 to 9.",
-      args: { kp: { type: "number", min: 0, max: 9, required: true } }, run: function (args) {
-        if (!controllers.aurora || typeof controllers.aurora.intensity !== "function") throw new Error("The aurora controller is not ready.");
+      args: { kp: { type: "number", min: 0, max: 9, required: true } },
+      available: function () { return !!(controllers.aurora && typeof controllers.aurora.intensity === "function"); },
+      unavailable: staticBlocked("The aurora intensity controller is not ready."), run: function (args) {
         return controllers.aurora.intensity(args.kp);
       } });
     registerToggle("garden.guests", "Garden / Party", "guests", { read: function () { return !!(window.__guestsIn && window.__guestsIn()); } });

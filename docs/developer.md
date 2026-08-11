@@ -522,7 +522,7 @@ calls only public typed `loft.*` capabilities plus ordinary JavaScript timing. I
 executable timeline and the editable canonical file shown in Code; do not mirror its body in HTML or
 another sample. The manifest exposes only its transport path: first activation resolves the local
 built-in override or lazily fetches the canonical bytes, then uses the same async JavaScript source
-runner as Code and `run("name")`. The ordinary script requests `loft.trailer.play()` when run outside
+runner as Code's Run button. The ordinary script requests `loft.trailer.play()` when run outside
 an active reel and opens its preview transaction itself once activated; the IDE has no Trailer
 filename branch. The inline entry controller keeps overlay DOM, geometry, trusted-click audio
 priming, and takeover/error

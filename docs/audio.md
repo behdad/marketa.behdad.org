@@ -241,7 +241,7 @@ is prominent and unfiltered, a door or window opening is intermediate, and a clo
 audible but darker behind a low-pass. Cabin weather is mixed high enough to survive the drivetrain
 and road bed; filtering, rather than near-silence, carries most of the enclosure contrast. The
 Entrance façade without its driving HUD and Camping remain outside that car-only
-enclosure stage. The explicit `sound("thunder")` command and deliberate monitor-game effects are
+enclosure stage. Deliberate thunder and monitor-game effects are
 user-triggered SFX, not part of this autonomous weather gate.
 
 With the Entrance façade open and no driving HUD, the shared wind generator and the visual-rain

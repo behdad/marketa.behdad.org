@@ -75184,13 +75184,20 @@ setOfficeProgress("pc", false);
     register({ id: "poetry.hafez.read", kind: "query", description: "Draw one random Hafez reading without changing the scene.",
       available: function () { return typeof controllers.faal === "function"; }, unavailable: staticBlocked("The Hafez readings are not ready."),
       run: function () { return controllers.faal(); } });
-    register({ id: "poetry.rumi.read", kind: "action", risk: "ambient", description: "Start the next shuffled Rumi exchange with the quiet nighttime Cuddly fairy.",
+    register({ id: "poetry.rumi.read", kind: "action", risk: "ambient", completion: "finite", description: "Start the next shuffled Rumi exchange with the quiet nighttime Cuddly fairy.",
       available: function () {
         var fairy = document.getElementById("cuddly-rumi-fairy");
+        var balcony = document.getElementById("stage-balcony");
         return typeof controllers.rumi === "function" && !!(fairy && fairy.classList.contains("present")) &&
-          window.__currentStageName === "cuddly" && !window.__gardenPartyOn && !!(window.__isNight && window.__isNight());
+          window.__currentStageName === "cuddly" && !window.__gardenPartyOn && !!(balcony && balcony.classList.contains("dusk"));
       }, unavailable: staticBlocked("The quiet nighttime Cuddly fairy is not present."),
-      run: function () { return { reading: controllers.rumi() }; } });
+      run: function () {
+        var reading = controllers.rumi();
+        return window.__loftAwaitLifecycle(function () { return !!document.querySelector(".rumi-bubble"); }, {
+          label: "Rumi exchange", startTimeout: 1000, timeout: 16000,
+          value: function () { return { reading: reading, completed: true }; }
+        });
+      } });
     register({ id: "weather.cities", kind: "query", run: function () { var c = window.__chatContext ? window.__chatContext() : {}; return c.weather || {}; } });
     register({ id: "album.list", kind: "query", run: function () { return chatAlbumKnowledge(); } });
     register({ id: "tattoos.catalog", kind: "query", run: function () { return window.__chatTattooKnowledge ? window.__chatTattooKnowledge() : []; } });

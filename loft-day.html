@@ -77862,7 +77862,6 @@ setOfficeProgress("pc", false);
   // private script controllers (not exported by the REPL). Defined here so they share the
   // Code's storage/openCode; kept outside the controller region so a parent edit there
   // never collides. They remain private implementation owners, not console commands.
-  controllers.scripts = function () { return scriptsListStr("js"); };
   function codeResolveScript(name, language) {
     var key = String(name), lang = language === "python" ? "python" : "js", saved = readScripts(lang);
     if (codeHasOwn(saved, key)) return { name: key, code: String(saved[key]), language: lang, builtin: null };
@@ -77902,14 +77901,6 @@ setOfficeProgress("pc", false);
     });
   }
   window.__runCodeScript = codeRunNamedScript;
-  controllers.run = function (name) {
-    if (name == null || String(name).trim() === "") return "Choose a script to run: " + scriptsListStr("js");
-    var key = String(name), resolved = codeResolveScript(key, "js");
-    if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
-    codeStopRepeat(); // a one-shot run supersedes any active loop
-    codeRunNamedScript(resolved.name);
-    return "▶ running " + resolved.name + "…";
-  };
   // repeat("name") / repeat() → run a script on a loop until Esc (or stop()/reset). A compile or
   // runtime error ends the loop (never spins on a broken script); it also pauses while the tab is
   // hidden so nothing piles up (the timer-accumulation bug class).
@@ -114967,7 +114958,7 @@ function spawnDustMote(container) {
   // Park EVERY room but the one being viewed, on every device. During a direct multi-room pan,
   // every traversed stage must stay visible: CSS transform interpolation crosses their actual
   // geometry, so keeping only origin+destination produces blank intermediate frames.
-  var STRIP_SLIDE_MS = 720; // #loft-game-strip's .7s room slide (ROOM_SLIDE_MS is declared far later in the file)
+  var STRIP_SLIDE_MS = 720; // #loft-game-strip's .7s room slide
   var parkTimer = null, parkEndHandler = null, parkGeneration = 0;
   var pausedStageAnimations = {};
   var queuedAnimationPauses = new Set(), animationPauseRaf = null;
@@ -125897,31 +125888,6 @@ function spawnDustMote(container) {
     setTimeout(function () { if (window.__meteorKick) window.__meteorKick(); }, 820); // once the room slide has settled
     return true;
   };
-  // private meteors controller reports tonight's shower, meteors("perseids") / meteors(true) travel to
-  // one and summon it, meteors(false) comes back to today.
-  controllers.meteors = function (which) {
-    if (which === false) { calResetToday(); return "back to today"; }
-    var y = curCalYear(), n = window.__now ? window.__now() : new Date(), pick = null;
-    if (typeof which === "string" && which) {
-      var want = which.toLowerCase().replace(/[^a-z]/g, "");
-      for (var i = 0; i < METEOR_SHOWERS.length; i++) if (METEOR_SHOWERS[i].key === want) { pick = METEOR_SHOWERS[i]; break; }
-      if (!pick) return "no such shower — " + METEOR_SHOWERS.map(function (s) { return s.key; }).filter(function (k, j, a) { return a.indexOf(k) === j; }).join(" · ");
-    } else if (which === true) { // the next one due after the loft's day
-      var base = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 12).getTime(), best = null;
-      METEOR_SHOWERS.forEach(function (s) {
-        var t = new Date(y, s.m, s.d, 12).getTime();
-        if (t <= base) t = new Date(y + 1, s.m, s.d, 12).getTime();
-        if (best === null || t < best) { best = t; pick = s; }
-      });
-      y = new Date(best).getFullYear();
-    } else {
-      var now = showerFor(n.getMonth(), n.getDate());
-      return now ? (T.en["meteor_" + now.key] || now.key) + " — tonight" : "no shower tonight; meteors(true) for the next one, meteors(\"perseids\") for a named one";
-    }
-    jumpToDate(y, pick.m, pick.d); calView = { y: y, m: pick.m }; calRerenderOpen();
-    window.__meteorSummon(pick.m, pick.d);
-    return { shower: pick.key, year: y, month: pick.m + 1, day: pick.d };
-  };
   // The gifts, out on the two nights they're opened and not a day longer: Štědrý večer (the
   // 24th, when Ježíšek brings them) and Christmas morning (the 25th). An overlay for the same
   // reason the hats are — both days sit inside the holiday dressing, and the picture IS the
@@ -128094,94 +128060,6 @@ function spawnDustMote(container) {
     }
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
-  // ── scriptable ghost cursor ──
-  // cursorTo/ghostClick/cursorHide expose the show's visible pointer to scripts. They lean on
-  // the same IIFE-local machinery the cinematic uses (cursorPointFor/ensureCursor/cursorPlace/
-  // cursorRipple), so they land through room pans, zoom and fullscreen exactly like the show —
-  // but they work with the show OFF too: the ghost dot's visibility is the .visible class (CSS
-  // #cine-cursor.visible{opacity}), which isn't gated to window.__cinematic, so cursorPlace/glide
-  // reveal it either way. A target is an element id ("office-monitor"/"#office-monitor") → its
-  // live on-screen center (we jump to its room first), OR {x,y} in 0..1 viewport
-  // coords → that host-relative point (values >1 taken as raw px). Both return a Promise that
-  // resolves when the glide (and, for ghostClick, the click) is done, so scripts can `await`.
-  var SCRIPT_GLIDE_MS = 550;       // default scripted glide when no ms is passed
-  var ROOM_SLIDE_MS = 720;         // #loft-game-strip's .7s room slide — wait it out before measuring a fresh room
-  // resolve a script target → { x, y (host-local px), el (or null), sx, sy (screen px) }
-  function cursorScriptPoint(target) {
-    var host = cursorHost();
-    if (!host) return null;
-    if (target && typeof target === "object" && ("x" in target || "y" in target)) {
-      var h = host.getBoundingClientRect();
-      var nx = +target.x || 0, ny = +target.y || 0;
-      var px = nx > 1 ? nx : nx * h.width;   // 0..1 relative; >1 is a raw px escape hatch
-      var py = ny > 1 ? ny : ny * h.height;
-      return { x: px, y: py, el: null, sx: h.left + px, sy: h.top + py };
-    }
-    var id = String(target == null ? "" : target).replace(/^#/, "");
-    var el = id && document.getElementById(id);
-    if (!el) return null;
-    var p = cursorPointFor(id);
-    if (!p) return null;
-    return { x: p.x, y: p.y, el: el };
-  }
-  // If the target id lives in another room, jump there first; returns true if it did.
-  function cursorJumpToRoom(target) {
-    if (!target || typeof target === "object") return false; // {x,y} has no room
-    var el = document.getElementById(String(target).replace(/^#/, ""));
-    if (!el || !el.closest) return false;
-    var stage = el.closest("[id^='stage-']");
-    if (!stage) return false;
-    var room = stage.id.replace(/^stage-/, "");
-    if (window.__currentStageName === room) return false;
-    if (window.__goToStage) { window.__goToStage(room); return true; }
-    return false;
-  }
-  // like cursorGlideTo, but takes a resolved point and calls done() when the glide lands
-  function cursorGlidePoint(p, ms, done) {
-    var c = ensureCursor();
-    if (!c) { if (done) done(); return; }
-    var dur = ms || CURSOR_GLIDE_MS;
-    // reduced motion, first appearance, or no WAAPI → snap (no visible travel), resolve now
-    if (reduceMotion || !c.classList.contains("visible") || !c.animate) { cursorPlace(p.x, p.y); if (done) done(); return; }
-    if (cursorAnim) cursorAnim.cancel(); // single slot: at most one glide alive
-    var from = "translate(" + cursorX.toFixed(1) + "px," + cursorY.toFixed(1) + "px)";
-    cursorX = p.x; cursorY = p.y;
-    var to = "translate(" + p.x.toFixed(1) + "px," + p.y.toFixed(1) + "px)";
-    c.style.transform = to;
-    cursorAnim = c.animate([{ transform: from }, { transform: to }], { duration: dur, easing: "cubic-bezier(.4,0,.2,1)" });
-    var settled = false;
-    var finish = function () { if (settled) return; settled = true; cursorAnim = null; if (done) done(); };
-    cursorAnim.onfinish = finish;
-    setTimeout(finish, dur + 80); // safety net if onfinish is dropped (cancelled/backgrounded)
-  }
-  function cursorEcho(msg) { if (controllers.echo) try { controllers.echo(msg); } catch (e) {} }
-  // cursorTo(target[, ms]) — glide the ghost cursor to a target, no click. Awaitable.
-  controllers.cursorTo = function (target, ms) {
-    return new Promise(function (resolve) {
-      var switched = cursorJumpToRoom(target);
-      var go = function () {
-        var t = cursorScriptPoint(target);
-        if (!t) { cursorEcho("cursorTo: no such target (need an element id or {x,y} 0..1)"); resolve(null); return; }
-        cursorGlidePoint(t, typeof ms === "number" ? ms : SCRIPT_GLIDE_MS, function () { resolve(t); });
-      };
-      if (switched) setTimeout(go, ROOM_SLIDE_MS); else go(); // let a fresh room finish sliding before measuring
-    });
-  };
-  // ghostClick(target) — cursorTo the target, ripple, then dispatch a real (synthetic) click. Awaitable.
-  controllers.ghostClick = function (target) {
-    return controllers.cursorTo(target).then(function (t) {
-      if (!t) return null;
-      var pt = cursorScriptPoint(target) || t; // re-measure post-glide to correct any drift
-      cursorPlace(pt.x, pt.y);
-      cursorRipple(pt.x, pt.y);
-      var el = pt.el || (pt.sx != null ? document.elementFromPoint(pt.sx, pt.sy) : null); // {x,y} → whatever's under the point
-      if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      return el ? (el.id || null) : null;
-    });
-  };
-  // cursorHide() — send the ghost cursor away (fade it out), to end a scripted sequence.
-  controllers.cursorHide = function () { cursorHide(); };
-
   function stopCinematic(disposition) {
     if (cinematicStopping) return cinematicStopping;
     var preview = window.loft && window.loft.session && window.loft.session.preview &&
@@ -131636,30 +131514,6 @@ function spawnDustMote(container) {
     if (controllers.echo) controllers.echo(ok ? "🕺 Ali, Goli & Spencer crash the party — long beard, platinum bob, and a giant, all eyes on them." : "the floor's dark — use loft.party.set(true) first.");
     return was;
   };
-  // arrive("ali"|"spencer"|"alireza"|"farhang"|"bahareh") — a duo (or the single Bahareh) STROLLS
-  // IN through the garden gate onto the dance floor: the entrance moment. arrive() with no/unknown
-  // id walks in a random duo. Lights the party + heads to the garden if it's dark (matches guest/
-  // chase()), then walks the duo in a beat later once the room's settled. The duos also trickle in
-  // on their own, one per beat, as the party fills up — this is the manual trigger for the same move.
-  var ARRIVE_LABEL = {
-    ali: "Ali & Goli", spencer: "Spencer & Jay", alireza: "Alireza & Mahzad", chinnell: "Chinnell & Rafi",
-    farhang: "Farhang & Lauren", bahareh: "Bahareh", ayushi: "Ayushi"
-  };
-  function arriveLabel(id) {
-    if (id === "patricia") return "Patricia, " + personDisplayName("patricia-son") + " & " + personDisplayName("patricia-daughter");
-    return ARRIVE_LABEL[id] || id;
-  }
-  controllers.arrive = function (id) {
-    if (typeof id === "string") id = id.toLowerCase().trim();
-    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
-    if (window.__goToStage) window.__goToStage("garden");
-    setTimeout(function () { // let goToStage settle the room first (matches guest/chase helpers)
-      var landed = window.__duoArrive ? window.__duoArrive(id) : null;
-      if (controllers.echo) controllers.echo(landed ? ("🚪 " + arriveLabel(landed) + " stroll in through the garden gate onto the dance floor.") : "the floor's dark — use loft.party.set(true) first.");
-    }, 80);
-    return null;
-  };
-
   // ── ROSTER OVERLAY ("who's here") ────────────────────────────────────────────
   // A tidy list of everyone in the room ON SCREEN — name · role, the exact pairs the name
   // cards use. Every room has one: the dance floor, the bar, the nook, the office, the deck.
@@ -133372,20 +133226,6 @@ function spawnDustMote(container) {
     return l === "cs" ? "🌐 přepnuto do češtiny." : "🌐 switched to English.";
   };
 
-  controllers.countdown = function () {
-    function whole(y, m, d) { // whole days from local midnight today to the wedding
-      var now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      return Math.round((new Date(y, m - 1, d) - today) / 86400000);
-    }
-    function leg(emoji, label, n, when) {
-      if (n > 0) return emoji + " " + label + " in " + n + " day" + (n === 1 ? "" : "s") + " (" + when + ")";
-      if (n === 0) return emoji + " " + label + " today! 🎉";
-      return emoji + " " + label + " — married! 🎉";
-    }
-    return leg("⛪", "Edmonton", whole(2027, 5, 1), "May 1 2027") + " · " +
-           leg("🌻", "Prague", whole(2027, 7, 10), "Jul 10 2027");
-  };
-
   controllers.fullscreen = function (arg) {
     var area = document.getElementById("hunt-fullscreen-area");
     var prev = !!(area && area.classList.contains("is-fullscreen"));
@@ -133550,20 +133390,6 @@ function spawnDustMote(container) {
     narrate(open, "🍖 lid up — mind the smoke.", "🍖 lid down.");
     return prev;
   };
-  controllers.cooked = function (n) { // is a burger done? cooked(1|2|3) → bool · cooked() → [bool, bool, bool]
-    var s = document.getElementById("balcony-smoker");
-    var bs = s ? [].slice.call(s.querySelectorAll(".smoker-burger")) : [];
-    if (arguments.length === 0 || n == null || n === "") {
-      var states = bs.map(function (b) { return b.classList.contains("done"); });
-      var done = states.filter(Boolean).length;
-      controllers.echo("🍔 " + done + " of " + states.length + " done" + (states.length && done === states.length ? " — dinner's ready." : " — low and slow."));
-      return states;
-    }
-    var i = parseInt(n, 10);
-    if (i >= 1 && i <= bs.length) { var d = bs[i - 1].classList.contains("done"); controllers.echo("🍔 burger " + i + (d ? " — done, grab it." : " — still on the grill.")); return d; }
-    controllers.echo("🍔 there's no burger " + n + " on the smoker.");
-    return false;
-  };
   controllers.phone = function (arg) {
     var prev = !!document.querySelector(".phone-backdrop.show");
     if (arguments.length === 0) return prev; // no arg → is the phone up?
@@ -133675,15 +133501,6 @@ function spawnDustMote(container) {
     setTimeout(function () { if (pc && !pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); }, 900); // …then back up → boots Fedora → the caps desktop
     return "🔄 rebooting the loft OS…";
   };
-  // openurl("https://…") — open any URL in a new browser tab (bare host → https). A scripting
-  // helper; named openurl (not open) so it never shadows the native window.open the app relies on.
-  controllers.openurl = function (url) {
-    if (url == null || url === "") return 'openurl("https://…") — opens a URL in a new tab';
-    var u = /^[a-z][a-z0-9+.-]*:\/\//i.test(String(url)) ? String(url) : "https://" + String(url);
-    try { window.open(u, "_blank", "noopener"); } catch (e) {}
-    controllers.echo("↗ opening " + u + " …"); // narrate; return nothing (silent)
-  };
-
   // The private element owner brings an id into view; its activate variant dispatches a click.
   // Room ids list their targets, while no arguments reveal and return a random target.
   var SUMMON_ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
@@ -133752,154 +133569,6 @@ function spawnDustMote(container) {
   }
   controllers.guitar = function () { return consoleInstrumentTap("garden-guitar", "guitar — Markéta rotation"); };
   controllers.ukulele = function () { return consoleInstrumentTap("garden-ukulele", "ukulele — Orit / Dan rotation"); };
-
-  // sound("<id>") — a dev-console toy: play any one of the loft's curated one-shot sound
-  // effects by id (every SFX here maps to an existing play*Sound with safe defaults — no new
-  // audio). sound() returns the full id list; sound("<prefix>") returns the ids starting with
-  // that prefix (e.g. sound("cat") · sound("phone") · sound("soda")). Exact id wins over prefix.
-  // Ids that pan (creak/phone/doom…) carry their
-  // home element so they play from the right side even from another room; panForElId centers a
-  // hidden one. Console-English only, like every other command (no T dict, no CS mirror).
-  // Each wrapper forwards its call's arguments to the underlying play fn, so
-  // sound("id", …extra) overrides — falling back to the entry's baked-in constants
-  // (the values it used to be hard-called with) whenever no args are supplied, so a
-  // bare sound("id") behaves exactly as before. See `help sound` for the arg-takers.
-  var SFX = {
-    // kitchen & coffee
-    grind: function () { playGrindSound.apply(null, arguments); },
-    brew: function () { playBrewSound.apply(null, arguments); },
-    tamp: function () { playTampSound.apply(null, arguments); },
-    steam: function () { playSteamWandHissSound.apply(null, arguments); },
-    pour: function () { playPourSound.apply(null, arguments); },
-    sip: function () { playSipSound.apply(null, arguments); },
-    chop: function () { playChopSound.apply(null, arguments.length ? arguments : [1, 1]); },
-    sizzle: function () { playSizzleSound.apply(null, arguments); },
-    gong: function () { playGongSound.apply(null, arguments); },
-    // garden & party
-    windchime: function () { playWindchimeSound.apply(null, arguments.length ? arguments : [false, false]); },
-    rooster: function () { playRoosterCrowSound.apply(null, arguments.length ? arguments : [1]); },
-    goat: function () { playGoatBleatSound.apply(null, arguments); },
-    ladybug: function () { playLadybugSound.apply(null, arguments); },
-    water: function () { playWaterSound.apply(null, arguments); },
-    camera: function () { playCameraShutterSound.apply(null, arguments); },
-    giggle: function () { playGiggleSound.apply(null, arguments); },
-    hearts: function () { playHeartsSound.apply(null, arguments); },
-    fart: function () { playFartSound.apply(null, arguments.length ? arguments : [1, 1]); },
-    // cuddly & critters
-    "cat-meow": function () { playCatMeowSound.apply(null, arguments); },
-    "cat-chatter": function () { playCatChatterSound.apply(null, arguments); },
-    mouse: function () { playMouseSqueakSound.apply(null, arguments); },
-    plush: function () { playPlushSquishSound.apply(null, arguments); },
-    trunk: function () { playTrunkOpenSound.apply(null, arguments); },
-    butterfly: function () { playButterflyFlutterSound.apply(null, arguments); },
-    fairy: function () { playFairyChimeSound.apply(null, arguments); },
-    genie: function () { playGeniePoofSound.apply(null, arguments.length ? arguments : [false]); },
-    lamp: function () { playLampShimmerSound.apply(null, arguments); },
-    "ghost-boo": function () { playGhostBooSound.apply(null, arguments); },
-    "ghost-whisper": function () { playGhostWhisperSound.apply(null, arguments); },
-    bowl: function () { playBowlRingSound.apply(null, arguments); },
-    alien: function () { playAlienBlipSound.apply(null, arguments); },
-    // office & computer
-    boot: function () { playPcBootSound.apply(null, arguments); },
-    typewriter: function () { playTypewriterSound.apply(null, arguments.length ? arguments : [1]); },
-    "desk-motor": function () { playDeskMotorSound.apply(null, arguments); },
-    "chair-whirl": function () { playChairWhirlSound.apply(null, arguments.length ? arguments : [1]); },
-    "chair-pew": function () { playChairPewSound.apply(null, arguments); },
-    paper: function () { playPaperShuffleSound.apply(null, arguments); },
-    "soda-open": function () { playSodaDepressurizeSound.apply(null, arguments); },
-    "soda-hiss": function () { playSodaHissSound.apply(null, arguments); },
-    "can-crush": function () { playCanCrushSound.apply(null, arguments); },
-    "glass-clink": function () { playGlassClinkSound.apply(null, arguments.length ? arguments : [1]); },
-    "bass-boom": function () { playBassBoomSound.apply(null, arguments); },
-    doom: function () { playFatalitySound.apply(null, arguments.length ? arguments : ["office-monitor"]); },
-    bsod: function () { playBsodSound.apply(null, arguments.length ? arguments : ["office-monitor"]); },
-    "aw-snap": function () { playAwSnapSound.apply(null, arguments.length ? arguments : ["office-monitor"]); },
-    "flesh-wound": function () { playFleshWoundSound.apply(null, arguments.length ? arguments : ["office-monitor"]); },
-    "js-crash": function () { playJsCrashSound.apply(null, arguments.length ? arguments : ["office-monitor"]); },
-    // balcony
-    creak: function () { playCreakSound.apply(null, arguments.length ? arguments : ["balcony-door"]); },
-    thunder: function () { playThunderSound.apply(null, arguments.length ? arguments : [1]); },
-    "phone-ring": function () { playPhoneRingSound.apply(null, arguments.length ? arguments : ["balcony-phone"]); },
-    "phone-voice": function () { playPhoneVoiceSound.apply(null, arguments.length ? arguments : ["balcony-phone"]); },
-    "phone-notify": function () { window.__playPhoneNotifySound.apply(null, arguments); },
-    knock: function () { playKnockboxThumpSound.apply(null, arguments); },
-    mosquito: function () { playMosquitoSlapSound.apply(null, arguments); },
-    sweep: function () { playSweepSound.apply(null, arguments); },
-    extinguisher: function () { playExtinguisherHissSound.apply(null, arguments); },
-    // the couple & body
-    cough: function () { playCoughSound.apply(null, arguments); },
-    sneeze: function () { playSneezeSound.apply(null, arguments); },
-    exhale: function () { playSatisfiedExhaleSound.apply(null, arguments); },
-    ouch: function () { playOuchSound.apply(null, arguments); },
-    love: function () { playILoveYouSound.apply(null, arguments); },
-    iloveyou: function () { playILoveYouSound.apply(null, arguments); }, // alias for love — the synthesized "I love you"
-    alo: function () { playPhoneVoiceSound.apply(null, arguments.length ? arguments : ["balcony-phone"]); }, // the phone's little "alo?"
-    fishu: function (count) { if (controllers.fishu) return controllers.fishu(count); return sayFishu(); } // Fishu's bounded name-call; speech() owns arbitrary text
-  };
-  controllers.sound = function (id) {
-    var names = Object.keys(SFX);
-    if (arguments.length === 0 || id == null || id === "") return names.slice(); // no arg → the whole list
-    var key = String(id).toLowerCase().trim().replace(/^["']|["']$/g, "");       // tolerate stray quotes
-    // exact id → play it, forwarding every arg AFTER the id on to the underlying play fn
-    if (SFX[key]) { try { SFX[key].apply(null, Array.prototype.slice.call(arguments, 1)); } catch (e) {} return "🔊 " + key; }
-    return names.filter(function (n) { return n.indexOf(key) === 0; });          // otherwise → ids under that prefix (maybe [])
-  };
-
-  // speech(text[, opts]) — arbitrary text-to-speech through the browser's Web Speech API
-  // (the same synth sayFishu uses). opts is a dict {pitch, rate, volume, voice}; a bare
-  // number 2nd arg is a pitch shorthand. voice: "male"/"female" (or "m"/"f") picks a
-  // matching OS voice via the same name patterns speakFishuWithVoices uses, any other
-  // string matches a voice by name-substring, else the default. Numeric ranges are clamped.
-  var SPEECH_FEMALE = /female|woman|samantha|victoria|zira|karen|susan|tessa|moira|fiona|allison|ava|serena/i;
-  var SPEECH_MALE = /male|man|david|daniel|alex|fred|george|thomas|oliver|aaron|gordon|arthur/i;
-  controllers.speech = function (text, opts) {
-    if (text == null || String(text).trim() === "") return 'speech("text"[, {pitch:0-2, rate:0.1-10, volume:0-1, voice:"male"|"female"|name}]) — a number 2nd arg is pitch';
-    var str = String(text);
-    var o = (typeof opts === "number") ? { pitch: opts } : (opts && typeof opts === "object" ? opts : {});
-    function clamp(v, lo, hi, d) { v = Number(v); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d; }
-    var rate = o.rate != null ? clamp(o.rate, 0.1, 10, 1) : 1;
-    var pitch = o.pitch != null ? clamp(o.pitch, 0, 2, 1) : 1;
-    var volume = o.volume != null ? clamp(o.volume, 0, 1, 1) : 1;
-    var voiceWant = o.voice != null ? String(o.voice).toLowerCase().trim() : "";
-    function speakNow(voices) {
-      try {
-        var utter = new SpeechSynthesisUtterance(str);
-        utter.rate = rate; utter.pitch = pitch; utter.volume = volume;
-        if (voiceWant && voices && voices.length) {
-          var match;
-          if (voiceWant === "female" || voiceWant === "f") match = voices.filter(function (v) { return SPEECH_FEMALE.test(v.name) && !SPEECH_MALE.test(v.name); })[0];
-          else if (voiceWant === "male" || voiceWant === "m") match = voices.filter(function (v) { return SPEECH_MALE.test(v.name) && !SPEECH_FEMALE.test(v.name); })[0];
-          else match = voices.filter(function (v) { return v.name.toLowerCase().indexOf(voiceWant) !== -1; })[0];
-          if (match) utter.voice = match;
-        }
-        window.speechSynthesis.speak(utter);
-      } catch (e) {}
-    }
-    try {
-      if (!window.speechSynthesis) return str;
-      window.speechSynthesis.cancel(); // cut off anything mid-utterance first
-      var voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-      if (voices.length) speakNow(voices);
-      else if (window.speechSynthesis.addEventListener) window.speechSynthesis.addEventListener("voiceschanged", function once() {
-        window.speechSynthesis.removeEventListener("voiceschanged", once);
-        speakNow(window.speechSynthesis.getVoices());
-      });
-      else speakNow([]);
-    } catch (e) {}
-    return str;
-  };
-
-  // Private tempo owner: milliseconds until the next musical beat, so internal effects stay in time with the
-  // music. Phase-locked to the concert songs' real audio clock; for a party dance it's the beat
-  // period from the dance's tempo; ~500ms (120 BPM) if nothing's playing.
-  controllers.beat = function () {
-    var ms = window.__songBeatMs ? window.__songBeatMs() : 0; // phase-aware, concert songs
-    if (ms > 0) return Math.round(ms);
-    // ONE bpm map, owned by the party-dance registry (window.__danceBpm); no duplicate here.
-    var bpm = (window.__gardenPartyOn && window.__partyDance && window.__danceBpm) ? window.__danceBpm(window.__partyDance) : 0;
-    if (bpm) return Math.round(60000 / bpm);
-    return 500; // nothing playing → a neutral 120 BPM
-  };
 
   // Internal audio source controller: music (garden songs), piano (night-sky classical),
   // or dance (garden Party). The strict public object exposes named methods.
@@ -134227,7 +133896,6 @@ function spawnDustMote(container) {
   var fonts = window.loft.fonts || (window.loft.fonts = {});
   fonts.google = googleFonts;
   fonts.local = localFonts;
-  controllers.love = function () { return "love is patient, love is kind. ∞"; };
   controllers.blacklight = function (arg) { // toggle the UV/blacklight wash over the whole loft (the caps-lock toggle it used to ride is gone)
     var strip = document.getElementById("loft-game-strip");
     var prev = !!(strip && strip.classList.contains("uv-mode"));

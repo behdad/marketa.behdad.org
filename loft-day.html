@@ -6884,7 +6884,6 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 /* full-help card (Tab on an exact command): the ƒ signature + the whole help, wrapped */
 .code-ac-sig{color:#c6f0ad; padding:0.15px 0.7px 0; white-space:pre-wrap; word-break:break-word}
 .code-ac-fullhelp{color:#8aa88a; padding:0.15px 0.7px 0.3px; white-space:pre-wrap; word-break:break-word}
-.code-ac-more{padding:0.15px 0.7px; color:#5f7a5f}
 .code-ac-mirror{position:absolute; visibility:hidden; pointer-events:none; left:-9999px; top:0; white-space:pre; overflow:hidden}
 #monitor-console-close,#monitor-console-back{cursor:pointer}
 #monitor-console-close:hover .seg-hover,#monitor-console-back:hover .seg-hover{opacity:.55}
@@ -37602,8 +37601,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-debb78173f81"></script>
-<script src="loft-day.cs.js?v=dict-26ba37c9d23c"></script>
+<script src="loft-day.en.js?v=dict-8ce128d794c6"></script>
+<script src="loft-day.cs.js?v=dict-6eda6a866bc2"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -76669,6 +76668,16 @@ setOfficeProgress("pc", false);
     var __capturedOut = activeConsoleOut;
     try {
     if (/^(?:exit|quit)(?:\(\))?$/i.test(c)) { if (ctx.onQuit) ctx.onQuit(); else closeConsole(); return; }
+    var helpCommand = c.match(/^help\s+(loft(?:\.[A-Za-z_$][\w$]*)*)$/);
+    if (helpCommand) {
+      var helpTarget = helpTargetFromPath(helpCommand[1]);
+      consolePrint(window.loft.help(helpTarget == null ? helpCommand[1] : helpTarget));
+      return;
+    }
+    if (c === "ls") {
+      consolePrint("This is a JavaScript console. Try the Linux app instead.", "console-dim");
+      return;
+    }
     function fmtOut(v) {
       if (v === undefined) return "undefined";
       if (v === null) return "null";
@@ -76890,15 +76899,14 @@ setOfficeProgress("pc", false);
     return p;
   }
   function consoleTabComplete(inEl) {
-    inEl = inEl || consoleIn;                                   // default: the monitor console's input; the drop-down passes its own
-    if (!inEl) return;
-    var consoleIn = inEl;                                       // shadow so the body below reads/writes the passed field
-    var val = consoleIn.value, caret = consoleIn.selectionStart;
+    var field = inEl || consoleIn;                              // default: monitor input; the drop-down passes its own
+    if (!field) return;
+    var val = field.value, caret = field.selectionStart;
     if (caret == null) caret = val.length;
     if (caret !== val.length) return;                          // only complete at the end of the line
-    var m = val.match(/^(\s*)(loft(?:\.[A-Za-z_$][\w$]*)*\.?)$/i);
+    var m = val.match(/^(\s*(?:help\s+)?)(loft(?:\.[A-Za-z_$][\w$]*)*\.?)$/i);
     if (!m) return;
-    var lead = m[1], typed = m[2], trailingDot = typed.charAt(typed.length - 1) === ".";
+    var lead = m[1], typed = m[2], helpMode = /help\s+$/i.test(lead), trailingDot = typed.charAt(typed.length - 1) === ".";
     var bits = typed.replace(/\.$/, "").split("."), node = window.loft;
     if (bits[0].toLowerCase() !== "loft") return;
     for (var bi = 1; bi < bits.length - (trailingDot ? 0 : 1); bi++) {
@@ -76912,16 +76920,16 @@ setOfficeProgress("pc", false);
     if (!matches.length) return;                               // no candidate → leave the input untouched
     if (matches.length === 1) {
       var full = matches[0], value = node[full];
-      var out = lead + base + full + (typeof value === "function" ? "(" : ".");
-      consoleIn.value = out;
-      try { consoleIn.setSelectionRange(out.length, out.length); } catch (e) {}
+      var out = lead + base + full + (helpMode ? "" : typeof value === "function" ? "(" : ".");
+      field.value = out;
+      try { field.setSelectionRange(out.length, out.length); } catch (e) {}
       return;
     }
     var pre = consoleCommonPrefix(matches);
     if (pre.length > prefix.length) {
       var ext = lead + base + pre;
-      consoleIn.value = ext;
-      try { consoleIn.setSelectionRange(ext.length, ext.length); } catch (e) {}
+      field.value = ext;
+      try { field.setSelectionRange(ext.length, ext.length); } catch (e) {}
     }
     consolePrint(matches.map(function (name) { return base + name; }).join("  "), "console-dim");
   }
@@ -78135,7 +78143,6 @@ setOfficeProgress("pc", false);
   // console Tab completion, and loft.help() cannot drift into separate command dialects.
   var codeMain = codeWrap ? codeWrap.querySelector(".code-main") : null;
   var codeAc = null, codeAcMirror = null, codeAcItems = [], codeAcSel = -1, codeAcTok = null;
-  var CODEAC_MAX = 7; // rows shown before a "+N more" tail (the list also scrolls)
   // help trimmed to the descriptive tail after the "usage — " dash, when there is one.
   function codeHelpDesc(h) {
     var s = Array.isArray(h) ? (h[0] || "") : (h || "");
@@ -78200,7 +78207,9 @@ setOfficeProgress("pc", false);
     if (codeLanguage === "python") return CODE_PY_CMDS.map(function (x) { return { name: x[0], help: x[1], fn: true, sig: x[2] }; });
     return loftCommandCatalog();
   }
-  window.__codeCommands = codeCmdList; // active language's completion catalog
+  window.__codeCommands = function (prefix) { // no prefix returns the complete language roster for integrations
+    return prefix == null || codeLanguage === "python" ? codeCmdList() : loftCompletionRows(prefix);
+  };
   window.__loftCommands = loftCommandCatalog;
   // The Python catalog completes one identifier. JavaScript completes a full dotted loft path.
   function codeTokenAtCaret() {
@@ -78216,8 +78225,31 @@ setOfficeProgress("pc", false);
     return { text: tok, start: start, end: c };
   }
   function codeMatches(prefix) {
+    if (codeLanguage !== "python") return loftCompletionRows(prefix);
     var low = prefix.toLowerCase();
     return codeCmdList().filter(function (cmd) { return cmd.name.toLowerCase().indexOf(low) === 0; });
+  }
+  function loftCompletionRows(prefix) {
+    prefix = String(prefix || "");
+    var low = prefix.toLowerCase();
+    if (low.indexOf("loft") !== 0) return [];
+    if (prefix.indexOf(".") < 0) {
+      return "loft".indexOf(low) === 0 ? [{ name: "loft", help: "Public Loft API root.", namespace: true }] : [];
+    }
+    var dot = prefix.lastIndexOf("."), parentPath = prefix.slice(0, dot), fragment = prefix.slice(dot + 1).toLowerCase();
+    var parent = loftValueAtPath(parentPath);
+    if (!parent || (typeof parent !== "object" && typeof parent !== "function")) return [];
+    var descriptions = Object.create(null);
+    if (window.loft && window.loft.api) window.loft.api.capabilities().forEach(function (cap) {
+      descriptions["loft." + cap.id] = cap.description || "";
+    });
+    return Object.keys(parent).filter(function (key) {
+      return key.toLowerCase().indexOf(fragment) === 0;
+    }).sort(typedHelpCompare).map(function (key) {
+      var child; try { child = parent[key]; } catch (_error) { child = undefined; }
+      var name = parentPath + "." + key, fn = typeof child === "function", namespace = !!child && !fn && typeof child === "object";
+      return { name: name, help: descriptions[name] || (namespace ? "Namespace." : "Public Loft API helper."), fn: fn, namespace: namespace };
+    });
   }
   function codeAcVisible() { return !!(codeAc && codeAc.classList.contains("open")); }
   function codeAcHide() {
@@ -78301,16 +78333,15 @@ setOfficeProgress("pc", false);
     codeAcEnsure();
     if (!codeAc) return;
     codeAcTok = tok;
-    codeAcItems = matches.slice(0, CODEAC_MAX);
+    codeAcItems = matches.slice();
     codeAcSel = 0;
-    var extra = matches.length - codeAcItems.length;
     codeAc.innerHTML = "";
     codeAcItems.forEach(function (cmd, i) {
       var row = document.createElement("div");
       row.className = "code-ac-item" + (i === 0 ? " active" : "");
       var nm = document.createElement("span");
       nm.className = "code-ac-name";
-      nm.textContent = cmd.fn ? codeFnSig(cmd) : cmd.name;
+      nm.textContent = cmd.fn ? codeFnSig(cmd) : cmd.name + (cmd.namespace ? "." : "");
       var hp = document.createElement("span");
       hp.className = "code-ac-help";
       hp.textContent = cmd.help;
@@ -78319,12 +78350,6 @@ setOfficeProgress("pc", false);
       row.addEventListener("mousedown", function (e) { e.preventDefault(); e.stopPropagation(); codeAcSel = i; codeAcAccept(); });
       codeAc.appendChild(row);
     });
-    if (extra > 0) {
-      var more = document.createElement("div");
-      more.className = "code-ac-more";
-      more.textContent = "+" + extra + " more";
-      codeAc.appendChild(more);
-    }
     codeAc.classList.add("open");
     codeAcPosition();
   }
@@ -78347,7 +78372,7 @@ setOfficeProgress("pc", false);
     if (!codeAcVisible() || codeAcSel < 0 || !codeAcTok) { codeAcHide(); return false; }
     var cmd = codeAcItems[codeAcSel];
     if (!cmd) { codeAcHide(); return false; }
-    var v = codeCode.value, ins = cmd.name + (cmd.fn ? "(" : "");
+    var v = codeCode.value, ins = cmd.name + (cmd.fn ? "(" : cmd.namespace ? "." : "");
     var before = v.slice(0, codeAcTok.start), after = v.slice(codeAcTok.end);
     codeSetBuffer(before + ins + after);
     var caret = (before + ins).length;

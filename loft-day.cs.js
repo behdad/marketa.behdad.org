@@ -175,7 +175,7 @@ window.__loftMessages["cs"] = {
   "console_hint": "Otevřít rozbalovací konzoli",
   "console_hint_close": "Zavřít rozbalovací konzoli",
   "console_laser": "bzzzt — červená tečka je venku a sleduje kurzor. dalším dvojklikem na pobíhající kočku ji odvoláte. hodně štěstí, kočko.",
-  "console_welcome": "   loftová konzole — opravdový JavaScript; typované API Loft je připravené jako `loft`. zkuste: loft.help() · ? klávesové zkratky",
+  "console_welcome": "Loft Console — real JavaScript; typed Loft API ready as `loft`. try: `help loft`",
   "contact": "Dotazy? Napiš nám:",
   "credits_codesigner": "spolutvůrkyně designu",
   "credits_codesigner_translator": "spolutvůrkyně designu | český překlad",

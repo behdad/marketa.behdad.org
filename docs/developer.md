@@ -88,8 +88,9 @@ There are three useful interface layers:
   should use them.
 - **Internal `window.__…` hooks** coordinate closures and support diagnostics. They are convenient
   search entry points, but they are not a stable external API.
-- **`window.loft.api`** is the versioned automation/integration boundary. External tooling should
-  prefer it over internal flags and DOM classes.
+- **`window.loft`** is the sole public app root; its `loft.api` transport is the versioned
+  automation/integration boundary. External tooling should prefer the typed namespaces over
+  internal flags and DOM classes.
 
 The DOM is both presentation and a projection of state. Classes and attributes often mirror a
 closure-owned value so CSS and independent closures can observe it. A mirror is not a second owner:

@@ -112,7 +112,7 @@ gate for autonomous room output: the named room must be visible, attended, and
 uncovered by a foreground device or any lower room. Balcony city/wind/rain beds
 and delayed chimes, eclipse payoffs, door creaks, and sky celebrations use it;
 opening a lower room also rechecks the three beds synchronously. Direct prop
-sounds remain local, and the console eclipse navigates upstairs before starting.
+sounds remain local, and `loft.sky.eclipse.play()` navigates upstairs before starting.
 Cross-origin Vimeo also bypasses the boundary as deliberate Cinema foreground
 media. A song still on native `<audio>` fallback cannot receive Web Audio
 filtering, so `setSongLevel()` applies the profile's gain only; after capture,

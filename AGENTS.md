@@ -74,10 +74,9 @@ both owner-confirmed.)
   touches `egg-hunt.html`, `loft-day.html`, or either `loft-day.*.js` message dictionary.**
   Zero-dependency script — `node --check` on each page's authored scripts,
   EN/CS dictionary key parity, `EGG_TOTAL` vs. cheatsheet `<li data-egg>`
-  count, `<g>`/`</g>` tag balance in loft-day.html's shared SVG strip, and the JS-console
-  Tab-autocomplete roster (`CONSOLE_CMDS`) vs. `CONSOLE_HELP` keys parity (so a new
-  `window.<cmd>` console command must be added to BOTH, or check.js fails naming the
-  drift). It's cheap
+  count, `<g>`/`</g>` tag balance in loft-day.html's shared SVG strip, and the JavaScript
+  console's `loft.*`-only help/autocomplete boundary (so legacy command tables or private
+  controller shortcuts fail immediately). It's cheap
   insurance against exactly the bugs that have bitten this project before (a dropped
   `</g>` that silently broke every stage after the edited one, dictionary keys added to
   one language and not the other). Add more checks to it over time as new bug classes

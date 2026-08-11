@@ -65,7 +65,7 @@ function hook(opts) {
     // Some architecture tests need the browser's Window surface before ANY authored
     // page script has run. Keep the snapshot in this head hook: a body-end harness is
     // too late, and a hardcoded browser-global allowlist goes stale across Chrome builds.
-    opts.captureWindowBaseline ? "window.__weddingTestWindowBaseline = Reflect.ownKeys(window);" : "",
+    opts.captureWindowBaseline ? "(function(){var keys=Reflect.ownKeys(window),descriptors=keys.map(function(key){return [key,Object.getOwnPropertyDescriptor(window,key)];});window.__weddingTestWindowBaseline=keys;window.__weddingTestWindowBaselineDescriptors=descriptors;})();" : "",
     "</script>"
   ].join("\n");
 }

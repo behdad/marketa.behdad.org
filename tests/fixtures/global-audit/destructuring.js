@@ -1,0 +1,1 @@
+({ value: window.rogueDestructured } = source);

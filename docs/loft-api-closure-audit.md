@@ -7,7 +7,7 @@ public document.
 
 - Final integration base: `5b8c6dbf` (instrument art and weather graphics).
 - Migration branch: `refactor/loft-public-api-closure`.
-- Candidate range at the final validation checkpoint: `5b8c6dbf..87625a28` (plus this ledger update).
+- Candidate range: `5b8c6dbf..HEAD`; record the exact reviewed tip in the independent-review report.
 - No merge, push, or deployment has been performed.
 
 ## Contract and result
@@ -64,18 +64,13 @@ Candidate repeated runtime result (two strict and two report runs):
 - 1,666 private `__*` globals.
 - 2,794 verified browser named-element globals.
 
-Final static Acorn + eslint-scope pass across all seven authored classic-script sources:
-
-- 23,456 through-scope references.
-- 72 unique unresolved identifiers, all browser or JavaScript natives.
-- 0 unresolved writes.
-- 11,061 explicit Window references, 1,717 unique properties.
-- 673 direct non-private reads, covering exactly 29 browser-native names.
-- 0 direct non-private writes.
-- 37 dynamic Window references; every write was manually classified as a private `__*` hook,
-  a lazy vendor capture/delete, or a guarded lookup rooted in `loft.*`.
-
-Static audit artifacts for this work session are under `/dev/shm/loft-static-audit/`.
+`node tests/global-static-audit.js` is the durable zero-network AST gate. It uses Node's bundled
+Acorn, resolves Window and meta-operation aliases, rejects public or unclassified dynamic writes,
+and runs checked-in hostile fixtures for baseline replacement, computed/destructuring writes,
+`Object.assign`, property definitions, Reflect, and delete. The four dynamic-private helper owners
+are an explicit narrow allowlist. `tests/global-surface.js` separately compares runtime baseline
+descriptors/identities and proves authored DOM-valued properties cannot claim the named-element
+exception.
 
 ## Validation completed
 
@@ -97,9 +92,9 @@ Static audit artifacts for this work session are under `/dev/shm/loft-static-aud
   one inherited EN/CS confirmation fixture mismatch.
 - Two final strict Window-surface runs and two final report runs passed: each report found exactly
   0 forbidden, 1,666 private `__*`, and 2,794 verified named-element globals.
-- A final static audit reproduced the counts above with no unresolved/global writes. Every one of
-  the 37 dynamic Window references was reviewed again; writes are limited to private `__*` state
-  and lazy vendor capture/delete paths.
+- The durable AST audit and every hostile fixture pass with no public or unclassified dynamic
+  Window write. Runtime hostile probes reject baseline replacement and an authored DOM-valued
+  global while the ordinary page retains its zero-forbidden surface.
 - Final `check.js`, `state.js`, source `node --check`, and `git diff --check` passed.
 
 ## Manual matrix completed
@@ -137,6 +132,5 @@ capability exposes a private controller object or raw DOM state.
 
 ## Independent-review handoff
 
-The branch is ready for a separate xhigh review of API necessity/schema, namespace consistency,
-Window ownership, alias removal, discoverability, documentation, and migration completeness. No
-merge, push, or deployment should happen until that review and any concrete revision round finish.
+The closure revision must return to the same independent reviewer at its exact final HEAD. No merge,
+push, or deployment should happen until that reassessment approves all five acceptance findings.

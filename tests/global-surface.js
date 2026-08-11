@@ -20,9 +20,11 @@
 var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
+var staticAudit = require("./global-static-audit");
 
 var REPORT_ONLY = process.argv.slice(2).includes("--report");
 var NAMED_PROBE = "weddingTestNamedWindowProbe";
+var AUTHORED_DOM_PROBE = "weddingAuthoredDomProbe";
 
 var HARNESS = [
   '<pre id="__report">pending</pre>',
@@ -37,6 +39,15 @@ var HARNESS = [
   ' for(var i=0;i<candidates.length;i++){var node=candidates[i];if(value===node)return (node.id===name?"id":"name")+":"+String(node.tagName||"node").toLowerCase();if(node&&node.contentWindow&&value===node.contentWindow)return "frame:"+String(node.tagName||"node").toLowerCase();}',
   ' if(value&&typeof value.length==="number"&&candidates.length&&candidates.every(function(node){return includesNode(value,node);})){return "collection:"+candidates.length;}',
   ' return "";',
+  '}',
+  'function sameDescriptor(a,b){return !!a&&!!b&&a.configurable===b.configurable&&a.enumerable===b.enumerable&&a.writable===b.writable&&Object.is(a.value,b.value)&&a.get===b.get&&a.set===b.set;}',
+  'function browserNamedReason(name,value,reason){',
+  ' var authored;try{authored=Object.getOwnPropertyDescriptor(window,name);}catch(error){}if(!authored||!authored.configurable)return "";',
+  ' var removed=false;try{removed=delete window[name];}catch(error){}if(!removed)return "";',
+  ' var naturalRead=safeValue(name),naturalReason=naturalRead.ok?namedWindowReason(name,naturalRead.value):"",natural;try{natural=Object.getOwnPropertyDescriptor(window,name);}catch(error){}',
+  ' var browserProvided=!!naturalReason&&sameDescriptor(authored,natural);',
+  ' if(!browserProvided)try{Object.defineProperty(window,name,authored);}catch(error){}',
+  ' return browserProvided?reason:"";',
   '}',
   'function descriptorShape(name,value){',
   ' var descriptor=null;try{descriptor=Object.getOwnPropertyDescriptor(window,name);}catch(error){}',
@@ -71,19 +82,19 @@ var HARNESS = [
   '}',
   'function inventory(){',
   ' try{',
-  '  var baseline=window.__weddingTestWindowBaseline;',
+  '  var baseline=window.__weddingTestWindowBaseline,baselineDescriptors=new Map(window.__weddingTestWindowBaselineDescriptors||[]);',
   '  report.baselineCount=Array.isArray(baseline)?baseline.length:0;',
   '  var baselineSet=new Set(Array.isArray(baseline)?baseline:[]);',
   '  var probe=document.createElement("div");probe.id=' + JSON.stringify(NAMED_PROBE) + ';probe.hidden=true;document.body.appendChild(probe);',
   '  var names=ownKeys(),namedSeen=Object.create(null);report.finalCount=names.length;',
   '  for(var i=0;i<names.length;i++){',
-  '   var key=names[i];if(baselineSet.has(key))continue;',
+  '   var key=names[i];if(baselineSet.has(key)){var currentDescriptor=null;try{currentDescriptor=Object.getOwnPropertyDescriptor(window,key);}catch(error){}var baselineDescriptor=baselineDescriptors.get(key);if(!sameDescriptor(baselineDescriptor,currentDescriptor))report.forbidden.push({name:String(key),baselineReplacement:true,shape:descriptorShape(key,safeValue(key).value)});continue;}',
   '   if(typeof key!=="string"){report.forbidden.push({name:String(key),keyType:"symbol",shape:descriptorShape(key,safeValue(key).value)});continue;}',
   '   var name=key;',
   '   var read=safeValue(name),value=read.value;',
   '   if(name==="loft"){report.allowed.push({name:name,shape:descriptorShape(name,value)});continue;}',
   '   if(name.indexOf("__")===0){report.privateCount++;continue;}',
-  '   var namedReason=read.ok?namedWindowReason(name,value):"";',
+  '   var namedReason=read.ok?namedWindowReason(name,value):"";if(namedReason)namedReason=browserNamedReason(name,value,namedReason);',
   '   if(namedReason){namedSeen[name]=true;report.namedCount++;if(report.namedExamples.length<20)report.namedExamples.push({name:name,reason:namedReason});continue;}',
   '   var shape=descriptorShape(name,value);if(!read.ok)shape.readError=read.error;report.forbidden.push({name:name,shape:shape});',
   '  }',
@@ -147,31 +158,6 @@ function likelySources(name, files) {
   }).slice(0, 3);
 }
 
-function staticPublicWindowWrites(files) {
-  var writes = [];
-  var patterns = [
-    { label: "property assignment", re: /\b(?:window|globalThis)\s*\.\s*([A-Za-z_$][\w$]*)\s*(?:=(?!=|>)|\+\+|--|\+=|-=|\*=|\/=|\?\?=|&&=|\|\|=)/g },
-    { label: "literal property assignment", re: /\b(?:window|globalThis)\s*\[\s*["']([^"']+)["']\s*\]\s*(?:=(?!=|>)|\+\+|--|\+=|-=|\*=|\/=|\?\?=|&&=|\|\|=)/g },
-    { label: "defineProperty export", re: /\bObject\.defineProperty\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g },
-    { label: "Reflect.defineProperty export", re: /\bReflect\.defineProperty\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g },
-    { label: "Reflect.set export", re: /\bReflect\.set\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g }
-  ];
-  files.forEach(function (file) {
-    file.text.split("\n").forEach(function (line, index) {
-      patterns.forEach(function (pattern) {
-        pattern.re.lastIndex = 0;
-        var match;
-        while ((match = pattern.re.exec(line))) {
-          var name = match[1];
-          if (name === "loft" || name.indexOf("__") === 0) continue;
-          writes.push({ name: name, file: file.name, line: index + 1, label: pattern.label, text: line.trim().slice(0, 180) });
-        }
-      });
-    });
-  });
-  return writes;
-}
-
 function shapeText(shape) {
   if (!shape) return "unknown";
   var flags = [];
@@ -212,9 +198,12 @@ check(result.lazyBootstrap && result.lazyBootstrap.attempted && result.lazyBoots
 check(result.lazyBootstrap && result.lazyBootstrap.vendors && ["turnstile", "loadPyodide", "V86"].every(function (name) { return result.lazyBootstrap.vendors[name] === true; }), "lazy classic-script vendor globals are captured and removed at runtime", JSON.stringify(result.lazyBootstrap));
 
 var files = sourceFiles();
-var staticWrites = staticPublicWindowWrites(files);
+var staticWrites = [];
+staticAudit.authoredSources(lib.ROOT).forEach(function (file) {
+  staticWrites = staticWrites.concat(staticAudit.auditSource(file.source, file.name.replace(/#inline-\d+$/, "")));
+});
 check(staticWrites.length === 0, "authored sources contain no explicit public Window writes outside window.loft", staticWrites.map(function (hit) {
-  return hit.file + ":" + hit.line + " " + hit.label + " " + hit.name + " — " + hit.text;
+  return hit.file + ":" + hit.line + " " + hit.kind + " " + (hit.name === null ? "<dynamic>" : hit.name) + " — " + hit.message;
 }).join("\n"));
 var html = files.find(function (file) { return file.name === "loft-day.html"; }).text;
 var lazyVendorCaptures = {
@@ -246,6 +235,20 @@ if (REPORT_ONLY) {
 } else {
   check(result.forbidden.length === 0, "no app-authored public Window state exists outside window.loft", result.forbidden.length + " forbidden globals");
 }
+
+var hostile = lib.runPageSync("loft-day.html", HARNESS + [
+  '<script>',
+  'window.open=function authoredReplacement(){};',
+  'var authoredNode=document.createElement("div");authoredNode.id=' + JSON.stringify(AUTHORED_DOM_PROBE) + ';document.body.appendChild(authoredNode);',
+  'Object.defineProperty(window,' + JSON.stringify(AUTHORED_DOM_PROBE) + ',{configurable:true,enumerable:false,writable:false,value:authoredNode});',
+  '</script>'
+].join("\n"), 6500, {
+  captureWindowBaseline: true,
+  patchRaf: true,
+  urlSuffix: "?global-hostile=" + Date.now()
+});
+check(hostile && hostile.forbidden.some(function (entry) { return entry.name === "open" && entry.baselineReplacement; }), "runtime gate rejects replacement of a baseline native", hostile && hostile.forbidden);
+check(hostile && hostile.forbidden.some(function (entry) { return entry.name === AUTHORED_DOM_PROBE; }), "runtime gate rejects an authored DOM-valued Window property", hostile && hostile.forbidden);
 
 console.log("");
 if (failures) {

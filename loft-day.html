@@ -132706,12 +132706,12 @@ function spawnDustMote(container) {
   // echo() reports whether it's on. All the internal tools narrate through echo(), so echo(false)
   // silences their status chatter for scripting.
   var __echoOn = true;
-  controllers.say = function (m) { if (m != null && m !== "" && window.__loftEcho) window.__loftEcho(String(m)); };
+  function consoleSay(m) { if (m != null && m !== "" && window.__loftEcho) window.__loftEcho(String(m)); }
   controllers.echo = function (x) {
     if (x === true) { var p = __echoOn; __echoOn = true; return p; }
     if (x === false) { var q = __echoOn; __echoOn = false; return q; }
     if (arguments.length === 0 || x == null) return __echoOn;
-    if (__echoOn) controllers.say(String(x));
+    if (__echoOn) consoleSay(String(x));
     return x;
   };
   function narrate(on, onMsg, offMsg) { controllers.echo(on ? onMsg : offMsg); } // tools' 2-message convenience, gated via echo
@@ -133501,44 +133501,6 @@ function spawnDustMote(container) {
     setTimeout(function () { if (pc && !pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); }, 900); // …then back up → boots Fedora → the caps desktop
     return "🔄 rebooting the loft OS…";
   };
-  // The private element owner brings an id into view; its activate variant dispatches a click.
-  // Room ids list their targets, while no arguments reveal and return a random target.
-  var SUMMON_ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
-  function summonHits(room) { var st = document.getElementById("stage-" + room); return st ? [].slice.call(st.querySelectorAll("[id].hunt-hit")).map(function (e) { return e.id; }) : []; }
-  function summonAll() { var all = []; SUMMON_ROOMS.forEach(function (r) { all = all.concat(summonHits(r)); }); return all; }
-  window.__summonRoster = function () {
-    return "targets by room — " + SUMMON_ROOMS.map(function (r) { return r + " (" + summonHits(r).length + ")"; }).join(" · ") + ". Use loft.scene.element.list({room}), loft.scene.element.show({id}), or loft.scene.element.activate({id}).";
-  };
-  // Jump to the room an element lives in and optionally activate it.
-  // echoes a human status and RETURNS the element id it acted on (or null), so scripts get a
-  // usable handle for scripts.
-  function reveal(elId, doClick) {
-    var el = document.getElementById(elId);
-    if (!el) { controllers.echo("no element with id \"" + elId + "\". Try loft.scene.element.list() for the roster."); return null; }
-    var stage = el.closest && el.closest("[id^='stage-']"); // the room it lives in, if any
-    var room = stage ? stage.id.replace(/^stage-/, "") : null;
-    if (room && window.__goToStage) window.__goToStage(room);
-    if (doClick) { try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch (e) {} }
-    controllers.echo((doClick ? "✨ clicked #" : "👁 showing #") + el.id + (room ? " (in the " + room + ")" : ""));
-    return el.id;
-  }
-  function summonOrClick(id, doClick) {
-    if (id == null || id === "") { var all = summonAll(); if (!all.length) { controllers.echo("nothing here right now."); return null; } return reveal(all[(Math.random() * all.length) | 0], doClick); }
-    var key = String(id).replace(/^#/, "");
-    if (SUMMON_ROOMS.indexOf(key.toLowerCase()) !== -1) { var list = summonHits(key.toLowerCase()); controllers.echo(key.toLowerCase() + " targets: " + (list.join(" · ") || "(none)")); return list; } // a room name → echo + return its ids
-    return reveal(key, doClick);
-  }
-  controllers.summon = function (id, doClick) { return summonOrClick(id, !!doClick); }; // show; optionally activate
-  // The private list helper returns an array of pokeable ids for internal scripting.
-  // no arg → every id; an exact room name → that room's ids; anything else → ids starting with that prefix.
-  controllers.summon.list = function (filter) {
-    var all = []; SUMMON_ROOMS.forEach(function (r) { all = all.concat(summonHits(r)); });
-    if (filter == null || filter === "") return all;
-    var f = String(filter).replace(/^#/, "").toLowerCase();
-    if (SUMMON_ROOMS.indexOf(f) !== -1) return summonHits(f); // a room name → that room's ids
-    return all.filter(function (id) { return id.toLowerCase().indexOf(f) === 0; }); // else a prefix filter
-  };
-
   // ── audio sources ──────────────────────────────────────────────────────────
   // The four real recordings in the shared monitor/phone player: report the current song or play
   // one by id/index/fraction.

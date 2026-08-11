@@ -89840,7 +89840,7 @@ def colormode(mode=None):
 // Rides #loft-game-strip's own transform transition, so the glide matches the room
 // slide. Targets measure their LIVE bounding box at engage time (desk items shift
 // during the typewriter/monitor swaps, so static centres would drift) mapped through
-// the strip's rect — the same transform-immune ratio mapping the laser uses.
+// the strip's rect, keeping stage transforms out of the pointer mapping.
 (function () {
   var strip = document.getElementById("loft-game-strip");
   var vp = document.querySelector(".hunt-viewport");
@@ -115456,7 +115456,6 @@ function spawnDustMote(container) {
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (window.__updateWhistler) window.__updateWhistler(); // re-evaluate Whistler's presence/room for the new view
-    if (window.__laserHop) window.__laserHop(); // the laser dot follows into the new room
     if (name === "cuddly" && window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown(); // entering the nook on a milestone day pops the sign + throws confetti
     if (name === "cuddly" && window.__updateCuddlyGrooving) window.__updateCuddlyGrooving();
     if (name === "cuddly" && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // re-arm the door-nudge hint if the door's the next step
@@ -125497,7 +125496,6 @@ function spawnDustMote(container) {
     if (controllers.dog) controllers.dog.set(false); // drop any dog override + send Whistler home (party-off below also hides him)
     if (window.__resetCuddlyCabinet) window.__resetCuddlyCabinet(); // fresh game: cabinet shut, mouse back in the box + re-armed for its one dash
     if (window.__resetRumiFairy) window.__resetRumiFairy(); // fairy back behind the sun door; phase-two departure can happen again
-    if (window.__laserOff) window.__laserOff(); // any active laser dot mid-dart goes with it
     if (window.__stopPragueGathering) window.__stopPragueGathering(); // a fresh game disarms the Prague garden gathering (and drops its pending widen)
     if (window.__resetRoosterEgg) window.__resetRoosterEgg(); // no golden egg left mid-shimmer at the rooster's feet
     if (window.__resetMealPlates) window.__resetMealPlates(); // fresh game: the low table's feast is untouched again
@@ -129747,7 +129745,6 @@ function spawnDustMote(container) {
   // cat suns itself on the balcony rail. Both read live so a sky change retimes the very next cycle.
   function wxRaining() { return !!(window.__wxRain || window.__wxStorm); }
   function wxClearDay() { return !isNight() && !(window.__skyCloudy && window.__skyCloudy()); }
-  function laserOn() { return !!(controllers.laser && controllers.laser.status()); } // the laser dot is out — stay chase-ready, don't nap through it
   function baseFeet() {                    // the roam-neutral floor position of the cat's feet
     // Read the LIVE base offset from #witchy-chest-cat-pos rather than the ROOMS table:
     // a freshly-emerged cat still carries the chest's native translate(-46,0) until a
@@ -129820,12 +129817,11 @@ function spawnDustMote(container) {
     // a nap in its cozy spot (eyes shut, slow breaths, a wake-up stretch on the hop down, all via
     // the existing isNap path + longer sit duration). At night it stays alert and just sits. Only
     // plain {x,y} sit perches convert — the office desk/chair naps keep their own weighting and
-    // their drag-follow hooks stay unconfused — and never while the laser's out, so a chase is
-    // never napped through. isNight/laserOn are read live.
+    // their drag-follow hooks stay unconfused. isNight is read live.
     // On a CLEAR DAY the cat basks: an ordinary balcony-rail sit almost always curls into a
     // sun-nap (weather tie-in) — otherwise the usual drowsy-daylight ~60% conversion applies.
     var napChance = (catRoom === "balcony" && wxClearDay()) ? 0.92 : 0.6;
-    if (!isNap && !isSwipe && !isStare && typeof chosen === "object" && !isNight() && !laserOn() && Math.random() < napChance) isNap = true;
+    if (!isNap && !isSwipe && !isStare && typeof chosen === "object" && !isNight() && Math.random() < napChance) isNap = true;
     var perch = typeof chosen === "function" ? chosen() : chosen; // resolve live-geometry perches
     if (!perch) { scheduleJump(); return; }           // couldn't resolve a surface — skip this cycle
     var b = baseFeet();
@@ -130151,13 +130147,12 @@ function spawnDustMote(container) {
     }, duration * 0.48);
     return true;
   };
-  // The laser controller's chase hook: one best-effort pounce toward a floor-adjacent
-  // point in the cat's own room. Shares the perch-jump's busy-lock, guards (loose, on
-  // the viewed room, not mid-hop, reduced motion, hidden tab — all via canJumpNow) and
-  // finishJump cleanup, so however the laser ends the roam resumes on its own. The
-  // lunge is stride-capped and its target snapped onto the floor band: the dot can
-  // climb walls, the cat can't, and each pounce lands back where the roam froze — the
-  // dot simply outruns it, which is the whole joke.
+  // One best-effort pounce toward a floor-adjacent point in the cat's own room. Shared
+  // by the children's cat play and the cat/dog chase. It uses the perch-jump's busy-lock
+  // and guards (loose, on the viewed room, not mid-hop, reduced motion, hidden tab — all
+  // via canJumpNow), plus finishJump cleanup so the roam always resumes. The lunge is
+  // stride-capped and its target snapped onto the floor band: the cat can reach toward
+  // its playmate without climbing the walls, then lands where the roam froze.
   window.__catChaseTo = function (x, y) {
     if (catGoneForever || !walk.animate || !canJumpNow()) return;
     clearTimeout(jumpTimer);
@@ -130603,25 +130598,6 @@ function spawnDustMote(container) {
     if (!canJumpNow()) return;
     clearTimeout(jumpTimer);
     startJump();
-  });
-  function toggleRoamingCatLaser() {
-    var stage = document.getElementById("stage-" + catRoom);
-    var roaming = walk.classList.contains("roaming") || walk.classList.contains("roaming-sm");
-    if (catGoneForever || !walk.classList.contains("out") || !roaming ||
-        window.__currentStageIndex !== IDX[catRoom] || !stage || !stage.contains(pos) ||
-        getComputedStyle(pos).visibility === "hidden" || !controllers.laser || !controllers.laser.set) return false;
-    controllers.laser.set(!controllers.laser.status());
-    return true;
-  }
-  if (catArt) catArt.addEventListener("dblclick", function (e) {
-    if (!toggleRoamingCatLaser()) return;
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  var gameStrip = document.getElementById("loft-game-strip");
-  if (gameStrip) gameStrip.addEventListener("dblclick", function (e) {
-    if (e.defaultPrevented || (e.target.closest && e.target.closest(".hunt-hit,[tabindex],button,input,textarea,select,a"))) return;
-    if (toggleRoamingCatLaser()) e.preventDefault();
   });
   // ── NAUGHTY ANTICS ─────────────────────────────────────────────────────────
   // The loose cat is a real troublemaker now: on its OWN self-rescheduling timer it
@@ -131279,117 +131255,6 @@ function spawnDustMote(container) {
   controllers.brew     = function () { return kAct("kitchen-portafilter"); };// lock in + brew the shot
   controllers.sip      = function () { return kAct("kitchen-shotcup"); };    // sip the finished shot
   controllers.knockbox = function () { return kAct("kitchen-knockbox"); };   // knock the spent puck out
-})();
-(function () {
-  // The scene's private laser controller: a red dot loose in the CURRENTLY VIEWED room.
-  // It shadows the visitor's cursor (mapped through the strip's live bounding box, so
-  // room offsets and the monitor zoom can't skew it) and free-darts on its own whenever
-  // the cursor rests >2.5s — which is also the whole behavior on touch screens. Runs
-  // until the same interaction calls it off. It spawns
-  // INTO the current stage group (the spawn-in-parent rule) and every teardown path
-  // removes it and clears its timers: the natural end, a repeated set (restart —
-  // never two dots), a room change (goToStage), the extinguisher reset (resetHunt),
-  // and a hidden tab (same visibilitychange rule as the cat's hops). New spots are
-  // offered to the loose cat via __catChaseTo, throttled to a pounce-ish cadence so
-  // cursor wiggling can't spam the chase.
-  var dot = null, dartTimer = null, endTimer = null, dartAnim = null;
-  var dotX = 0, dotY = 0, lastMove = 0, lastChase = 0;
-  window.__laserOff = function () {
-    clearTimeout(dartTimer); dartTimer = null;
-    clearTimeout(endTimer); endTimer = null;
-    if (dartAnim) { dartAnim.cancel(); dartAnim = null; }
-    if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
-    dot = null;
-  };
-  function randomSpot() { // anywhere on the room's walls/furniture band, clear of the frame edges
-    return { x: 50 + Math.random() * 580, y: 70 + Math.random() * 240 };
-  }
-  function reducedMotion() {
-    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }
-  function offerChase(x, y) {
-    var now = Date.now();
-    if (now - lastChase < 600) return;
-    lastChase = now;
-    if (window.__catChaseTo) window.__catChaseTo(x, y);
-  }
-  function dart() {
-    if (!dot) return;
-    if (Date.now() - lastMove < 2500) { dartTimer = setTimeout(dart, 500); return; } // the cursor's driving
-    var from = { x: dotX, y: dotY };
-    var to = randomSpot();
-    dotX = to.x; dotY = to.y;
-    var glide = 130 + Math.random() * 200;
-    dot.style.transform = "translate(" + to.x + "px," + to.y + "px)"; // the rest pose; the glide composes over it
-    if (dot.animate && !reducedMotion()) {
-      if (dartAnim) dartAnim.cancel();
-      dartAnim = dot.animate([
-        { transform: "translate(" + from.x + "px," + from.y + "px)" },
-        { transform: "translate(" + to.x + "px," + to.y + "px)" }
-      ], { duration: glide, easing: "cubic-bezier(.3,0,.2,1)", fill: "none" });
-    }
-    offerChase(to.x, to.y);
-    dartTimer = setTimeout(dart, glide + 90 + Math.random() * 420); // jitter pause between darts
-  }
-  function followPointer(e) {
-    if (!dot) return;
-    var strip = document.getElementById("loft-game-strip");
-    if (!strip) return;
-    var r = strip.getBoundingClientRect();
-    if (!r.width) return;
-    var x = (e.clientX - r.left) / r.width * 3400 - (window.__currentStageIndex || 0) * 680;
-    var y = (e.clientY - r.top) / r.height * 340;
-    if (x < 2 || x > 678 || y < 2 || y > 338) return; // pointer left the viewed room: hold the last spot
-    lastMove = Date.now();
-    if (dartAnim) { dartAnim.cancel(); dartAnim = null; } // the cursor outranks a free dart
-    dotX = x; dotY = y;
-    dot.style.transform = "translate(" + x + "px," + y + "px)";
-    offerChase(x, y);
-  }
-  var laserVp = document.querySelector(".hunt-viewport");
-  if (laserVp) laserVp.addEventListener("pointermove", followPointer);
-  window.__laserPointer = function (seconds) {
-    window.__laserOff();
-    var stage = document.getElementById("stage-" + (window.__currentStageName || "kitchen"));
-    if (!stage) return;
-    var NS = "http://www.w3.org/2000/svg";
-    dot = document.createElementNS(NS, "g");
-    dot.setAttribute("class", "laser-dot");
-    dot.setAttribute("pointer-events", "none");
-    // bright core + soft halo, ~4 units across (cat-eye scale)
-    [["2.4", "#ff1500", "0.35"], ["1.2", "#ff1500", "0.95"], ["0.5", "#ffd8d0", "1"]].forEach(function (c) {
-      var circ = document.createElementNS(NS, "circle");
-      circ.setAttribute("r", c[0]);
-      circ.setAttribute("fill", c[1]);
-      circ.setAttribute("opacity", c[2]);
-      dot.appendChild(circ);
-    });
-    var first = randomSpot();
-    dotX = first.x; dotY = first.y; lastMove = 0;
-    dot.style.transform = "translate(" + first.x + "px," + first.y + "px)";
-    stage.appendChild(dot); // last child: the dot paints over the room, like a real laser would
-    if (seconds > 0) endTimer = setTimeout(window.__laserOff, seconds * 1000);
-    dartTimer = setTimeout(dart, 260 + Math.random() * 240);
-  };
-  // a room change re-homes the dot into the newly viewed stage (same spawn-in-parent rule)
-  window.__laserHop = function () {
-    if (!dot) return;
-    var stage = document.getElementById("stage-" + (window.__currentStageName || "kitchen"));
-    if (!stage) { window.__laserOff(); return; }
-    var to = randomSpot();
-    dotX = to.x; dotY = to.y; lastMove = 0;
-    dot.style.transform = "translate(" + to.x + "px," + to.y + "px)";
-    stage.appendChild(dot); // moves it — a node has one parent
-  };
-  controllers.laser = function (on) { // private toggle shared by the roaming cat interaction
-    var wasOn = !!dot;
-    if (arguments.length === 0 || on == null) return wasOn; // no-arg: report whether it's on
-    if (on) window.__laserPointer(0); else window.__laserOff(); // runs until the same interaction turns it off
-    return wasOn;
-  };
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "hidden") window.__laserOff(); // no timer pile-up in a hidden tab
-  });
 })();
 (function () {
   // ── PRIVATE LOFT CONTROLLERS ──────────────────────────────────────────────────
@@ -133846,7 +133711,6 @@ function spawnDustMote(container) {
     var el = document.getElementById(id);
     return !!(el && el.classList.contains(className));
   }
-  promote("laser");
   promote("party", { read: function () { return !!window.__gardenPartyOn; } });
   promote("guests", { read: function () { return !!(window.__guestsIn && window.__guestsIn()); } });
   promote("roster", { read: function () { return !!(window.__rosterOpen && window.__rosterOpen()); } });

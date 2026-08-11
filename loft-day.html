@@ -75851,6 +75851,17 @@ setOfficeProgress("pc", false);
       if (controllers.twilight && controllers.twilight.set) controllers.twilight.set(args.effect === "twilight");
       return { effect: args.effect, aurora: window.__auroraStatus ? window.__auroraStatus() : null, twilight: window.__setTwilight ? !!window.__setTwilight() : false };
     } });
+    register({ id: "sky.eclipse.play", kind: "action", risk: "scene", completion: "finite",
+      description: "Bring the Balcony sky into view and start its daylight-appropriate eclipse.",
+      available: function () { return roomRouteReady("balcony") && typeof controllers.eclipse === "function" && typeof window.__runBalconyEclipse === "function"; }, unavailable: function () {
+        return blockedBy([!roomRouteReady("balcony") && roomRouteReason("balcony"), typeof controllers.eclipse !== "function" && "The eclipse controller is not ready.",
+          typeof window.__runBalconyEclipse !== "function" && "The Balcony sky is not ready."], null);
+      }, run: function () {
+        return runInRoom("balcony", function () {
+          var message = controllers.eclipse(), balcony = document.getElementById("stage-balcony");
+          return { effect: balcony && balcony.classList.contains("dusk") ? "lunar" : "solar", message: message, room: currentRoom() };
+        });
+      } });
     register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene", completion: "finite",
       description: "Bring the Garden into view and start a finite Party moment, independent of game phase.",
       args: { moment: { type: "string", enum: Object.keys(PARTY_MOMENTS), required: true } },
@@ -134330,7 +134341,7 @@ function spawnDustMote(container) {
     return true;
   };
   controllers.eclipse = function () {
-    if (window.__goToStage) window.__goToStage("balcony"); // the eclipse plays out over the balcony sky
+    if (window.__currentStageName !== "balcony" && window.__goToStage) window.__goToStage("balcony"); // the eclipse plays out over the balcony sky
     if (window.__runBalconyEclipse) { window.__runBalconyEclipse(); return "🌒 the moon slides across the sky…"; }
     return "no clear sky for an eclipse.";
   };

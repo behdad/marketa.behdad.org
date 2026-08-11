@@ -163,7 +163,8 @@ Preview another date or clock time with `loft.calendar.date.set("2027-05-01")` a
 `loft.calendar.time.set({hours: 18, minutes: 0})`; the matching `.reset()` actions restore the real
 calendar and clock. `loft.poetry.hafez.read()` draws a Hafez reading; the scene-gated
 `await loft.poetry.rumi.read()` starts the quiet nighttime Cuddly exchange. Block Party is the
-`"block-party"` choice for `loft.minigame.start(...)`.
+`"block-party"` choice for `loft.minigame.start(...)`. `await loft.sky.eclipse.play()` brings the
+Balcony into view and starts the eclipse appropriate to its current sky.
 
 Code lists the unsaved buffer first, then default and user files by basename. Unsaved and untouched
 defaults are italic; overridden defaults and user files are upright. Tooltips—not icons or colors—

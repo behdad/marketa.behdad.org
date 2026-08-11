@@ -60115,7 +60115,7 @@ setMusicPausedState(false);
   // than a forecast: completing the trace guarantees a strong show until the fire goes out.
   //
   // WHAT DRIVES IT: the planetary Kp index (0–9) — live from NOAA SWPC when the fetch lands,
-  // else rolled per nightfall, or pinned by aurora.intensity(7). Kp sets curtain height,
+  // else rolled per nightfall, or pinned by loft.sky.aurora.intensity(7). Kp sets curtain height,
   // how bright and fast they are, how much structure the fringe has, and whether the red
   // 630nm crown lights up. Darkness (a real solar-depression calculation, below) scales the
   // brightness on top, and __skyCloudy() hides the whole thing — see .aurora-clouded.
@@ -60463,7 +60463,7 @@ setMusicPausedState(false);
     return false;
   }
   // "would a visitor actually see them?" — the paint gate minus the tab-focus term, plus enough
-  // brightness to register. Drives aurora.details().
+  // brightness to register. Drives loft.sky.aurora.details().
   function auroraVisible() {
     for (var k = 0; k < targets.length; k++) {
       if (targets[k].controlled && targetShown(targets[k])) {
@@ -60559,7 +60559,7 @@ setMusicPausedState(false);
     return true;
   };
   window.__auroraShowing = auroraVisible; // pure status query with no override side-effect
-  // everything aurora.details() reports: whether they're showing, the index driving them and
+  // everything loft.sky.aurora.details() reports: whether they're showing, the index driving them and
   // where it came from, and — honestly, even while forced — the sky that would decide it
   window.__auroraStatus = function () {
     var kp = auroraTargetKp(), dep = auroraSunDepression(), dark = auroraDarkness();
@@ -72300,7 +72300,7 @@ setOfficeProgress("pc", false);
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true, game: { id: "hack-man", name: "Hack-Man", highScoreState: "__pacmanState", how_to_open: "Search for hackman on the monitor; the ketamine ghost can reveal it too." },
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
     { id: "prince", labelKey: "app_prince", glyph: "♛", tile: "#17130f", color: "#d7b34c", glyphSize: "5.2", searchOnly: true,
-      game: { id: "prince", name: "Prince of Persia", how_to_open: "Search for prince on the monitor, or type prince in Console." },
+      game: { id: "prince", name: "Prince of Persia", how_to_open: "Search for prince on the monitor, or run loft.app.open(\"prince\") in Console." },
       open: function () { openPrinceApp(); } },
     { id: "system", labelKey: "mon_sys_system", glyph: "⚙", tile: "#f4ecdf", color: "#4a6b94", glyphSize: "5.2", searchOnly: true,
       open: function () { openMonitorSystemInfo(); } },
@@ -74603,7 +74603,7 @@ setOfficeProgress("pc", false);
     window.__registerLoftCapability = register;
     // Central state owners call this after a real mutation. During api.perform() the active typed
     // action supplies the public event id/source, preventing duplicate versions and leaking no
-    // private helper names; direct UI/console changes retain a small semantic internal id.
+    // private helper names; direct UI/private-controller changes retain a small semantic internal id.
     window.__loftStateChanged = function (id, args, source) { return recordChange(id, args, source); };
 
     var UPPER_ROOMS = ["kitchen", "garden", "cuddly", "office", "balcony"];
@@ -76449,7 +76449,7 @@ setOfficeProgress("pc", false);
     if (!hbBannerShown && window.loft.typography && window.loft.typography.harfbuzz) {
       hbBannerShown = true;
       window.loft.typography.harfbuzz().then(function () {
-        if (!fromCode) consolePrint("harfbuzzjs ready — hb.Face(bytes), hb.Buffer(), hb.shape(...)", "console-dim");
+        if (!fromCode) consolePrint("harfbuzzjs ready — loft.typography.hb.Face(bytes), .Buffer(), .shape(...)", "console-dim");
       }, function () {});
     }
     if (consoleIn) setTimeout(function () { appAutoFocusTextControl(consoleIn); }, 60);
@@ -76630,7 +76630,7 @@ setOfficeProgress("pc", false);
           : "(async function(){ return (" + c.replace(/;\s*$/, "") + "); })()";
       }
       var out = window.eval(src); // indirect eval -> global scope, so var/function persist across commands
-      if (out && typeof out.then === "function") { // a Promise (shape(), await-y toys): print when it settles
+      if (out && typeof out.then === "function") { // a Promise (for example loft.typography.harfbuzz()): print when it settles
         // settles in a LATER task, after activeConsoleOut has been restored — so re-point it
         // to the surface that typed this command, print, then hand it back.
         out.then(function (v) { var p = activeConsoleOut; activeConsoleOut = __capturedOut; consolePrint(fmtOut(v)); activeConsoleOut = p; },
@@ -125877,7 +125877,7 @@ function spawnDustMote(container) {
     var sh = showerFor(m, d);
     if (!sh) return false;
     if (window.__goToStage) window.__goToStage("garden");
-    // a deliberately summoned shower gets the sky it needs, the way aurora.set(true) does and the
+    // a deliberately summoned shower gets the sky it needs, the way loft.sky.aurora.set(true) does and the
     // way the BBQ summon jumps the clock into its cookout window: a December Geminid click that
     // landed on a snow roll would otherwise show nothing at all, since cloud hides meteors
     if (window.__forceBalconyStorm) window.__forceBalconyStorm(false);
@@ -132783,7 +132783,7 @@ function spawnDustMote(container) {
   };
 
   function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
-  // Internal daylight controller, captured by daylight.status()/set(true|false|null):
+  // Internal daylight controller, captured by loft.environment.daylight.status()/set(true|false|null):
   // it and returns the PREVIOUS state. The typed daylight capability owns public access. Narrates via narrate().
   controllers.daylight = function (arg) {
     var prev = !isNight(); // true = day
@@ -133006,7 +133006,7 @@ function spawnDustMote(container) {
     var on = !!arg; // internal controller captured by the typed rain owner below
     if (!on) { window.__setBalconyRain(false, "ui"); narrate(false, "", "🌤 the rain lets up."); return prev; }
     if (window.__setBalconySnow) window.__setBalconySnow(false, "ui");
-    window.__setBalconyRain(true, "ui"); // falls day or night; pair with storm.set(true)
+    window.__setBalconyRain(true, "ui"); // falls day or night; pair with loft.weather.storm.set(true)
     narrate(true, "🌧 rain sweeps in over the balcony.", "");
     return prev;
   };
@@ -133691,13 +133691,13 @@ function spawnDustMote(container) {
     narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
   };
-  // loft.typography.harfbuzz(text, opts) — shape text with HarfBuzz from JavaScript, mirroring the Python
+  // loft.typography.harfbuzz() loads HarfBuzz for JavaScript, mirroring the Python
   // console's uharfbuzz. Lazy-loads the self-hosted harfbuzzjs runtime (harfbuzzjs/hb.js
   // loader + hb.wasm + the hbjs.js wrapper) and a latin-subset Fraunces once, caches the
   // parsed font, and reuses them for every call. Returns a Promise, so both the in-game
-  // console and real devtools can `await loft.typography.harfbuzz('markéta')`. opts.features takes an array
-  // or comma-separated string of OpenType feature tags. English-only (script helpers
-  // aren't translated).
+  // console's uharfbuzz. It returns the raw hb runtime and bundled Fraunces font; callers can
+  // `const { hb, font } = await loft.typography.harfbuzz()`, then shape with those local handles.
+  // English-only (script helpers aren't translated).
   var __hbReady = null;
   // A uharfbuzz-style facade over the raw harfbuzzjs API, so loft.typography.hb reads like the
   // Python console's uharfbuzz `hb`: loft.typography.hb.Face(bytes), .Font(face), .Buffer(), .shape(
@@ -133861,7 +133861,7 @@ function spawnDustMote(container) {
     var strip = document.getElementById("loft-game-strip");
     var prev = !!(strip && strip.classList.contains("uv-mode"));
     if (arguments.length === 0 || !strip) return prev; // no arg → is the UV on?
-    var on = !!arg; // internal controller captured by blacklight.status()/set()
+    var on = !!arg; // internal controller captured by loft.environment.blacklight.status()/set()
     if (on && !prev && window.__resetUvEase) window.__resetUvEase(); // a fresh raise flashes intense then eases
     strip.classList.toggle("uv-mode", on);
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
@@ -133978,7 +133978,7 @@ function spawnDustMote(container) {
     release: function () { if (window.__setWildfireSmoke) window.__setWildfireSmoke(null); },
     mode: function () { var level = window.__wildfireOverride && window.__wildfireOverride(); return typeof level !== "number" ? "auto" : level > 0 ? "on" : "off"; },
     methods: { intensity: function (owner) { return function (level) {
-      if (typeof level !== "number" || !isFinite(level) || level < 0 || level > 1) throw new RangeError("wildfires.intensity(level) requires a number from 0 to 1.");
+      if (typeof level !== "number" || !isFinite(level) || level < 0 || level > 1) throw new RangeError("loft.weather.wildfires.intensity(level) requires a number from 0 to 1.");
       owner(level);
       return window.__wildfireOverride ? window.__wildfireOverride() : level;
     }; } }
@@ -133991,7 +133991,7 @@ function spawnDustMote(container) {
     methods: {
       details: function () { return function () { return window.__auroraStatus ? window.__auroraStatus() : null; }; },
       intensity: function (owner) { return function (kp) {
-        if (typeof kp !== "number" || !isFinite(kp) || kp < 0 || kp > 9) throw new RangeError("aurora.intensity(kp) requires a number from 0 to 9.");
+        if (typeof kp !== "number" || !isFinite(kp) || kp < 0 || kp > 9) throw new RangeError("loft.sky.aurora.intensity(kp) requires a number from 0 to 9.");
         owner(kp); return window.__auroraStatus ? window.__auroraStatus() : null;
       }; }
     }

@@ -152,7 +152,9 @@ function staticPublicWindowWrites(files) {
   var patterns = [
     { label: "property assignment", re: /\b(?:window|globalThis)\s*\.\s*([A-Za-z_$][\w$]*)\s*(?:=(?!=|>)|\+\+|--|\+=|-=|\*=|\/=|\?\?=|&&=|\|\|=)/g },
     { label: "literal property assignment", re: /\b(?:window|globalThis)\s*\[\s*["']([^"']+)["']\s*\]\s*(?:=(?!=|>)|\+\+|--|\+=|-=|\*=|\/=|\?\?=|&&=|\|\|=)/g },
-    { label: "defineProperty export", re: /\bObject\.defineProperty\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g }
+    { label: "defineProperty export", re: /\bObject\.defineProperty\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g },
+    { label: "Reflect.defineProperty export", re: /\bReflect\.defineProperty\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g },
+    { label: "Reflect.set export", re: /\bReflect\.set\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g }
   ];
   files.forEach(function (file) {
     file.text.split("\n").forEach(function (line, index) {

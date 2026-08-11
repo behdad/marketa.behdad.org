@@ -67,19 +67,24 @@ Candidate repeated runtime result (two strict and two report runs):
 `node tests/global-static-audit.js` is the durable zero-network AST gate. It uses Node's bundled
 Acorn and a finite abstract-value/data-flow model per lexical binding. Window, its prototype chain,
 safe `loft`/private descendants, Object/Reflect callables, finite strings, and unknown values remain
-distinct across branch unions, aliases, patterns, defaults, rest/spread, callbacks, loops, and
-mutations. Window self-equivalents and shared `Object.prototype` escapes are hazardous without
-mistaking a child constructor's prototype for Window's chain. Meta invocations normalize direct,
-aliased, destructured, `.call`/`.apply`/`.bind`, `Reflect.apply`, Function-call uncurrying, and partial
-binding. Program lexical bindings, sloppy Annex-B block functions, classic declarations, and
-implicit bare writes are included even when runtime Window-key inventory cannot enumerate them.
+distinct across branch unions, aliases, patterns, defaults, rest/spread, callable object/array
+members, callbacks, and mutations. Call-site values distinguish sloppy plain-call Window `this`,
+strict and arrow semantics, member receivers, and explicit call/apply/bind receivers. Bare `loft`,
+`top`/`parent`/`frames` self chains, and `document.defaultView` are modeled; shared
+`Object.prototype` escapes remain hazardous without mistaking a child constructor's prototype for
+Window's chain. Meta invocations normalize direct, aliased, destructured, `.call`/`.apply`/`.bind`,
+`Reflect.apply`, direct call/apply uncurrying, and partial binding. Program lexical bindings, sloppy
+Annex-B block functions, classic declarations, and implicit bare writes are included even when
+runtime Window-key inventory cannot enumerate them, while loop and switch lexicals remain local.
 Dynamic names pass only when every finite possibility is private or an owned temporary vendor name;
-unknown hazardous flows fail closed. The checked-in matrix contains the reviewer probes, adjacent
-abstraction controls, and both combined browser bypasses. `tests/global-surface.js` separately
+unknown hazardous flows fail closed. The checked-in matrix contains the reviewer probes and
+adjacent abstraction controls. `tests/global-surface.js` separately
 compares own and inherited runtime baseline descriptors/identities, including add/replace/remove.
 Its two-script proof confirms a persistent lexical binding is bare-accessible but not an own Window
 key, while a temporary shared-prototype name resolves through Window and bare lookup before deletion;
-static analysis rejects both surfaces which the later clean inventory cannot observe.
+its five-name proof exercises sloppy `this`, bare-Loft prototype, `top`, direct uncurrying, and member
+call publication. Static analysis rejects every temporary surface which the later clean inventory
+cannot observe.
 
 ## Validation completed
 

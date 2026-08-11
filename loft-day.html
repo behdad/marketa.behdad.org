@@ -76500,14 +76500,11 @@ setOfficeProgress("pc", false);
     box.scrollTop = box.scrollHeight;
     return d;
   }
-  // Side-channel so private controllers can still show their
-  // cute status line while returning a plain bool for scripting: they print here as a
-  // side-effect and the return value is the previous on/off state. Only prints when this
-  // console is the active screen; devtools/script callers just get the return value.
+  // Game narration belongs to the browser's developer console, not the in-game REPL
+  // scrollback. Controllers can still log a status line while returning a scriptable value.
   window.__loftEcho = function (msg) {
     if (msg == null || msg === "") return;
-    consolePrint(String(msg), "console-dim"); // always into the in-game console scrollback (consolePrint no-ops if it isn't built yet)
-    try { console.log(String(msg)); } catch (e) {} // and the browser's real console
+    try { console.log(String(msg)); } catch (e) {}
   };
   function openConsole(fromCode) {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
@@ -114967,7 +114964,7 @@ function spawnDustMote(container) {
     if (typeof arguments[2] === "number") holdMs = arguments[2];                    // caption(text, blinkMs, holdMs)
     var token = captionArbiter.overlay({ literal: String(text), owner: "console", scope: captionViewportScope(),
       priority: CAPTION_PRIORITY.scripted, duration: holdMs, clock: "wall" });
-    if (controllers.echo) controllers.echo(caption.textContent); // print through the echo side-channel (respects echo(true/false)) — rendered, so markup never reaches the console
+    if (controllers.echo) controllers.echo(caption.textContent); // developer-console side-channel, gated by echo(true/false)
     if (token && Number.isFinite(blinkMs) && blinkMs > 0) captionArbiter.blink(token, blinkMs);
     return prev;
   };
@@ -132859,9 +132856,9 @@ function spawnDustMote(container) {
   // one. Anything else (a real 1..n index, a name string) returns null and falls through to the
   // command's normal name/number parsing.
   function fracToIndex(v, n) { return (typeof v === "number" && v >= 0 && v < 1) ? Math.min(n, Math.floor(v * n) + 1) : null; }
-  // print a cute status line to the console (if open) without disturbing the controller's return
-  // value — the toggles return a bool for scripting but still narrate what they did. (See __loftEcho.)
-  // narrate(str) ALWAYS prints to both consoles (in-game + browser). echo(str) prints via narrate() only
+  // Log a status line to the browser developer console without disturbing the controller's return
+  // value — toggles return a bool for scripting but still narrate what they did. (See __loftEcho.)
+  // echo(str) logs via narrate() only
   // while echoing is on; echo(true)/echo(false) turn echoing on/off (returns the previous state);
   // echo() reports whether it's on. All the internal tools narrate through echo(), so echo(false)
   // silences their status chatter for scripting.

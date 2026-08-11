@@ -91,9 +91,9 @@ check(night.runs() === 0 && night.timers[0].delay >= 300000,
   "a nighttime opportunity is skipped rather than queued for daybreak",
   { runs: night.runs(), next: night.timers[0].delay });
 
-check(/register\(\{ id: "sky\.eclipse\.play"[\s\S]*?runInRoom\("balcony"[\s\S]*?controllers\.eclipse\(\)/.test(source) &&
+check(/register\(\{ id: "sky\.eclipse\.play"[\s\S]*?runInRoom\("balcony"[\s\S]*?controllers\.eclipse\(\)[\s\S]*?__loftAwaitLifecycle/.test(source) &&
     !/window\.eclipse\s*=/.test(source),
-  "the typed loft.sky.eclipse.play action owns explicit eclipse navigation");
+  "the typed loft.sky.eclipse.play action owns explicit navigation and the full finite eclipse lifecycle");
 
 console.log("");
 if (failures) {

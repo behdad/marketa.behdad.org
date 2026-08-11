@@ -75859,7 +75859,13 @@ setOfficeProgress("pc", false);
       }, run: function () {
         return runInRoom("balcony", function () {
           var message = controllers.eclipse(), balcony = document.getElementById("stage-balcony");
-          return { effect: balcony && balcony.classList.contains("dusk") ? "lunar" : "solar", message: message, room: currentRoom() };
+          var effect = balcony && balcony.classList.contains("dusk") ? "lunar" : "solar";
+          return window.__loftAwaitLifecycle(function () {
+            return !!(balcony && balcony.classList.contains(effect + "-eclipse"));
+          }, {
+            label: effect + " eclipse", startTimeout: 1000, timeout: 20000,
+            value: function () { return { effect: effect, message: message, room: currentRoom(), completed: true }; }
+          });
         });
       } });
     register({ id: "garden.moment.start", group: "Garden / Party", kind: "action", risk: "scene", completion: "finite",

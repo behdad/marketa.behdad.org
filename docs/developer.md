@@ -410,6 +410,8 @@ owner transition; do not make the API mutate a DOM projection directly.
 The in-game consoles evaluate ordinary JavaScript over the same public `loft.*` tree. Their only
 API shorthand is `help loft...`, which resolves a rooted public path and calls `loft.help(...)`;
 `clear`, `exit`, and `quit` are lifecycle controls, while bare `ls` only points to the Linux app.
+Their scrollback contains REPL commands, results, errors, and boot/help messages; controller
+narration logs only to the browser developer console.
 Tab completion walks the live Loft object—including after the `help ` prefix—and Code autocomplete
 shows every immediate child of the object at the caret in its scrollable list. Selecting a namespace
 drills into it instead of flattening or truncating the tree. `window.loft` is the sole app-authored

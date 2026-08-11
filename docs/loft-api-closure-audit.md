@@ -7,7 +7,7 @@ public document.
 
 - Final integration base: `5b8c6dbf` (instrument art and weather graphics).
 - Migration branch: `refactor/loft-public-api-closure`.
-- Candidate range at this checkpoint: `5b8c6dbf..53038ec9`.
+- Candidate range at the final validation checkpoint: `5b8c6dbf..87625a28` (plus this ledger update).
 - No merge, push, or deployment has been performed.
 
 ## Contract and result
@@ -89,6 +89,16 @@ Static audit artifacts for this work session are under `/dev/shm/loft-static-aud
   these to 34. Of those, 32 reproduced on exact main. One stale API-closure expectation in
   `device-boot-audio.js` was corrected and now passes; `kid-occupancy.js` was a nondeterministic
   fixture and passed three subsequent candidate runs plus exact main.
+- The final closure-specific run passed `private-bootstrap`, API expansion/gating/preview/state/v4,
+  Python Code, Python Loft API, drop-down terminal, console, status API, and whole-file Code reset.
+  The per-file Code-reset runner produced the exact same output bytes as exact main, including its
+  one inherited EN/CS confirmation fixture mismatch.
+- Two final strict Window-surface runs and two final report runs passed: each report found exactly
+  0 forbidden, 1,666 private `__*`, and 2,794 verified named-element globals.
+- A final static audit reproduced the counts above with no unresolved/global writes. Every one of
+  the 37 dynamic Window references was reviewed again; writes are limited to private `__*` state
+  and lazy vendor capture/delete paths.
+- Final `check.js`, `state.js`, source `node --check`, and `git diff --check` passed.
 
 ## Manual matrix completed
 
@@ -103,15 +113,28 @@ successful `loft.sky.aurora.details()`, `ReferenceError` for bare `birthday()` a
 uncaught exceptions. Screenshots and the JSON report live under `/dev/shm/loft-api-final-*` and
 `/dev/shm/loft-manual-final-report.json`.
 
-## Remaining before independent review
+## Capability design review
 
-1. Finish the fresh all-339-JS serial sweep; the prior long shell was interrupted after 83 tests,
-   so resume from the remaining tests without concurrent runners.
-2. Rerun every failure twice on the candidate and compare persistent failures with exact main.
-3. Repeat all nine MJS suites after the final source revision and classify any failure.
-4. Repeat strict/report Window-surface runs twice, then repeat the static scope/Window inventory.
-5. Perform final source syntax, mandatory checks, `git diff --check`, clean-worktree, commit-trailer,
-   and main-tip/rebase checks.
-6. Hand the result to a separate xhigh reviewer as **READY FOR INDEPENDENT REVIEW**; revise from
-   concrete findings before owner handoff.
+Every newly registered capability is an intentional replacement for behavior that otherwise only
+had a retired bare helper or an incomplete boolean facade:
 
+- Birthday list/selection/cake operations share `calendar.birthday`; date and time ownership share
+  `calendar.date` and `calendar.time`; `calendar.moment` is the combined pure query.
+- Authored season discovery, status, cycling, explicit selection, and automatic reset form one
+  symmetrical `environment.season` owner.
+- The one share-card renderer is the finite `share.card.open` action.
+- Hafez is a side-effect-free query; Rumi is a finite, scene-gated action under `poetry`.
+- Wildfire and aurora intensity extend their existing typed environment owners rather than create
+  parallel commands. Aurora details is the structured query that the old prose status lacked.
+- Irene's named poses extend `people.irene` because the existing boolean `set` deliberately accepts
+  only visitation state. Eclipse is a finite sky action and navigates to its Balcony-owned effect.
+
+Arguments are typed and bounded, action/query kinds match side effects, finite lifecycle actions
+settle after their visible effect, and unavailable scene behavior reports an exact reason. No new
+capability exposes a private controller object or raw DOM state.
+
+## Independent-review handoff
+
+The branch is ready for a separate xhigh review of API necessity/schema, namespace consistency,
+Window ownership, alias removal, discoverability, documentation, and migration completeness. No
+merge, push, or deployment should happen until that review and any concrete revision round finish.

@@ -1133,7 +1133,6 @@ T["en"] = {
   "pr_desc_half": "+ sleepover option available.",
   "prince_kill_line": "the hourglass runs out.",
   "prince_kill_title": "JAFFAR WINS",
-  "prince_wall_label": "wake the prince",
   "py_busy": "still chewing on the last one…",
   "py_fail": "couldn't load Python — offline, or the download broke. close and reopen to retry.",
   "py_fonttools": "fontTools {v} is already imported — the groom insisted.",

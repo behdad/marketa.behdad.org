@@ -1133,7 +1133,6 @@ T["cs"] = {
   "pr_desc_half": "+ možnost přespání.",
   "prince_kill_line": "písek v přesýpacích hodinách došel.",
   "prince_kill_title": "JAFFAR VÍTĚZÍ",
-  "prince_wall_label": "probudit prince",
   "py_busy": "ještě žvýkám ten předchozí…",
   "py_fail": "Python se nepodařilo načíst — offline, nebo se přerušilo stahování. zavři a znovu otevři.",
   "py_fonttools": "fontTools {v} je už naimportovaný — ženich trval na svém.",

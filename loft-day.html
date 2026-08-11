@@ -89905,7 +89905,7 @@ def colormode(mode=None):
     apply();
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // screen focus settles musically: ~2.5s rather than the projector's ~1s
-    if (el === monitor && window.__hideMsgBadgeCoach) window.__hideMsgBadgeCoach();
+    if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(true);
     if (el === monitor && window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   function zoomOut() {
@@ -89930,6 +89930,7 @@ def colormode(mode=None):
     strip.style.transition = "";
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(false);
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   // A room slide and a device-zoom glide both own the same strip transform. Collapse any
@@ -89963,6 +89964,7 @@ def colormode(mode=None):
     strip.style.transition = prevTransition;
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck();
+    if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(false);
     return true;
   }
   // re-fit the zoom whenever the box it frames may have moved or resized under us — a
@@ -96914,7 +96916,7 @@ def colormode(mode=None):
       openMessagesAt(null);
       return true;
     };
-    var msgThumbEl = null, msgThumbT = null, curThumbId = null;
+    var msgThumbEl = null, msgThumbT = null, curThumbId = null, deviceNotificationHold = false;
     var notificationActionGames = Object.create(null), heldMessageThumbIds = [], heldMessageReleaseT = null;
     function actionGameHoldsNotifications() {
       return Object.keys(notificationActionGames).some(function (game) { return notificationActionGames[game]; });
@@ -96933,7 +96935,7 @@ def colormode(mode=None):
     }
     function releaseHeldMessageThumbs() {
       heldMessageReleaseT = null;
-      if (actionGameHoldsNotifications()) return;
+      if (actionGameHoldsNotifications() || deviceNotificationHold) return;
       var id = null;
       while (heldMessageThumbIds.length) {
         var candidate = heldMessageThumbIds.pop();
@@ -96963,6 +96965,22 @@ def colormode(mode=None):
       heldMessageReleaseT = setTimeout(releaseHeldMessageThumbs, 450);
       return true;
     }
+    window.__setDeviceNotificationHold = function (active) {
+      active = !!active;
+      if (deviceNotificationHold === active) return false;
+      deviceNotificationHold = active;
+      if (heldMessageReleaseT) { clearTimeout(heldMessageReleaseT); heldMessageReleaseT = null; }
+      if (active) {
+        if (msgThumbEl && msgThumbEl.classList.contains("show")) holdMessageThumb(curThumbId);
+        hideMessageThumb(true);
+        hideMsgBadgeCoach();
+        updateMsgBadge();
+      } else {
+        updateMsgBadge();
+        heldMessageReleaseT = setTimeout(releaseHeldMessageThumbs, 450);
+      }
+      return true;
+    };
     window.__setLowerRoomNotificationHold = function (active) {
       syncActionGameNotificationHold("lower-room", !!active);
     };
@@ -96986,6 +97004,7 @@ def colormode(mode=None):
     function showMessageThumb(id) {
       if (document.hidden || !document.hasFocus()) return; // unattended → the text waits in the app; no ghost thumbnail/buzz
       if (isOpen()) return; // phone's already up → no notification toast over it (the text lands in the thread; the app live-refreshes)
+      if (deviceNotificationHold) { holdMessageThumb(id); return; }
       var roadtripExchangeMessage = ["downstairs_entrance", "downstairs_roadtrip_where",
         "downstairs_roadtrip_journey", "downstairs_roadtrip_go"].indexOf(id) !== -1;
       if (actionGameHoldsNotifications() && !roadtripExchangeMessage) {
@@ -97038,7 +97057,7 @@ def colormode(mode=None):
     }
     window.__hideMessageThumb = hideMessageThumb;
     window.__messageNotificationsHeld = function () {
-      return { active: Object.keys(notificationActionGames), messages: heldMessageThumbIds.slice() };
+      return { active: Object.keys(notificationActionGames), device: deviceNotificationHold, messages: heldMessageThumbIds.slice() };
     };
     window.addEventListener("loft:statechange", function (event) {
       var detail = event && event.detail, args = detail && detail.args;
@@ -97085,8 +97104,7 @@ def colormode(mode=None):
     }
     window.__dismissMsgBadgeCoach = function () { return acknowledgeMsgBadgeCoach("dismissed"); };
     function showMsgBadgeCoach(host) {
-      if (msgBadgeCoachAcknowledged || attentionBlocksMsgBadgeCoach() || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic ||
-          (window.__monitorZoomed && window.__monitorZoomed())) return false;
+      if (msgBadgeCoachAcknowledged || deviceNotificationHold || attentionBlocksMsgBadgeCoach() || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic) return false;
       msgBadgeCoachShown = true;
       if (!msgBadgeCoachEl) {
         msgBadgeCoachEl = document.createElement("div");
@@ -97109,7 +97127,7 @@ def colormode(mode=None):
       return true;
     }
     function maybeShowMsgBadgeCoach() {
-      if (!msgBadgeCoachAcknowledged && !attentionBlocksMsgBadgeCoach() && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) return showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
+      if (!msgBadgeCoachAcknowledged && !deviceNotificationHold && !attentionBlocksMsgBadgeCoach() && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) return showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
       return false;
     }
     window.__repeatMsgBadgeCoach = function () { // test hook: repaint after a temporary cover without waiting on a scene transition
@@ -97137,7 +97155,7 @@ def colormode(mode=None):
         });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (attentionBlocksMsgBadgeCoach()) {
+      if (deviceNotificationHold || attentionBlocksMsgBadgeCoach()) {
         msgBadgeEl.classList.remove("idle", "show");
         hideMsgBadgeCoach();
       } else if (n > 0 && !isOpen() && !rosterOpen) {
@@ -97160,7 +97178,7 @@ def colormode(mode=None):
       if (balBadge) {
         var bt = balBadge.querySelector("text");
         if (bt) bt.textContent = n >= 8 ? "∞" : String(n); // the real count until the 8 cap, then ∞
-        balBadge.style.display = (n > 0 && !isOpen() && !rosterOpen && !actionGameHoldsNotifications()) ? "" : "none";
+        balBadge.style.display = (n > 0 && !isOpen() && !rosterOpen && !deviceNotificationHold && !actionGameHoldsNotifications()) ? "" : "none";
       }
       updatePhoneHomeBadges();
     }

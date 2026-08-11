@@ -80,7 +80,8 @@ than replaying an old line.
 Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The Party
 handoff coach allows navigation but holds new notifications and calls until it leaves. Opening a
 message never performs its suggested activity: use the separate activity arrow. Old messages remain
-readable even when their activity has expired.
+readable even when their activity has expired. While the Office monitor or laptop is zoomed, message
+previews and unread bubbles wait until that focused view closes, just as they do while the phone is open.
 
 If you are unsure what comes next:
 

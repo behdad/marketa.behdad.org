@@ -74,8 +74,9 @@ check(/playLaptopBootSound\("office-laptop"\)/.test(laptopFlow) &&
   /playPcBootSound\("office-monitor"\)/.test(screenFlow),
   "device and video-call completion paths invoke their own cues");
 check(source.indexOf("playBootChimeSound") < 0 &&
-  /boot:\s*function\s*\(\)\s*\{\s*playPcBootSound\.apply/.test(source),
-  "the ambiguous shared boot helper is gone and console boot previews the PC cue");
+  !/boot:\s*function\s*\(\)\s*\{\s*playPcBootSound\.apply/.test(source) &&
+  source.indexOf("controllers.audio") < 0,
+  "the ambiguous shared boot helper and retired console-preview facade are gone");
 
 if (failed) process.exit(1);
 console.log("device boot audio checks passed");

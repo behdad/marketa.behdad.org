@@ -645,7 +645,7 @@ port nor another developer's server process.
 | Full solve | End-to-end first-run solve and interaction storm | `node tests/play.js` |
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
-| Typed API | Catalogue shape, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/api-gating.js` |
+| Typed API | Catalogue shape, public Window ownership, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/global-surface.js`, `tests/api-gating.js` |
 | Rendering | Album signatures and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, screenshots or real CDP Chrome |
 
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the

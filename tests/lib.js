@@ -62,6 +62,10 @@ function hook(opts) {
     "  var t = e.target && e.target.closest && e.target.closest('a, .party-send');",
     "  if (t) { e.preventDefault(); e.stopImmediatePropagation(); }",
     "}, true);",
+    // Some architecture tests need the browser's Window surface before ANY authored
+    // page script has run. Keep the snapshot in this head hook: a body-end harness is
+    // too late, and a hardcoded browser-global allowlist goes stale across Chrome builds.
+    opts.captureWindowBaseline ? "window.__weddingTestWindowBaseline = Reflect.ownKeys(window);" : "",
     "</script>"
   ].join("\n");
 }

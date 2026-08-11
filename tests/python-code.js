@@ -43,8 +43,9 @@ check(/code:\s*\{\s*language:\s*codeLanguage/.test(html) &&
 check(/window\.__runPythonCode[\s\S]*?pyCodeQueue\.push\(job\)[\s\S]*?openPython\(true\)/.test(html),
   "Python Run hands the complete buffer to the existing Python app");
 check(/PYODIDE_PACKAGE_BASE_URL\s*=\s*"https:\/\/cdn\.jsdelivr\.net\/pyodide\/v314\.0\.2\/full\/"/.test(html) &&
-      /loadPyodide\(\{[\s\S]*?indexURL:\s*"pyodide\/"[\s\S]*?packageBaseUrl:\s*PYODIDE_PACKAGE_BASE_URL/.test(html),
-  "the local runtime resolves unbundled official packages from the pinned Pyodide repository");
+      /captureLazyScriptGlobal\("loadPyodide"\)/.test(html) &&
+      /pyodideLoader\(\{[\s\S]*?indexURL:\s*"pyodide\/"[\s\S]*?packageBaseUrl:\s*PYODIDE_PACKAGE_BASE_URL/.test(html),
+  "the local runtime privately captures its loader and resolves unbundled official packages from the pinned Pyodide repository");
 check(/function pyRunWithImports\(source\)[\s\S]*?loadPackagesFromImports\(source\)[\s\S]*?runPythonAsync\(source\)/.test(html) &&
       /function pyDrainCodeQueue\(\)[\s\S]*?__loftTurtleCommand\("screen_clear"\)[\s\S]*?pyRunWithImports\(job\.code\)/.test(html) &&
       /function pyRun\(cmd\)[\s\S]*?pyRunWithImports\(cmd\)/.test(html),

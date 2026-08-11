@@ -84,6 +84,19 @@ function codeSnippetResourceHook(html) {
   return "<script>window.__codeSnippetResourceRequests=[];window.__codeSnippetResourceLoader=function(path){window.__codeSnippetResourceRequests.push(path);var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing test resource: '+path));};</script>";
 }
 
+// HarfBuzz's pinned classic scripts are intentionally compiled in a private function scope.
+// file:// fetch cannot read them, so scratch pages receive the canonical source through the same
+// private, test-only resource seam used for Code snippets.
+function harfbuzzScriptResourceHook(html) {
+  if (html.indexOf('harfbuzzjs/hb.js') === -1) return "";
+  var resources = {};
+  ["hb.js", "hbjs.js"].forEach(function (name) {
+    resources["harfbuzzjs/" + name] = fs.readFileSync(path.join(ROOT, "harfbuzzjs", name), "utf8");
+  });
+  var serialized = JSON.stringify(resources).replace(/<\/script/gi, "<\\/script");
+  return "<script>window.__harfbuzzScriptResourceLoader=function(path){var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing HarfBuzz test resource: '+path));};</script>";
+}
+
 function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
   // --mute-audio: the playthrough click-storms every interactive element and state.js
   // starts beds/dances/songs, so the game's Web Audio actually SOUNDS. --headless=new
@@ -99,7 +112,7 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
 
 function makeScratch(file, harness, hookHtml) {
   var html = fs.readFileSync(path.join(ROOT, file), "utf8");
-  var patched = html.replace("<head>", "<head>" + hookHtml + codeSnippetResourceHook(html)).replace("</body>", harness + "\n</body>");
+  var patched = html.replace("<head>", "<head>" + hookHtml + codeSnippetResourceHook(html) + harfbuzzScriptResourceHook(html)).replace("</body>", harness + "\n</body>");
   // Production HTTP uses content-versioned dictionary URLs. Chrome's file:// loader treats
   // those query-bearing local scripts as missing, so scratch pages remove only the already-
   // check.js-verified cache query while retaining the exact copied dictionary bytes.
@@ -117,6 +130,7 @@ function makeScratch(file, harness, hookHtml) {
   });
   if (html.indexOf('src="code-snippets/') !== -1) fs.cpSync(path.join(ROOT, "code-snippets"), path.join(scratchDir, "code-snippets"), { recursive: true });
   if (html.indexOf('pyodide/pyodide.js') !== -1) fs.symlinkSync(path.join(ROOT, "pyodide"), path.join(scratchDir, "pyodide"), "dir");
+  if (html.indexOf('harfbuzzjs/hb.js') !== -1) fs.symlinkSync(path.join(ROOT, "harfbuzzjs"), path.join(scratchDir, "harfbuzzjs"), "dir");
   fs.writeFileSync(scratch, patched);
   return scratch;
 }

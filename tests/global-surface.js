@@ -27,7 +27,7 @@ var NAMED_PROBE = "weddingTestNamedWindowProbe";
 var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
-  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null};',
+  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,lazyBootstrap:{attempted:false,settled:false,error:""}};',
   'function ownKeys(){return Reflect.ownKeys(window);}',
   'function safeValue(name){try{return {ok:true,value:window[name]};}catch(error){return {ok:false,error:String(error&&error.message||error)};}}',
   'function includesNode(collection,node){try{for(var i=0;i<collection.length;i++)if(collection[i]===node)return true;}catch(error){}return false;}',
@@ -45,7 +45,7 @@ var HARNESS = [
   ' return {type:type,tag:tag,enumerable:descriptor?!!descriptor.enumerable:null,configurable:descriptor?!!descriptor.configurable:null,writable:descriptor&&Object.prototype.hasOwnProperty.call(descriptor,"writable")?!!descriptor.writable:null,accessor:!!(descriptor&&(descriptor.get||descriptor.set))};',
   '}',
   'function finish(){report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);}',
-  'window.addEventListener("load",function(){setTimeout(function(){',
+  'function inventory(){',
   ' try{',
   '  var baseline=window.__weddingTestWindowBaseline;',
   '  report.baselineCount=Array.isArray(baseline)?baseline.length:0;',
@@ -69,7 +69,12 @@ var HARNESS = [
   '  report.probe={baseline:Array.isArray(baseline)&&baseline.indexOf(' + JSON.stringify(NAMED_PROBE) + ')>=0,own:names.indexOf(' + JSON.stringify(NAMED_PROBE) + ')>=0,resolves:probeRead.ok&&probeRead.value===probe,classified:!!probeReason,reason:probeReason,baselineHadLoft:Array.isArray(baseline)&&baseline.indexOf("loft")>=0,finalHasLoft:names.indexOf("loft")>=0};',
   ' }catch(error){window.__errs.push(String(error&&error.stack||error));}',
   ' finish();',
-  '},500);});',
+  '}',
+  'window.addEventListener("load",function(){setTimeout(function(){',
+  ' report.lazyBootstrap.attempted=true;',
+  ' var pending;try{pending=window.loft.typography.harfbuzz();}catch(error){pending=Promise.reject(error);}',
+  ' Promise.resolve(pending).then(function(){},function(error){report.lazyBootstrap.error=String(error&&error.message||error);}).then(function(){report.lazyBootstrap.settled=true;setTimeout(inventory,100);});',
+  '},100);});',
   '})();</script>'
 ].join("\n");
 
@@ -162,7 +167,7 @@ function check(ok, message, detail) {
 }
 
 console.log("loft-day.html Window ownership:");
-var result = lib.runPageSync("loft-day.html", HARNESS, 5200, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 6500, {
   captureWindowBaseline: true,
   patchRaf: true,
   urlSuffix: "?global-surface=" + Date.now()
@@ -177,12 +182,26 @@ check(result.baselineCount > 100, "browser Window baseline was captured in the h
 check(result.probe && !result.probe.baselineHadLoft && result.probe.finalHasLoft, "baseline precedes creation of the public loft API root", JSON.stringify(result.probe));
 check(result.probe && !result.probe.baseline && result.probe.resolves && result.probe.classified, "a real browser named-element global is recognized and excluded", JSON.stringify(result.probe));
 check(result.allowed.length === 1 && result.allowed[0].name === "loft" && result.allowed[0].shape.type === "object", "window.loft is the one app-authored public root", JSON.stringify(result.allowed));
+check(result.lazyBootstrap && result.lazyBootstrap.attempted && result.lazyBootstrap.settled, "a real lazy vendor bootstrap settles before the Window inventory", JSON.stringify(result.lazyBootstrap));
 
 var files = sourceFiles();
 var staticWrites = staticPublicWindowWrites(files);
 check(staticWrites.length === 0, "authored sources contain no explicit public Window writes outside window.loft", staticWrites.map(function (hit) {
   return hit.file + ":" + hit.line + " " + hit.label + " " + hit.name + " — " + hit.text;
 }).join("\n"));
+var html = files.find(function (file) { return file.name === "loft-day.html"; }).text;
+var lazyVendorCaptures = {
+  turnstile: 'captureLazyScriptGlobal("turnstile")',
+  loadPyodide: 'captureLazyScriptGlobal("loadPyodide")',
+  V86: 'captureLazyScriptGlobal("V86")',
+  createHarfBuzz: 'hbLoadScript("harfbuzzjs/hb.js", "createHarfBuzz")',
+  hbjs: 'hbLoadScript("harfbuzzjs/hbjs.js", "hbjs")'
+};
+var lazyVendorGlobals = Object.keys(lazyVendorCaptures);
+check(lazyVendorGlobals.every(function (name) {
+  return html.indexOf(lazyVendorCaptures[name]) >= 0 && !new RegExp("\\bwindow\\s*\\.\\s*" + reEscape(name) + "\\b").test(html);
+}), "every lazy vendor bootstrap symbol is captured privately instead of becoming a public API",
+  lazyVendorGlobals.filter(function (name) { return html.indexOf(lazyVendorCaptures[name]) < 0 || new RegExp("\\bwindow\\s*\\.\\s*" + reEscape(name) + "\\b").test(html); }).join(", "));
 if (result.forbidden.length) {
   console.log("\n  Forbidden app-authored globals (" + result.forbidden.length + "):");
   result.forbidden.forEach(function (entry) {

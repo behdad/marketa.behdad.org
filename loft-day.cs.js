@@ -174,7 +174,7 @@ window.__loftMessages["cs"] = {
   "code_reset_files_confirm": "Obnovit všechny soubory a úpravy v aplikaci Kód? Tuto akci nelze vrátit zpět.",
   "console_hint": "Otevřít rozbalovací konzoli",
   "console_hint_close": "Zavřít rozbalovací konzoli",
-  "console_laser": "bzzzt — červená tečka je venku a sleduje kurzor. laser.set(false) ji odvolá. hodně štěstí, kočko.",
+  "console_laser": "bzzzt — červená tečka je venku a sleduje kurzor. dalším dvojklikem na pobíhající kočku ji odvoláte. hodně štěstí, kočko.",
   "console_welcome": "   loftová konzole — opravdový JavaScript; typované API Loft je připravené jako `loft`. zkuste: loft.help() · ? klávesové zkratky",
   "contact": "Dotazy? Napiš nám:",
   "credits_codesigner": "spolutvůrkyně designu",

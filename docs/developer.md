@@ -361,7 +361,8 @@ as `loft.api.info()` are installed and documented by the same namespace builder.
 Its groups, namespaces, and capability rows use one fixed code-unit comparator, keeping JavaScript
 and Python help identical across browser locales.
 Calendar birthdays live under `loft.calendar.birthday.*`, authored season previews under
-`loft.environment.season.*`, and the occasion-card preview under `loft.share.card.open()`.
+`loft.environment.season.*`, the occasion-card preview under `loft.share.card.open()`, and the
+Hafez/Rumi readers under `loft.poetry.*`.
 Calendar date/time previews live under `loft.calendar.date.*` and `loft.calendar.time.*`; their
 status queries return the effective values while their reset actions restore automatic timekeeping.
 JavaScript-native helpers that deliberately return raw values rather than transport envelopes stay
@@ -411,6 +412,12 @@ public Window root. Split-script data and implementation/test integration may us
 `window.__…` names, but those are private and may change without compatibility notice. The runtime
 `tests/global-surface.js` snapshot distinguishes browser baseline and verified named-element globals
 from app additions, then fails on any non-`loft`, non-`__…` app-owned property.
+Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before
+injection; their one vendor bootstrap symbol is captured into the main closure and the temporary
+Window property is deleted at `load`. HarfBuzz's pinned factories are instead compiled directly in a
+private function scope because its wrapper uses a non-configurable top-level function declaration.
+Keep every runtime consumer on these captured lexical owners rather than reading vendor globals from
+Window.
 
 `__chatApiManifest()` is the compact machine boundary for JavaScript Code assistance: typed
 capability rows plus a short primitives/signatures list. Do not add a parallel human command index

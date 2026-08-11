@@ -18,7 +18,7 @@ function parse(reply, code = {}) {
 }
 
 console.log("Code edit protocol:");
-const code = 'await sleep(10000);\nawait loft.call.incoming.trigger("madla");\nloft.party.set(true);';
+const code = 'await loft.util.sleep(10000);\nawait loft.call.incoming.trigger("madla");\nloft.party.set(true);';
 const callStart = code.indexOf("loft.call.incoming.trigger");
 const callEnd = callStart + 'loft.call.incoming.trigger("madla")'.length;
 const valid = parse({ text: "Insert the call before the party.", edits: [

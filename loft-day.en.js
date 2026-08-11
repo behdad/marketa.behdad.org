@@ -174,7 +174,7 @@ window.__loftMessages["en"] = {
   "code_reset_files_confirm": "Reset all Code files and edits? This cannot be undone.",
   "console_hint": "Open the drop-down console",
   "console_hint_close": "Close the drop-down console",
-  "console_laser": "bzzzt — red dot on the loose, shadowing your cursor. laser.set(false) calls it off. good luck, cat.",
+  "console_laser": "bzzzt — red dot on the loose, shadowing your cursor. double-click the roaming cat again to call it off. good luck, cat.",
   "console_welcome": "   loft console — real JavaScript; typed Loft API ready as `loft`. try: loft.help() · ? keyboard shortcuts",
   "contact": "Questions? Write to us:",
   "credits_codesigner": "co-designer",

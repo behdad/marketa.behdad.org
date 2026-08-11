@@ -193,8 +193,8 @@ check(captured.body.input.length === 3 && captured.body.input[0].role === "user"
 check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/.test(captured.body.instructions) && /\"active_occasion\":\"wedding-prague\"/.test(captured.body.instructions), "language rule and sanitized occasion-aware game context reach the developer instructions");
 check(/You are Charlie/.test(captured.body.instructions) && /Always spell Markéta/.test(captured.body.instructions) && /kitchen\/bar/.test(captured.body.instructions) && /garden\/party/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "Charlie's identity and official room names reach the chatbot instructions");
 check(/broad question about what games exist MUST cover every supplied entry/.test(captured.body.instructions) && /Never substitute an internal\/controller name/.test(captured.body.instructions) && /never invent a Games menu/.test(captured.body.instructions), "Charlie must use every exact public game entry without inventing names or locations");
-check(/faal\(\) returns one random Hafez reading/.test(captured.body.instructions) &&
-  /rumi\(\) consumes the next load-time-shuffled Rumi pair/.test(captured.body.instructions) &&
+check(/loft\.poetry\.hafez\.read\(\) returns one random Hafez reading/.test(captured.body.instructions) &&
+  /loft\.poetry\.rumi\.read\(\) consumes the next load-time-shuffled Rumi pair/.test(captured.body.instructions) &&
   /Do not invent poet arguments/.test(captured.body.instructions),
   "Chat understands the distinct Hafez return and scene-gated Rumi recitation helpers");
 check(/Allowed optional actions/.test(captured.body.instructions) && /\"actions_available\":\[\"room.go\",\"music.play\"\]/.test(captured.body.instructions) && !/not\.real/.test(captured.body.instructions), "the model sees the canonical action catalog and only sanitized currently available IDs");
@@ -743,7 +743,7 @@ const javascriptCodeResponse = await worker.fetch(makeRequest("/chat", {
       scripting_api: {
         runtime: "JavaScript in the Loft Code app; top-level await is valid.",
         typed: [{ id: "garden.set", kind: "action", args: { on: { type: "boolean" } }, argOrder: ["on"], completion: "instant" }],
-        primitives: [{ signature: "sleep(ms)", result: "Promise<void>" }],
+        primitives: [{ signature: "loft.util.sleep(ms)", result: "Promise<void>" }],
       },
     },
     code: {
@@ -764,7 +764,7 @@ check(/Loft scripting API \(JSON data\)/.test(captured.body.instructions) &&
   /"runtime":"JavaScript in the Loft Code app; top-level await is valid\."/.test(captured.body.instructions) &&
   /"argOrder":\["on"\]/.test(captured.body.instructions) &&
   /"completion":"instant"/.test(captured.body.instructions) &&
-  /"signature":"sleep\(ms\)"/.test(captured.body.instructions) &&
+  /"signature":"loft\.util\.sleep\(ms\)"/.test(captured.body.instructions) &&
   !/"globals":/.test(captured.body.instructions),
   "JavaScript Code receives the compact typed manifest and calling context", captured.body.instructions);
 
@@ -799,7 +799,7 @@ check(/CPython 3\.14/.test(captured.body.instructions) &&
       /browser-compatible turtle/.test(captured.body.instructions) &&
       /import loft/.test(captured.body.instructions) &&
       /loft\.weather\.rain\.set\(None\)/.test(captured.body.instructions) &&
-      /help\(loft\.weather\) drills down/.test(captured.body.instructions) &&
+      /loft\.help\(loft\.weather\) drills down/.test(captured.body.instructions) &&
       /never suggest the string "auto"/.test(captured.body.instructions) &&
       /Do not suggest tkinter/.test(captured.body.instructions) &&
       !/"name":"party"/.test(captured.body.instructions),

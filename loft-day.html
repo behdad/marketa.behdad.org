@@ -252,7 +252,7 @@ footer{margin-top:2.6rem}
 /* ── ROSTER PANEL ("who's here") ──────────────────────────────────────────────
    An at-a-glance list of everyone in the room ON SCREEN right now — a tidy overlay
    complementing the per-figure name cards. Toggled by the corner button, the 'h'/'w'
-   keys, __toggleRoster(), or roster.set(); it renders from window.__whoIsHere(). HTML
+   keys, __toggleRoster(), or loft.roster.set(); it renders from window.__whoIsHere(). HTML
    overlay (not SVG), lives inside .hunt-viewport so it rides along into fullscreen.
    A dim click-catching backdrop makes the open roster modal: the scene and its room
    navigation wait until the visitor closes it. */
@@ -4646,7 +4646,7 @@ html.party-foreground-suspended #loft-game-strip.party-on :is(#stage-kitchen,#st
    party-gated, crickets-safe timer (see the trickle driver in JS). While
    that fill is in progress #garden-guests carries .trickle, and each walking figure is HIDDEN
    until JS grants it .arrived (then it walks in through the gate + joins the dance). The hosts
-   are never gated. An instant-fill path (guests.set(true) / __summonGuests) grants everyone
+   are never gated. An instant-fill path (loft.garden.guests.set(true) / __summonGuests) grants everyone
    .arrived at once and drops .trickle, so tests + the roster/album still get a full floor.
    visibility (not display) so getBBox stays valid; WebKit honours visibility:hidden and won't
    leak an off-floor figure. Descendant dance animations are also killed so a hidden figure
@@ -26522,7 +26522,7 @@ section{margin:1.9rem 0}
 </g>
 <!-- CODE app: a tiny local JavaScript/Python workspace. A left sidebar lists every
      saved file; the top strip holds Run, language, and filename controls.
-     Each language persists independently. JavaScript remains callable through run("name");
+     Each language persists independently. JavaScript uses Code's ordinary async runner;
      Python hands execution to the Python app. -->
 <g id="monitor-code">
 <foreignObject x="254" y="154" width="124" height="42">
@@ -37605,14 +37605,40 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-17c3893f6d4e"></script>
-<script src="loft-day.cs.js?v=dict-24249005dd5b"></script>
+<script src="loft-day.en.js?v=dict-6cdf4eadb9e1"></script>
+<script src="loft-day.cs.js?v=dict-8a0e544ed7d1"></script>
 <script src="code-snippets/manifest.js?v=transport-e81302682356"></script>
 <script>
 (function () {
 "use strict";
 const T = window.__loftMessages;
 var controllers = window.__loftControllers = Object.create(null);
+// Lazy classic-script runtimes historically publish one bootstrap symbol on Window.
+// Arm a configurable accessor before injection, capture the value into this closure,
+// then remove the temporary property as soon as the script finishes evaluating.
+function captureLazyScriptGlobal(name) {
+  var captured;
+  var prior = Object.getOwnPropertyDescriptor(window, name);
+  if (prior) {
+    captured = window[name];
+    if (prior.configurable) delete window[name];
+  }
+  if (!Object.prototype.hasOwnProperty.call(window, name)) {
+    Object.defineProperty(window, name, {
+      configurable: true,
+      get: function () { return captured; },
+      set: function (value) { captured = value; }
+    });
+  }
+  return {
+    release: function () {
+      if (captured === undefined) captured = window[name];
+      var descriptor = Object.getOwnPropertyDescriptor(window, name);
+      if (descriptor && descriptor.configurable) delete window[name];
+      return captured;
+    }
+  };
+}
 // Canonical season ids shared by the typed API, keyboard ring, and private scene owner.
 var SEAS = ["wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "mehregan", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "sadeh", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice", "auto"];
 
@@ -60249,15 +60275,15 @@ setMusicPausedState(false);
   // that ride the night's Kp. Re-rolled on nightfall and when the garden's UV party toggles
   // (the neon washes the lights out, so toggling it mid-night re-decides the sky). Shared
   // across both windows (both watch the same sky). Starts true so the very first night a
-  // visitor reaches is a likely showing; the console force bypasses it.
+  // visitor reaches is a likely showing; an explicit preview bypasses it.
   var auroraTonight = true;
-  var forcedKp = null;   // aurora.intensity(7) pins the index until aurora.set(null) / reset clears it
+  var forcedKp = null;   // a deterministic preview can pin the index until automatic ownership resumes
   var rolledKp = 2.4;    // this night's index when no live NOAA forecast has landed (offline, or pre-fetch)
   function forecastKp() {
     var f = window.__auroraForecast;
     return (f && typeof f.kp === "number" && f.kp > 0) ? f.kp : null;
   }
-  var SUMMON_KP = 5.5; // the floor a summoned aurora is lifted to: aurora.set(true) and cinematic sky are a promise of a show, not a weather report
+  var SUMMON_KP = 5.5; // an explicit aurora and the cinematic sky promise a show, not a weather report
   function naturalKp() { return forecastKp() != null ? forecastKp() : rolledKp; }
   // where the index came from — "summoned" only when the floor is genuinely what's driving,
   // so a real storm on a summoned night still reports its true origin
@@ -60315,7 +60341,7 @@ setMusicPausedState(false);
   // REACH (how high the curtains climb) rides Kp alone — a Kp 7 storm is a Kp 7 storm whatever
   // the twilight is doing. BRIGHTNESS rides Kp × darkness, so a marginal midsummer night gets a
   // tall but washed-out display rather than a small bright one. A SUMMONED aurora ignores
-  // darkness entirely: aurora.set(true) / aurora.intensity(7) is a promise, not a forecast.
+  // darkness entirely: an explicit aurora preview is a promise, not a forecast.
   function auroraDials(kp, story) {
     var s = kpStrength(kp);
     var dark = auroraForced() || story ? 1 : auroraDarkness();
@@ -61890,7 +61916,7 @@ setMusicPausedState(false);
   // React on the completed click, not pointerdown: Irene may change pose and reparent
   // herself, which cancels the browser's pending click and prevents her bio from opening.
   irene.addEventListener("click", function () { giggle(); });
-  // full visit (appear → two actions → leave); used by irene.set(true) + the wall double-
+  // full visit (appear → two actions → leave); used by loft.people.irene.set(true) + the wall double-
   // click. Reset the auto-appearance scheduler so a manual summon gives a clean standalone
   // visit: cancel any pending auto-show, count this as her first appearance (firstDone) so the
   // re-arm uses the baseline cadence rather than the short first-visit delay, then re-arm the
@@ -68942,7 +68968,7 @@ function quickReversalGesture(action) {
     if (parent) parent.appendChild(e);
     return e;
   }
-  function tr(key) { var l = currentLang || "en"; return (window.__loftMessages && window.__loftMessages[l] && window.__loftMessages[l][key]) || (window.__loftMessages && window.__loftMessages.en && window.__loftMessages.en[key]) || key; }
+  function tr(key) { var l = document.documentElement.lang || "en"; return (window.__loftMessages && window.__loftMessages[l] && window.__loftMessages[l][key]) || (window.__loftMessages && window.__loftMessages.en && window.__loftMessages.en[key]) || key; }
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function barUpNow() { return !!(window.__barUpNow && window.__barUpNow()); }
   function present() { return barUpNow() && window.__currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
@@ -70017,7 +70043,7 @@ setOfficeProgress("pc", false);
   // it toggles the scene-agnostic drop-down terminal instead; __whiskToConsole is kept for
   // the boot/restore path other callers reuse.)
   var pendingBootConsole = false;
-  // A console device-command — computer.open("doom")/monitor.open("chat") — asks a fresh boot to
+  // A typed loft.app.open() request asks a fresh boot to
   // finish by opening a named dock app on the caps desktop (see __openMonitorApp below).
   var pendingBootApp = null;
   // the family-call app opens on its picker by default; a deep-link ("california" / "tehran")
@@ -71073,7 +71099,7 @@ setOfficeProgress("pc", false);
       // a '`'-summoned boot opens the console once the desktop lands (openConsole
       // needs show-caps, which the branch above has just added)
       if (!resumedMonitorLock && pendingBootConsole) { pendingBootConsole = false; openConsole(); }
-      // a computer.open()/monitor.open() device-command queued a dock app once caps lands
+      // a loft.app.open() request queued a dock app once caps lands
       if (!resumedMonitorLock && pendingBootApp) {
         var _pbName = pendingBootApp, _pbApp = monitorAppByName(_pbName);
         pendingBootApp = null;
@@ -74248,7 +74274,7 @@ setOfficeProgress("pc", false);
     return true;
   }
   controllers.display_svg = function (source) {
-    if (!consoleDisplaySvg(source)) throw new Error("display_svg() needs a valid SVG document");
+    if (!consoleDisplaySvg(source)) throw new Error("loft.presentation.svg.show() needs a valid SVG document");
     return true;
   };
   if (consoleViewToggle) {
@@ -74356,7 +74382,7 @@ setOfficeProgress("pc", false);
       timer = setTimeout(poll, 0);
     });
   };
-  // The typed public facade over the loft.s private interaction controllers. Charlie and the
+  // The typed public facade over the private interaction controllers. Charlie and the
   // wedding thread can request only capabilities registered here; neither ever evaluates source,
   // clicks arbitrary ids, opens arbitrary URLs, or calls a function by a model-supplied name.
   (function initLoftApi() {
@@ -74373,7 +74399,7 @@ setOfficeProgress("pc", false);
       kitchen: "Kitchen / Bar", media: "Media", message: "Office / Devices", messages: "Office / Devices",
       minigame: "Games", minigames: "Games", music: "Media", office: "Office / Devices",
       party: "Garden / Party", people: "People / Animals", person: "People / Animals", photo: "Album / Photos",
-      presentation: "Presentation / Trailer", projector: "Media", roadtrip: "Road Trip", room: "Rooms", scene: "Weather / Environment",
+      poetry: "Poetry", presentation: "Presentation / Trailer", projector: "Media", roadtrip: "Road Trip", room: "Rooms", scene: "Weather / Environment",
       roster: "Roster", share: "Calendar", sky: "Weather / Environment", tattoos: "Album / Photos", trip: "Trips", video: "Media",
       volume: "Media", weather: "Weather / Environment"
     };
@@ -75155,6 +75181,16 @@ setOfficeProgress("pc", false);
       available: function () { return typeof window.__shareCard === "function"; }, unavailable: staticBlocked("The share-card renderer is not ready."), run: function () {
         return Promise.resolve(window.__shareCard()).then(function () { return { opened: true }; });
       } });
+    register({ id: "poetry.hafez.read", kind: "query", description: "Draw one random Hafez reading without changing the scene.",
+      available: function () { return typeof controllers.faal === "function"; }, unavailable: staticBlocked("The Hafez readings are not ready."),
+      run: function () { return controllers.faal(); } });
+    register({ id: "poetry.rumi.read", kind: "action", risk: "ambient", description: "Start the next shuffled Rumi exchange with the quiet nighttime Cuddly fairy.",
+      available: function () {
+        var fairy = document.getElementById("cuddly-rumi-fairy");
+        return typeof controllers.rumi === "function" && !!(fairy && fairy.classList.contains("present")) &&
+          window.__currentStageName === "cuddly" && !window.__gardenPartyOn && !!(window.__isNight && window.__isNight());
+      }, unavailable: staticBlocked("The quiet nighttime Cuddly fairy is not present."),
+      run: function () { return { reading: controllers.rumi() }; } });
     register({ id: "weather.cities", kind: "query", run: function () { var c = window.__chatContext ? window.__chatContext() : {}; return c.weather || {}; } });
     register({ id: "album.list", kind: "query", run: function () { return chatAlbumKnowledge(); } });
     register({ id: "tattoos.catalog", kind: "query", run: function () { return window.__chatTattooKnowledge ? window.__chatTattooKnowledge() : []; } });
@@ -76353,7 +76389,7 @@ setOfficeProgress("pc", false);
   // Which scrollback a print lands in. Defaults to the monitor console's own out element,
   // but consoleRun() re-points it (to whichever surface issued the command) for the length
   // of that command — synchronously, and again inside its Promise callbacks — so the SAME
-  // interpreter can drive the drop-down terminal's scrollback too. All the bare
+  // interpreter can drive the drop-down terminal's scrollback too. All the internal
   // consolePrint() call sites keep working unchanged; they follow whoever's active.
   var activeConsoleOut = consoleOut;
   function consolePrint(txt, cls) {
@@ -76471,7 +76507,7 @@ setOfficeProgress("pc", false);
   window.__restartMonitorConsole = function () { consoleDeathFlash(true); };  // Restart → flash → refresh → reopen a fresh shell
 
 
-  // Compact machine reference for contextual assistants. Human prose stays local in help();
+  // Compact machine reference for contextual assistants. Human prose stays local in loft.help();
   // sending the entire console manual wastes the Code/Chat context and creates a second API.
   window.__chatApiManifest = function () {
     var typed = [];
@@ -77802,7 +77838,7 @@ setOfficeProgress("pc", false);
   window.__killMonitorCode = codeDeathFlash;
   // private script controllers (not exported by the REPL). Defined here so they share the
   // Code's storage/openCode; kept outside the controller region so a parent edit there
-  // never collides. Require run("name")/edit("name") — no bare-identifier script calls.
+  // never collides. They remain private implementation owners, not console commands.
   controllers.scripts = function () { return scriptsListStr("js"); };
   function codeResolveScript(name, language) {
     var key = String(name), lang = language === "python" ? "python" : "js", saved = readScripts(lang);
@@ -77844,7 +77880,7 @@ setOfficeProgress("pc", false);
   }
   window.__runCodeScript = codeRunNamedScript;
   controllers.run = function (name) {
-    if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr("js");
+    if (name == null || String(name).trim() === "") return "Choose a script to run: " + scriptsListStr("js");
     var key = String(name), resolved = codeResolveScript(key, "js");
     if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
     codeStopRepeat(); // a one-shot run supersedes any active loop
@@ -77869,7 +77905,7 @@ setOfficeProgress("pc", false);
     window.dispatchEvent(new Event("loft:scriptstop"));
     return true;
   }
-  function codeStopRepeat() { var was = codeRepeatOn; codeRepeatOn = false; codeRepeatToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; codeUpdateRunBtn(); return was; } // also aborts any in-flight one-shot script at its next await sleep()
+  function codeStopRepeat() { var was = codeRepeatOn; codeRepeatOn = false; codeRepeatToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; codeUpdateRunBtn(); return was; } // also aborts any in-flight one-shot script at its next await loft.util.sleep()
   window.__stopRepeat = codeStopRepeat; // reset/other hooks end the loop through here
   function codeLoopStep(tok, name, code) {
     if (tok !== codeRepeatToken || !codeRepeatOn) return;
@@ -77888,7 +77924,7 @@ setOfficeProgress("pc", false);
     var key, code, loading = null;
     if (name == null || String(name).trim() === "") {
       if (codeLanguage === "js" && codeCode && codeCode.value.trim()) { key = (codeName && codeName.value.trim()) || "(code)"; code = codeCode.value; } // no arg → loop the current JS buffer
-      else return "repeat(\"name\") — which script? " + scriptsListStr("js");
+      else return "Choose a script to repeat: " + scriptsListStr("js");
     } else {
       key = String(name); var resolved = codeResolveScript(key, "js");
       if (!resolved) return "no runnable script named \"" + key + "\". " + scriptsListStr("js");
@@ -82858,7 +82894,7 @@ setOfficeProgress("pc", false);
   var chatEverOpened = false;
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
   var chatKillActive = false, chatKillStage = "", chatKillThought = null, chatKillRows = [], chatKillTokens = [];
-  var chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
+  var chatTurnstileApi = null, chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
   var chatTurnstileWait = null;
   var chatTurnstileCancelSeq = 0;
   var chatTurnstilePreparedToken = null, chatTurnstilePreparedAt = 0, chatTurnstilePreparePromise = null;
@@ -82874,8 +82910,8 @@ setOfficeProgress("pc", false);
   }
   window.__reparentChatTurnstileToFsHost = function () { if (chatTurnstileHost) chatTurnstileHostEl(); };
   function removeChatTurnstileWidget() {
-    if (chatTurnstileWidget != null && window.turnstile && typeof window.turnstile.remove === "function") {
-      try { window.turnstile.remove(chatTurnstileWidget); } catch (_error) {}
+    if (chatTurnstileWidget != null && chatTurnstileApi && typeof chatTurnstileApi.remove === "function") {
+      try { chatTurnstileApi.remove(chatTurnstileWidget); } catch (_error) {}
     }
     chatTurnstileWidget = null;
     if (chatTurnstileHost) {
@@ -82898,22 +82934,28 @@ setOfficeProgress("pc", false);
     if (chatTurnstileWait) settleChatTurnstile(new Error("verification cancelled"));
   }
   function loadChatTurnstile() {
-    if (window.turnstile && typeof window.turnstile.render === "function") return Promise.resolve(window.turnstile);
+    if (!chatTurnstileApi && Object.prototype.hasOwnProperty.call(window, "turnstile")) {
+      chatTurnstileApi = captureLazyScriptGlobal("turnstile").release();
+    }
+    if (chatTurnstileApi && typeof chatTurnstileApi.render === "function") return Promise.resolve(chatTurnstileApi);
     if (chatTurnstileApiPromise) return chatTurnstileApiPromise;
     chatTurnstileApiPromise = new Promise(function (resolve, reject) {
       var script = document.getElementById("loft-chat-turnstile-script");
+      var capture = captureLazyScriptGlobal("turnstile");
       function ready() {
-        if (window.turnstile && typeof window.turnstile.render === "function") resolve(window.turnstile);
+        chatTurnstileApi = capture.release();
+        if (chatTurnstileApi && typeof chatTurnstileApi.render === "function") resolve(chatTurnstileApi);
         else reject(new Error("Turnstile unavailable"));
       }
-      if (script) { script.addEventListener("load", ready, { once: true }); script.addEventListener("error", reject, { once: true }); return; }
+      function failed() { capture.release(); reject(new Error("Turnstile failed to load")); }
+      if (script) { script.addEventListener("load", ready, { once: true }); script.addEventListener("error", failed, { once: true }); return; }
       script = document.createElement("script");
       script.id = "loft-chat-turnstile-script";
       script.src = CHAT_TURNSTILE_SCRIPT;
       script.async = true;
       script.defer = true;
       script.addEventListener("load", ready, { once: true });
-      script.addEventListener("error", function () { reject(new Error("Turnstile failed to load")); }, { once: true });
+      script.addEventListener("error", failed, { once: true });
       document.head.appendChild(script);
     }).catch(function (error) { chatTurnstileApiPromise = null; throw error; });
     return chatTurnstileApiPromise;
@@ -83394,12 +83436,12 @@ setOfficeProgress("pc", false);
         if (!wait) wait = prompt.match(/\b(?:in|after)\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/);
         if (wait && /\bmadla\b/.test(prompt) && /\b(call|ring|phone)\b/.test(prompt)) {
           var callMs = Math.max(0, Math.min(600000, Math.round(Number(wait[1]) * 1000)));
-          setTimeout(function () { window.__setMonitorCodeDraft("await sleep(" + callMs + ");\nawait loft.call.incoming.trigger(\"madla\");", "madla-call-after-delay"); }, 90);
+          setTimeout(function () { window.__setMonitorCodeDraft("await loft.util.sleep(" + callMs + ");\nawait loft.call.incoming.trigger(\"madla\");", "madla-call-after-delay"); }, 90);
           return result;
         }
         if (wait && /\bparty\b/.test(prompt)) {
           var ms = Math.max(0, Math.min(600000, Math.round(Number(wait[1]) * 1000)));
-          setTimeout(function () { window.__setMonitorCodeDraft("await sleep(" + ms + ");\nloft.party.set(true);", "party-after-delay"); }, 90);
+          setTimeout(function () { window.__setMonitorCodeDraft("await loft.util.sleep(" + ms + ");\nloft.party.set(true);", "party-after-delay"); }, 90);
         }
       }
       return result;
@@ -84292,6 +84334,7 @@ setOfficeProgress("pc", false);
   }
   var pyHist = [], pyHistIdx = 0, pyWelcomed = false;
   var pyRuntime = null, pyReprFn = null;
+  var pyodideLoader = null;
   var pyLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
   var pyLoadGeneration = 0, PY_LOAD_CANCELLED = {};
   var pyBusy = false, pyLastCmd = "";
@@ -85113,21 +85156,23 @@ def colormode(mode=None):
     pyLoadState = "loading";
     var generation = ++pyLoadGeneration;
     pyPrint(pyT("py_loading"), "console-dim");
-    if (window.loadPyodide) { initPyodide(generation); return; } // library already fetched (e.g. a Restart) — don't re-inject the script
+    if (pyodideLoader) { initPyodide(generation); return; } // library already fetched (e.g. a Restart) — don't re-inject the script
+    var capture = captureLazyScriptGlobal("loadPyodide");
     var s = document.createElement("script");
     s.src = PYODIDE_URL;
-    s.onerror = function () { pyLoadFailed(generation); };
-    s.onload = function () { initPyodide(generation); };
+    s.onerror = function () { capture.release(); pyLoadFailed(generation); };
+    s.onload = function () { pyodideLoader = capture.release(); initPyodide(generation); };
     document.head.appendChild(s);
   }
-  // Build a fresh CPython interpreter from the (already-loaded) loadPyodide global. Split
+  // Build a fresh CPython interpreter from the captured Pyodide loader. Split
   // out of loadPythonRuntime so Restart can re-init a new interpreter without re-injecting
   // the pyodide script (and re-running its whole bundle).
   function initPyodide(generation) {
       if (!pyLoadCurrent(generation)) return;
       var p;
       try {
-        p = window.loadPyodide({
+        if (typeof pyodideLoader !== "function") throw new Error("Pyodide loader unavailable");
+        p = pyodideLoader({
           indexURL: "pyodide/",
           packageBaseUrl: PYODIDE_PACKAGE_BASE_URL
         });
@@ -85375,6 +85420,7 @@ def colormode(mode=None):
   var lxCloseBtn = document.getElementById("monitor-linux-close");
   var lxHist = [], lxHistIdx = 0, lxWelcomed = false;
   var lxVM = null; // the V86 instance — created once, stopped/resumed across open/close
+  var lxV86 = null; // captured constructor; the lazy vendor bootstrap never remains public
   var lxLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
   var lxPrompted = false; // a shell prompt has appeared, so typed lines may be sent
   var lxHiddenStop = false; // the hidden-tab guard stopped the CPU (resume on return)
@@ -85457,7 +85503,8 @@ def colormode(mode=None):
   function lxBootVM() {
     if (lxVM) { try { lxVM.destroy(); } catch (e) {} lxVM = null; } // a failed half-boot never survives into the retry
     try {
-      lxVM = new window.V86({
+      if (typeof lxV86 !== "function") throw new Error("V86 unavailable");
+      lxVM = new lxV86({
         wasm_path: LX_ASSETS.wasm,
         memory_size: 64 * 1024 * 1024, // plenty for a 2.6 kernel + busybox
         vga_memory_size: 2 * 1024 * 1024, // nobody watches the VGA — serial only
@@ -85486,11 +85533,12 @@ def colormode(mode=None):
     lxPrint(lxT("linux_loading"), "console-dim");
     if (lxStallTimer) clearTimeout(lxStallTimer);
     lxStallWatch();
-    if (window.V86) { lxBootVM(); return; } // a retry already has the library
+    if (lxV86) { lxBootVM(); return; } // a retry already has the library
+    var capture = captureLazyScriptGlobal("V86");
     var s = document.createElement("script");
     s.src = LX_ASSETS.lib;
-    s.onerror = function () { lxFail(); };
-    s.onload = function () { lxBootVM(); };
+    s.onerror = function () { capture.release(); lxFail(); };
+    s.onload = function () { lxV86 = capture.release(); lxBootVM(); };
     document.head.appendChild(s);
   }
   function openLinux() {
@@ -88337,7 +88385,7 @@ def colormode(mode=None):
     pendingBootConsole = false;
     openConsole();
   };
-  // Console device-command hook: computer.open("doom")/monitor.open("chat") open a named dock app
+  // Private owner behind typed loft.app.open() requests for named monitor apps
   // on the office monitor. Boots the PC (queuing the open) if it's off, brings the monitor
   // forward if the typewriter's up, waits out a mid-boot, or opens straight away on a live
   // desktop — the same boot/restore path as __whiskToConsole, generalized to any DESKTOP_APPS
@@ -96369,7 +96417,7 @@ def colormode(mode=None):
       hideMsgBadgeCoach();
       return result;
     };
-    // Console device-command hook: phone.open("cocktails")/phone.open("weather") opens a named phone app.
+    // Private owner behind typed loft.app.open() requests for named phone apps.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
     // launch never stalls on the passcode. Matches by app id (case-insensitive) or its localized
     // label; returns a status string, or the app-name list on an unknown name.
@@ -98784,7 +98832,7 @@ def colormode(mode=None):
     // warm/purple twilight wash over the balcony sky around each crossing. There is NO periodic
     // polling: a single timer (armCrossing) is scheduled to the very next sunrise/sunset and
     // flips + reschedules AT that crossing. A manual flip (the sun, the 'd' key,
-    // day()/night(), the garden switch) is a TEMPORARY look — the crossing scheduler stays armed,
+    // loft.environment.daylight.set(), the garden switch) is a TEMPORARY look — the crossing scheduler stays armed,
     // so the next real crossing still flips the scene over the manual set. It steps aside for a
     // season/birthday preview, a ?date= jump, a drug trip, and the garden
     // party's forced night (all read live). The crossing itself is crickets-gated (visible+focused,
@@ -98977,7 +99025,7 @@ def colormode(mode=None):
       return Math.max(0, Math.min(1, ((90 - g.lat) - g.decl) / 18));
     }
     window.__nightDepth = nightDepth;
-    // Stamped on the STRIP (not per-stage) and outside the day/night verdict, so a manual night()
+    // Stamped on the STRIP (not per-stage) and outside the day/night verdict, so a manual daylight override
     // and a ?date= jump both land it. Only the two rooms with a view read it.
     function stampNightDepth() {
       var strip = document.getElementById("loft-game-strip");
@@ -99035,7 +99083,7 @@ def colormode(mode=None):
     // NON-destructive re-check (focus / visibility / weather feed / hashchange / the ?time= advance
     // tick): re-arm the crossing and, ONLY if the auto-clock has crossed into the other segment
     // since we last synced (segNight != now), re-stamp the scene. Within a segment this is a no-op,
-    // so a manual day()/night()/sun flip is LEFT ALONE until the real sunrise/sunset crossing.
+    // so a manual daylight/sun flip is LEFT ALONE until the real sunrise/sunset crossing.
     function catchUpDayNight() {
       if (document.hidden || !document.hasFocus()) { armCrossing(); return; } // crickets rule: never flip the scene in a hidden/blurred tab; re-arm and defer to the return
       if (autoStopped || window.__gardenPartyOn || autoOverridden()) { if (twilightOverride === null) stageBalcony.classList.remove("twilight"); armCrossing(); return; }
@@ -101153,7 +101201,7 @@ def colormode(mode=None):
       windFilter.frequency.value = initial.filter; // broad/airy, well above city hum's 260Hz "distant" cutoff
       windFilter.Q.value = 0.5;
       windGain = windCtx.createGain();
-      // Seed the live .value before scheduling: arriving via the phone (the 'c' key / phone.open())
+      // Seed the live .value before scheduling: arriving via the phone (the 'c' key / phone UI)
       // runs goToStage("balcony")→startWind and then open()→applyIntensity in the SAME synchronous
       // tick. applyIntensity anchors its ramp on windGain.gain.value, but a scheduled setValueAtTime
       // is NOT reflected by the .value getter until the audio thread renders it — a just-created gain
@@ -102478,7 +102526,7 @@ def colormode(mode=None):
       if (window.__showUrlInPhone) window.__showUrlInPhone(HAFEZ_WIKI[document.documentElement.lang === "cs" ? "cs" : "en"]);
     });
   }
-  // faal() — return a random Hafez reading. The visible Yalda book keeps its separate
+  // loft.poetry.hafez.read() — return a random Hafez reading. The visible Yalda book keeps its separate
   // consult() interaction; the console function has no scene side effects.
   controllers.faal = function () {
     var i = falPick();
@@ -102487,7 +102535,7 @@ def colormode(mode=None):
   };
 })();
 // Once the released fairy has moved into the quiet nook, Markéta and behdad trade one
-// Rumi couplet: seven pairs from four ghazals in Divan-e Shams. rumi() deals from this
+// Rumi couplet: seven pairs from four ghazals in Divan-e Shams. loft.poetry.rumi.read() deals from this
 // deck only when it can initiate the nighttime Cuddly recitation sequence.
 (function () {
   var RUMI_FA = [
@@ -102606,7 +102654,7 @@ def colormode(mode=None):
     var fairy = document.getElementById("cuddly-rumi-fairy");
     var inExchange = window.__currentStageName === "cuddly" && fairy &&
       fairy.classList.contains("present") && !window.__gardenPartyOn;
-    if (!inExchange) return "🧚 rumi() waits for the quiet nighttime Cuddly fairy.";
+    if (!inExchange) return "🧚 loft.poetry.rumi.read() waits for the quiet nighttime Cuddly fairy.";
     var i = window.__offerRumiAt(fairy);
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
@@ -128364,7 +128412,7 @@ function spawnDustMote(container) {
       window.removeEventListener("unhandledrejection", onRejection);
     };
     // Resolve the canonical/locally-overridden file only after activation, then hand its exact
-    // bytes to the same ordinary async JavaScript runner used by Code and run("name").
+    // bytes to the same ordinary async JavaScript runner used by Code.
     return window.__runCodeScript("trailer.js", {
       language: "js", rejectOnError: true,
       guard: function () { return window.__cinematic && launchToken === cinematicLaunchToken; }
@@ -131231,10 +131279,10 @@ function spawnDustMote(container) {
     dot.style.transform = "translate(" + to.x + "px," + to.y + "px)";
     stage.appendChild(dot); // moves it — a node has one parent
   };
-  controllers.laser = function (on) { // internal toggle captured by laser.status()/set()
+  controllers.laser = function (on) { // private toggle shared by the roaming cat interaction
     var wasOn = !!dot;
     if (arguments.length === 0 || on == null) return wasOn; // no-arg: report whether it's on
-    if (on) window.__laserPointer(0); else window.__laserOff(); // runs until laser.set(false)
+    if (on) window.__laserPointer(0); else window.__laserOff(); // runs until the same interaction turns it off
     return wasOn;
   };
   document.addEventListener("visibilitychange", function () {
@@ -132867,7 +132915,7 @@ function spawnDustMote(container) {
 
   function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
   // Internal daylight controller, captured by daylight.status()/set(true|false|null):
-  // it and returns the PREVIOUS state. day()/night() are aliases. Narrates via narrate().
+  // it and returns the PREVIOUS state. The typed daylight capability owns public access. Narrates via narrate().
   controllers.daylight = function (arg) {
     var prev = !isNight(); // true = day
     if (arguments.length === 0) return prev;
@@ -133076,15 +133124,15 @@ function spawnDustMote(container) {
   //   storm — LIGHTNING+THUNDER, dry unless rain is also on; day or night
   //   rain — falling precipitation (drops + pane streaks + rain hiss); day or night
   //   overcast — the grey daytime cloud wash
-  //   day()/night() — the sky's time-of-day, fully independent of the weather levers above
-  // rain.set(true)+storm.set(true) together = a classic thunderstorm.
+  //   loft.environment.daylight.set() — the sky's time-of-day, fully independent of the weather levers above
+  // loft.weather.rain.set(true)+loft.weather.storm.set(true) together = a classic thunderstorm.
   controllers.storm = function (arg) {
     var prev = window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
     if (arguments.length === 0 || !window.__setBalconyStormLayer) return prev; // no arg → is the lightning storm on?
     var on = !!arg; // internal controller captured by the strict storm command below
     if (!on) { window.__setBalconyStormLayer(false, "ui"); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
     window.__setBalconyStormLayer(true, "ui");
-    narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning + thunder, no rain (works day or night; add rain.set(true) for the downpour, day()/night() to set the sky).", "");
+    narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning + thunder, no rain (works day or night; add loft.weather.rain.set(true) for the downpour, or use loft.environment.daylight.set() to set the sky).", "");
     return prev;
   };
   controllers.rain = function (arg) {
@@ -133337,7 +133385,7 @@ function spawnDustMote(container) {
     // reuse the button's own toggle path (a console keystroke is a user gesture, so a real
     // requestFullscreen is allowed); only click when it would change state
     if (enter !== area.classList.contains("is-fullscreen")) btn.click();
-    narrate(enter, "⛶ fullscreen — the loft fills the screen (Esc or fullscreen.set(false) to leave).", "⛶ back to windowed.");
+    narrate(enter, "⛶ fullscreen — the loft fills the screen (Esc or loft.display.fullscreen.set(false) to leave).", "⛶ back to windowed.");
     return prev;
   };
 
@@ -133923,9 +133971,9 @@ function spawnDustMote(container) {
     if (arguments.length === 1) return (Math.random() * a) | 0;
     return a + ((Math.random() * (b - a + 1)) | 0);
   };
-  controllers.sleep = function (ms) { // await sleep(ms) — pause a script; resolves after the delay (default 1000ms)
+  controllers.sleep = function (ms) { // await loft.util.sleep(ms) — pause a script; resolves after the delay (default 1000ms)
     ms = (typeof ms === "number" && ms >= 0) ? ms : 1000;
-    var start = window.__scriptAbortN | 0; // stop() bumps this → the script ends at its next await sleep()
+    var start = window.__scriptAbortN | 0; // stopping Code bumps this → the script ends at its next await loft.util.sleep()
     return new Promise(function (resolve, reject) {
       if ((window.__scriptAbortN | 0) !== start) return reject({ __scriptStop: true });
       setTimeout(function () {
@@ -134103,22 +134151,31 @@ function spawnDustMote(container) {
       version_string: function () { return hb.version_string ? hb.version_string() : "14.0.0"; }
     };
   }
-  function hbLoadScript(src) {
-    return new Promise(function (resolve, reject) {
-      var s = document.createElement("script");
-      s.src = src;
-      s.onload = function () { resolve(); };
-      s.onerror = function () { reject(new Error("failed to load " + src)); };
-      document.head.appendChild(s);
+  function hbLoadScript(src, globalName) {
+    var source = typeof window.__harfbuzzScriptResourceLoader === "function"
+      ? Promise.resolve(window.__harfbuzzScriptResourceLoader(src))
+      : fetch(src).then(function (response) {
+        if (!response.ok) throw new Error("failed to load " + src + ": " + response.status);
+        return response.text();
+      });
+    return source.then(function (text) {
+      // The pinned wrapper starts with a function declaration, which a classic script makes a
+      // non-configurable Window property. Compile both factories in a private function scope so
+      // neither the Emscripten loader nor the wrapper ever enters the application's public surface.
+      if (!/^[A-Za-z_$][\w$]*$/.test(globalName)) throw new Error("invalid HarfBuzz factory name");
+      var factory = Function('"use strict";\n' + text + '\nreturn typeof ' + globalName + ' === "undefined" ? undefined : ' + globalName + ';\n//# sourceURL=' + src)();
+      if (typeof factory !== "function") throw new Error("missing " + globalName + " factory in " + src);
+      return factory;
     });
   }
   function hbReady() {
     if (__hbReady) return __hbReady;
-    var p = hbLoadScript("harfbuzzjs/hb.js")
-      .then(function () { return hbLoadScript("harfbuzzjs/hbjs.js"); })
-      .then(function () { return window.createHarfBuzz({ locateFile: function (f) { return "harfbuzzjs/" + f; } }); })
+    var createHarfBuzz, hbjsFactory;
+    var p = hbLoadScript("harfbuzzjs/hb.js", "createHarfBuzz")
+      .then(function (factory) { createHarfBuzz = factory; return hbLoadScript("harfbuzzjs/hbjs.js", "hbjs"); })
+      .then(function (factory) { hbjsFactory = factory; return createHarfBuzz({ locateFile: function (f) { return "harfbuzzjs/" + f; } }); })
       .then(function (mod) {
-        var hb = window.hbjs(mod);
+        var hb = hbjsFactory(mod);
         return fetch("harfbuzzjs/fraunces.ttf").then(function (r) {
           if (!r.ok) throw new Error("font " + r.status);
           return r.arrayBuffer();

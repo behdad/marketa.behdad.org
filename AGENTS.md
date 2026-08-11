@@ -53,8 +53,9 @@ both owner-confirmed.)
   long — deliberate, no purge step. `Cache-Control` request headers won't bypass it; to
   verify a fresh deploy, append a throwaway query string (`?fresh=1` — distinct cache key)
   or wait out the TTL.
-- **Always mirror English copy edits into Czech in the same commit.** Never let `T["en"]` in
-  `loft-day.en.js` / `T["cs"]` in `loft-day.cs.js` (or a static HTML fallback) drift out of sync,
+- **Always mirror English copy edits into Czech in the same commit.** Never let
+  `window.__loftMessages["en"]` in `loft-day.en.js` / `window.__loftMessages["cs"]` in
+  `loft-day.cs.js` (or a static HTML fallback) drift out of sync,
   even for a one-word tweak. Keep dictionary keys alphabetically sorted; `check.js` enforces
   recursive key parity and sorting while leaving array order authored.
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
@@ -329,7 +330,7 @@ the "best in desktop Chrome" nudge only helps desktop.
 
 ## i18n
 
-EN + CZ only. Dictionary `T` in the inline script; elements carry `data-i="key"` (text,
+EN + CZ only. The split dictionaries populate private `window.__loftMessages`; elements carry `data-i="key"` (text,
 via `innerHTML`), `data-href-i="key"` (translated `href`), `data-aria-i="key"` (translated
 `aria-label`), `data-title-i="key"` (translated `title` tooltip), or `data-note-key="key"`
 (used by `.footnote-mark` elements — one shared click/keydown handler serves multiple
@@ -373,7 +374,7 @@ you've found, if any — a live checklist, not a static spoiler).
   "...">` attributes must match these exactly, and the count must stay at 12 (view-source
   and console-opening are real bonus finds but aren't reliably trackable in JS, so they're
   deliberately *not* listed in the cheatsheet — keeps "N found" honest).
-- **Bilingual jokes**: all egg copy lives in the same `T` dict as regular content
+- **Bilingual jokes**: all egg copy lives in the same message dictionary as regular content
   (`inf_jokes` array, `footnote_text`, `lang_note_text`, `ipa_secret`, `clapper_text`,
   `book_text`, `egg_more`/`egg_done`). Mirror EN/CS same as any other copy. `book_text`
   lists Markéta's three *real* published translations (fetched from her translator

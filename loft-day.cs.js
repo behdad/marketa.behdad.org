@@ -149,7 +149,6 @@ T["cs"] = {
   "chat_unavailable": "Chat zatím není připojený.",
   "chat_welcome": "Ahoj! Jsem Charlie, tvůj svatební průvodce. Znám tenhle loft a vím, jak to tu funguje. Zeptej se mě na cokoli.",
   "cheers_text": "Na zdraví! 🥂",
-  "cinema_screen_off": "projektor je vypnutý",
   "cinema_screen_short": "vysychá…",
   "cinema_short_gag": "Projektor přežil. Záruka ne.",
   "cinema_title": "Na co se podíváme?",

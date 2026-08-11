@@ -199,15 +199,18 @@ check(s.play && s.play.geometry &&
    s.play.geometry.bezel[1] <= s.play.geometry.shellOuter[1] &&
    s.play.geometry.bezel[2] >= s.play.geometry.shellOuter[2] &&
    s.play.geometry.bezel[3] >= s.play.geometry.shellOuter[3] &&
-   s.play.geometry.shellOuter[1] - s.play.geometry.bezel[1] < 3 &&
-   s.play.geometry.bezel[3] - s.play.geometry.shellOuter[3] < 3 &&
-   Math.abs((s.play.geometry.shellOuter[0] - s.play.geometry.bezel[0]) -
-     ((s.play.geometry.shellOuter[3] - s.play.geometry.shellOuter[1]) -
-      (s.play.geometry.shellOuter[2] - s.play.geometry.shellOuter[0]) * 9 / 16) / 2) < 1 &&
-   Math.abs((s.play.geometry.bezel[2] - s.play.geometry.shellOuter[2]) -
-     ((s.play.geometry.shellOuter[3] - s.play.geometry.shellOuter[1]) -
-      (s.play.geometry.shellOuter[2] - s.play.geometry.shellOuter[0]) * 9 / 16) / 2) < 1,
-   "the side bezel matches Vimeo's 16:9 top/bottom band for a uniform visible frame", s.play && s.play.geometry);
+   Math.max.apply(null, [
+     s.play.geometry.shellOuter[0] - s.play.geometry.bezel[0],
+     s.play.geometry.shellOuter[1] - s.play.geometry.bezel[1],
+     s.play.geometry.bezel[2] - s.play.geometry.shellOuter[2],
+     s.play.geometry.bezel[3] - s.play.geometry.shellOuter[3]
+   ]) - Math.min.apply(null, [
+     s.play.geometry.shellOuter[0] - s.play.geometry.bezel[0],
+     s.play.geometry.shellOuter[1] - s.play.geometry.bezel[1],
+     s.play.geometry.bezel[2] - s.play.geometry.shellOuter[2],
+     s.play.geometry.bezel[3] - s.play.geometry.shellOuter[3]
+   ]) < 1.5,
+   "the velvet bezel stays evenly centred around the full-bleed 16:9 screen", s.play && s.play.geometry);
 check(s.sideTransport && !s.sideTransport.pause.state.playing && !s.sideTransport.pause.duck.active &&
   s.sideTransport.play.state.playing && s.sideTransport.play.duck.active &&
   s.sideTransport.next.playing && s.sideTransport.next.video === "927763091",

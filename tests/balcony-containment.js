@@ -23,7 +23,7 @@ var HARNESS = [
   'window.__runSolarEclipse();var beganUpstairs=document.getElementById("stage-balcony").classList.contains("solar-eclipse");window.__openEntranceRoom();',
   'var event=new Event("animationend",{bubbles:true});Object.defineProperty(event,"animationName",{value:"solar-transit-in"});document.getElementById("balcony-solar-moon").dispatchEvent(event);',
   'report.steps.totality={beganUpstairs:beganUpstairs,allowed:allowed("balcony"),effects:host.childElementCount};',
-  'window.__clearBalconyEclipse();var explicitResult=window.__loftControllers.eclipse();report.steps.explicit={result:explicitResult,entrance:window.__entranceRoomOpen,solar:document.getElementById("stage-balcony").classList.contains("solar-eclipse")};window.__clearBalconyEclipse();',
+  'window.__clearBalconyEclipse();var explicitPromise=window.loft.sky.eclipse.play();await sleep(850);report.steps.explicit={entrance:window.__entranceRoomOpen,solar:document.getElementById("stage-balcony").classList.contains("solar-eclipse")};window.__clearBalconyEclipse();report.steps.explicit.result=await explicitPromise;',
   'report.steps.lower={bathroom:await probe("kitchen","__openBathroomRoom","__closeBathroomRoom"),prince:await probe("garden","__openGardenPrince","__closeMonitorPrince"),cinema:await probe("cuddly","__openCinemaRoom","__closeCinemaRoom"),bedroom:await probe("office","__openBedroomRoom","__closeBedroomRoom"),entrance:await probe("balcony","__openEntranceRoom","__closeEntranceRoom")};',
   'window.__goToStage("balcony");focused=false;report.steps.unfocused=allowed("balcony");focused=true;report.steps.refocused=allowed("balcony");var hidden=false;Object.defineProperty(document,"hidden",{configurable:true,get:function(){return hidden;}});Object.defineProperty(document,"visibilityState",{configurable:true,get:function(){return hidden?"hidden":"visible";}});hidden=true;report.steps.hidden=allowed("balcony");hidden=false;',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -59,8 +59,9 @@ check(s.entrance && s.entrance.localAfter === s.entrance.localBefore + 1,
   "the active lower room keeps its user-initiated prop reaction", s.entrance);
 check(s.totality && s.totality.beganUpstairs && !s.totality.allowed && s.totality.effects === 0,
   "an eclipse already in flight cannot begin its totality visual or chime below", s.totality);
-check(s.explicit && !s.explicit.entrance && s.explicit.solar && /moon slides/.test(s.explicit.result),
-  "the explicit console eclipse closes the lower room and starts immediately", s.explicit);
+check(s.explicit && !s.explicit.entrance && s.explicit.solar && s.explicit.result.ok &&
+  s.explicit.result.value.completed && /moon slides/.test(s.explicit.result.value.message),
+  "the typed eclipse closes the lower room immediately and settles after the sky lifecycle", s.explicit);
 
 var lower = s.lower || {};
 Object.keys(lower).forEach(function (name) {

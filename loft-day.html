@@ -134290,23 +134290,23 @@ function spawnDustMote(container) {
     return "no clear sky for an eclipse.";
   };
 })();
-(function promoteBooleanConsoleCommands() {
+(function promoteBooleanControllers() {
   function strictBoolean(value, name) {
     if (typeof value !== "boolean") throw new TypeError(name + ".set(value) requires true or false.");
     return value;
   }
   function promote(name, options) {
     options = options || {};
-    var legacy = controllers[name];
-    if (typeof legacy !== "function") return null;
-    var read = options.read || function () { return !!legacy(); };
-    var write = options.write || function (value) { legacy(value); };
+    var owner = controllers[name];
+    if (typeof owner !== "function") return null;
+    var read = options.read || function () { return !!owner(); };
+    var write = options.write || function (value) { owner(value); };
     var overrideMode = "auto";
-    var command = {
+    var controller = {
       status: function () { return !!read(); },
       set: function (value) {
         if (options.auto && value === null) {
-          if (options.release) options.release(legacy, read, write);
+          if (options.release) options.release(owner, read, write);
           overrideMode = "auto";
           return !!read();
         }
@@ -134315,12 +134315,12 @@ function spawnDustMote(container) {
         return !!read();
       }
     };
-    if (options.auto) command.mode = function () { return options.mode ? options.mode() : overrideMode; };
+    if (options.auto) controller.mode = function () { return options.mode ? options.mode() : overrideMode; };
     Object.keys(options.methods || {}).forEach(function (method) {
-      command[method] = options.methods[method](legacy, read, write);
+      controller[method] = options.methods[method](owner, read, write);
     });
-    controllers[name] = Object.freeze(command);
-    return command;
+    controllers[name] = Object.freeze(controller);
+    return controller;
   }
   function elementClass(id, className) {
     var el = document.getElementById(id);
@@ -134331,7 +134331,7 @@ function spawnDustMote(container) {
   promote("guests", { read: function () { return !!(window.__guestsIn && window.__guestsIn()); } });
   promote("roster", { read: function () { return !!(window.__rosterOpen && window.__rosterOpen()); } });
   promote("blacklight", { auto: true, read: function () { return elementClass("loft-game-strip", "uv-mode"); },
-    release: function (legacy) { legacy(!!window.__gardenPartyOn); } });
+    release: function (owner) { owner(!!window.__gardenPartyOn); } });
   promote("daylight", { auto: true, read: function () { return !elementClass("stage-balcony", "dusk"); },
     release: function () { if (window.__startAutoDayNight) window.__startAutoDayNight(); } });
   function weatherPromotion(name, key) {
@@ -134348,9 +134348,9 @@ function spawnDustMote(container) {
     read: function () { return !!(window.__smokeLevel && window.__smokeLevel() > 0); },
     release: function () { if (window.__setWildfireSmoke) window.__setWildfireSmoke(null); },
     mode: function () { var level = window.__wildfireOverride && window.__wildfireOverride(); return typeof level !== "number" ? "auto" : level > 0 ? "on" : "off"; },
-    methods: { intensity: function (legacy) { return function (level) {
+    methods: { intensity: function (owner) { return function (level) {
       if (typeof level !== "number" || !isFinite(level) || level < 0 || level > 1) throw new RangeError("wildfires.intensity(level) requires a number from 0 to 1.");
-      legacy(level);
+      owner(level);
       return window.__wildfireOverride ? window.__wildfireOverride() : level;
     }; } }
   });
@@ -134361,9 +134361,9 @@ function spawnDustMote(container) {
     mode: function () { var row = window.__auroraCheckpointState && window.__auroraCheckpointState(); return row && row.mode || "auto"; },
     methods: {
       details: function () { return function () { return window.__auroraStatus ? window.__auroraStatus() : null; }; },
-      intensity: function (legacy) { return function (kp) {
+      intensity: function (owner) { return function (kp) {
         if (typeof kp !== "number" || !isFinite(kp) || kp < 0 || kp > 9) throw new RangeError("aurora.intensity(kp) requires a number from 0 to 9.");
-        legacy(kp); return window.__auroraStatus ? window.__auroraStatus() : null;
+        owner(kp); return window.__auroraStatus ? window.__auroraStatus() : null;
       }; }
     }
   });
@@ -134383,32 +134383,32 @@ function spawnDustMote(container) {
   promote("smokerlid");
   promote("phone", {
     read: function () { var s = window.__chatPhoneState && window.__chatPhoneState(); return !!(s && s.open); },
-    methods: { open: function (legacy) { return function (app) {
+    methods: { open: function (owner) { return function (app) {
       if (typeof app !== "string" || !app.trim()) throw new TypeError("phone.open(app) requires an app name.");
-      return legacy(app.trim());
+      return owner(app.trim());
     }; } }
   });
   promote("laptop", {
     read: function () { return elementClass("office-laptop", "open"); },
-    methods: { call: function (legacy) { return function (contact) {
+    methods: { call: function (owner) { return function (contact) {
       if (typeof contact !== "string" || !contact.trim()) throw new TypeError("laptop.call(contact) requires a contact name.");
-      return legacy(contact.trim());
+      return owner(contact.trim());
     }; } }
   });
   promote("computer", {
     read: function () { return elementClass("office-pc-desk-trio", "on"); },
-    methods: { open: function (legacy) { return function (app) {
+    methods: { open: function (owner) { return function (app) {
       if (typeof app !== "string" || !app.trim()) throw new TypeError("computer.open(app) requires an app name.");
-      return legacy(app.trim());
+      return owner(app.trim());
     }; } }
   });
   promote("cat");
   promote("dog", { read: function () { return !!(window.__whistlerOut && window.__whistlerOut()); } });
   promote("irene", {
     read: function () { return elementClass("cuddly-irene", "showing"); },
-    methods: { pose: function (legacy) { return function (name) {
+    methods: { pose: function (owner) { return function (name) {
       if (typeof name !== "string" || !name.trim()) throw new TypeError("irene.pose(name) requires a pose name.");
-      return legacy(name.trim());
+      return owner(name.trim());
     }; } }
   });
   promote("mouses", { read: function () { return !!window.__mousesVisiting; } });
@@ -134416,10 +134416,10 @@ function spawnDustMote(container) {
   promote("audio", {
     read: function () { return !!(window.__anyMusicPlaying && window.__anyMusicPlaying()); },
     methods: {
-      source: function (legacy) { return function () { return legacy(); }; },
-      select: function (legacy) { return function (source) {
+      source: function (owner) { return function () { return owner(); }; },
+      select: function (owner) { return function (source) {
         if (["music", "piano", "dance"].indexOf(source) < 0) throw new TypeError('audio.select(source) requires "music", "piano", or "dance".');
-        return legacy(source);
+        return owner(source);
       }; }
     }
   });

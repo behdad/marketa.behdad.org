@@ -1,0 +1,13 @@
+const __owner = {};
+__owner.publish = function (host) { host.staleObject = true; };
+__owner.publish = function () {};
+__owner.publish(window);
+const __calls = [];
+__calls[0] = function (host) { host.staleArray = true; };
+__calls[0] = function () {};
+__calls[0](window);
+const __root = {};
+const __alias = __root;
+__alias.publish = function (host) { host.staleAlias = true; };
+__alias.publish = function () {};
+__root.publish(window);

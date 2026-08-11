@@ -424,16 +424,19 @@ the DOM-valued disguise, and a public property added to `Window.prototype` all f
 `tests/global-static-audit.js` uses the Acorn parser bundled with Node—no download or install—and a
 conservative finite abstract-value model per lexical binding. It keeps Window, Window prototypes,
 the safe `loft`/private subtrees, Object/Reflect meta callables, finite strings, and unknown values
-distinct while propagating branches, patterns, aliases, defaults, rest/spread, callable object/array
-members, and ordinary array callbacks. Program lexical bindings and sloppy Annex-B block functions
+distinct while propagating branches, patterns, aliases, defaults, rest/spread, nested/fixed-computed
+object members, array members, and ordinary callbacks. Definite sequential member assignments replace
+earlier values, while conditional writes remain a conservative union. Program lexical bindings and
+sloppy Annex-B block functions
 count as bare public surface even though they are absent from `Reflect.ownKeys(window)`; loop and
 switch lexical environments remain local. Call-site analysis gives sloppy plain calls Window
-`this`, preserves strict and arrow semantics, and evaluates member, `.call`, `.apply`, and `.bind`
-receivers. Bare `loft`, browser `top`/`parent`/`frames` self chains, and `document.defaultView` are
+`this`, preserves strict and arrow semantics, evaluates member, `.call`, `.apply`, and `.bind`
+receivers, and models Window timer/listener callback receivers. Bare `loft`, browser
+`top`/`parent`/`frames` self chains, and `document.defaultView` are
 modeled explicitly. Shared `Object.prototype` paths below otherwise-safe objects remain hazardous,
 while an authored child constructor such as `window.loft.Widget.prototype` stays safe. Meta writes
-normalize direct, destructured, call/apply/bind, `Reflect.apply`, and bound or direct Function-call
-uncurrying forms.
+normalize direct, destructured, call/apply/bind, `Reflect.apply`, and bound, direct, or
+Reflect-assisted Function-call uncurrying forms.
 Dynamic names must remain a finite set of private or temporary-vendor names through every mutation;
 otherwise they fail closed. Safe descendants such as `window.loft.Widget.prototype` remain allowed.
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before

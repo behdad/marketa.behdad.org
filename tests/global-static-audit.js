@@ -33,7 +33,7 @@ function mergeValues(values) {
 }
 
 function lexicalModel(ast) {
-  var nodeScopes = new WeakMap(), functionBindings = new WeakMap(), forcedStrictFunctions = new WeakSet(), globalDeclarations = [], memberAssignments = [], scopes = [], nextBindingId = 1;
+  var nodeScopes = new WeakMap(), nodeParents = new WeakMap(), functionBindings = new WeakMap(), forcedStrictFunctions = new WeakSet(), globalDeclarations = [], memberAssignments = [], scopes = [], nextBindingId = 1;
   var programStrict = ast.body.some(function (node) { return node.type === "ExpressionStatement" && node.directive === "use strict"; });
   function makeScope(parent, type, thisWindow) { var scope = { parent: parent, type: type, bindings: new Map(), thisWindow: thisWindow === undefined ? !!(parent && parent.thisWindow) : thisWindow, strict: !!(parent && parent.strict), functionInfo: null }; scopes.push(scope); return scope; }
   var programScope = makeScope(null, "program");
@@ -154,6 +154,9 @@ function lexicalModel(ast) {
     return names;
   }
   scan(ast, programScope);
+  walk.fullAncestor(ast, function (node, _state, ancestors) {
+    if (ancestors.length > 1) nodeParents.set(node, ancestors[ancestors.length - 2]);
+  });
 
   function ref(node, scope) { return { node: node, scope: scope || nodeScopes.get(node), path: [] }; }
   function projected(source, part) { return { node: source.node, scope: source.scope, path: source.path.concat([part]) }; }
@@ -193,7 +196,7 @@ function lexicalModel(ast) {
           owner.memberSources.get(member).push(ref(node.right));
         }
       }
-      if (node.operator === "=" && node.left.type === "MemberExpression" && fixedMemberName(node.left) !== null) memberAssignments.push({ owner: node.left.object, name: fixedMemberName(node.left), source: ref(node.right) });
+      if (node.operator === "=" && node.left.type === "MemberExpression" && fixedMemberName(node.left) !== null) memberAssignments.push({ node: node, owner: node.left.object, name: fixedMemberName(node.left), source: ref(node.right) });
     },
     UpdateExpression: function (node) { var marker = implicitWrites; marker.kind = "update"; recordPattern(node.argument, { unknown: true }, marker); },
     ForOfStatement: function (node) {
@@ -241,24 +244,47 @@ function lexicalModel(ast) {
     });
     return expanded;
   }
+  function fixedString(node, seen) {
+    if (!node) return null;
+    if (node.type === "Literal" && (typeof node.value === "string" || typeof node.value === "number")) return String(node.value);
+    if (node.type === "TemplateLiteral" && !node.expressions.length) return node.quasis[0].value.cooked;
+    if (node.type === "Identifier") {
+      var found = resolve(nodeScopes.get(node), node.name);
+      if (!found || (seen = seen || new Set()).has(found) || !found.sources.length) return null;
+      seen.add(found);
+      var values = found.sources.map(function (sourceRef) { return sourceRef.node && !(sourceRef.path && sourceRef.path.length) ? fixedString(sourceRef.node, seen) : null; });
+      seen.delete(found);
+      return values.length && values.every(function (value) { return value !== null && value === values[0]; }) ? values[0] : null;
+    }
+    return null;
+  }
   function fixedMemberName(node) {
     if (!node || node.type !== "MemberExpression") return null;
     if (!node.computed && node.property.type === "Identifier") return node.property.name;
-    if (node.computed && node.property.type === "Literal" && (typeof node.property.value === "string" || typeof node.property.value === "number")) return String(node.property.value);
+    if (node.computed) return fixedString(node.property, new Set());
     return null;
   }
-  function ownerKey(node) {
+  function ownerKey(node, seen) {
     if (!node) return null;
     if (node.type === "Identifier") {
       var found = resolve(nodeScopes.get(node), node.name);
-      if (found) return "binding:" + found.id;
+      if (found) {
+        seen = seen || new Set();
+        if (!seen.has(found) && found.sources.length) {
+          seen.add(found);
+          var sourceKeys = found.sources.map(function (sourceRef) { return sourceRef.node && !(sourceRef.path && sourceRef.path.length) ? ownerKey(sourceRef.node, seen) : null; });
+          seen.delete(found);
+          if (sourceKeys.length && sourceKeys[0] !== null && sourceKeys.every(function (key) { return key === sourceKeys[0]; })) return sourceKeys[0];
+        }
+        return "binding:" + found.id;
+      }
       if (node.name === "window" || node.name === "globalThis" || node.name === "self" || node.name === "top" || node.name === "parent" || node.name === "frames") return "window";
       if (node.name === "loft") return "loft";
       if (node.name === "document") return "document";
       return "global:" + node.name;
     }
     if (node.type === "MemberExpression") {
-      var base = ownerKey(node.object), name = fixedMemberName(node);
+      var base = ownerKey(node.object, seen), name = fixedMemberName(node);
       if (base === null || name === null) return null;
       if (base === "window" && (name === "window" || name === "globalThis" || name === "self" || name === "top" || name === "parent" || name === "frames")) return "window";
       if (base === "window" && name === "loft") return "loft";
@@ -266,44 +292,83 @@ function lexicalModel(ast) {
       if (base === "document" && name === "defaultView") return "window";
       return base + "." + name;
     }
+    if (node.type === "AssignmentExpression") return ownerKey(node.right, seen);
+    if (node.type === "SequenceExpression" && node.expressions.length) return ownerKey(node.expressions[node.expressions.length - 1], seen);
     return null;
   }
-  function functionDescriptors(node, seen) {
+  function propertyName(property) {
+    if (!property || property.type !== "Property") return null;
+    if (!property.computed) return String(property.key.name === undefined ? property.key.value : property.key.name);
+    if (property.computed) return fixedString(property.key, new Set());
+    return null;
+  }
+  function flowContainer(node) {
+    while (node && node.type !== "Program" && node.type !== "BlockStatement") node = nodeParents.get(node);
+    return node || null;
+  }
+  function definiteBefore(assignment, readNode) {
+    if (!readNode || assignment.start >= readNode.start || flowContainer(assignment) !== flowContainer(readNode)) return false;
+    var node = assignment, container = flowContainer(assignment);
+    while (node && node !== container) {
+      var parent = nodeParents.get(node);
+      if (!parent) return false;
+      if (parent.type === "IfStatement" || parent.type === "ConditionalExpression" || parent.type === "LogicalExpression" || parent.type === "SwitchCase" || parent.type === "SwitchStatement" || parent.type === "TryStatement" || parent.type === "ForStatement" || parent.type === "ForInStatement" || parent.type === "ForOfStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement") return false;
+      node = parent;
+    }
+    return node === container;
+  }
+  function memberSourceNodes(memberNode, seen, readNode) {
+    var name = fixedMemberName(memberNode), sources = [];
+    if (name === null) return sources;
+    var wantedOwner = ownerKey(memberNode.object);
+    var memberToken = "member:" + String(wantedOwner) + ":" + name;
+    if (seen.has(memberToken)) return sources;
+    seen.add(memberToken);
+    var assignments = wantedOwner === null ? [] : memberAssignments.filter(function (assignment) {
+      return assignment.name === name && ownerKey(assignment.owner) === wantedOwner && (!readNode || assignment.node.start < readNode.start);
+    }).sort(function (a, b) { return a.node.start - b.node.start; });
+    var lastDefinite = null;
+    assignments.forEach(function (assignment) { if (definiteBefore(assignment.node, readNode)) lastDefinite = assignment; });
+    function fromContainer(container) {
+      if (!container) return;
+      if (container.type === "ObjectExpression") container.properties.forEach(function (property) {
+        if (propertyName(property) === name) sources.push(property.value);
+      });
+      else if (container.type === "ArrayExpression" && /^(?:0|[1-9]\d*)$/.test(name)) {
+        var entry = container.elements[Number(name)]; if (entry) sources.push(entry.type === "SpreadElement" ? entry.argument : entry);
+      } else if (container.type === "Identifier") {
+        var owner = resolve(nodeScopes.get(container), container.name);
+        if (!owner || seen.has(owner)) return;
+        seen.add(owner);
+        owner.sources.forEach(function (sourceRef) { if (sourceRef.node && !(sourceRef.path && sourceRef.path.length)) fromContainer(sourceRef.node); });
+        seen.delete(owner);
+      } else if (container.type === "MemberExpression") memberSourceNodes(container, seen, readNode).forEach(fromContainer);
+      else if (container.type === "ConditionalExpression" || container.type === "LogicalExpression") {
+        fromContainer(container.type === "ConditionalExpression" ? container.consequent : container.left);
+        fromContainer(container.type === "ConditionalExpression" ? container.alternate : container.right);
+      } else if (container.type === "SequenceExpression") fromContainer(container.expressions[container.expressions.length - 1]);
+      else if (container.type === "AssignmentExpression") fromContainer(container.right);
+    }
+    if (!lastDefinite) fromContainer(memberNode.object);
+    assignments.forEach(function (assignment) {
+      if (!lastDefinite || assignment.node.start >= lastDefinite.node.start) sources.push(assignment.source.node);
+    });
+    return sources;
+  }
+  function functionDescriptors(node, seen, readNode) {
     if (!node) return [];
     if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") return [{ target: functionBindings.get(node), boundArgs: [], boundThis: null }];
-    if (node.type === "ChainExpression") return functionDescriptors(node.expression, seen);
-    if (node.type === "ConditionalExpression" || node.type === "LogicalExpression") return functionDescriptors(node.type === "ConditionalExpression" ? node.consequent : node.left, seen).concat(functionDescriptors(node.type === "ConditionalExpression" ? node.alternate : node.right, seen));
-    if (node.type === "SequenceExpression") return functionDescriptors(node.expressions[node.expressions.length - 1], seen);
+    if (node.type === "ChainExpression") return functionDescriptors(node.expression, seen, readNode);
+    if (node.type === "ConditionalExpression" || node.type === "LogicalExpression") return functionDescriptors(node.type === "ConditionalExpression" ? node.consequent : node.left, seen, readNode).concat(functionDescriptors(node.type === "ConditionalExpression" ? node.alternate : node.right, seen, readNode));
+    if (node.type === "SequenceExpression") return functionDescriptors(node.expressions[node.expressions.length - 1], seen, readNode);
     if (node.type === "CallExpression" && node.callee.type === "MemberExpression" && fixedMemberName(node.callee) === "bind") {
-      return functionDescriptors(node.callee.object, seen).map(function (descriptor) {
+      return functionDescriptors(node.callee.object, seen, readNode).map(function (descriptor) {
         return { target: descriptor.target, boundThis: descriptor.boundThis || (node.arguments[0] ? ref(node.arguments[0]) : { safe: true }), boundArgs: descriptor.boundArgs.concat(expandedArguments(node.arguments.slice(1))) };
       });
     }
     if (node.type === "MemberExpression") {
-      var name = fixedMemberName(node), targets = [];
-      if (name === null) return targets;
-      function fromContainer(container) {
-        if (!container) return;
-        if (container.type === "ObjectExpression") container.properties.forEach(function (property) {
-          if (property.type !== "Property" || property.computed) return;
-          if (String(property.key.name === undefined ? property.key.value : property.key.name) === name) functionDescriptors(property.value, seen).forEach(function (target) { targets.push(target); });
-        });
-        else if (container.type === "ArrayExpression" && /^(?:0|[1-9]\d*)$/.test(name)) {
-          var entry = container.elements[Number(name)]; if (entry) functionDescriptors(entry.type === "SpreadElement" ? entry.argument : entry, seen).forEach(function (target) { targets.push(target); });
-        } else if (container.type === "Identifier") {
-          var owner = resolve(nodeScopes.get(container), container.name);
-          if (!owner || seen.has(owner)) return;
-          seen.add(owner);
-          owner.sources.forEach(function (sourceRef) { if (sourceRef.node && !(sourceRef.path && sourceRef.path.length)) fromContainer(sourceRef.node); });
-          (owner.memberSources.get(name) || []).forEach(function (sourceRef) { if (sourceRef.node) functionDescriptors(sourceRef.node, seen).forEach(function (target) { targets.push(target); }); });
-          seen.delete(owner);
-        }
-      }
-      fromContainer(node.object);
-      var wantedOwner = ownerKey(node.object);
-      if (wantedOwner !== null) memberAssignments.forEach(function (assignment) {
-        if (assignment.name === name && ownerKey(assignment.owner) === wantedOwner) functionDescriptors(assignment.source.node, seen).forEach(function (target) { targets.push(target); });
-      });
+      var targets = [];
+      memberSourceNodes(node, seen, readNode).forEach(function (sourceNode) { functionDescriptors(sourceNode, seen, readNode).forEach(function (target) { targets.push(target); }); });
       return targets;
     }
     if (node.type !== "Identifier") return [];
@@ -312,11 +377,11 @@ function lexicalModel(ast) {
     if (found.functionNode) return [{ target: functionBindings.get(found.functionNode), boundArgs: [], boundThis: null }];
     seen.add(found);
     var targets = [];
-    found.sources.forEach(function (sourceRef) { if (sourceRef.node) functionDescriptors(sourceRef.node, seen).forEach(function (target) { if (target && targets.indexOf(target) < 0) targets.push(target); }); });
+    found.sources.forEach(function (sourceRef) { if (sourceRef.node) functionDescriptors(sourceRef.node, seen, readNode).forEach(function (target) { if (target && targets.indexOf(target) < 0) targets.push(target); }); });
     seen.delete(found);
     return targets;
   }
-  function functionTargets(node, seen) { return functionDescriptors(node, seen).map(function (descriptor) { return descriptor.target; }); }
+  function functionTargets(node, seen, readNode) { return functionDescriptors(node, seen, readNode).map(function (descriptor) { return descriptor.target; }); }
   function iterationName(callee) { return fixedMemberName(callee); }
   var iterationMethods = new Set(["forEach", "map", "filter", "some", "every", "find", "findIndex", "flatMap", "reduce", "reduceRight"]);
   function effectiveThisSource(target, source) {
@@ -328,11 +393,11 @@ function lexicalModel(ast) {
     CallExpression: function (node) {
       var callee = node.callee, suffix = fixedMemberName(callee), descriptors, args, explicitThis = null, memberThis = null;
       if (callee.type === "MemberExpression" && (suffix === "call" || suffix === "apply")) {
-        descriptors = functionDescriptors(callee.object, new Set());
+        descriptors = functionDescriptors(callee.object, new Set(), node);
         explicitThis = node.arguments[0] ? ref(node.arguments[0]) : { safe: true };
         args = suffix === "apply" ? (node.arguments[1] && arrayItems(node.arguments[1], new Set()) || [{ hazard: true }]) : expandedArguments(node.arguments.slice(1));
       } else {
-        descriptors = functionDescriptors(callee, new Set());
+        descriptors = functionDescriptors(callee, new Set(), node);
         args = expandedArguments(node.arguments);
         if (callee.type === "MemberExpression") memberThis = ref(callee.object);
       }
@@ -345,7 +410,7 @@ function lexicalModel(ast) {
         if (!target.arrow) target.thisSources.push(thisSource);
       });
       var method = iterationName(node.callee), items = method && iterationMethods.has(method) ? arrayItems(node.callee.object, new Set()) : null;
-      if (items && node.arguments[0]) functionTargets(node.arguments[0], new Set()).forEach(function (target) {
+      if (items && node.arguments[0]) functionTargets(node.arguments[0], new Set(), node).forEach(function (target) {
         target.paramPatterns.forEach(function (pattern, index) {
           if (!pattern) return;
           if (method === "reduce" || method === "reduceRight") {
@@ -360,6 +425,20 @@ function lexicalModel(ast) {
           var callbackThis = method === "reduce" || method === "reduceRight" || !node.arguments[1] ? { safe: true } : ref(node.arguments[1]);
           target.thisSources.push(effectiveThisSource(target, callbackThis));
         }
+      });
+      var hostCallback = null, hostThis = null;
+      if (callee.type === "Identifier" && !resolve(nodeScopes.get(callee), callee.name) && (callee.name === "setTimeout" || callee.name === "setInterval" || callee.name === "addEventListener")) {
+        hostCallback = node.arguments[callee.name === "addEventListener" ? 1 : 0]; hostThis = { window: true };
+      } else if (callee.type === "MemberExpression") {
+        var hostMethod = fixedMemberName(callee), hostOwner = ownerKey(callee.object);
+        if (hostOwner === "window" && (hostMethod === "setTimeout" || hostMethod === "setInterval")) {
+          hostCallback = node.arguments[0]; hostThis = { window: true };
+        } else if (hostMethod === "addEventListener") {
+          hostCallback = node.arguments[1]; hostThis = hostOwner === "window" ? { window: true } : ref(callee.object);
+        }
+      }
+      if (hostCallback) functionTargets(hostCallback, new Set(), node).forEach(function (target) {
+        if (!target.arrow) target.thisSources.push(hostThis);
       });
     }
   });
@@ -618,7 +697,10 @@ function auditSource(source, file) {
       if (callable.method === "Reflect.apply") {
         var reflectArgs = callable.bound.concat(directArgs), target = reflectArgs[0] && evalReference(reflectArgs[0]);
         var reflected = reflectArgs[2] && arrayReferenceValues(reflectArgs[2]);
-        target.callables.forEach(function (targetCallable) { calls.push({ method: targetCallable.method, args: reflected ? targetCallable.bound.concat(reflected) : null }); });
+        target.callables.forEach(function (targetCallable) {
+          if (!reflected) calls.push({ method: targetCallable.method, args: null });
+          else calls = calls.concat(invokeWithThis(targetCallable, reflectArgs[1] || { safe: true }, reflected));
+        });
       } else calls.push(invokeCallable(callable, directArgs));
     });
     if (callee.origins.has("meta-hazard")) calls.push({ method: "<unknown-meta>", args: directArgs });

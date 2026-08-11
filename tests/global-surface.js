@@ -32,11 +32,13 @@ var LEXICAL_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-au
 var LOFT_PROTOTYPE_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-loft-prototype.js"), "utf8");
 var FIVE_NAME_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-five-transient.js"), "utf8");
 var FIVE_NAMES = ["weddingSloppyTransient", "weddingBareLoftTransient", "weddingTopTransient", "weddingUncurryTransient", "weddingMethodTransient"];
+var NEARBY_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-nearby-transient.js"), "utf8");
+var NEARBY_NAMES = ["weddingNestedPrivateTransient", "weddingComputedMemberTransient", "weddingEventThisTransient", "weddingReflectUncurryTransient"];
 
 var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
-  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,transientResolution:null,transientOwn:null,combinedResolution:null,fiveNameProof:null,fiveNamesRemaining:[],lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
+  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,transientResolution:null,transientOwn:null,combinedResolution:null,fiveNameProof:null,fiveNamesRemaining:[],nearbyProof:null,nearbyNamesRemaining:[],lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
   'function ownKeys(){return Reflect.ownKeys(window);}',
   'function safeValue(name){try{return {ok:true,value:window[name]};}catch(error){return {ok:false,error:String(error&&error.message||error)};}}',
   'function includesNode(collection,node){try{for(var i=0;i<collection.length;i++)if(collection[i]===node)return true;}catch(error){}return false;}',
@@ -105,6 +107,7 @@ var HARNESS = [
   '  report.transientResolution=window.__weddingTransientResolution||null;report.transientOwn=Object.prototype.hasOwnProperty.call(window,' + JSON.stringify(TRANSIENT_PROBE) + ');',
   '  report.combinedResolution=window.__weddingCombinedResolution||null;',
   '  report.fiveNameProof=window.__weddingFiveNameProof||null;report.fiveNamesRemaining=' + JSON.stringify(FIVE_NAMES) + '.filter(function(name){return name in window;});',
+  '  report.nearbyProof=window.__weddingNearProof||null;report.nearbyNamesRemaining=' + JSON.stringify(NEARBY_NAMES) + '.filter(function(name){return name in window;});',
   '  var names=ownKeys(),namedSeen=Object.create(null);report.finalCount=names.length;',
   '  for(var i=0;i<names.length;i++){',
   '   var key=names[i];if(baselineSet.has(key)){var currentDescriptor=null;try{currentDescriptor=Object.getOwnPropertyDescriptor(window,key);}catch(error){}var baselineDescriptor=baselineDescriptors.get(key);if(!sameDescriptor(baselineDescriptor,currentDescriptor))report.forbidden.push({name:String(key),baselineReplacement:true,shape:descriptorShape(key,safeValue(key).value)});continue;}',
@@ -259,6 +262,7 @@ var hostile = lib.runPageSync("loft-day.html", HARNESS + [
   '<script>', LEXICAL_SOURCE, '</script>',
   '<script>', LOFT_PROTOTYPE_SOURCE, '</script>',
   '<script>', FIVE_NAME_SOURCE, '</script>',
+  '<script>', NEARBY_SOURCE, '</script>',
   '<script>',
   TRANSIENT_SOURCE,
   'window.open=function authoredReplacement(){};',
@@ -289,6 +293,10 @@ var fiveStatic = staticAudit.auditSource(FIVE_NAME_SOURCE, "combined-five-transi
 check(FIVE_NAMES.every(function (name) { return fiveStatic.some(function (entry) { return entry.name === name; }); }), "static gate rejects all five ordinary temporary publication paths", fiveStatic);
 check(hostile && hostile.fiveNameProof && ["sloppy", "bareLoft", "top", "uncurry", "method"].every(function (key) { var pair = hostile.fiveNameProof[key]; return Array.isArray(pair) && pair.length === 2 && pair[0] === pair[1]; }), "combined browser proof resolves all five temporary names through window.name and bare name", hostile && hostile.fiveNameProof);
 check(hostile && hostile.fiveNamesRemaining && hostile.fiveNamesRemaining.length === 0, "combined five-name proof removes every temporary global before runtime inventory", hostile && hostile.fiveNamesRemaining);
+var nearbyStatic = staticAudit.auditSource(NEARBY_SOURCE, "combined-nearby-transient.js");
+check(NEARBY_NAMES.every(function (name) { return nearbyStatic.some(function (entry) { return entry.name === name; }); }), "static gate rejects all four nearby temporary publication paths", nearbyStatic);
+check(hostile && hostile.nearbyProof && ["nested", "computed", "eventThis", "reflectUncurry"].every(function (key) { var pair = hostile.nearbyProof[key]; return Array.isArray(pair) && pair.length === 2 && pair[0] === pair[1]; }), "combined browser proof resolves all four nearby temporary names through window.name and bare name", hostile && hostile.nearbyProof);
+check(hostile && hostile.nearbyNamesRemaining && hostile.nearbyNamesRemaining.length === 0, "combined nearby proof removes every temporary global before runtime inventory", hostile && hostile.nearbyNamesRemaining);
 
 var replacedPrototype = lib.runPageSync("loft-day.html", HARNESS + '<script>Object.defineProperty(window.__proto__,"constructor",{configurable:true,writable:true,value:function AuthoredWindowConstructor(){}});</script>', 6500, {
   captureWindowBaseline: true, patchRaf: true, urlSuffix: "?global-prototype-replace=" + Date.now()

@@ -26,11 +26,13 @@ var REPORT_ONLY = process.argv.slice(2).includes("--report");
 var NAMED_PROBE = "weddingTestNamedWindowProbe";
 var AUTHORED_DOM_PROBE = "weddingAuthoredDomProbe";
 var INHERITED_PROBE = "weddingPrototypeLeak";
+var TRANSIENT_PROBE = "weddingTransientLeak";
+var TRANSIENT_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-transient.js"), "utf8");
 
 var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
-  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
+  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,transientResolution:null,transientOwn:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
   'function ownKeys(){return Reflect.ownKeys(window);}',
   'function safeValue(name){try{return {ok:true,value:window[name]};}catch(error){return {ok:false,error:String(error&&error.message||error)};}}',
   'function includesNode(collection,node){try{for(var i=0;i<collection.length;i++)if(collection[i]===node)return true;}catch(error){}return false;}',
@@ -96,6 +98,7 @@ var HARNESS = [
   '  });',
   '  if(currentPrototype)report.forbidden.push({name:"[[Prototype:extra]]",prototypeAddition:true});',
   '  report.prototypeResolution=window.__weddingPrototypeResolution||null;',
+  '  report.transientResolution=window.__weddingTransientResolution||null;report.transientOwn=Object.prototype.hasOwnProperty.call(window,' + JSON.stringify(TRANSIENT_PROBE) + ');',
   '  var names=ownKeys(),namedSeen=Object.create(null);report.finalCount=names.length;',
   '  for(var i=0;i<names.length;i++){',
   '   var key=names[i];if(baselineSet.has(key)){var currentDescriptor=null;try{currentDescriptor=Object.getOwnPropertyDescriptor(window,key);}catch(error){}var baselineDescriptor=baselineDescriptors.get(key);if(!sameDescriptor(baselineDescriptor,currentDescriptor))report.forbidden.push({name:String(key),baselineReplacement:true,shape:descriptorShape(key,safeValue(key).value)});continue;}',
@@ -248,6 +251,7 @@ if (REPORT_ONLY) {
 
 var hostile = lib.runPageSync("loft-day.html", HARNESS + [
   '<script>',
+  TRANSIENT_SOURCE,
   'window.open=function authoredReplacement(){};',
   'var authoredNode=document.createElement("div");authoredNode.id=' + JSON.stringify(AUTHORED_DOM_PROBE) + ';document.body.appendChild(authoredNode);',
   'Object.defineProperty(window,' + JSON.stringify(AUTHORED_DOM_PROBE) + ',{configurable:true,enumerable:false,writable:false,value:authoredNode});',
@@ -263,6 +267,10 @@ check(hostile && hostile.forbidden.some(function (entry) { return entry.name ===
 check(hostile && hostile.forbidden.some(function (entry) { return entry.name === AUTHORED_DOM_PROBE; }), "runtime gate rejects an authored DOM-valued Window property", hostile && hostile.forbidden);
 check(hostile && hostile.forbidden.some(function (entry) { return entry.name === INHERITED_PROBE && entry.inheritedAddition; }), "runtime gate rejects inherited public application surface", hostile && hostile.forbidden);
 check(hostile && hostile.prototypeResolution && hostile.prototypeResolution.windowValue && hostile.prototypeResolution.bareValue, "hostile inherited property resolves through window.name and bare name", hostile && hostile.prototypeResolution);
+var transientStatic = staticAudit.auditSource(TRANSIENT_SOURCE, "combined-transient.js");
+check(transientStatic.some(function (entry) { return entry.name === TRANSIENT_PROBE; }), "static gate rejects a conditional alias that publishes then deletes a public global", transientStatic);
+check(hostile && hostile.transientResolution && hostile.transientResolution.windowValue && hostile.transientResolution.bareValue, "temporary hostile global resolves through window.name and bare name while published", hostile && hostile.transientResolution);
+check(hostile && hostile.transientOwn === false, "temporary hostile global is gone before runtime inventory", hostile && { transientOwn: hostile.transientOwn });
 
 console.log("");
 if (failures) {

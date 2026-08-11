@@ -415,11 +415,14 @@ public Window root. Split-script data and implementation/test integration may us
 distinguishes delete-revealed browser named properties from authored DOM-valued properties, and
 fails on any non-`loft`, non-`__…` app-owned property. Its hostile run proves baseline replacement,
 the DOM-valued disguise, and a public property added to `Window.prototype` all fail.
-`tests/global-static-audit.js` uses the Acorn parser bundled with Node—no download or install—to
-resolve lexical Window/Object/Reflect aliases and reject assignment, update, delete, loop and
-destructuring targets, computed and prototype-chain writes, `Object.assign`, property definitions,
-Reflect meta-writes, and meta-method `.call`/`.apply`. Dynamic names must resolve through lexical
-bindings and direct call sites to finite private or temporary-vendor names; otherwise they fail closed.
+`tests/global-static-audit.js` uses the Acorn parser bundled with Node—no download or install—and a
+conservative finite abstract-value model per lexical binding. It keeps Window, Window prototypes,
+the safe `loft`/private subtrees, Object/Reflect meta callables, finite strings, and unknown values
+distinct while propagating branches, patterns, loops, aliases, defaults, and reassignment. It rejects
+implicit and declaration-created classic-script globals, hazardous prototype aliases, and normalized
+meta writes through direct, destructured, `.call`/`.apply`/`.bind`, and `Reflect.apply` invocation.
+Dynamic names must remain a finite set of private or temporary-vendor names through every mutation;
+otherwise they fail closed. Safe descendants such as `window.loft.Widget.prototype` remain allowed.
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before
 injection. One generation-owned record retains that capture together with its script node, listeners,
 watchdog, and settlement. Success, error, timeout, cancellation, and reset all release it idempotently,

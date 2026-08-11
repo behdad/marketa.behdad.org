@@ -65,13 +65,17 @@ Candidate repeated runtime result (two strict and two report runs):
 - 2,794 verified browser named-element globals.
 
 `node tests/global-static-audit.js` is the durable zero-network AST gate. It uses Node's bundled
-Acorn, resolves lexical Window and meta-operation aliases, and rejects public or unclassified
-dynamic writes across ordinary, loop, destructuring, nested prototype, `.call`/`.apply`, Object,
-and Reflect forms. Checked-in hostile fixtures reproduce every reviewed bypass. Dynamic names are
-accepted only when lexical binding and direct-call propagation proves a finite private or temporary
-vendor name; there is no filename/function-name exception. `tests/global-surface.js` separately
-compares own and inherited runtime baseline descriptors/identities and proves authored DOM-valued
-properties cannot claim the named-element exception or hide public state on `Window.prototype`.
+Acorn and a finite abstract-value/data-flow model per lexical binding. Window, its prototype chain,
+safe `loft`/private descendants, Object/Reflect callables, finite strings, and unknown values remain
+distinct across branch unions, aliases, patterns, defaults, loops, and mutations. Meta invocations
+are normalized through direct, aliased, destructured, `.call`/`.apply`/`.bind`, and `Reflect.apply`
+forms, including partial binding. Classic-script declarations and implicit bare writes are included.
+Dynamic names pass only when every finite possibility is private or an owned temporary vendor name;
+unknown hazardous flows fail closed. The checked-in matrix contains the reviewer probes, adjacent
+abstraction controls, and the temporary publish/resolve/delete bypass. `tests/global-surface.js`
+separately compares own and inherited runtime baseline descriptors/identities; its browser probe
+proves the temporary name resolved through both Window and bare lookup before static analysis—not
+the later clean inventory—rejected it.
 
 ## Validation completed
 

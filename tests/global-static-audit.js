@@ -14,54 +14,50 @@ function internalModule(name) {
 var acorn = internalModule("internal/deps/acorn/acorn/dist/acorn");
 var walk = internalModule("internal/deps/acorn/acorn-walk/dist/walk");
 
+function emptyValue() { return { origins: new Set(), strings: new Set(), callables: [], objects: [], arrays: [], unknown: false }; }
+function unknownValue() { var value = emptyValue(); value.unknown = true; return value; }
+function originValue(origin) { var value = emptyValue(); value.origins.add(origin); return value; }
+function stringValue(text) { var value = emptyValue(); value.strings.add(text); return value; }
+function mergeValues(values) {
+  var merged = emptyValue();
+  values.forEach(function (value) {
+    if (!value) { merged.unknown = true; return; }
+    value.origins.forEach(function (origin) { merged.origins.add(origin); });
+    value.strings.forEach(function (text) { merged.strings.add(text); });
+    value.callables.forEach(function (callable) { if (merged.callables.indexOf(callable) < 0) merged.callables.push(callable); });
+    value.objects.forEach(function (object) { if (merged.objects.indexOf(object) < 0) merged.objects.push(object); });
+    value.arrays.forEach(function (array) { if (merged.arrays.indexOf(array) < 0) merged.arrays.push(array); });
+    if (value.unknown) merged.unknown = true;
+  });
+  return merged;
+}
+
 function lexicalModel(ast) {
-  var nodeScopes = new WeakMap(), functionBindings = new WeakMap(), scopes = [];
-  function makeScope(parent, type) {
-    var scope = { parent: parent, type: type, bindings: new Map() };
-    scopes.push(scope);
-    return scope;
-  }
+  var nodeScopes = new WeakMap(), functionBindings = new WeakMap(), globalDeclarations = [], scopes = [];
+  function makeScope(parent, type) { var scope = { parent: parent, type: type, bindings: new Map() }; scopes.push(scope); return scope; }
   var programScope = makeScope(null, "program");
-  function nearestVarScope(scope) {
-    while (scope.parent && scope.type !== "function" && scope.type !== "program") scope = scope.parent;
-    return scope;
-  }
-  function binding(scope, name) {
-    if (!scope.bindings.has(name)) scope.bindings.set(name, { name: name, scope: scope, sources: [], params: null, functionNode: null });
+  function nearestVarScope(scope) { while (scope.parent && scope.type !== "function" && scope.type !== "program") scope = scope.parent; return scope; }
+  function ensure(scope, name) {
+    if (!scope.bindings.has(name)) scope.bindings.set(name, { name: name, scope: scope, sources: [], functionNode: null, params: null, indirect: false });
     return scope.bindings.get(name);
   }
-  function resolve(scope, name) {
-    while (scope) {
-      if (scope.bindings.has(name)) return scope.bindings.get(name);
-      scope = scope.parent;
-    }
-    return null;
-  }
-  function markPattern(pattern, scope, declareScope, param) {
+  function resolve(scope, name) { while (scope) { if (scope.bindings.has(name)) return scope.bindings.get(name); scope = scope.parent; } return null; }
+  function markPattern(pattern, useScope, declarationScope, paramOwner, paramIndex) {
     if (!pattern) return;
-    nodeScopes.set(pattern, scope);
+    nodeScopes.set(pattern, useScope);
     if (pattern.type === "Identifier") {
-      var found = binding(declareScope, pattern.name);
-      if (param) { found.paramOwner = param.owner; found.paramIndex = param.index; }
-      return found;
-    }
-    if (pattern.type === "RestElement") return markPattern(pattern.argument, scope, declareScope, param);
-    if (pattern.type === "AssignmentPattern") {
-      var assigned = markPattern(pattern.left, scope, declareScope, param);
-      scan(pattern.right, scope);
-      return assigned;
-    }
-    if (pattern.type === "ArrayPattern") {
-      pattern.elements.forEach(function (item) { markPattern(item, scope, declareScope, param); });
+      var found = ensure(declarationScope, pattern.name);
+      if (paramOwner) { found.paramOwner = paramOwner; found.paramIndex = paramIndex; }
       return;
     }
-    if (pattern.type === "ObjectPattern") {
-      pattern.properties.forEach(function (property) {
-        nodeScopes.set(property, scope);
-        if (property.computed) scan(property.key, scope);
-        markPattern(property.type === "RestElement" ? property.argument : property.value, scope, declareScope, param);
-      });
-    }
+    if (pattern.type === "RestElement") { markPattern(pattern.argument, useScope, declarationScope, paramOwner, paramIndex); return; }
+    if (pattern.type === "AssignmentPattern") { markPattern(pattern.left, useScope, declarationScope, paramOwner, paramIndex); scan(pattern.right, useScope); return; }
+    if (pattern.type === "ArrayPattern") { pattern.elements.forEach(function (entry) { markPattern(entry, useScope, declarationScope, paramOwner, paramIndex); }); return; }
+    if (pattern.type === "ObjectPattern") pattern.properties.forEach(function (property) {
+      nodeScopes.set(property, useScope);
+      if (property.computed) scan(property.key, useScope);
+      markPattern(property.type === "RestElement" ? property.argument : property.value, useScope, declarationScope, paramOwner, paramIndex);
+    });
   }
   function scanChildren(node, scope, skip) {
     Object.keys(node).forEach(function (key) {
@@ -72,88 +68,106 @@ function lexicalModel(ast) {
     });
   }
   function scanFunction(node, outerScope, outerBinding) {
-    var functionScope = makeScope(outerScope, "function");
     nodeScopes.set(node, outerScope);
-    if (node.type === "FunctionExpression" && node.id) {
-      nodeScopes.set(node.id, functionScope);
-      binding(functionScope, node.id.name).functionNode = node;
-    }
-    var params = [];
+    var functionScope = makeScope(outerScope, "function"), params = [];
+    if (node.type === "FunctionExpression" && node.id) { nodeScopes.set(node.id, functionScope); ensure(functionScope, node.id.name).functionNode = node; }
     node.params.forEach(function (param, index) {
-      markPattern(param, functionScope, functionScope, { owner: node, index: index });
+      markPattern(param, functionScope, functionScope, node, index);
       if (param.type === "Identifier") params[index] = resolve(functionScope, param.name);
     });
-    if (outerBinding) {
-      outerBinding.functionNode = node;
-      outerBinding.params = params;
-      functionBindings.set(node, outerBinding);
-    }
+    if (outerBinding) { outerBinding.functionNode = node; outerBinding.params = params; outerBinding.paramPatterns = node.params; functionBindings.set(node, outerBinding); }
     scan(node.body, functionScope);
   }
   function scan(node, scope) {
     if (!node) return;
     nodeScopes.set(node, scope);
     if (node.type === "Program") { node.body.forEach(function (child) { scan(child, scope); }); return; }
-    if (node.type === "BlockStatement") {
-      var blockScope = makeScope(scope, "block");
-      node.body.forEach(function (child) { scan(child, blockScope); });
-      return;
-    }
+    if (node.type === "BlockStatement") { var block = makeScope(scope, "block"); node.body.forEach(function (child) { scan(child, block); }); return; }
     if (node.type === "FunctionDeclaration") {
-      var declared = node.id ? binding(scope, node.id.name) : null;
+      var functionBinding = node.id ? ensure(scope, node.id.name) : null;
       if (node.id) nodeScopes.set(node.id, scope);
-      scanFunction(node, scope, declared);
+      if (scope === programScope && node.id) globalDeclarations.push({ node: node, name: node.id.name, kind: "function declaration" });
+      scanFunction(node, scope, functionBinding);
       return;
     }
     if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") { scanFunction(node, scope, null); return; }
     if (node.type === "VariableDeclaration") {
-      var declareScope = node.kind === "var" ? nearestVarScope(scope) : scope;
-      node.declarations.forEach(function (declarator) {
-        nodeScopes.set(declarator, scope);
-        var found = markPattern(declarator.id, scope, declareScope, null);
-        if (found && declarator.init) {
-          found.sources.push({ node: declarator.init, scope: scope });
-          if (declarator.init.type === "FunctionExpression" || declarator.init.type === "ArrowFunctionExpression") scanFunction(declarator.init, scope, found);
-          else scan(declarator.init, scope);
-        } else if (declarator.init) {
-          if (declarator.id.type === "ObjectPattern") declarator.id.properties.forEach(function (property) {
-            if (property.type !== "Property" || property.value.type !== "Identifier") return;
-            var destructured = resolve(scope, property.value.name);
-            if (destructured) destructured.destructuredMethod = { owner: declarator.init, key: property.key, computed: property.computed };
-          });
-          scan(declarator.init, scope);
-        }
+      var declarationScope = node.kind === "var" ? nearestVarScope(scope) : scope;
+      node.declarations.forEach(function (declaration) {
+        nodeScopes.set(declaration, scope);
+        markPattern(declaration.id, scope, declarationScope, null, null);
+        if (declaration.init) scan(declaration.init, scope);
+        if (declarationScope === programScope && node.kind === "var") collectPatternNames(declaration.id).forEach(function (name) { globalDeclarations.push({ node: declaration, name: name, kind: "var declaration" }); });
       });
       return;
     }
     if (node.type === "ClassDeclaration") {
-      if (node.id) { nodeScopes.set(node.id, scope); binding(scope, node.id.name); }
+      if (node.id) { nodeScopes.set(node.id, scope); ensure(scope, node.id.name); if (scope === programScope) globalDeclarations.push({ node: node, name: node.id.name, kind: "class declaration" }); }
       scanChildren(node, scope, { id: true });
       return;
     }
-    if (node.type === "CatchClause") {
-      var catchScope = makeScope(scope, "block");
-      markPattern(node.param, catchScope, catchScope, null);
-      scan(node.body, catchScope);
-      return;
-    }
+    if (node.type === "CatchClause") { var catchScope = makeScope(scope, "block"); markPattern(node.param, catchScope, catchScope, null, null); scan(node.body, catchScope); return; }
     scanChildren(node, scope);
+  }
+  function collectPatternNames(pattern) {
+    var names = [];
+    (function collect(node) {
+      if (!node) return;
+      if (node.type === "Identifier") { names.push(node.name); return; }
+      if (node.type === "RestElement") { collect(node.argument); return; }
+      if (node.type === "AssignmentPattern") { collect(node.left); return; }
+      if (node.type === "ArrayPattern") { node.elements.forEach(collect); return; }
+      if (node.type === "ObjectPattern") node.properties.forEach(function (property) { collect(property.type === "RestElement" ? property.argument : property.value); });
+    })(pattern);
+    return names;
   }
   scan(ast, programScope);
 
+  function ref(node, scope) { return { node: node, scope: scope || nodeScopes.get(node), path: [] }; }
+  function projected(source, part) { return { node: source.node, scope: source.scope, path: source.path.concat([part]) }; }
+  function alternatives(sources) { return { alternatives: sources }; }
+  function recordPattern(pattern, source, implicit) {
+    if (!pattern) return;
+    if (pattern.type === "Identifier") {
+      var found = resolve(nodeScopes.get(pattern), pattern.name);
+      if (found) found.sources.push(source);
+      else if (implicit) implicit.push({ node: pattern, name: pattern.name, kind: implicit.kind });
+      return;
+    }
+    if (pattern.type === "RestElement") { recordPattern(pattern.argument, { rest: source }, implicit); return; }
+    if (pattern.type === "AssignmentPattern") { recordPattern(pattern.left, source && source.absent ? ref(pattern.right) : alternatives([source, ref(pattern.right)]), implicit); return; }
+    if (pattern.type === "ArrayPattern") { pattern.elements.forEach(function (entry, index) { recordPattern(entry, projected(source, { type: "index", value: index }), implicit); }); return; }
+    if (pattern.type === "ObjectPattern") pattern.properties.forEach(function (property) {
+      if (property.type === "RestElement") recordPattern(property.argument, { rest: source }, implicit);
+      else {
+        var key = property.computed ? { type: "computed", node: property.key, scope: nodeScopes.get(property.key) } : { type: "key", value: property.key.name || property.key.value };
+        recordPattern(property.value, projected(source, key), implicit);
+      }
+    });
+  }
+  var implicitWrites = [];
   walk.simple(ast, {
+    VariableDeclarator: function (node) { if (node.init) recordPattern(node.id, ref(node.init), null); },
     AssignmentExpression: function (node) {
-      if (node.operator !== "=" || node.left.type !== "Identifier") return;
-      var found = resolve(nodeScopes.get(node.left), node.left.name);
-      if (found) found.sources.push({ node: node.right, scope: nodeScopes.get(node.right) });
+      var marker = implicitWrites; marker.kind = "assignment";
+      recordPattern(node.left, node.operator === "=" ? ref(node.right) : { unknown: true }, marker);
+    },
+    UpdateExpression: function (node) { var marker = implicitWrites; marker.kind = "update"; recordPattern(node.argument, { unknown: true }, marker); },
+    ForOfStatement: function (node) {
+      var marker = implicitWrites; marker.kind = "for-of";
+      var target = node.left.type === "VariableDeclaration" ? node.left.declarations[0].id : node.left;
+      recordPattern(target, { iterable: ref(node.right), kind: "values" }, marker);
+    },
+    ForInStatement: function (node) {
+      var marker = implicitWrites; marker.kind = "for-in";
+      var target = node.left.type === "VariableDeclaration" ? node.left.declarations[0].id : node.left;
+      recordPattern(target, { iterable: ref(node.right), kind: "keys" }, marker);
     },
     CallExpression: function (node) {
       if (node.callee.type !== "Identifier") return;
       var found = resolve(nodeScopes.get(node.callee), node.callee.name);
-      if (!found || !found.functionNode || !found.params) return;
-      found.params.forEach(function (param, index) {
-        if (param) param.sources.push({ node: node.arguments[index] || null, scope: nodeScopes.get(node.arguments[index]) || nodeScopes.get(node) });
-      });
+      if (!found || !found.functionNode || !found.paramPatterns) return;
+      found.paramPatterns.forEach(function (pattern, index) { recordPattern(pattern, node.arguments[index] ? ref(node.arguments[index]) : { absent: true }, null); });
     }
   });
   walk.ancestor(ast, {
@@ -164,10 +178,10 @@ function lexicalModel(ast) {
       if ((parent.type === "FunctionDeclaration" || parent.type === "FunctionExpression") && parent.id === node) return;
       if (parent.type === "VariableDeclarator" && parent.id === node) return;
       if (parent.type === "CallExpression" && parent.callee === node) return;
-      found.indirectReference = true;
+      found.indirect = true;
     }
   });
-  return { nodeScopes: nodeScopes, resolve: resolve, programScope: programScope, functionBindings: functionBindings };
+  return { nodeScopes: nodeScopes, resolve: resolve, functionBindings: functionBindings, globalDeclarations: globalDeclarations, implicitWrites: implicitWrites };
 }
 
 function auditSource(source, file) {
@@ -175,203 +189,271 @@ function auditSource(source, file) {
   try { ast = acorn.parse(source, { ecmaVersion: "latest", sourceType: "script", locations: true, allowHashBang: true }); }
   catch (error) { return [{ file: file, line: error.loc && error.loc.line || 0, kind: "parse", name: null, message: error.message }]; }
   var model = lexicalModel(ast), nodeScopes = model.nodeScopes, resolve = model.resolve;
-  var globalNames = new Set(["window", "globalThis", "self"]), metaOwners = new Set(["Object", "Reflect"]);
-  var vendorCaptures = new Set(["turnstile", "loadPyodide", "V86"]);
+  var vendorNames = new Set(["turnstile", "loadPyodide", "V86"]);
+  var metaMethods = new Set(["Object.assign", "Object.defineProperty", "Object.defineProperties", "Object.setPrototypeOf",
+    "Object.getPrototypeOf", "Reflect.set", "Reflect.defineProperty", "Reflect.deleteProperty", "Reflect.setPrototypeOf",
+    "Reflect.getPrototypeOf", "Reflect.apply"]);
+  var evaluatingBindings = new Set();
   function bindingOf(node) { return node && node.type === "Identifier" ? resolve(nodeScopes.get(node), node.name) : null; }
-  function isGlobalIdentifier(node, names) { return node && node.type === "Identifier" && names.has(node.name) && !bindingOf(node); }
-  function bindingMatches(found, predicate, seen) {
-    if (!found || seen.has(found) || !found.sources.length) return false;
-    seen.add(found);
-    var matched = found.sources.some(function (sourceRef) { return sourceRef.node && predicate(sourceRef.node, sourceRef.scope, seen); });
-    seen.delete(found);
-    return matched;
-  }
-  function isWindow(node, scope, seen) {
-    if (isGlobalIdentifier(node, globalNames)) return true;
-    if (!(node && node.type === "Identifier")) return false;
-    return bindingMatches(resolve(scope || nodeScopes.get(node), node.name), isWindow, seen || new Set());
-  }
-  function metaOwner(node, scope, seen) {
-    if (isGlobalIdentifier(node, metaOwners)) return node.name;
-    if (!(node && node.type === "Identifier")) return null;
-    var found = resolve(scope || nodeScopes.get(node), node.name), result = null;
-    if (!found || (seen = seen || new Set()).has(found)) return null;
-    seen.add(found);
-    found.sources.some(function (sourceRef) { result = metaOwner(sourceRef.node, sourceRef.scope, seen); return !!result; });
-    seen.delete(found);
-    return result;
-  }
-  function mergeValues(parts) {
-    var values = new Set();
-    for (var i = 0; i < parts.length; i++) {
-      if (!parts[i]) return null;
-      parts[i].forEach(function (value) { values.add(value); });
+  function globalIdentifier(node, name) { return node && node.type === "Identifier" && node.name === name && !bindingOf(node); }
+  function evalReference(reference) {
+    if (!reference || reference.unknown) return unknownValue();
+    if (reference.rest) {
+      var restBase = evalReference(reference.rest);
+      if (restBase.origins.has("object") || restBase.origins.has("reflect") || restBase.origins.has("meta-hazard")) return originValue("meta-hazard");
+      return unknownValue();
     }
-    return values;
+    if (reference.alternatives) return mergeValues(reference.alternatives.map(evalReference));
+    if (reference.iterable) {
+      var iterable = evalReference(reference.iterable), parts = [];
+      if (reference.kind === "values") iterable.arrays.forEach(function (arrayRef) { arrayRef.node.elements.forEach(function (entry) { if (entry) parts.push(evalExpr(entry, arrayRef.scope)); }); });
+      else iterable.objects.forEach(function (objectRef) { objectRef.node.properties.forEach(function (property) { if (property.type === "Property" && !property.computed) parts.push(stringValue(property.key.name || property.key.value)); else parts.push(unknownValue()); }); });
+      if (!parts.length || iterable.unknown) parts.push(unknownValue());
+      return mergeValues(parts);
+    }
+    return projectValue(reference.node, reference.scope, reference.path || []);
   }
-  function stringValues(node, scope, seen) {
-    if (!node) return null;
-    if (node.type === "Literal" && typeof node.value === "string") return new Set([node.value]);
-    if (node.type === "TemplateLiteral" && node.expressions.length === 0) return new Set([node.quasis[0].value.cooked]);
-    if (node.type === "Identifier") {
+  function projectValue(node, scope, parts) {
+    if (!parts.length) return evalExpr(node, scope);
+    var part = parts[0], rest = parts.slice(1), results = [];
+    if (node && node.type === "Identifier") {
       var found = resolve(scope || nodeScopes.get(node), node.name);
-      if (!found || (seen = seen || new Set()).has(found) || !found.sources.length) return null;
-      if (found.paramOwner) {
-        var ownerBinding = model.functionBindings.get(found.paramOwner);
-        if (!ownerBinding || ownerBinding.indirectReference) return null;
+      if (found && found.sources.length && !evaluatingBindings.has(found)) {
+        evaluatingBindings.add(found);
+        found.sources.forEach(function (sourceRef) { results.push(projectReference(sourceRef, parts)); });
+        evaluatingBindings.delete(found);
+        return mergeValues(results);
       }
-      seen.add(found);
-      var resolved = mergeValues(found.sources.map(function (sourceRef) { return stringValues(sourceRef.node, sourceRef.scope, seen); }));
-      seen.delete(found);
-      return resolved;
     }
-    if (node.type === "ConditionalExpression") return mergeValues([stringValues(node.consequent, nodeScopes.get(node.consequent), seen), stringValues(node.alternate, nodeScopes.get(node.alternate), seen)]);
-    if (node.type === "LogicalExpression") return mergeValues([stringValues(node.left, nodeScopes.get(node.left), seen), stringValues(node.right, nodeScopes.get(node.right), seen)]);
-    if (node.type === "BinaryExpression" && node.operator === "+") {
-      var left = stringValues(node.left, nodeScopes.get(node.left), seen), right = stringValues(node.right, nodeScopes.get(node.right), seen);
-      if (left && !right && Array.from(left).every(function (value) { return value.indexOf("__") === 0; })) return new Set(["__*"]);
-      if (!left || !right) return null;
-      var combined = new Set();
-      left.forEach(function (a) { right.forEach(function (b) { combined.add(a + b); }); });
-      return combined;
+    if (node && node.type === "ObjectExpression" && part.type !== "index") {
+      var wanted = part.type === "key" ? new Set([part.value]) : finiteStrings(evalExpr(part.node, part.scope));
+      node.properties.forEach(function (property) {
+        if (property.type !== "Property") { results.push(unknownValue()); return; }
+        var keys = property.computed ? finiteStrings(evalExpr(property.key, nodeScopes.get(property.key))) : new Set([property.key.name || property.key.value]);
+        if (!wanted || !keys || Array.from(keys).some(function (key) { return wanted.has(key); })) results.push(projectValue(property.value, nodeScopes.get(property.value), rest));
+      });
+      return results.length ? mergeValues(results) : unknownValue();
     }
-    if (node.type === "MemberExpression") {
-      var objectBinding = bindingOf(node.object), objects = objectBinding && objectBinding.sources.map(function (sourceRef) { return sourceRef.node; });
-      if (!objects || !objects.length || objects.some(function (candidate) { return candidate.type !== "ObjectExpression"; })) return null;
-      var wanted = node.computed ? stringValues(node.property, nodeScopes.get(node.property), seen) : new Set([node.property.name]);
-      var outputs = [];
-      objects.forEach(function (object) {
-        object.properties.forEach(function (property) {
-          if (property.type !== "Property") { outputs.push(null); return; }
-          var keys = property.computed ? stringValues(property.key, nodeScopes.get(property.key), seen) : new Set([property.key.name || property.key.value]);
-          if (!wanted || (keys && Array.from(keys).some(function (key) { return wanted.has(key); }))) outputs.push(stringValues(property.value, nodeScopes.get(property.value), seen));
+    if (node && node.type === "ArrayExpression" && part.type === "index") {
+      return node.elements[part.value] ? projectValue(node.elements[part.value], nodeScopes.get(node.elements[part.value]), rest) : unknownValue();
+    }
+    var base = evalExpr(node, scope), names = part.type === "key" ? new Set([part.value]) : part.type === "index" ? new Set([String(part.value)]) : finiteStrings(evalExpr(part.node, part.scope));
+    return rest.length ? unknownValue() : memberValue(base, names);
+  }
+  function projectReference(reference, parts) {
+    if (!reference || reference.unknown) return unknownValue();
+    if (reference.alternatives) return mergeValues(reference.alternatives.map(function (alternative) { return projectReference(alternative, parts); }));
+    return projectValue(reference.node, reference.scope, (reference.path || []).concat(parts));
+  }
+  function evalBinding(found) {
+    if (!found || evaluatingBindings.has(found) || !found.sources.length) return unknownValue();
+    if (found.paramOwner) {
+      var owner = model.functionBindings.get(found.paramOwner);
+      if (!owner || owner.indirect) return unknownValue();
+    }
+    evaluatingBindings.add(found);
+    var value = mergeValues(found.sources.map(evalReference));
+    evaluatingBindings.delete(found);
+    return value;
+  }
+  function memberNames(node) { return node.computed ? finiteStrings(evalExpr(node.property, nodeScopes.get(node.property))) : new Set([node.property.name]); }
+  function finiteStrings(value) { return value && !value.unknown && !value.origins.size && !value.callables.length && !value.objects.length && !value.arrays.length ? value.strings : null; }
+  function callableValue(method, bound) { var value = emptyValue(); value.callables.push({ method: method, bound: bound || [] }); return value; }
+  function memberValue(base, names) {
+    var results = [];
+    if (!names) {
+      if (base.origins.has("window") || base.origins.has("prototype") || base.origins.has("window-constructor")) results.push(originValue("hazard"));
+      if (base.origins.has("loft")) results.push(originValue("loft"));
+      if (base.origins.has("private")) results.push(originValue("private"));
+      base.objects.forEach(function (objectRef) {
+        objectRef.node.properties.forEach(function (property) {
+          if (property.type === "Property") results.push(evalExpr(property.value, nodeScopes.get(property.value)));
+          else results.push(unknownValue());
         });
       });
-      return outputs.length ? mergeValues(outputs) : null;
+      if (base.unknown || (!results.length && !base.callables.length && !base.arrays.length)) results.push(unknownValue());
+      return mergeValues(results);
     }
-    return null;
+    names.forEach(function (name) {
+      if (base.origins.has("window")) {
+        if (name === "loft") results.push(originValue("loft"));
+        else if (name === "__proto__") results.push(originValue("prototype"));
+        else if (name === "constructor") results.push(originValue("window-constructor"));
+        else if (name.indexOf("__") === 0) results.push(originValue("private"));
+        else results.push(unknownValue());
+      }
+      if (base.origins.has("window-constructor")) results.push(name === "prototype" ? originValue("prototype") : unknownValue());
+      if (base.origins.has("prototype")) results.push(originValue("prototype"));
+      if (base.origins.has("loft")) results.push(originValue("loft"));
+      if (base.origins.has("private")) results.push(originValue("private"));
+      if (base.origins.has("object") && metaMethods.has("Object." + name)) results.push(callableValue("Object." + name));
+      if (base.origins.has("reflect") && metaMethods.has("Reflect." + name)) results.push(callableValue("Reflect." + name));
+      if (base.origins.has("hazard")) results.push(originValue("hazard"));
+      if (base.origins.has("meta-hazard")) results.push(originValue("meta-hazard"));
+      if (base.unknown) results.push(unknownValue());
+      base.objects.forEach(function (objectRef) {
+        objectRef.node.properties.forEach(function (property) {
+          if (property.type !== "Property") { results.push(unknownValue()); return; }
+          var keys = property.computed ? finiteStrings(evalExpr(property.key, nodeScopes.get(property.key))) : new Set([property.key.name || property.key.value]);
+          if (!keys || keys.has(name)) results.push(evalExpr(property.value, nodeScopes.get(property.value)));
+        });
+      });
+    });
+    return results.length ? mergeValues(results) : unknownValue();
   }
-  function propertyValues(member) {
-    return member.computed ? stringValues(member.property, nodeScopes.get(member.property), new Set()) : new Set([member.property.name]);
+  function arrayReferences(node, scope) {
+    var value = evalExpr(node, scope), references = [];
+    value.arrays.forEach(function (arrayRef) { arrayRef.node.elements.forEach(function (entry) { references.push(entry ? { node: entry, scope: arrayRef.scope, path: [] } : { unknown: true }); }); });
+    return value.arrays.length && !value.unknown ? references : null;
   }
-  function memberPaths(node) {
-    if (isWindow(node, nodeScopes.get(node), new Set())) return [[]];
-    if (!node || node.type !== "MemberExpression") return null;
-    if (isGlobalIdentifier(node.object, new Set(["Window"]))) {
-      var constructorProperties = propertyValues(node);
-      if (constructorProperties && constructorProperties.size === 1 && constructorProperties.has("prototype")) return [["prototype"]];
+  function arrayReferenceValues(reference) {
+    var value = evalReference(reference), references = [];
+    value.arrays.forEach(function (arrayRef) { arrayRef.node.elements.forEach(function (entry) { references.push(entry ? { node: entry, scope: arrayRef.scope, path: [] } : { unknown: true }); }); });
+    return value.arrays.length && !value.unknown ? references : null;
+  }
+  function invocationList(node) {
+    if (!node || node.type !== "CallExpression") return [];
+    if (node.callee.type === "MemberExpression") {
+      var suffixes = memberNames(node.callee);
+      if (suffixes && suffixes.size === 1) {
+        var suffix = Array.from(suffixes)[0], base = evalExpr(node.callee.object, nodeScopes.get(node.callee.object));
+        if (suffix === "call" && base.callables.length) return base.callables.map(function (callable) { return { method: callable.method, args: callable.bound.concat(node.arguments.slice(1).map(function (arg) { return { node: arg, scope: nodeScopes.get(arg), path: [] }; })) }; });
+        if (suffix === "apply") {
+          var applied = node.arguments[1] && arrayReferences(node.arguments[1], nodeScopes.get(node.arguments[1]));
+          if (base.callables.length) return base.callables.map(function (callable) { return { method: callable.method, args: applied ? callable.bound.concat(applied) : null }; });
+        }
+      }
     }
-    var bases = memberPaths(node.object);
-    if (!bases) return null;
-    var properties = propertyValues(node);
-    if (!properties) return bases.map(function (base) { return base.concat([null]); });
-    var paths = [];
-    bases.forEach(function (base) { properties.forEach(function (property) { paths.push(base.concat([property])); }); });
-    return paths;
+    var callee = evalExpr(node.callee, nodeScopes.get(node.callee));
+    var directArgs = node.arguments.map(function (arg) { return { node: arg, scope: nodeScopes.get(arg), path: [] }; });
+    var calls = [];
+    callee.callables.forEach(function (callable) {
+      if (callable.method === "Reflect.apply") {
+        var reflectArgs = callable.bound.concat(directArgs), target = reflectArgs[0] && evalReference(reflectArgs[0]);
+        var reflected = reflectArgs[2] && arrayReferenceValues(reflectArgs[2]);
+        target.callables.forEach(function (targetCallable) { calls.push({ method: targetCallable.method, args: reflected ? targetCallable.bound.concat(reflected) : null }); });
+      } else calls.push({ method: callable.method, args: callable.bound.concat(directArgs) });
+    });
+    if (callee.origins.has("meta-hazard")) calls.push({ method: "<unknown-meta>", args: directArgs });
+    return calls;
   }
-  function allowedName(name) { return name === "loft" || vendorCaptures.has(name) || (typeof name === "string" && name.indexOf("__") === 0 && name !== "__proto__"); }
+  function evalExpr(node, scope) {
+    if (!node) return unknownValue();
+    scope = scope || nodeScopes.get(node);
+    if (node.type === "Literal") return typeof node.value === "string" ? stringValue(node.value) : emptyValue();
+    if (node.type === "TemplateLiteral") {
+      if (!node.expressions.length) return stringValue(node.quasis[0].value.cooked);
+      var pieces = [stringValue(node.quasis[0].value.cooked)];
+      node.expressions.forEach(function (expression, index) { pieces.push(evalExpr(expression)); pieces.push(stringValue(node.quasis[index + 1].value.cooked)); });
+      var current = new Set([""]), unknown = false;
+      pieces.forEach(function (piece) { var strings = finiteStrings(piece); if (!strings) { unknown = true; return; } var next = new Set(); current.forEach(function (a) { strings.forEach(function (b) { next.add(a + b); }); }); current = next; });
+      var templated = emptyValue(); templated.strings = current; templated.unknown = unknown; return templated;
+    }
+    if (node.type === "Identifier") {
+      var found = resolve(scope, node.name);
+      if (found) return evalBinding(found);
+      if (node.name === "window" || node.name === "globalThis" || node.name === "self") return originValue("window");
+      if (node.name === "Window") return originValue("window-constructor");
+      if (node.name === "Object") return originValue("object");
+      if (node.name === "Reflect") return originValue("reflect");
+      return unknownValue();
+    }
+    if (node.type === "ConditionalExpression") return mergeValues([evalExpr(node.consequent), evalExpr(node.alternate)]);
+    if (node.type === "LogicalExpression") return mergeValues([evalExpr(node.left), evalExpr(node.right)]);
+    if (node.type === "SequenceExpression") return evalExpr(node.expressions[node.expressions.length - 1]);
+    if (node.type === "AssignmentExpression") return evalExpr(node.right);
+    if (node.type === "BinaryExpression" && node.operator === "+") {
+      var left = evalExpr(node.left), right = evalExpr(node.right), leftStrings = finiteStrings(left), rightStrings = finiteStrings(right), value = emptyValue();
+      if (leftStrings && rightStrings) leftStrings.forEach(function (a) { rightStrings.forEach(function (b) { value.strings.add(a + b); }); });
+      else if (leftStrings && Array.from(leftStrings).every(function (text) { return text.indexOf("__") === 0; })) value.strings.add("__*");
+      else value.unknown = true;
+      return value;
+    }
+    if (node.type === "ObjectExpression") { var objectValue = emptyValue(); objectValue.objects.push({ node: node, scope: scope }); return objectValue; }
+    if (node.type === "ArrayExpression") { var arrayValue = emptyValue(); arrayValue.arrays.push({ node: node, scope: scope }); return arrayValue; }
+    if (node.type === "MemberExpression") return memberValue(evalExpr(node.object), memberNames(node));
+    if (node.type === "CallExpression") {
+      if (node.callee.type === "MemberExpression") {
+        var suffixes = memberNames(node.callee);
+        if (suffixes && suffixes.size === 1 && suffixes.has("bind")) {
+          var base = evalExpr(node.callee.object), boundValue = emptyValue(), bound = node.arguments.slice(1).map(function (arg) { return { node: arg, scope: nodeScopes.get(arg), path: [] }; });
+          base.callables.forEach(function (callable) { boundValue.callables.push({ method: callable.method, bound: callable.bound.concat(bound) }); });
+          if (!boundValue.callables.length) boundValue.unknown = true;
+          return boundValue;
+        }
+      }
+      var calls = invocationList(node), results = [];
+      calls.forEach(function (call) {
+        if ((call.method === "Object.getPrototypeOf" || call.method === "Reflect.getPrototypeOf") && call.args && call.args[0]) {
+          var target = evalReference(call.args[0]);
+          if (target.origins.has("window") || target.origins.has("prototype") || target.origins.has("hazard")) results.push(originValue("prototype"));
+          else results.push(unknownValue());
+        } else results.push(unknownValue());
+      });
+      return results.length ? mergeValues(results) : unknownValue();
+    }
+    return unknownValue();
+  }
+  function allowedName(name) { return name === "loft" || vendorNames.has(name) || (typeof name === "string" && name.indexOf("__") === 0 && name !== "__proto__"); }
   var violations = [];
   function add(node, kind, name, message, force) {
     if (!force && allowedName(name)) return;
-    violations.push({ file: file, line: node.loc.start.line, kind: kind, name: name, message: message || (name === null ? "unclassified dynamic Window write" : "public Window write: " + name) });
-  }
-  function auditPath(node, kind, path, appendedName) {
-    var full = path.slice();
-    if (appendedName !== undefined) full.push(appendedName);
-    var prototypeIndex = full.findIndex(function (part) { return part === "__proto__" || part === "prototype"; });
-    if (prototypeIndex >= 0) {
-      add(node, kind, full[full.length - 1] || null, "inherited Window surface write", true);
-      return;
-    }
-    // Mutating a member of an ordinary Window-owned object does not add or replace Window
-    // surface. Prototype traversal above is different: it changes inherited global lookup.
-    if (full.length > 1) return;
-    add(node, kind, full.length ? full[0] : null);
+    violations.push({ file: file, line: node.loc.start.line, kind: kind, name: name, message: message || (name === null ? "unclassified hazardous Window write" : "public Window write: " + name) });
   }
   function auditTarget(node, kind) {
     if (!node) return;
     if (node.type === "VariableDeclaration") { node.declarations.forEach(function (declaration) { auditTarget(declaration.id, kind); }); return; }
     if (node.type === "MemberExpression") {
-      var paths = memberPaths(node);
-      if (paths) paths.forEach(function (path) { auditPath(node, kind, path); });
+      var base = evalExpr(node.object), names = memberNames(node);
+      if (base.origins.has("prototype")) { if (!names) add(node, kind, null, "dynamic inherited Window surface write", true); else names.forEach(function (name) { add(node, kind, name, "inherited Window surface write", true); }); }
+      if (base.origins.has("window")) { if (!names) add(node, kind, null); else names.forEach(function (name) { add(node, kind, name); }); }
+      if (base.origins.has("hazard")) add(node, kind, null, "unresolved value may be Window or its prototype", true);
+      return;
+    }
+    if (node.type === "Identifier") {
+      if (!resolve(nodeScopes.get(node), node.name)) add(node, kind, node.name);
       return;
     }
     if (node.type === "ArrayPattern") { node.elements.forEach(function (entry) { auditTarget(entry, kind); }); return; }
     if (node.type === "ObjectPattern") { node.properties.forEach(function (property) { auditTarget(property.type === "RestElement" ? property.argument : property.value, kind); }); return; }
     if (node.type === "AssignmentPattern" || node.type === "RestElement") auditTarget(node.left || node.argument, kind);
   }
-  function directMethod(node, seen) {
-    if (!node) return null;
-    if (node.type === "Identifier") {
-      var found = bindingOf(node), result = null;
-      if (!found || (seen = seen || new Set()).has(found)) return null;
-      if (found.destructuredMethod) {
-        var destructuredOwner = metaOwner(found.destructuredMethod.owner, nodeScopes.get(found.destructuredMethod.owner), new Set());
-        var destructuredNames = found.destructuredMethod.computed ? stringValues(found.destructuredMethod.key, nodeScopes.get(found.destructuredMethod.key), new Set()) : new Set([found.destructuredMethod.key.name || found.destructuredMethod.key.value]);
-        if (destructuredOwner && destructuredNames && destructuredNames.size === 1) return destructuredOwner + "." + Array.from(destructuredNames)[0];
-      }
-      seen.add(found);
-      found.sources.some(function (sourceRef) { result = directMethod(sourceRef.node, seen); return !!result; });
-      seen.delete(found);
-      return result;
+  function objectKeys(reference) {
+    var value = evalReference(reference), names = new Set(), valid = value.objects.length > 0 && !value.unknown;
+    value.objects.forEach(function (objectRef) { objectRef.node.properties.forEach(function (property) {
+      if (property.type !== "Property") { valid = false; return; }
+      var keys = property.computed ? finiteStrings(evalExpr(property.key, nodeScopes.get(property.key))) : new Set([property.key.name || property.key.value]);
+      if (!keys) valid = false; else keys.forEach(function (key) { names.add(key); });
+    }); });
+    return valid ? names : null;
+  }
+  function auditMeta(node, call) {
+    var writes = new Set(["<unknown-meta>", "Object.assign", "Object.defineProperty", "Object.defineProperties", "Object.setPrototypeOf", "Reflect.set", "Reflect.defineProperty", "Reflect.deleteProperty", "Reflect.setPrototypeOf"]);
+    if (!writes.has(call.method)) return;
+    if (!call.args || !call.args[0]) { add(node, call.method, null); return; }
+    var target = evalReference(call.args[0]), hazardous = target.origins.has("window") || target.origins.has("prototype") || target.origins.has("hazard");
+    if (!hazardous) return;
+    var inherited = target.origins.has("prototype") || target.origins.has("hazard");
+    function report(name) { add(node, call.method, name, inherited ? "inherited or unresolved Window surface write" : null, inherited); }
+    if (call.method === "<unknown-meta>") { report(null); return; }
+    if (call.method === "Object.setPrototypeOf" || call.method === "Reflect.setPrototypeOf") { report("[[Prototype]]"); return; }
+    if (call.method === "Object.assign") {
+      call.args.slice(1).forEach(function (sourceRef) { var keys = objectKeys(sourceRef); if (!keys) report(null); else keys.forEach(report); });
+      return;
     }
-    if (node.type !== "MemberExpression") return null;
-    var owner = metaOwner(node.object, nodeScopes.get(node.object), new Set()), names = propertyValues(node);
-    return owner && names && names.size === 1 ? owner + "." + Array.from(names)[0] : null;
+    if (call.method === "Object.defineProperties") { var descriptorKeys = call.args[1] && objectKeys(call.args[1]); if (!descriptorKeys) report(null); else descriptorKeys.forEach(report); return; }
+    var names = call.args[1] && finiteStrings(evalReference(call.args[1]));
+    if (!names) report(null); else names.forEach(report);
   }
-  function operation(node) {
-    var method = directMethod(node.callee, new Set()), args = node.arguments;
-    if (method) return { method: method, args: args };
-    if (node.callee.type !== "MemberExpression") return null;
-    var suffixes = propertyValues(node.callee);
-    if (!suffixes || suffixes.size !== 1) return null;
-    var suffix = Array.from(suffixes)[0], base = directMethod(node.callee.object, new Set());
-    if (!base || (suffix !== "call" && suffix !== "apply")) return null;
-    if (suffix === "call") return { method: base, args: args.slice(1) };
-    if (args[1] && args[1].type === "ArrayExpression") return { method: base, args: args[1].elements };
-    return { method: base, args: null };
-  }
+  model.globalDeclarations.forEach(function (declaration) { add(declaration.node, declaration.kind, declaration.name); });
+  model.implicitWrites.forEach(function (write) { add(write.node, write.kind, write.name); });
   walk.simple(ast, {
     AssignmentExpression: function (node) { auditTarget(node.left, "assignment"); },
     UpdateExpression: function (node) { auditTarget(node.argument, "update"); },
     UnaryExpression: function (node) { if (node.operator === "delete") auditTarget(node.argument, "delete"); },
     ForInStatement: function (node) { auditTarget(node.left, "for-in"); },
     ForOfStatement: function (node) { auditTarget(node.left, "for-of"); },
-    CallExpression: function (node) {
-      var op = operation(node);
-      if (!op || !["Object.assign", "Object.defineProperty", "Object.defineProperties", "Object.setPrototypeOf", "Reflect.set", "Reflect.defineProperty", "Reflect.deleteProperty", "Reflect.setPrototypeOf"].includes(op.method)) return;
-      if (!op.args) { add(node, op.method + ".apply", null); return; }
-      var targetPaths = memberPaths(op.args[0]);
-      if (!targetPaths) return;
-      if (op.method === "Object.setPrototypeOf" || op.method === "Reflect.setPrototypeOf") {
-        targetPaths.forEach(function (targetPath) { add(node, op.method, targetPath[0] || "[[Prototype]]", "Window prototype replacement", true); });
-        return;
-      }
-      if (op.method === "Object.assign") {
-        op.args.slice(1).forEach(function (sourceNode) {
-          if (!sourceNode || sourceNode.type !== "ObjectExpression") { add(node, op.method, null); return; }
-          sourceNode.properties.forEach(function (property) {
-            var names = property.type === "SpreadElement" ? null : (property.computed ? stringValues(property.key, nodeScopes.get(property.key), new Set()) : new Set([property.key.name || property.key.value]));
-            if (!names) { add(property, op.method, null); return; }
-            targetPaths.forEach(function (targetPath) { names.forEach(function (name) { auditPath(property, op.method, targetPath, name); }); });
-          });
-        });
-        return;
-      }
-      if (op.method === "Object.defineProperties") {
-        var descriptors = op.args[1];
-        if (!descriptors || descriptors.type !== "ObjectExpression") { add(node, op.method, null); return; }
-        descriptors.properties.forEach(function (property) {
-          var names = property.computed ? stringValues(property.key, nodeScopes.get(property.key), new Set()) : new Set([property.key.name || property.key.value]);
-          if (!names) { add(property, op.method, null); return; }
-          targetPaths.forEach(function (targetPath) { names.forEach(function (name) { auditPath(property, op.method, targetPath, name); }); });
-        });
-        return;
-      }
-      var names = stringValues(op.args[1], nodeScopes.get(op.args[1]), new Set());
-      if (!names) { add(node, op.method, null); return; }
-      targetPaths.forEach(function (targetPath) { names.forEach(function (name) { auditPath(node, op.method, targetPath, name); }); });
-    }
+    CallExpression: function (node) { invocationList(node).forEach(function (call) { auditMeta(node, call); }); }
   });
   return violations;
 }
@@ -381,10 +463,8 @@ function authoredSources(root) {
   var scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, match, inline = 0;
   while ((match = scriptRe.exec(html))) {
     var src = match[1].match(/\bsrc=["']([^"']+)["']/i);
-    if (src) {
-      var relative = src[1].split(/[?#]/)[0];
-      if (!/^[a-z]+:/i.test(relative)) files.push({ name: relative, source: fs.readFileSync(path.join(root, relative), "utf8") });
-    } else files.push({ name: "loft-day.html#inline-" + (++inline), source: match[2] });
+    if (src) { var relative = src[1].split(/[?#]/)[0]; if (!/^[a-z]+:/i.test(relative)) files.push({ name: relative, source: fs.readFileSync(path.join(root, relative), "utf8") }); }
+    else files.push({ name: "loft-day.html#inline-" + (++inline), source: match[2] });
   }
   return files;
 }
@@ -393,29 +473,20 @@ function main() {
   var root = path.join(__dirname, ".."), violations = [];
   authoredSources(root).forEach(function (file) { violations = violations.concat(auditSource(file.source, file.name.replace(/#inline-\d+$/, "") === "loft-day.html" ? "loft-day.html" : file.name)); });
   var fixtureDir = path.join(__dirname, "fixtures", "global-audit");
-  var fixtures = fs.readdirSync(fixtureDir).filter(function (name) { return /\.js$/.test(name); }).sort();
-  var expected = {
-    "alias-baseline.js": "open", "assign.js": "rogueAssign", "computed.js": "rogueComputed",
-    "define-properties.js": "rogueDefinedMany", "define-property-apply.js": "rogueApply",
-    "define-property-call.js": "rogueCall", "define-property.js": "rogueDefined",
-    "delete.js": "fetch", "destructured-meta.js": "rogueDestructuredMeta", "destructuring.js": "rogueDestructured",
-    "duplicate-scope-alias.js": "rogueDuplicate", "dynamic-helper.js": null, "dynamic.js": null,
-    "for-in.js": "rogueForIn", "for-of.js": "rogueForOf", "nested-shadow.js": "rogueShadowed",
-    "prototype-chain.js": "roguePrototype", "reflect.js": "rogueReflected"
-  };
-  var fixtureFailures = [];
-  fixtures.forEach(function (name) {
-    var found = auditSource(fs.readFileSync(path.join(fixtureDir, name), "utf8"), name);
-    var passed = name === "allowed.js" ? found.length === 0 : Object.prototype.hasOwnProperty.call(expected, name) && found.some(function (violation) { return violation.name === expected[name]; });
-    if (!passed) fixtureFailures.push({ fixture: name, expected: expected[name], violations: found });
+  var manifest = JSON.parse(fs.readFileSync(path.join(fixtureDir, "manifest.json"), "utf8"));
+  var failures = [];
+  Object.keys(manifest).sort().forEach(function (name) {
+    var found = auditSource(fs.readFileSync(path.join(fixtureDir, name), "utf8"), name), expected = manifest[name];
+    var passed = expected === "allowed" ? found.length === 0 : found.some(function (violation) { return violation.name === expected || (expected === null && violation.name === null); });
+    if (!passed) failures.push({ fixture: name, expected: expected, violations: found });
   });
   console.log("Loft static Window audit:");
   if (violations.length) violations.forEach(function (entry) { console.log("  ✗ " + entry.file + ":" + entry.line + " " + entry.kind + " " + (entry.name === null ? "<dynamic>" : entry.name)); });
   else console.log("  ✓ authored sources contain no public or unclassified dynamic Window writes");
-  if (fixtureFailures.length) fixtureFailures.forEach(function (entry) { console.log("  ✗ hostile fixture classification: " + JSON.stringify(entry)); });
-  else console.log("  ✓ hostile fixtures cover lexical shadows, aliases, loops, prototype chains, dynamic keys, assignments, destructuring, Object meta-writes, Reflect, and delete");
+  if (failures.length) failures.forEach(function (entry) { console.log("  ✗ hostile fixture classification: " + JSON.stringify(entry)); });
+  else console.log("  ✓ abstract-value fixture matrix covers lexical, prototype, meta-callable, declaration, pattern-mutation, and safe-subtree flows");
   console.log("  ✓ parser: Node-bundled Acorn " + acorn.version + " (zero network)");
-  if (violations.length || fixtureFailures.length) process.exit(1);
+  if (violations.length || failures.length) process.exit(1);
   console.log("All static Window audit checks passed.");
 }
 

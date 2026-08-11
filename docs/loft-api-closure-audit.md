@@ -63,19 +63,23 @@ Before migration on final main:
 Candidate repeated runtime result (two strict and two report runs):
 
 - 0 forbidden globals.
-- 1,670 private `__*` globals.
+- 1,668 private `__*` globals.
 - 2,794 verified browser named-element globals.
 
 `node tests/global-static-audit.js` is the durable zero-network AST gate. It uses Node's bundled
 Acorn and a finite abstract-value/data-flow model per lexical binding. Window, its prototype chain,
 safe `loft`/private descendants, Object/Reflect callables, finite strings, and unknown values remain
-distinct across branch unions, aliases, patterns, defaults, rest/spread, callable object/array
-members, callbacks, and mutations. Call-site values distinguish sloppy plain-call Window `this`,
-strict and arrow semantics, member receivers, and explicit call/apply/bind receivers. Bare `loft`,
+distinct across branch unions, aliases, patterns, defaults, rest/spread, destructured callable
+members, nested members, finite computed names, arrays, callbacks, and mutations. Definite sequential
+member overwrites—including unconditional nested blocks and constant branches—replace stale values;
+runtime-dependent overwrites remain unioned. Call-site values distinguish sloppy plain-call Window
+`this`, strict and arrow semantics, member receivers, explicit call/apply/bind receivers, aliased
+Window timers/listeners, and sloppy versus strict Promise callbacks. Bare `loft`,
 `top`/`parent`/`frames` self chains, and `document.defaultView` are modeled; shared
 `Object.prototype` escapes remain hazardous without mistaking a child constructor's prototype for
 Window's chain. Meta invocations normalize direct, aliased, destructured, `.call`/`.apply`/`.bind`,
-`Reflect.apply`, direct call/apply uncurrying, and partial binding. Program lexical bindings, sloppy
+recursively composed `Reflect.apply`, direct and Reflect-assisted call/apply uncurrying, and partial
+binding. Program lexical bindings, sloppy
 Annex-B block functions, classic declarations, and implicit bare writes are included even when
 runtime Window-key inventory cannot enumerate them, while loop and switch lexicals remain local.
 Dynamic names pass only when every finite possibility is private or an owned temporary vendor name;
@@ -85,8 +89,11 @@ compares own and inherited runtime baseline descriptors/identities, including ad
 Its two-script proof confirms a persistent lexical binding is bare-accessible but not an own Window
 key, while a temporary shared-prototype name resolves through Window and bare lookup before deletion;
 its five-name proof exercises sloppy `this`, bare-Loft prototype, `top`, direct uncurrying, and member
-call publication. Static analysis rejects every temporary surface which the later clean inventory
-cannot observe.
+call publication. A nearby four-name proof covers nested private objects, fixed-computed methods,
+Window event callbacks, and Reflect-assisted uncurrying. A further five-name proof covers
+destructured callables, concatenated member names, timer aliases, Promise callback `this`, and
+recursive Reflect-call composition. Static analysis rejects every temporary surface which the later
+clean inventory cannot observe.
 
 ## Validation completed
 
@@ -107,7 +114,7 @@ cannot observe.
   The per-file Code-reset runner produced the exact same output bytes as exact main, including its
   one inherited EN/CS confirmation fixture mismatch.
 - Final strict and report Window-surface runs passed: the report found exactly 0 forbidden,
-  1,670 private `__*`, and 2,794 verified named-element globals.
+  1,668 private `__*`, and 2,794 verified named-element globals.
 - The durable AST audit and every hostile fixture pass with no public or unclassified dynamic
   Window write. Runtime hostile probes reject baseline replacement, an authored DOM-valued global,
   and inherited public surface while the ordinary page retains its zero-forbidden surface.

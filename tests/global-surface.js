@@ -27,7 +27,7 @@ var NAMED_PROBE = "weddingTestNamedWindowProbe";
 var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
-  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,lazyBootstrap:{attempted:false,settled:false,error:""}};',
+  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
   'function ownKeys(){return Reflect.ownKeys(window);}',
   'function safeValue(name){try{return {ok:true,value:window[name]};}catch(error){return {ok:false,error:String(error&&error.message||error)};}}',
   'function includesNode(collection,node){try{for(var i=0;i<collection.length;i++)if(collection[i]===node)return true;}catch(error){}return false;}',
@@ -45,6 +45,30 @@ var HARNESS = [
   ' return {type:type,tag:tag,enumerable:descriptor?!!descriptor.enumerable:null,configurable:descriptor?!!descriptor.configurable:null,writable:descriptor&&Object.prototype.hasOwnProperty.call(descriptor,"writable")?!!descriptor.writable:null,accessor:!!(descriptor&&(descriptor.get||descriptor.set))};',
   '}',
   'function finish(){report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);}',
+  'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
+  'function monitorDesktop(){',
+  ' if(window.__goToStage)window.__goToStage("office");',
+  ' var tower=document.getElementById("office-pc-desk-trio"),monitor=document.getElementById("office-monitor");',
+  ' if(tower)tower.classList.add("on");',
+  ' if(monitor){if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();monitor.classList.add("here","screen-on","show-caps");monitor.classList.remove("show-fedora");}',
+  '}',
+  'async function exerciseLazyVendors(){',
+  ' var own=Object.prototype.hasOwnProperty,originalAppend=document.head.appendChild;',
+  ' window.turnstile={render:function(_host,options){setTimeout(function(){options.callback("test-token");},0);return "test-widget";},execute:function(){},remove:function(){}};',
+  ' monitorDesktop();await window.loft.app.open("chat");await sleep(50);',
+  ' report.lazyBootstrap.vendors.turnstile=!own.call(window,"turnstile");',
+  ' document.head.appendChild=function(node){',
+  '  var src=String(node&&node.src||"");',
+  '  if(/pyodide\\.js(?:[?#]|$)/.test(src)){setTimeout(function(){window.loadPyodide=function(){throw new Error("test loader stop");};node.dispatchEvent(new Event("load"));},0);return node;}',
+  '  if(/libv86\\.js(?:[?#]|$)/.test(src)){setTimeout(function(){window.V86=function(){throw new Error("test loader stop");};node.dispatchEvent(new Event("load"));},0);return node;}',
+  '  return originalAppend.call(document.head,node);',
+  ' };',
+  ' monitorDesktop();await window.loft.app.open("python");await sleep(50);',
+  ' report.lazyBootstrap.vendors.loadPyodide=!own.call(window,"loadPyodide");',
+  ' monitorDesktop();await window.loft.app.open("linux");await sleep(50);',
+  ' report.lazyBootstrap.vendors.V86=!own.call(window,"V86");',
+  ' document.head.appendChild=originalAppend;',
+  '}',
   'function inventory(){',
   ' try{',
   '  var baseline=window.__weddingTestWindowBaseline;',
@@ -73,7 +97,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){',
   ' report.lazyBootstrap.attempted=true;',
   ' var pending;try{pending=window.loft.typography.harfbuzz();}catch(error){pending=Promise.reject(error);}',
-  ' Promise.resolve(pending).then(function(){},function(error){report.lazyBootstrap.error=String(error&&error.message||error);}).then(function(){report.lazyBootstrap.settled=true;setTimeout(inventory,100);});',
+  ' Promise.resolve(pending).then(function(){},function(error){report.lazyBootstrap.error=String(error&&error.message||error);}).then(exerciseLazyVendors).then(function(){report.lazyBootstrap.settled=true;setTimeout(inventory,100);},function(error){report.lazyBootstrap.error=String(error&&error.message||error);report.lazyBootstrap.settled=true;setTimeout(inventory,100);});',
   '},100);});',
   '})();</script>'
 ].join("\n");
@@ -183,6 +207,7 @@ check(result.probe && !result.probe.baselineHadLoft && result.probe.finalHasLoft
 check(result.probe && !result.probe.baseline && result.probe.resolves && result.probe.classified, "a real browser named-element global is recognized and excluded", JSON.stringify(result.probe));
 check(result.allowed.length === 1 && result.allowed[0].name === "loft" && result.allowed[0].shape.type === "object", "window.loft is the one app-authored public root", JSON.stringify(result.allowed));
 check(result.lazyBootstrap && result.lazyBootstrap.attempted && result.lazyBootstrap.settled, "a real lazy vendor bootstrap settles before the Window inventory", JSON.stringify(result.lazyBootstrap));
+check(result.lazyBootstrap && result.lazyBootstrap.vendors && ["turnstile", "loadPyodide", "V86"].every(function (name) { return result.lazyBootstrap.vendors[name] === true; }), "lazy classic-script vendor globals are captured and removed at runtime", JSON.stringify(result.lazyBootstrap));
 
 var files = sourceFiles();
 var staticWrites = staticPublicWindowWrites(files);

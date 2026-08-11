@@ -20,8 +20,10 @@ public document.
   `window.__loftCodeSnippets`; the old public `T` and `LOFT_CODE_SNIPPETS` globals are absent.
 - App-authored classic JavaScript is wrapped in a strict closure. Unreachable console-era private
   facades were removed rather than preserved under a new namespace.
-- Lazy third-party loaders are captured and their temporary Window properties are deleted after
-  settlement. The runtime regression exercises Turnstile, Pyodide, v86, and HarfBuzz loader paths.
+- Lazy third-party loads own their capture, script, listeners, watchdog, and settlement per generation;
+  every terminal path removes the temporary Window property and script idempotently. Focused runtime
+  regressions exercise success, error/retry, hung reset/cancel, watchdog, stale late load, and repeated
+  success across Turnstile, Pyodide, and v86; HarfBuzz remains privately compiled.
 
 ## Capability inventory
 

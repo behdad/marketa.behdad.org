@@ -414,8 +414,10 @@ public Window root. Split-script data and implementation/test integration may us
 `tests/global-surface.js` snapshot distinguishes browser baseline and verified named-element globals
 from app additions, then fails on any non-`loft`, non-`__…` app-owned property.
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before
-injection; their one vendor bootstrap symbol is captured into the main closure and the temporary
-Window property is deleted at `load`. HarfBuzz's pinned factories are instead compiled directly in a
+injection. One generation-owned record retains that capture together with its script node, listeners,
+watchdog, and settlement. Success, error, timeout, cancellation, and reset all release it idempotently,
+remove the script, and delete the temporary Window property; descriptor identity prevents a stale
+generation from releasing its successor. HarfBuzz's pinned factories are instead compiled directly in a
 private function scope because its wrapper uses a non-configurable top-level function declaration.
 Keep every runtime consumer on these captured lexical owners rather than reading vendor globals from
 Window.

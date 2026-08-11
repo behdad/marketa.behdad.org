@@ -218,9 +218,9 @@ check(staticWrites.length === 0, "authored sources contain no explicit public Wi
 }).join("\n"));
 var html = files.find(function (file) { return file.name === "loft-day.html"; }).text;
 var lazyVendorCaptures = {
-  turnstile: 'captureLazyScriptGlobal("turnstile")',
-  loadPyodide: 'captureLazyScriptGlobal("loadPyodide")',
-  V86: 'captureLazyScriptGlobal("V86")',
+  turnstile: 'lazyScriptAttempt("turnstile"',
+  loadPyodide: 'lazyScriptAttempt("loadPyodide"',
+  V86: 'lazyScriptAttempt("V86"',
   createHarfBuzz: 'hbLoadScript("harfbuzzjs/hb.js", "createHarfBuzz")',
   hbjs: 'hbLoadScript("harfbuzzjs/hbjs.js", "hbjs")'
 };

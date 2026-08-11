@@ -37617,27 +37617,64 @@ var controllers = window.__loftControllers = Object.create(null);
 // Arm a configurable accessor before injection, capture the value into this closure,
 // then remove the temporary property as soon as the script finishes evaluating.
 function captureLazyScriptGlobal(name) {
-  var captured;
+  var captured, released = false;
   var prior = Object.getOwnPropertyDescriptor(window, name);
   if (prior) {
     captured = window[name];
     if (prior.configurable) delete window[name];
   }
+  var getter = function () { return captured; };
+  var setter = function (value) { captured = value; };
   if (!Object.prototype.hasOwnProperty.call(window, name)) {
     Object.defineProperty(window, name, {
       configurable: true,
-      get: function () { return captured; },
-      set: function (value) { captured = value; }
+      get: getter,
+      set: setter
     });
   }
   return {
     release: function () {
+      if (released) return captured;
+      released = true;
       if (captured === undefined) captured = window[name];
       var descriptor = Object.getOwnPropertyDescriptor(window, name);
-      if (descriptor && descriptor.configurable) delete window[name];
+      if (descriptor && descriptor.configurable && descriptor.get === getter && descriptor.set === setter) delete window[name];
       return captured;
     }
   };
+}
+// One record owns every terminal edge of one lazy classic-script generation. Removing a settled
+// script prevents its late load from executing; descriptor identity prevents a stale callback from
+// deleting a newer generation's capture even when a test dispatches that callback manually.
+function lazyScriptAttempt(name, src, options) {
+  options = options || {};
+  var capture = captureLazyScriptGlobal(name), script = document.createElement("script");
+  var record = { name: name, script: script, capture: capture, timer: null, settled: false, value: undefined, cancel: null, promise: null };
+  script.src = src;
+  if (options.id) script.id = options.id;
+  script.async = options.async !== false;
+  script.defer = !!options.defer;
+  record.promise = new Promise(function (resolve, reject) {
+    function settle(error) {
+      if (record.settled) return;
+      record.settled = true;
+      if (record.timer) { clearTimeout(record.timer); record.timer = null; }
+      script.removeEventListener("load", loaded);
+      script.removeEventListener("error", failed);
+      record.value = capture.release();
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (error) reject(error); else resolve(record.value);
+    }
+    function loaded() { settle(null); }
+    function failed() { settle(new Error(options.error || (name + " failed to load"))); }
+    record.cancel = function (reason) { settle(new Error(reason || (name + " load cancelled"))); };
+    script.addEventListener("load", loaded, { once: true });
+    script.addEventListener("error", failed, { once: true });
+    if (options.timeout > 0) record.timer = setTimeout(function () { record.cancel(options.timeoutError || (name + " load timed out")); }, options.timeout);
+    try { document.head.appendChild(script); }
+    catch (error) { settle(error); }
+  });
+  return record;
 }
 // Canonical season ids shared by the typed API, keyboard ring, and private scene owner.
 var SEAS = ["wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "mehregan", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "sadeh", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice", "auto"];
@@ -82945,7 +82982,7 @@ setOfficeProgress("pc", false);
   var chatEverOpened = false;
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
   var chatKillActive = false, chatKillStage = "", chatKillThought = null, chatKillRows = [], chatKillTokens = [];
-  var chatTurnstileApi = null, chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
+  var chatTurnstileApi = null, chatTurnstileApiPromise = null, chatTurnstileLoadAttempt = null, chatTurnstileHost = null, chatTurnstileWidget = null;
   var chatTurnstileWait = null;
   var chatTurnstileCancelSeq = 0;
   var chatTurnstilePreparedToken = null, chatTurnstilePreparedAt = 0, chatTurnstilePreparePromise = null;
@@ -82983,6 +83020,7 @@ setOfficeProgress("pc", false);
     chatTurnstileCancelSeq++;
     chatTurnstilePreparedToken = null; chatTurnstilePreparedAt = 0;
     if (chatTurnstileWait) settleChatTurnstile(new Error("verification cancelled"));
+    if (chatTurnstileLoadAttempt) chatTurnstileLoadAttempt.cancel("Turnstile load cancelled");
   }
   function loadChatTurnstile() {
     if (!chatTurnstileApi && Object.prototype.hasOwnProperty.call(window, "turnstile")) {
@@ -82990,25 +83028,22 @@ setOfficeProgress("pc", false);
     }
     if (chatTurnstileApi && typeof chatTurnstileApi.render === "function") return Promise.resolve(chatTurnstileApi);
     if (chatTurnstileApiPromise) return chatTurnstileApiPromise;
-    chatTurnstileApiPromise = new Promise(function (resolve, reject) {
-      var script = document.getElementById("loft-chat-turnstile-script");
-      var capture = captureLazyScriptGlobal("turnstile");
-      function ready() {
-        chatTurnstileApi = capture.release();
-        if (chatTurnstileApi && typeof chatTurnstileApi.render === "function") resolve(chatTurnstileApi);
-        else reject(new Error("Turnstile unavailable"));
-      }
-      function failed() { capture.release(); reject(new Error("Turnstile failed to load")); }
-      if (script) { script.addEventListener("load", ready, { once: true }); script.addEventListener("error", failed, { once: true }); return; }
-      script = document.createElement("script");
-      script.id = "loft-chat-turnstile-script";
-      script.src = CHAT_TURNSTILE_SCRIPT;
-      script.async = true;
-      script.defer = true;
-      script.addEventListener("load", ready, { once: true });
-      script.addEventListener("error", failed, { once: true });
-      document.head.appendChild(script);
-    }).catch(function (error) { chatTurnstileApiPromise = null; throw error; });
+    var stale = document.getElementById("loft-chat-turnstile-script");
+    if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+    var attempt = chatTurnstileLoadAttempt = lazyScriptAttempt("turnstile", CHAT_TURNSTILE_SCRIPT, {
+      id: "loft-chat-turnstile-script", defer: true, timeout: CHAT_TOTAL_TIMEOUT_MS,
+      error: "Turnstile failed to load", timeoutError: "Turnstile load timed out"
+    });
+    var promise = attempt.promise.then(function (api) {
+      if (chatTurnstileLoadAttempt !== attempt) throw new Error("Turnstile load superseded");
+      chatTurnstileApi = api;
+      if (!chatTurnstileApi || typeof chatTurnstileApi.render !== "function") throw new Error("Turnstile unavailable");
+      return chatTurnstileApi;
+    }).finally(function () {
+      if (chatTurnstileLoadAttempt === attempt) chatTurnstileLoadAttempt = null;
+      if (chatTurnstileApiPromise === promise) chatTurnstileApiPromise = null;
+    });
+    chatTurnstileApiPromise = promise;
     return chatTurnstileApiPromise;
   }
   function solveChatTurnstileToken() {
@@ -83686,6 +83721,7 @@ setOfficeProgress("pc", false);
     if (chatActiveMessage) cancelled.unshift(chatActiveMessage);
     cancelled.forEach(function (message) { settleChatMessage(message, new Error("chat request cancelled")); });
     cancelChatTurnstile();
+    chatTurnstileApi = null;
     if (chatAbort) { try { chatAbort.abort(); } catch (e) {} chatAbort = null; }
     chatPending = false; chatError = ""; chatHistory = []; chatQueue = []; chatActiveMessage = null; chatRetryMessage = null;
     if (chatInput) chatInput.value = "";
@@ -84387,7 +84423,7 @@ setOfficeProgress("pc", false);
   var pyRuntime = null, pyReprFn = null;
   var pyodideLoader = null;
   var pyLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
-  var pyLoadGeneration = 0, PY_LOAD_CANCELLED = {};
+  var pyLoadGeneration = 0, pyLoadAttempt = null, PY_LOAD_CANCELLED = {};
   var pyBusy = false, pyLastCmd = "";
   var pyCodeQueue = [];
   var PYODIDE_URL = "pyodide/pyodide.js";
@@ -85198,6 +85234,7 @@ def colormode(mode=None):
   function pyLoadGuard(generation) { if (!pyLoadCurrent(generation)) throw PY_LOAD_CANCELLED; }
   function pyLoadFailed(generation) {
     if (generation !== pyLoadGeneration) return;
+    if (pyLoadAttempt) { var attempt = pyLoadAttempt; pyLoadAttempt = null; attempt.cancel("Pyodide load cancelled"); }
     pyLoadState = "failed";
     pyCodeQueue.length = 0;
     pyPrint(pyT("py_fail"), "console-err");
@@ -85208,12 +85245,18 @@ def colormode(mode=None):
     var generation = ++pyLoadGeneration;
     pyPrint(pyT("py_loading"), "console-dim");
     if (pyodideLoader) { initPyodide(generation); return; } // library already fetched (e.g. a Restart) — don't re-inject the script
-    var capture = captureLazyScriptGlobal("loadPyodide");
-    var s = document.createElement("script");
-    s.src = PYODIDE_URL;
-    s.onerror = function () { capture.release(); pyLoadFailed(generation); };
-    s.onload = function () { pyodideLoader = capture.release(); initPyodide(generation); };
-    document.head.appendChild(s);
+    var attempt = pyLoadAttempt = lazyScriptAttempt("loadPyodide", PYODIDE_URL, {
+      timeout: 45000, error: "Pyodide failed to load", timeoutError: "Pyodide load timed out"
+    });
+    attempt.promise.then(function (loader) {
+      if (pyLoadAttempt !== attempt || !pyLoadCurrent(generation)) return;
+      pyLoadAttempt = null;
+      pyodideLoader = loader;
+      initPyodide(generation);
+    }, function () {
+      if (pyLoadAttempt === attempt) pyLoadAttempt = null;
+      pyLoadFailed(generation);
+    });
   }
   // Build a fresh CPython interpreter from the captured Pyodide loader. Split
   // out of loadPythonRuntime so Restart can re-init a new interpreter without re-injecting
@@ -85314,6 +85357,7 @@ def colormode(mode=None):
   // heavy), so reopening only re-inits the interpreter via openPython → loadPythonRuntime, not the fetch.
   function destroyPython() {
     pyLoadGeneration++;
+    if (pyLoadAttempt) { var attempt = pyLoadAttempt; pyLoadAttempt = null; attempt.cancel("Pyodide load cancelled by reset"); }
     pyReturnToCode = false;
     paintPythonClose();
     if (pyOut) pyOut.innerHTML = "";
@@ -85473,6 +85517,7 @@ def colormode(mode=None):
   var lxVM = null; // the V86 instance — created once, stopped/resumed across open/close
   var lxV86 = null; // captured constructor; the lazy vendor bootstrap never remains public
   var lxLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
+  var lxLoadGeneration = 0, lxLoadAttempt = null;
   var lxPrompted = false; // a shell prompt has appeared, so typed lines may be sent
   var lxHiddenStop = false; // the hidden-tab guard stopped the CPU (resume on return)
   var lxLine = ""; // the serial console's unfinished tail line (rendered as the row prompt)
@@ -85533,8 +85578,10 @@ def colormode(mode=None):
       }, 600);
     }
   }
-  function lxFail() {
+  function lxFail(generation) {
+    if (generation != null && generation !== lxLoadGeneration) return;
     if (lxLoadState === "failed") return; // download-error and the stall watchdog can both report
+    if (lxLoadAttempt) { var attempt = lxLoadAttempt; lxLoadAttempt = null; attempt.cancel("V86 load cancelled"); }
     if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
     lxLoadState = "failed";
     lxPrint(lxT("linux_fail"), "console-err");
@@ -85543,15 +85590,17 @@ def colormode(mode=None):
   // proxy) or a wedged boot must not sit on "booting…" forever — 45 s with no shell
   // prompt surfaces the fail line, whose close-and-reopen advice actually retries.
   // A deliberately paused CPU (hidden tab, app closed mid-boot) isn't a stall: re-arm.
-  function lxStallWatch() {
+  function lxStallWatch(generation) {
     lxStallTimer = setTimeout(function () {
       lxStallTimer = null;
+      if (generation !== lxLoadGeneration) return;
       if (lxPrompted || lxLoadState === "failed") return;
-      if (document.hidden || lxHiddenStop || !monitor.classList.contains("show-linux")) { lxStallWatch(); return; }
-      lxFail();
+      if (document.hidden || lxHiddenStop || !monitor.classList.contains("show-linux")) { lxStallWatch(generation); return; }
+      lxFail(generation);
     }, 45000);
   }
-  function lxBootVM() {
+  function lxBootVM(generation) {
+    if (generation !== lxLoadGeneration || lxLoadState !== "loading") return;
     if (lxVM) { try { lxVM.destroy(); } catch (e) {} lxVM = null; } // a failed half-boot never survives into the retry
     try {
       if (typeof lxV86 !== "function") throw new Error("V86 unavailable");
@@ -85566,11 +85615,12 @@ def colormode(mode=None):
         disable_keyboard: true, // all input arrives via serial0_send
         disable_mouse: true
       });
-    } catch (e) { lxFail(); return; }
+    } catch (e) { lxFail(generation); return; }
     lxDec = new TextDecoder(); // fresh stream state per boot
-    lxVM.add_listener("download-error", function () { lxFail(); }); // wasm/bios/iso 404 or offline
-    lxVM.add_listener("serial0-output-byte", function (b) { lxFeed(lxDec.decode(new Uint8Array([b]), { stream: true })); });
+    lxVM.add_listener("download-error", function () { lxFail(generation); }); // wasm/bios/iso 404 or offline
+    lxVM.add_listener("serial0-output-byte", function (b) { if (generation === lxLoadGeneration) lxFeed(lxDec.decode(new Uint8Array([b]), { stream: true })); });
     lxVM.add_listener("emulator-started", function () {
+      if (generation !== lxLoadGeneration) return;
       if (lxLoadState === "loading") lxLoadState = "ready";
       // autostart can land after the app closed or the tab hid mid-download — don't
       // let the CPU spin under a closed app / hidden tab (idempotent on every resume)
@@ -85581,16 +85631,23 @@ def colormode(mode=None):
   function loadLinuxVM() {
     if (lxLoadState === "loading" || lxLoadState === "ready") return;
     lxLoadState = "loading";
+    var generation = ++lxLoadGeneration;
     lxPrint(lxT("linux_loading"), "console-dim");
     if (lxStallTimer) clearTimeout(lxStallTimer);
-    lxStallWatch();
-    if (lxV86) { lxBootVM(); return; } // a retry already has the library
-    var capture = captureLazyScriptGlobal("V86");
-    var s = document.createElement("script");
-    s.src = LX_ASSETS.lib;
-    s.onerror = function () { capture.release(); lxFail(); };
-    s.onload = function () { lxV86 = capture.release(); lxBootVM(); };
-    document.head.appendChild(s);
+    lxStallWatch(generation);
+    if (lxV86) { lxBootVM(generation); return; } // a retry already has the library
+    var attempt = lxLoadAttempt = lazyScriptAttempt("V86", LX_ASSETS.lib, {
+      timeout: 45000, error: "V86 failed to load", timeoutError: "V86 load timed out"
+    });
+    attempt.promise.then(function (constructor) {
+      if (lxLoadAttempt !== attempt || generation !== lxLoadGeneration || lxLoadState !== "loading") return;
+      lxLoadAttempt = null;
+      lxV86 = constructor;
+      lxBootVM(generation);
+    }, function () {
+      if (lxLoadAttempt === attempt) lxLoadAttempt = null;
+      lxFail(generation);
+    });
   }
   function openLinux() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python")) return;
@@ -85617,6 +85674,8 @@ def colormode(mode=None):
   // A true KILL (vs the ✕, which just pauses): power the VM off for real — destroy it and wipe the
   // session so the next open COLD-BOOTS a brand-new machine. Then back to the desktop.
   function destroyLinux() {
+    lxLoadGeneration++;
+    if (lxLoadAttempt) { var attempt = lxLoadAttempt; lxLoadAttempt = null; attempt.cancel("V86 load cancelled by reset"); }
     if (lxVM) { try { lxVM.destroy(); } catch (e) {} lxVM = null; }
     if (lxStallTimer) { clearTimeout(lxStallTimer); lxStallTimer = null; }
     lxLoadState = ""; lxPrompted = false; lxHiddenStop = false;

@@ -505,8 +505,9 @@ The bridge recursively converts Python `None` to JavaScript `null`—Pyodide oth
 API results raise `loft.LoftError` when read or awaited. The module calls only discovered typed ids;
 it does not expose arbitrary JavaScript evaluation or private `window.__…` hooks.
 
-The module leaves Python builtins untouched. `loft.help()` and `loft.help(loft.weather)` print the
-same recursive text as JavaScript, while ordinary `help(str)` keeps Python's native behavior. Native
+The module wraps Python's `help` dispatcher narrowly: `help(loft)`, `help(loft.weather)`, and typed
+capability objects print the same rooted text as `loft.help(...)` and JavaScript, while `help(str)`
+and every non-Loft target retain Python's native pydoc behavior. Native
 font and graphics helpers also stay under the module root (`loft.fonts.*` and
 `loft.presentation.svg.*`); the REPL receives no bare compatibility commands.
 

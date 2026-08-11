@@ -11315,11 +11315,22 @@ html.mir-acid #trip-acid-kaleido{animation:acid-kaleido 4.5s ease-in-out}
   100%{opacity:0; transform:rotate(150deg) scale(1.12)}
 }
 #loft-game-strip.froggies{filter:url(#froggies-filter)}
+.trip-froggies-paisley{opacity:0; pointer-events:none}
 .trip-froggies-whiteout{opacity:0; pointer-events:none; fill:#ffffff}
+#loft-game-strip.froggies .trip-froggies-paisley{animation:trip-froggies-paisley-rise 5s ease-in-out}
 #loft-game-strip.froggies .trip-froggies-whiteout{animation:trip-froggies-whiteout-fade 5s ease-in-out}
+@keyframes trip-froggies-paisley-rise{
+  0%{opacity:0}
+  4%{opacity:.45}
+  9%{opacity:1}
+  24%{opacity:1}
+  42%,100%{opacity:0}
+}
 @keyframes trip-froggies-whiteout-fade{
   0%{opacity:0}
-  25%{opacity:1}
+  24%{opacity:0}
+  32%{opacity:.2}
+  48%{opacity:1}
   65%{opacity:1}
   100%{opacity:0}
 }
@@ -11867,6 +11878,7 @@ html.mir-iboga #iboga-heartbeat-veil{animation:iboga-heartbeat 2.1s ease-in-out 
   html.mir-iboga #iboga-heartbeat-veil{animation:none}
   /* iboga: no 20s ramp — the world just holds at the static gray-out (SMIL never fired) */
   #loft-game-strip.iboga #loft-float{filter:url(#iboga-tint-static)}
+  #loft-game-strip.froggies .trip-froggies-paisley,
   #loft-game-strip.froggies .trip-froggies-whiteout{animation:none}
   #loft-game-strip.ketamine #garden-monstera,
   #loft-game-strip.ketamine #garden-peacelily,
@@ -14973,8 +14985,21 @@ section{margin:1.9rem 0}
 <feTurbulence type="fractalNoise" baseFrequency="0.004 0.09" numOctaves="2" seed="7" result="turb">
 <animate attributeName="baseFrequency" values="0.004 0.09;0.006 0.13;0.004 0.09" dur="2.4s" repeatCount="indefinite"/>
 </feTurbulence>
-<feDisplacementMap in="SourceGraphic" in2="turb" scale="45" xChannelSelector="A" yChannelSelector="G"/>
+<feDisplacementMap in="SourceGraphic" in2="turb" scale="0" xChannelSelector="A" yChannelSelector="G">
+<animate id="froggies-wobble-ramp" attributeName="scale" values="0;12;45;45" keyTimes="0;.09;.48;1" dur="5s" begin="indefinite" fill="freeze"/>
+</feDisplacementMap>
 </filter>
+<pattern id="froggies-paisley-grid" width="38" height="33" patternUnits="userSpaceOnUse">
+<rect width="38" height="33" fill="#f1f1ef" opacity=".76"/>
+<g transform="scale(.52)">
+<path d="M18 7 C8 12 7 27 16 34 C23 40 34 35 35 25 C36 16 29 11 24 5 C24 13 16 15 15 22 C14 27 18 31 23 30 C28 29 30 24 28 20 C26 17 23 18 21 21" fill="#b6b7b4" stroke="#4d504e" stroke-width="1.25"/>
+<path d="M22 15 C17 18 17 25 21 27 C24 29 28 26 27 22 C27 19 24 18 22 15Z" fill="#e3e3e0" stroke="#737673" stroke-width=".8"/>
+<path d="M54 38 C44 43 43 58 52 65 C59 71 70 66 71 56 C72 47 65 42 60 36 C60 44 52 46 51 53 C50 58 54 62 59 61 C64 60 66 55 64 51 C62 48 59 49 57 52" fill="#a3a5a2" stroke="#414442" stroke-width="1.25"/>
+<path d="M58 46 C53 49 53 56 57 58 C60 60 64 57 63 53 C63 50 60 49 58 46Z" fill="#d8d9d6" stroke="#696c69" stroke-width=".8"/>
+<circle cx="6" cy="52" r="2.2" fill="none" stroke="#737673" stroke-width=".75"/>
+<circle cx="42" cy="21" r="2.2" fill="none" stroke="#737673" stroke-width=".75"/>
+</g>
+</pattern>
 <!-- ladybug compound-eye view: broad, low-frequency displacement sacrifices fine detail while
      a slight channel rebalance makes greens/blues more prominent. The visible facets themselves
      are the pointer-transparent HTML overlay; keeping the expensive SVG filter to one room makes
@@ -31597,6 +31622,7 @@ section{margin:1.9rem 0}
 </g><!-- /#balcony-wobble -->
 </g>
 <rect id="balcony-thunder-flash" class="balcony-thunder-flash" x="2720" y="0" width="680" height="340" pointer-events="none"/>
+<rect class="trip-froggies-paisley" x="0" y="0" width="3400" height="340" fill="url(#froggies-paisley-grid)" pointer-events="none"/>
 <rect class="trip-froggies-whiteout" x="0" y="0" width="3400" height="340" pointer-events="none"/>
 <!-- garden-party dancers (party-only): a colorful mixed group of five — three women
      (md-d1..d3) and two men (md-d4/md-d5). JS sets this group's transform to translate()
@@ -106992,6 +107018,11 @@ function startTripVariant(variant, noCard, immediateCard, explicitChoice, altern
     requestAnimationFrame(function () {
       if (generation !== tripGeneration || currentTripVariant !== variant) return;
       strip.classList.add(variant);
+      if (variant === "froggies") {
+        var frogRM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var frogWobble = document.getElementById("froggies-wobble-ramp");
+        if (frogWobble && !frogRM && frogWobble.beginElement) { try { frogWobble.beginElement(); } catch (e) {} }
+      }
       if (window.__syncScopeMirrors) window.__syncScopeMirrors();
       if (window.__updateGardenAurora) window.__updateGardenAurora(); // a trip owns the window → aurora pauses
     });

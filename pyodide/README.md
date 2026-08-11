@@ -17,16 +17,21 @@ Core runtime (what `loadPyodide({ indexURL: "pyodide/" })` fetches):
 - `python_stdlib.zip` — the Python standard library (2.6 MB)
 - `pyodide-lock.json` — the release's package index and exact wheel metadata (114 KB)
 
-Wheels the app installs at startup (all three have no dependencies of their own
-per pyodide-lock.json, so this is the complete closure):
+Pinned wheels kept beside the runtime (all have no dependencies of their own per
+pyodide-lock.json):
 
-- `micropip-0.11.1-py3-none-any.whl` — Pyodide's package installer (113 KB)
-- `fonttools-4.62.1-py3-none-any.whl` — the groom's library, pre-imported in the
-  REPL (1.1 MB)
+- `micropip-0.11.1-py3-none-any.whl` — Pyodide's package installer (113 KB), the
+  only package requested during console boot
+- `fonttools-4.62.1-py3-none-any.whl` — the groom's library (1.1 MB), loaded only
+  when submitted source imports it
 - `brotli-1.2.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl` — decompression for
-  woff2, so TTFont can open the page's mounted webfonts (284 KB)
+  woff2 (284 KB), likewise import-driven rather than part of boot
+- `uharfbuzz-0.56.0b1-cp310-abi3-pyemscripten_2026_0_wasm32.whl` — the pinned
+  self-hosted HarfBuzz Python binding, installed through micropip only when source
+  imports `uharfbuzz`
 
-The core and those starter wheels remain local. Before each user REPL command or Code
+The core and pinned wheels remain local. Boot loads micropip, installs the embedded
+Turtle and Loft modules, and imports only `loft`. Before each user REPL command or Code
 script, `loadPackagesFromImports()` scans imports. A package present in the official
 lock but absent from this trimmed directory is fetched on demand from the pinned
 `https://cdn.jsdelivr.net/pyodide/v314.0.2/full/` repository; for example, a first
@@ -43,6 +48,6 @@ https://github.com/fonttools/fonttools and https://github.com/google/brotli.
 
 To upgrade: bump the version in the URL above, re-download the five core files,
 re-read `pyodide-lock.json` for the current wheel filenames of micropip, fonttools
-and brotli (plus anything new in their `depends` lists), and update the filenames
-here and the `~15 MB` figure in Loft Day's `py_loading` copy (EN + CS) if the
-total moves materially.
+and brotli (plus anything new in their `depends` lists), verify the separate
+uharfbuzz wheel remains compatible, and update the filenames here and the `~15 MB`
+figure in Loft Day's loading copy if the total moves materially.

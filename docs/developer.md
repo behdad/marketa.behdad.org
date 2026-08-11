@@ -492,8 +492,10 @@ The Pyodide console installs an embedded `loft.py` module beside the browser Tur
 `import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
 namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
 there is no second capability roster to synchronize.
-Its visible boot transcript contains only the automatic `import loft`; fontTools, Brotli, and
-uharfbuzz are installed silently for Code snippets without being imported into the console namespace.
+Boot loads only `micropip`, installs the embedded modules, and automatically imports `loft`.
+fontTools, Brotli, uharfbuzz, and other packages remain absent until submitted source imports them;
+uharfbuzz then installs from the pinned self-hosted wheel while lock-file packages use Pyodide's
+version-pinned repository.
 JavaScript, Python, and Linux console chrome and runtime messages are deliberately English-only and
 live beside their implementations rather than in the bilingual game dictionaries.
 Queries return ordinary Python dictionaries, lists, and scalars. Actions start immediately and

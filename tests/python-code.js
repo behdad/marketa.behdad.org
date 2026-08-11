@@ -156,6 +156,12 @@ check(/pyLoadState\s*=\s*"ready";[\s\S]*?pyPrint\(">>> import loft", "console-di
       !/pyPrint\(">>> (?:import micropip|from fontTools|import uharfbuzz|hb\.|import turtle)/.test(html) &&
       !/typed Loft API ready —/.test(html),
   "the completed Python boot transcript shows only its automatic import loft command");
+var initPythonBlock = /function initPyodide\(generation\) \{([\s\S]*?)\n  function openPython/.exec(html);
+check(!!initPythonBlock && /loadPackage\("micropip"\)/.test(initPythonBlock[1]) &&
+      !/micropip'\)\.install\(\['fonttools', 'brotli'\]\)/.test(initPythonBlock[1]) &&
+      !/uharfbuzz-0\.56\.0b1/.test(initPythonBlock[1]) &&
+      /needsHb[\s\S]*?fetch\("pyodide\/" \+ wheel\)[\s\S]*?micropip'\)\.install/.test(html),
+  "boot loads only micropip and loft while the pinned uharfbuzz wheel waits for an actual import");
 check(/var CONSOLE_WELCOME = "loft console/.test(html) && /var PY_COPY = \{/.test(html) &&
       /welcome: "loft python/.test(html) && /var LINUX_COPY = \{/.test(html) &&
       /welcome: "loft linux/.test(html) &&

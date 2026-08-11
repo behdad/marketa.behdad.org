@@ -84611,6 +84611,7 @@ setOfficeProgress("pc", false);
   };
   var PY_LOFT_MODULE = `
 """Python access to the Loft's public API and native SVG graphics display."""
+import builtins as _builtins
 import json as _json
 import keyword as _keyword
 import js as _js
@@ -84970,6 +84971,32 @@ def help(target=_HELP_MISSING):
     print(text)
 
 
+class _LoftHelpProxy:
+    """Route Python help for Loft objects without changing ordinary pydoc help."""
+
+    __slots__ = ("_loft_original", "_loft_owner")
+
+    def __init__(self, original):
+        self._loft_original = original
+        self._loft_owner = __name__
+
+    def __call__(self, *args, **kwargs):
+        if (len(args) == 1 and not kwargs
+                and (args[0] is _sys.modules.get(__name__) or isinstance(args[0], _Namespace))):
+            return help(args[0])
+        return self._loft_original(*args, **kwargs)
+
+    def __repr__(self):
+        return repr(self._loft_original)
+
+
+def _install_python_help():
+    current = _builtins.help
+    if getattr(current, "_loft_owner", None) == __name__:
+        return
+    _builtins.help = _LoftHelpProxy(getattr(current, "_loft_original", current))
+
+
 def _install_native_helpers():
     _install_native("presentation.svg.show", _show_svg)
     _install_native("presentation.svg.clear", _clear_svg)
@@ -84985,6 +85012,7 @@ def __getattr__(name):
 def __dir__():
     return sorted(set(globals()) | set(dir(_root)))
 _refresh()
+_install_python_help()
 `;
   var PY_TURTLE_MODULE = `
 """A compact browser Turtle implementation for the Loft's Pyodide console."""

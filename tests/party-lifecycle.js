@@ -102,7 +102,7 @@ var harness = String.raw`<script>
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
       switchCoach.classList.contains("show") &&
       switchCoachPopup.querySelector(".hunt-coach-copy").textContent === "When the time comes, end the party here." &&
-      window.__loftMessages.cs.hunt.party_switch_coach === "Až přijde čas, ukonči párty tady." &&
+      window.__loftMessages.cs.hunt.party_switch_coach === "Až nastane čas, ukonči párty tady." &&
       getComputedStyle(switchCoachArrow).fill === "rgb(239, 23, 23)" &&
       document.activeElement !== document.getElementById("garden-lightswitch") &&
       !/end the party here/i.test(document.getElementById("hunt-caption").textContent),
@@ -240,7 +240,7 @@ var harness = String.raw`<script>
   var partyEndCaption = document.getElementById("hunt-caption").textContent;
   var partyEndPopup = document.querySelector("#party-room-map-coach .party-bridge-room-copy").textContent;
   check("manual party-end progress copy is localized in Czech", !window.__gardenPartyOn &&
-    /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndPopup) && /Pokračuj dál/.test(partyEndPopup) &&
+    /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndPopup) && /Zkoumej dál/.test(partyEndPopup) &&
       !/Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption),
     JSON.stringify({ popup: partyEndPopup, caption: partyEndCaption }));
   if (window.__runMsgAction) window.__runMsgAction("downstairs_roadtrip_go");

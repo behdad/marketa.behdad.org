@@ -94,7 +94,9 @@ function harfbuzzScriptResourceHook(html) {
     resources["harfbuzzjs/" + name] = fs.readFileSync(path.join(ROOT, "harfbuzzjs", name), "utf8");
   });
   var serialized = JSON.stringify(resources).replace(/<\/script/gi, "<\\/script");
-  return "<script>window.__harfbuzzScriptResourceLoader=function(path){var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing HarfBuzz test resource: '+path));};</script>";
+  var wasm = fs.readFileSync(path.join(ROOT, "harfbuzzjs", "hb.wasm")).toString("base64");
+  var font = fs.readFileSync(path.join(ROOT, "harfbuzzjs", "fraunces.ttf")).toString("base64");
+  return "<script>(function(){function bytes(encoded){var binary=atob(encoded),out=new Uint8Array(binary.length);for(var i=0;i<binary.length;i++)out[i]=binary.charCodeAt(i);return out;}var loader=window.__harfbuzzScriptResourceLoader=function(path){var resources=" + serialized + ";return Object.prototype.hasOwnProperty.call(resources,path)?resources[path]:Promise.reject(new Error('missing HarfBuzz test resource: '+path));};loader.wasm=bytes(" + JSON.stringify(wasm) + ");loader.font=bytes(" + JSON.stringify(font) + ");})();</script>";
 }
 
 function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {

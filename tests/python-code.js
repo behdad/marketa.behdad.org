@@ -79,9 +79,12 @@ check(/t\.goto\(-75,\s*-75\)/.test(fillerPy) && /fill\(4\)/.test(fillerPy) &&
   "the canonical recursive Turtle and typed Loft API samples remain intact");
 var loftTypePy = snippet("loft-type.py"), loftTypeJs = snippet("loft-type.js");
 check(/import loft/.test(loftTypePy) && /SVGPathPen/.test(loftTypePy) && /import uharfbuzz as hb/.test(loftTypePy) &&
-      /await loft\.fonts\.google\("Fraunces"\)/.test(loftTypePy) && /buffer\.add_str\("LoftType"\)/.test(loftTypePy) &&
+      /data = await loft\.fonts\.google\("Fraunces"\)/.test(loftTypePy) && /face = hb\.Face\(data\)/.test(loftTypePy) &&
+      /font = hb\.Font\(face\)/.test(loftTypePy) && /hb\.shape\(font, buffer\)/.test(loftTypePy) && /buffer\.add_str\("LoftType"\)/.test(loftTypePy) &&
       /loft\.presentation\.svg\.show\(svg\)/.test(loftTypePy) &&
-      /const \{ hb, font \} = await loft\.typography\.harfbuzz\(\)/.test(loftTypeJs) && /buffer\.addText\("LoftType"\)/.test(loftTypeJs) &&
+      /const hb = await loft\.fonts\.harfbuzz\(\)/.test(loftTypeJs) && /const data = await loft\.fonts\.google\("Fraunces"\)/.test(loftTypeJs) &&
+      /hb\.createBlob\(data\)/.test(loftTypeJs) && /hb\.createFace\(blob, 0\)/.test(loftTypeJs) && /hb\.createFont\(face\)/.test(loftTypeJs) &&
+      /buffer\.addText\("LoftType"\)/.test(loftTypeJs) && /hb\.shape\(font, buffer\)/.test(loftTypeJs) &&
       /font\.glyphToPath\(glyph\.g\)/.test(loftTypeJs) && /loft\.presentation\.svg\.show\(svg\)/.test(loftTypeJs),
   "both canonical HarfBuzz + Fraunces package demos render LoftType from outlines");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&

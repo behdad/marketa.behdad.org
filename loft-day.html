@@ -132941,9 +132941,6 @@ function spawnDustMote(container) {
     narrate(wantDay, "☀️ daylight.", "🌙 dusk settles over the loft.");
     return prev;
   };
-  controllers.day = function () { return controllers.daylight.set(true); };   // alias — bring the day back
-  controllers.night = function () { return controllers.daylight.set(false); }; // alias — bring dusk down
-
   // winter · spooky · auto(=the calendar's own season). Friendly aliases fold onto those;
   // no arg still SURPRISES you with a random one (a documented feature). Drives the same
   // apply-path the 's' key uses (strip class + naming pill + cycle-sync).
@@ -133567,21 +133564,6 @@ function spawnDustMote(container) {
     controllers.echo("🍔 there's no burger " + n + " on the smoker.");
     return false;
   };
-  controllers.servefood = function (pick) { // serve a cooked burger; servefood(random()) → a random ready one. returns true if one was served
-    var s = document.getElementById("balcony-smoker");
-    var bs = s ? [].slice.call(s.querySelectorAll(".smoker-burger")) : [];
-    var ready = bs.filter(function (b) { return b.classList.contains("done") && !b.classList.contains("served"); });
-    if (!ready.length) { controllers.echo("🍽 nothing's ready to serve yet — give the smoker a minute."); return false; }
-    if (window.__goToStage) window.__goToStage("balcony");
-    if (!s.classList.contains("open")) { var lid = document.getElementById("balcony-smoker-lid"); if (lid) lid.dispatchEvent(new MouseEvent("click", { bubbles: true })); } // serving needs the lid up
-    var idx = 0;
-    var fi = fracToIndex(pick, ready.length); if (fi) idx = fi - 1; // random() (0..1) → a random ready one
-    else if (arguments.length && pick != null && pick !== "") { var pn = parseInt(pick, 10); if (pn >= 1 && pn <= ready.length) idx = pn - 1; }
-    ready[idx].dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    narrate(true, "🍔 served.", "");
-    return true;
-  };
-
   controllers.phone = function (arg) {
     var prev = !!document.querySelector(".phone-backdrop.show");
     if (arguments.length === 0) return prev; // no arg → is the phone up?
@@ -133644,26 +133626,6 @@ function spawnDustMote(container) {
     }
     return "📞 can't ring right now — a call's already up, the phone's open, or she's already ringing.";
   };
-  controllers.saturday = function (arg) {
-    if (arg === true) {
-      if (window.__answerPrague) {
-        window.__answerPrague();
-        if (controllers.echo) controllers.echo("📞 answering Prague — máma and táta, on the Saturday call.");
-        return window.__loftAwaitLifecycle(function () { return !!(window.__loftCallBusy && window.__loftCallBusy()); }, {
-          label: "Prague call", startTimeout: 3000, timeout: Infinity, settle: 900, value: { completed: true, caller: "prague" }
-        });
-      }
-      return "the call hook isn't ready yet.";
-    }
-    if (window.__pragueRing && window.__pragueRing()) {
-      if (controllers.echo) controllers.echo("📞 Prague's calling — máma and táta, ringing top-centre. Tap to answer (or ignore for 15s to miss it).");
-      return window.__loftAwaitLifecycle(function () { return !!(window.__loftCallBusy && window.__loftCallBusy()); }, {
-        label: "Prague call", startTimeout: 3000, timeout: Infinity, settle: 900, value: { completed: true, caller: "prague" }
-      });
-    }
-    return "📞 can't ring right now — a call's already up, the phone's open, or they're already ringing.";
-  };
-
   controllers.laptop = function (arg) {
     var lap = document.getElementById("office-laptop");
     var prev = !!(lap && lap.classList.contains("open"));
@@ -134098,16 +134060,6 @@ function spawnDustMote(container) {
     if (window.__homeCat) window.__homeCat(window.__currentStageName || "garden"); // walk it into the room you're viewing
     narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
-  };
-  controllers.kitty = function () {
-    if (window.__goToStage) window.__goToStage("office"); // summon the cat to the office
-    var walk = document.getElementById("witchy-chest-cat-walk");
-    if (!walk) return "no cat here.";
-    if (!walk.classList.contains("out")) {
-      if (!window.__releaseCat || !window.__releaseCat()) return "the cat's asleep in the chest — open the moon door in the garden.";
-    }
-    if (window.__homeCat) window.__homeCat("office");
-    return "🐈 here, kitty — she pads into the office.";
   };
   // shape(text, opts) — shape text with HarfBuzz from JavaScript, mirroring the python
   // console's uharfbuzz. Lazy-loads the self-hosted harfbuzzjs runtime (harfbuzzjs/hb.js

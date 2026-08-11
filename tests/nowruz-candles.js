@@ -23,7 +23,7 @@ var HARNESS = [
   ' click("office-hs-candle-1-hit");await sleep(350);S("firstOff",state());',
   ' click("office-hs-candle-2-hit");await sleep(350);S("bothOff",state());',
   ' click("office-hs-candle-1-hit");await sleep(350);S("firstRelit",state());',
-  ' window.__loftControllers.night();await sleep(60);S("night",state());window.__loftControllers.day();await sleep(60);S("day",state());',
+  ' await window.loft.environment.daylight.set(false);await sleep(60);S("night",state());await window.loft.environment.daylight.set(true);await sleep(60);S("day",state());',
   ' click("office-hs-bowl-hit");await sleep(80);S("fishNoCat",state());',
   ' window.__releaseCat(true);window.__homeCat("office",true);await sleep(40);click("office-hs-bowl-hit");await sleep(80);S("fishCat",state());',
   ' click("office-hs-bowl-hit");await sleep(80);S("fishCatRepeat",state());',

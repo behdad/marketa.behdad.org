@@ -36,7 +36,7 @@ var harness = String.raw`<pre id="__report">pending</pre>
     Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
     window.__unlockAllRooms();
     window.__goToStage("balcony");
-    window.__loftControllers.night();
+    await window.loft.environment.daylight.set(false);
     await sleep(80);
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
@@ -80,7 +80,7 @@ var harness = String.raw`<pre id="__report">pending</pre>
       afterAim: Number(group.getAttribute("data-roadtrip-aim-x")),
       amount: steeringAngle
     };
-    window.__loftControllers.day();
+    await window.loft.environment.daylight.set(true);
     await sleep(80);
     report.day = { roomClass: room.getAttribute("class"), opacity: opacity(group) };
   } catch (error) {

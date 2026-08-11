@@ -22,8 +22,8 @@ var harness = String.raw`<script>
     check("Ayushi appears in the language-neutral tester roster",
       names.indexOf("Ayushi") !== -1, names.join(", "));
     check("new testers remain appended in source order",
-      names.slice(-9).join(",") ===
-        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir",
+      names.slice(-10).join(",") ===
+        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash",
       names.join(", "));
     var marketa = window.LOFT_CREDITS.people.find(function (person) { return person.name === "Markéta"; });
     check("Markéta is credited for co-design and Czech translation",

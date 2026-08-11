@@ -121733,8 +121733,8 @@ function spawnDustMote(container) {
       if (window.__resetRobin) window.__resetRobin();
       if (window.__resetNavid) window.__resetNavid();
     }
-    // Party-off is the teardown boundary even when a cinematic, reset, lifecycle fallback,
-    // or console helper calls this setter directly instead of going through setPartyMode.
+    // Party-off is the teardown boundary even when a cinematic, reset, typed action, or
+    // lifecycle fallback calls this setter directly instead of going through setPartyMode.
     // Clear both the switch's persistent UV intent and its visible state before the breather
     // evaluates; otherwise its one-second watchdog can restore .uv-mode after the party is gone.
     if (!on) {
@@ -128094,14 +128094,14 @@ function spawnDustMote(container) {
     }
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
-  // ── scriptable ghost cursor (console) ──
+  // ── scriptable ghost cursor ──
   // cursorTo/ghostClick/cursorHide expose the show's visible pointer to scripts. They lean on
   // the same IIFE-local machinery the cinematic uses (cursorPointFor/ensureCursor/cursorPlace/
   // cursorRipple), so they land through room pans, zoom and fullscreen exactly like the show —
   // but they work with the show OFF too: the ghost dot's visibility is the .visible class (CSS
   // #cine-cursor.visible{opacity}), which isn't gated to window.__cinematic, so cursorPlace/glide
   // reveal it either way. A target is an element id ("office-monitor"/"#office-monitor") → its
-  // live on-screen center (we jump to its room first, like click()), OR {x,y} in 0..1 viewport
+  // live on-screen center (we jump to its room first), OR {x,y} in 0..1 viewport
   // coords → that host-relative point (values >1 taken as raw px). Both return a Promise that
   // resolves when the glide (and, for ghostClick, the click) is done, so scripts can `await`.
   var SCRIPT_GLIDE_MS = 550;       // default scripted glide when no ms is passed
@@ -128124,7 +128124,7 @@ function spawnDustMote(container) {
     if (!p) return null;
     return { x: p.x, y: p.y, el: el };
   }
-  // if the target id lives in another room, jump there like click() does; returns true if it did
+  // If the target id lives in another room, jump there first; returns true if it did.
   function cursorJumpToRoom(target) {
     if (!target || typeof target === "object") return false; // {x,y} has no room
     var el = document.getElementById(String(target).replace(/^#/, ""));
@@ -132886,8 +132886,7 @@ function spawnDustMote(container) {
     });
   };
 
-  // room()/goto() — no arg returns the current room as {n, name} (both handy in scripts);
-  // with an arg (name in quotes, or 1–5) it navigates there. goto() is an alias for room().
+  // Private room controller: no arg returns {n, name}; a name or 1–5 navigates there.
   controllers.room = function (r) {
     if (arguments.length === 0 || r == null || r === "") {
       var cur = window.__currentStageName || "";

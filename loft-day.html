@@ -55916,6 +55916,46 @@ document.addEventListener("keydown", function (e) {
   // Right-click Copy/Paste menu for the office-monitor console/python consoles: copy the current
   // selection, or paste clipboard text into the console input at the caret. Lives in the fullscreen
   // root (not body) so it also renders while the game is in real Fullscreen.
+  // Chromium fires selectstart inside the monitor's transformed SVG foreignObject but does not
+  // extend the Range while dragging. Drive that missing native step from pointer coordinates;
+  // caretRangeFromPoint/caretPositionFromPoint still map the transformed text correctly.
+  [].forEach.call(document.querySelectorAll(".console-out"), function (box) {
+    var anchor = null, pointerId = null, startX = 0, startY = 0, dragged = false;
+    function caretAt(x, y) {
+      var range = document.caretRangeFromPoint && document.caretRangeFromPoint(x, y);
+      var position = !range && document.caretPositionFromPoint && document.caretPositionFromPoint(x, y);
+      var node = range ? range.startContainer : position && position.offsetNode;
+      var offset = range ? range.startOffset : position && position.offset;
+      var element = node && (node.nodeType === 1 ? node : node.parentElement);
+      return element && box.contains(element) ? { node: node, offset: offset } : null;
+    }
+    box.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0 || event.pointerType === "touch") return;
+      anchor = caretAt(event.clientX, event.clientY);
+      if (!anchor) return;
+      pointerId = event.pointerId; startX = event.clientX; startY = event.clientY; dragged = false;
+    });
+    document.addEventListener("pointermove", function (event) {
+      if (!anchor || event.pointerId !== pointerId || !(event.buttons & 1)) return;
+      if (!dragged && Math.hypot(event.clientX - startX, event.clientY - startY) < 2) return;
+      var focus = caretAt(event.clientX, event.clientY);
+      if (!focus) return;
+      dragged = true;
+      event.preventDefault();
+      var selection = window.getSelection && window.getSelection();
+      if (selection && selection.setBaseAndExtent) {
+        try { selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset); }
+        catch (error) {}
+      }
+    }, { passive: false });
+    function finish(event) {
+      if (event.pointerId !== pointerId) return;
+      if (dragged) event.preventDefault();
+      anchor = null; pointerId = null; dragged = false;
+    }
+    document.addEventListener("pointerup", finish, { passive: false });
+    document.addEventListener("pointercancel", finish);
+  });
   function consoleInput() {
     var m = document.getElementById("office-monitor");
     if (!m) return null;

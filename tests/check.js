@@ -1501,8 +1501,11 @@ function checkMetadataFreeGame(file, html) {
   });
   if (roleTags.length) issues.push("explicit role attributes: " + roleTags.length);
   if (/\.setAttribute\(\s*["']role["']/i.test(html)) issues.push("dynamic role assignment");
-  if (issues.length) fail(file + ": game UI stays free of ARIA and explicit role metadata", issues.join("\n"));
-  else pass(file + ": game UI stays free of ARIA and explicit role metadata");
+  var labelledImages = html.match(/<img\b[^>]*\s(?:alt|aria-label|title)\s*=/gi) || [];
+  if (labelledImages.length) issues.push("image label/tooltip attributes: " + labelledImages.length);
+  if (/\.alt\s*=|\.setAttribute\(\s*["']alt["']/i.test(html)) issues.push("dynamic image alt assignment");
+  if (issues.length) fail(file + ": game UI stays free of hidden accessibility metadata", issues.join("\n"));
+  else pass(file + ": game UI stays free of hidden accessibility metadata");
 }
 
 // #hunt-caption is a shared projection. Producers publish structured claims; only the

@@ -89,9 +89,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
-        window.getSfxCtx = function () { return null; };
+        window.__getSfxCtx = function () { return null; };
         window.__unlockAllRooms();
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();

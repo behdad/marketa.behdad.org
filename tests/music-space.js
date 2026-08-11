@@ -8,7 +8,7 @@ var harness = [
   '<script>(async function(){',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function space(){document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",code:"Space",bubbles:true,cancelable:true}));}',
-  'var out={errors:window.__errs};window.goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
+  'var out={errors:window.__errs};window.__goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
   'space();await sleep(180);out.desktop={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'space();await sleep(80);out.paused={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'mon.classList.remove("show-caps");mon.classList.add("show-weather");space();await sleep(180);out.app={weather:mon.classList.contains("show-weather"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',

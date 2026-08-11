@@ -28,7 +28,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   async function fire(label) {
     var before = report.thunder.length;
     var scene = window.__autonomousThunderScene();
-    window.triggerBalconyThunder();
+    window.__triggerBalconyThunder();
     await sleep(370);
     report.steps[label] = { scene: scene, calls: report.thunder.slice(before) };
   }
@@ -39,7 +39,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   } catch (_error) {}
   window.addEventListener("load", function () { setTimeout(async function () { try {
     Math.random = function () { return 0; };
-    window.playThunderSound = function (volume, pan, enclosure) {
+    window.__playThunderSound = function (volume, pan, enclosure) {
       report.thunder.push({ volume: volume, pan: pan, enclosure: enclosure || null,
         scene: window.__autonomousThunderScene() });
     };
@@ -49,24 +49,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var indoor = {};
     for (var i = 0; i < 4; i++) {
       var name = ["kitchen", "garden", "cuddly", "office"][i];
-      window.goToStage(name);
+      window.__goToStage(name);
       var before = report.thunder.length;
-      window.triggerBalconyThunder();
+      window.__triggerBalconyThunder();
       await sleep(370);
       indoor[name] = { scene: window.__autonomousThunderScene(), calls: report.thunder.length - before };
     }
     report.steps.indoor = indoor;
 
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     await fire("balcony");
     var queuedBefore = report.thunder.length;
-    window.triggerBalconyThunder();
-    window.goToStage("office");
+    window.__triggerBalconyThunder();
+    window.__goToStage("office");
     await sleep(370);
     report.steps.queuedLeave = { calls: report.thunder.length - queuedBefore,
       scene: window.__autonomousThunderScene() };
 
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
     await fire("entrance");
@@ -140,7 +140,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     // recorded enclosure must be the state at playback, never the stale arm-time state.
     setExposure("closed");
     var delayedBefore = report.thunder.length;
-    window.triggerBalconyThunder();
+    window.__triggerBalconyThunder();
     setExposure("roof-open");
     await sleep(370);
     report.steps.roadtripDelayedExposure = {
@@ -151,7 +151,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
     window.__toggleEntranceRoadtripTransport();
     var pausedBefore = report.thunder.length;
-    window.triggerBalconyThunder(); await sleep(370);
+    window.__triggerBalconyThunder(); await sleep(370);
     report.steps.roadtripPaused = { scene: window.__autonomousThunderScene(),
       calls: report.thunder.length - pausedBefore, rain: rainState() };
     window.__toggleEntranceRoadtripTransport();

@@ -22,7 +22,7 @@ var RETURN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9
   }
   function state() {
     return {
-      room: window.currentStageName, max: window.__maxUnlocked(), solved: window.__solvedRooms(),
+      room: window.__currentStageName, max: window.__maxUnlocked(), solved: window.__solvedRooms(),
       seen: window.__seenRooms(), coffee: window.__captureKitchenCoffeeState(), saved: progress(raw())
     };
   }
@@ -114,7 +114,7 @@ var OTHER_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-99
   function doubleClick(node) { click(node, 1); click(node, 2); node.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, detail: 2 })); }
   function snap() {
     var saved = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
-    return { runtime: window.currentStageName, room: saved.progress.room, max: saved.progress.maxUnlocked,
+    return { runtime: window.__currentStageName, room: saved.progress.room, max: saved.progress.maxUnlocked,
       solved: saved.progress.solvedRooms, seen: saved.progress.seenRooms };
   }
   addEventListener("load", function () { setTimeout(async function () {
@@ -134,11 +134,11 @@ var OTHER_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-99
       click(dots[0]);
       await sleep(480);
       report.steps.preview = {
-        runtime: window.currentStageName, rawSame: localStorage.getItem("loftCheckpoint:v1") === beforePreview
+        runtime: window.__currentStageName, rawSame: localStorage.getItem("loftCheckpoint:v1") === beforePreview
       };
       var ended = await window.__loftPreviewEnd("restore");
       report.steps.restored = {
-        room: window.currentStageName, rawSame: localStorage.getItem("loftCheckpoint:v1") === beforePreview,
+        room: window.__currentStageName, rawSame: localStorage.getItem("loftCheckpoint:v1") === beforePreview,
         checkpointPreserved: ended.checkpointPreserved
       };
     } catch (error) { report.errors.push("harness: " + String(error && error.stack || error)); }

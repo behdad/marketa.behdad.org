@@ -8,7 +8,7 @@ var HARNESS = String.raw`<script>
   var report = { errors: [] };
   addEventListener("load", function () { setTimeout(async function () {
     try {
-      goToStage("garden");
+      window.__goToStage("garden");
       var plant = document.getElementById("garden-money-tree");
       var hit = plant && plant.querySelector(':scope > rect[fill="transparent"]');
       var foliage = plant && Array.from(plant.querySelectorAll('g[transform^="rotate("]'));

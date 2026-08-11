@@ -35,14 +35,14 @@ var harness = String.raw`<script>
       tabChip && tabChip.nextElementSibling && tabChip.nextElementSibling.textContent);
     key("Escape");
     await sleep(280);
-    setLang("cs"); key("?"); await sleep(20);
+    window.__setLang("cs"); key("?"); await sleep(20);
     tabChip = [].slice.call(document.querySelectorAll(".kbd-keys")).filter(function (row) { return row.textContent === "Tab"; })[0];
     check("the keyboard dialog mirrors the Tab help in Czech",
       tabChip && tabChip.nextElementSibling && tabChip.nextElementSibling.textContent === "otevřít / zavřít pohled na celý loft",
       tabChip && tabChip.nextElementSibling && tabChip.nextElementSibling.textContent);
     key("Escape");
     await sleep(280);
-    setLang("en");
+    window.__setLang("en");
     window.__resetLowerRoomDiscovery();
     window.__setSeenRooms(["kitchen", "bathroom"]);
 
@@ -141,7 +141,7 @@ var harness = String.raw`<script>
       state().eligible && state().controlsUnlocked && state().button && !state().floorDisabled &&
         !document.getElementById("hunt-floor-coach"), JSON.stringify(state()));
 
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     window.__openBathroomRoom();
     await sleep(260);
     check("the first downstairs visit keeps both flanking controls visible and the floor control enabled",
@@ -181,38 +181,38 @@ var harness = String.raw`<script>
     check("Cinema click targets stay transparent in the cloned room art",
       getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill === "rgba(0, 0, 0, 0)",
       getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill);
-    var roomBeforeKey = window.currentStageName;
+    var roomBeforeKey = window.__currentStageName;
     key("ArrowRight");
     check("the open picker blocks room shortcuts from acting underneath it",
-      state().open && window.currentStageName === roomBeforeKey && window.__bathroomRoomOpen,
-      JSON.stringify({ room: window.currentStageName, open: state().open }));
+      state().open && window.__currentStageName === roomBeforeKey && window.__bathroomRoomOpen,
+      JSON.stringify({ room: window.__currentStageName, open: state().open }));
 
-    setLang("cs");
+    window.__setLang("cs");
     check("the open overview follows Czech live",
       document.getElementById("loft-dollhouse-title").textContent === "Loft 🗺️" &&
       roomButton("kitchen").textContent.indexOf("Kuchyň") !== -1 &&
       roomButton("garden").textContent.indexOf("Zahrada / Párty") !== -1,
       document.getElementById("loft-dollhouse-title").textContent);
-    setLang("en");
+    window.__setLang("en");
 
-    var lockedDungeon = roomButton("dungeon"), before = window.currentStageName;
+    var lockedDungeon = roomButton("dungeon"), before = window.__currentStageName;
     lockedDungeon.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     check("a scripted click cannot use an undiscovered room as a navigation shortcut",
-      state().open && window.currentStageName === before && window.__bathroomRoomOpen,
-      JSON.stringify({ room: window.currentStageName, open: state().open }));
+      state().open && window.__currentStageName === before && window.__bathroomRoomOpen,
+      JSON.stringify({ room: window.__currentStageName, open: state().open }));
 
     key("Escape");
     check("Escape closes the picker without changing rooms",
-      !state().open && window.currentStageName === before && window.__bathroomRoomOpen, JSON.stringify(state()));
+      !state().open && window.__currentStageName === before && window.__bathroomRoomOpen, JSON.stringify(state()));
     key("Tab");
 
     roomButton("kitchen").click();
     check("a discovered main-floor cell closes the picker and returns upstairs",
-      !state().open && window.currentStageName === "kitchen" && !window.__bathroomRoomOpen, JSON.stringify(state()));
+      !state().open && window.__currentStageName === "kitchen" && !window.__bathroomRoomOpen, JSON.stringify(state()));
     key("Tab");
     roomButton("bathroom").click();
     check("a discovered lower-floor cell opens its paired room",
-      !state().open && window.currentStageName === "kitchen" && window.__bathroomRoomOpen, JSON.stringify(state()));
+      !state().open && window.__currentStageName === "kitchen" && window.__bathroomRoomOpen, JSON.stringify(state()));
 
     key("Tab");
     document.getElementById("loft-game-strip").classList.add("party-on");
@@ -253,16 +253,16 @@ var harness = String.raw`<script>
     key("Tab");
     roomButton("garden").dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
     check("double-clicking a locked destination deliberately unlocks and enters it",
-      !state().open && window.currentStageName === "garden" && window.__roomSeen("garden"),
-      JSON.stringify({ room: window.currentStageName, open: state().open }));
+      !state().open && window.__currentStageName === "garden" && window.__roomSeen("garden"),
+      JSON.stringify({ room: window.__currentStageName, open: state().open }));
 
     window.__setSeenRooms(["kitchen"]);
     key("Tab");
     roomButton("cinema").dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
     check("unlocking a lower card does not also discover its paired upper room",
-      !state().open && window.currentStageName === "cuddly" && window.__cinemaRoomOpen &&
+      !state().open && window.__currentStageName === "cuddly" && window.__cinemaRoomOpen &&
       window.__roomSeen("cinema") && !window.__roomSeen("cuddly"),
-      JSON.stringify({ room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+      JSON.stringify({ room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
     key("Tab");
     check("reopening The Loft keeps only the selected lower card sharp",
       !roomButton("cinema").classList.contains("locked") &&
@@ -271,7 +271,7 @@ var harness = String.raw`<script>
     window.__closeDollhouse();
     if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
 
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     window.__setSeenRooms(["kitchen"]);
     key("Tab");
     key("ArrowRight");
@@ -283,9 +283,9 @@ var harness = String.raw`<script>
     check("a locked main-floor cursor needs two deliberate Enter presses and ignores auto-repeat",
       lockedMainFirst && lockedMainRepeat && lockedMainFirstState.open && lockedMainRepeatState.open &&
       !lockedMainFirstSeen && !lockedMainRepeatSeen && !state().open &&
-      window.currentStageName === "garden" && window.__roomSeen("garden"),
+      window.__currentStageName === "garden" && window.__roomSeen("garden"),
       JSON.stringify({ first: lockedMainFirstState, repeat: lockedMainRepeatState,
-        room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+        room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
 
     window.__setSeenRooms(["kitchen"]);
     key("Tab");
@@ -298,9 +298,9 @@ var harness = String.raw`<script>
     check("the same two-Enter contract unlocks a lower-floor destination",
       lockedLowerFirst && lockedLowerRepeat && lockedLowerFirstState.open && lockedLowerRepeatState.open &&
       !lockedLowerFirstSeen && !lockedLowerRepeatSeen && !state().open &&
-      window.currentStageName === "garden" && window.__princeState().basement && window.__roomSeen("dungeon"),
+      window.__currentStageName === "garden" && window.__princeState().basement && window.__roomSeen("dungeon"),
       JSON.stringify({ first: lockedLowerFirstState, repeat: lockedLowerRepeatState,
-        room: window.currentStageName, dungeon: window.__princeState(), seen: window.__seenRooms(), open: state().open }));
+        room: window.__currentStageName, dungeon: window.__princeState(), seen: window.__seenRooms(), open: state().open }));
     window.__closeMonitorPrince();
 
     window.__setSeenRooms(["kitchen"]);
@@ -309,29 +309,29 @@ var harness = String.raw`<script>
     touchTarget.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
     touchTarget.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
     check("double-tapping a locked destination does the same deliberate mobile unlock",
-      !state().open && window.currentStageName === "office" && window.__roomSeen("office"),
-      JSON.stringify({ room: window.currentStageName, open: state().open }));
+      !state().open && window.__currentStageName === "office" && window.__roomSeen("office"),
+      JSON.stringify({ room: window.__currentStageName, open: state().open }));
 
     window.__setSeenRooms(["kitchen"]);
     window.__setSecondRound(true);
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     key("Tab");
     roomButton("cinema").click();
     check("Phase 2 single-click unlocks and opens any locked dollhouse room",
-      !state().open && window.currentStageName === "cuddly" && window.__cinemaRoomOpen &&
+      !state().open && window.__currentStageName === "cuddly" && window.__cinemaRoomOpen &&
       window.__roomSeen("cinema") && !window.__roomSeen("cuddly"),
-      JSON.stringify({ room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+      JSON.stringify({ room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
     if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
 
     window.__setSeenRooms(["kitchen"]);
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     key("Tab");
     key("ArrowDown");
     var phaseTwoEnter = key("Enter");
     check("Phase 2 single-Enter has the same locked-room behavior",
-      phaseTwoEnter && !state().open && window.currentStageName === "kitchen" &&
+      phaseTwoEnter && !state().open && window.__currentStageName === "kitchen" &&
       window.__bathroomRoomOpen && window.__roomSeen("bathroom"),
-      JSON.stringify({ room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+      JSON.stringify({ room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

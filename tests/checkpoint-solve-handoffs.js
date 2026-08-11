@@ -11,7 +11,7 @@ var CASES = {
     max: 1,
     solved: ["kitchen"],
     setup: [
-      "window.markGardenWatered();",
+      "window.__markGardenWatered();",
       "click('garden-guitar');",
       "click('garden-candle-1');",
       "await sleep(40);"
@@ -72,13 +72,13 @@ function recoveryHarness(id, testCase) {
     window.__endAttract();
     window.__setMaxUnlocked(${testCase.max});
     window.__setSolvedRooms(${JSON.stringify(testCase.solved)});
-    window.goToStage(${JSON.stringify(testCase.room)});
+    window.__goToStage(${JSON.stringify(testCase.room)});
     ${testCase.setup}
     window.__saveLoftCheckpoint();
     ${testCase.finish}
     var raw = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
     sessionStorage.setItem(${JSON.stringify(sessionKey + "-immediate")}, JSON.stringify({
-      room: window.currentStageName,
+      room: window.__currentStageName,
       max: window.__maxUnlocked(),
       solved: window.__solvedRooms(),
       terminal: !!(${testCase.terminalDom}),
@@ -106,7 +106,7 @@ function recoveryHarness(id, testCase) {
     gate.querySelector(".loft-recovery-btn.primary").click();
     await sleep(180);
     report.restored = {
-      room: window.currentStageName,
+      room: window.__currentStageName,
       max: window.__maxUnlocked(),
       solved: window.__solvedRooms(),
       terminal: !!(${testCase.terminalDom}),
@@ -115,7 +115,7 @@ function recoveryHarness(id, testCase) {
     };
     document.getElementById("hunt-next").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await sleep(80);
-    report.afterNext = { room: window.currentStageName, solved: window.__solvedRooms() };
+    report.afterNext = { room: window.__currentStageName, solved: window.__solvedRooms() };
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
@@ -143,8 +143,8 @@ var VISIT_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-99
         window.__endAttract();
         window.__setMaxUnlocked(4);
         window.__setSolvedRooms([]);
-        ["garden", "cuddly", "office"].forEach(function (room) { window.goToStage(room); });
-        report.room = window.currentStageName;
+        ["garden", "cuddly", "office"].forEach(function (room) { window.__goToStage(room); });
+        report.room = window.__currentStageName;
         report.max = window.__maxUnlocked();
         report.solved = window.__solvedRooms();
       } catch (error) {

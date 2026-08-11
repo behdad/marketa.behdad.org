@@ -84,7 +84,7 @@ var harness = String.raw`<script>
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   check("the unnamed regulars leave when the night bar becomes a party", patrons && getComputedStyle(patrons).opacity === "0");
   check("party starts a fresh lifecycle", window.__partyLifecycleState && window.__partyLifecycleState().attended === 0 && window.__partyLifecycleState().running);
-  if (window.goToStage) window.goToStage("garden");
+  if (window.__goToStage) window.__goToStage("garden");
   if (window.__showPartySwitchCoach) window.__showPartySwitchCoach();
   var switchCoach = document.getElementById("party-switch-coach");
   window.dispatchEvent(new Event("resize"));
@@ -138,7 +138,7 @@ var harness = String.raw`<script>
     window.__gardenPartyOn && window.__partyExitHintActive() && window.__partyLifecycleState().attended === 150);
   window.__advancePartyLifecycle(30);
   check("party remains live after 180 attended seconds", !!window.__gardenPartyOn && window.__partyLifecycleState().attended === 180);
-  if (window.goToStage) window.goToStage("kitchen");
+  if (window.__goToStage) window.__goToStage("kitchen");
   var finaleId = "lastdance";
   if (window.__deliverPhoneMessage) window.__deliverPhoneMessage(finaleId);
   if (finaleId && window.__runMsgAction) window.__runMsgAction(finaleId);
@@ -185,15 +185,15 @@ var harness = String.raw`<script>
   if (window.__setPartyMode) window.__setPartyMode(true, true);
   check("the ordinary party control can still restart it deliberately", !!window.__gardenPartyOn);
 
-  var realSparklers = window.sparklers, sparklerCalls = 0;
-  window.sparklers = function () { sparklerCalls++; };
+  var realSparklers = window.__loftControllers.sparklers, sparklerCalls = 0;
+  window.__loftControllers.sparklers = function () { sparklerCalls++; };
   if (window.__deliverPhoneMessage) window.__deliverPhoneMessage("lastsparklers");
   if (window.__runMsgAction) window.__runMsgAction("lastsparklers");
   var sparklerFinale = window.__partyLifecycleState();
   check("the third closing cue starts a sparkler send-off and schedules its graceful ending",
     sparklerCalls === 1 && sparklerFinale.finaleAt > sparklerFinale.attended && sparklerFinale.finaleReason === "lastsparklers",
     { calls: sparklerCalls, state: sparklerFinale });
-  window.sparklers = realSparklers;
+  window.__loftControllers.sparklers = realSparklers;
   if (window.__extendPartyLifecycle) window.__extendPartyLifecycle();
 
   window.__advancePartyLifecycle(150);
@@ -202,7 +202,7 @@ var harness = String.raw`<script>
   var extendedState = window.__partyLifecycleState();
   check("requesting more party cancels a pending finale and grants a fresh interval", extended && extendedState.attended === 0 && !extendedState.cue && extendedState.finaleAt === null && extendedState.finaleReason === null && window.__gardenPartyOn, extendedState);
 
-  if (window.goToStage) window.goToStage("garden");
+  if (window.__goToStage) window.__goToStage("garden");
   if (window.__summonGuests) window.__summonGuests();
   if (window.__finishPartyLifecycle) window.__finishPartyLifecycle("test");
   var fadingDeparture = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
@@ -231,10 +231,10 @@ var harness = String.raw`<script>
   var stoppedDeparture = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
   check("cake finale uses the normal party teardown", !window.__gardenPartyOn && !window.__cakeOn && stoppedDeparture && !stoppedDeparture.active && stoppedDeparture.gain === 1);
 
-  setLang("cs");
+  window.__setLang("cs");
   if (window.__resetPartyExitHint) window.__resetPartyExitHint();
   if (window.__setGardenParty) window.__setGardenParty(true, false);
-  if (window.goToStage) window.goToStage("kitchen");
+  if (window.__goToStage) window.__goToStage("kitchen");
   if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
   if (window.__setGardenParty) window.__setGardenParty(false, true);
   var partyEndCaption = document.getElementById("hunt-caption").textContent;
@@ -244,7 +244,7 @@ var harness = String.raw`<script>
       !/Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption),
     JSON.stringify({ popup: partyEndPopup, caption: partyEndCaption }));
   if (window.__runMsgAction) window.__runMsgAction("downstairs_roadtrip_go");
-  check("only the final Road Trip exchange line opens Entrance", window.currentStageName === "balcony" && window.__entranceRoomOpen);
+  check("only the final Road Trip exchange line opens Entrance", window.__currentStageName === "balcony" && window.__entranceRoomOpen);
   report();
 })();
 </script>`;

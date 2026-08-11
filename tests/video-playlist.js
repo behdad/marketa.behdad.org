@@ -31,7 +31,7 @@ var HARNESS = [
   ' report.steps.returned={track:window.__monitorVideoTrack(),src:video.src,time:fakeTime,playing:window.__videoPlaying(),playCalls:playCalls,pauseCalls:pauseCalls};',
   ' window.__closeMonitorVideo();var closedTime=fakeTime;monitor.classList.add("show-caps");window.__openMonitorApp("video");',
   ' report.steps.reopened={open:monitor.classList.contains("show-video"),track:window.__monitorVideoTrack(),time:fakeTime,closedTime:closedTime,playing:window.__videoPlaying()};',
-  ' window.resetMonitorAppState("video");video.dispatchEvent(new Event("loadedmetadata"));',
+  ' window.__resetMonitorAppState("video");video.dispatchEvent(new Event("loadedmetadata"));',
   ' report.steps.reset={open:monitor.classList.contains("show-video"),track:window.__monitorVideoTrack(),src:video.src,time:fakeTime,downtownActive:downtown.classList.contains("active"),roseActive:rose.classList.contains("active"),butterflyActive:butterfly.classList.contains("active")};',
   ' report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);}},120);});',

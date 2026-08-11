@@ -13,7 +13,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");',
-  ' window.goToStage("office");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__openMonitorApp("tattoo");await sleep(80);',
+  ' window.__goToStage("office");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__openMonitorApp("tattoo");await sleep(80);',
   ' var thumb=document.querySelector(".tattoo-thumb");S("gallery_prevented",context(thumb));var m=menu(),mr=m&&m.getBoundingClientRect();S("gallery_menu",{exists:!!m,count:m?m.querySelectorAll("button").length:0,label:m?m.textContent.trim():"",appKill:!!(m&&m.querySelector(".ctx-kill")),topmost:!!(m&&document.elementsFromPoint(mr.left+5,mr.top+5).indexOf(m)>=0)});',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));S("esc_closed",!menu());',
   ' document.querySelector(".tattoo-new").closest(".tattoo-cell").click();await sleep(30);',

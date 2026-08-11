@@ -38,12 +38,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     Object.defineProperty(document, "hasFocus", {
       value: function () { return attended; }, configurable: true
     });
-    window.getSfxCtx = function () { return null; };
+    window.__getSfxCtx = function () { return null; };
     window.__unlockAllRooms();
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     await sleep(40);
     window.__openEntrancePorscheDriveHud();
@@ -87,7 +87,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     Object.defineProperty(document, "hasFocus", {
       value: function () { return attended; }, configurable: true
     });
-    window.getSfxCtx = function () { return null; };
+    window.__getSfxCtx = function () { return null; };
     var expected = JSON.parse(sessionStorage.getItem("entrance-roadtrip-pause-expected"));
     var gate = document.getElementById("loft-recovery-gate");
     var button = gate && gate.querySelector(".loft-recovery-btn.primary");

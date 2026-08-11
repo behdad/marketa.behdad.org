@@ -20,7 +20,7 @@ var harness = String.raw`<script>
     document.body.appendChild(pre);
   }
   try {
-    window.goToStage("garden");
+    window.__goToStage("garden");
     var fairy = document.getElementById("witchy-chest-fairy");
     var door = document.getElementById("witchy-door-2");
     click(door);
@@ -56,7 +56,7 @@ var harness = String.raw`<script>
           fairy.classList.contains("departed") &&
           fairy.parentNode.classList.contains("away"));
         window.__setGardenParty(false, false);
-        window.goToStage("cuddly");
+        window.__goToStage("cuddly");
         var cameo = document.getElementById("cuddly-rumi-fairy");
         window.__setDayNight(false);
         check("the fairy stays away during the day after the party",
@@ -72,7 +72,7 @@ var harness = String.raw`<script>
           rumiCycleBefore.entries === 7 && rumiCycleBefore.readings === 7 &&
           rumiCycleBefore.ghazals.join(",") === "553,553,553,162,4,1403,1798",
           JSON.stringify(rumiCycleBefore));
-        var rumiConsole = window.rumi();
+        var rumiConsole = window.__loftControllers.rumi();
         var rumiCycleAfter = window.__rumiCycleState();
         var rumiTrail = document.getElementById("fairy-clue-trail");
         check("the Rumi deck advances one slot instead of drawing again",
@@ -124,7 +124,7 @@ var harness = String.raw`<script>
         check("Markéta's recitation wakes Behdad for the exchange",
           document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
         check("the Rumi exchange has its own public command",
-          typeof window.rumi === "function");
+          typeof window.__loftControllers.rumi === "function");
 
         setTimeout(function () {
           try {
@@ -167,7 +167,7 @@ var harness = String.raw`<script>
             window.__resetRumiFairy();
             check("reset releases the Rumi-held wake",
               !document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
-            window.goToStage("garden");
+            window.__goToStage("garden");
             door.classList.remove("open");
             click(door);
             check("opening the fairy door after phase 2 starts also begins the flight",
@@ -175,10 +175,10 @@ var harness = String.raw`<script>
               fairy.parentNode.classList.contains("departing"));
             var offRoomCycle = window.__rumiCycleState();
             check("rumi() waits without consuming its deck outside the recitation scene",
-              /^🧚 rumi\(\) waits/.test(window.rumi()) &&
+              /^🧚 rumi\(\) waits/.test(window.__loftControllers.rumi()) &&
               window.__rumiCycleState().cursor === offRoomCycle.cursor);
             check("faal() returns a random Hafez reading without arguments",
-              /^📖 /.test(window.faal()));
+              /^📖 /.test(window.__loftControllers.faal()));
           } catch (error) {
             out.errors.push(String(error && error.stack || error));
           }

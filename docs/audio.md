@@ -60,7 +60,7 @@ their volume controls never double-scale:
    `ac.destination`. The piano keeps one filtered output bus on that handle and gives
    each pressed key short, self-terminating oscillator voices. It is deliberately
    independent of the night-sky backing bed, so transport pause silences the score but
-   not live keys. The console `volume()` command (`__audioMaster`) scales this;
+   not live keys. The public `loft.volume.set()` action (`__audioMaster`) scales this;
    `__applySfxMaster()` pushes changes onto it.
 3. **Songs (real recordings)** → the **pipeline** (`eqAudioCtx`), which uses the **raw
    shared context** (not a handle — it needs real `suspend/resume` and, crucially,
@@ -73,7 +73,7 @@ their volume controls never double-scale:
 
 **Volume model (by design):** the in-scene volume **button** controls music/beds and the
 active cross-origin Cinema film (`__songVolume`), so you can turn program audio down to
-hear SFX. The console **`volume()`** master (`__audioMaster`) is the god-knob over
+hear SFX. The public **`loft.volume.set()`** master (`__audioMaster`) is the god-knob over
 everything (SFX master + folded into `__songVolume`, including Vimeo). Vimeo alone gets
 a smooth perceptual lift after that shared level: mute remains exactly 0, site 0.15 maps
 to about 0.35, site 0.4 to about 0.55, and full remains 1. Other sources keep their

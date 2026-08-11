@@ -10,7 +10,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function state() { return window.__entranceRoomState(); }
   function openEntrance() {
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
   }
   function activate(target, pointerType, detail) {
@@ -56,7 +56,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       activate(hit, "mouse", 1);
-      report.partyOff = { room: window.currentStageName, entrance: state() };
+      report.partyOff = { room: window.__currentStageName, entrance: state() };
 
       window.__setGardenParty(true, false);
       report.partyArt = {
@@ -65,25 +65,25 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         animation: getComputedStyle(art).animationName
       };
       activate(hit, "mouse", 1);
-      report.mouse = { room: window.currentStageName, entrance: state() };
+      report.mouse = { room: window.__currentStageName, entrance: state() };
 
       openEntrance();
       await sleep(50);
       enter(document.querySelector(".hunt-viewport"));
-      report.enter = { room: window.currentStageName, entrance: state() };
+      report.enter = { room: window.__currentStageName, entrance: state() };
       activate(home, "mouse", 1);
-      report.hudGate = { room: window.currentStageName, entrance: state() };
+      report.hudGate = { room: window.__currentStageName, entrance: state() };
       window.__dismissEntrancePorscheDriveHud();
 
       enter(home);
       report.keyboard = {
-        room: window.currentStageName,
+        room: window.__currentStageName,
         entrance: state(),
         active: document.activeElement && document.activeElement.id
       };
 
       activate(home, "touch", 1);
-      report.touch = { room: window.currentStageName, entrance: state() };
+      report.touch = { room: window.__currentStageName, entrance: state() };
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }

@@ -94,7 +94,7 @@ function check(ok, message, detail) {
   await evaluate(`(function(){
     var gate=document.getElementById("loft-recovery-gate");
     if(gate)gate.querySelector(".loft-recovery-btn:not(.primary)").click();
-    window.__endAttract();window.goToStage("office");
+    window.__endAttract();window.__goToStage("office");
     var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");
     tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");
     window.__monitorZoomIn();window.__openMonitorApp("classics");

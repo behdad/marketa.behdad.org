@@ -15,7 +15,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         window.__entranceRoadtripDevStart();
@@ -179,10 +179,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         document.querySelector(".entrance-roadtrip-notebook-close").click();
         fullscreenArea.classList.remove("is-fullscreen");
 
-        window.setLang("cs");
+        window.__setLang("cs");
         report.czechLakeTitle = lake.getAttribute("title");
         report.czechPineTitle = pines[0].getAttribute("title");
-        window.setLang("en");
+        window.__setLang("en");
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }

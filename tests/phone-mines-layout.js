@@ -13,7 +13,7 @@ function harness(lang) {
     'function rect(el){var r=el.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,w:r.width,h:r.height};}',
     'window.addEventListener("load",function(){setTimeout(async function(){',
     ' var report={errors:window.__errs};try{',
-    '  setLang(' + JSON.stringify(lang) + ');window.phone("mines");await sleep(220);',
+    '  window.__setLang(' + JSON.stringify(lang) + ');window.__loftControllers.phone.open("mines");await sleep(220);',
     '  var body=document.querySelector(".phone-app-body"),host=body.querySelector(".pm-mines-host"),board=host.querySelector(".mines-board"),toolbar=host.querySelector(".mines-side"),face=host.querySelector(".mines-face"),count=host.querySelector(".mines-count"),timer=host.querySelector(".mines-timer"),ring=count.querySelector(".mines-ring"),digits=count.querySelector(".mines-digits"),cell=board.querySelector(".mines-cell");',
     '  var cs=getComputedStyle(body),hs=getComputedStyle(host),cols=+board.getAttribute("data-mines-cols"),rows=+board.getAttribute("data-mines-rows");',
     '  report.layout={viewport:[innerWidth,innerHeight],padding:cs.padding,overflow:cs.overflowY,body:rect(body),host:rect(host),board:rect(board),toolbar:rect(toolbar),face:rect(face),count:rect(count),timer:rect(timer),ring:rect(ring),digits:rect(digits),cell:rect(cell),cols:cols,rows:rows,cells:board.children.length,scroll:[body.clientWidth,body.scrollWidth,body.clientHeight,body.scrollHeight],transform:hs.transform};',

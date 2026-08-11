@@ -10,23 +10,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   var report = { errors: [], steps: {} };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function click(id) { document.getElementById(id).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
-  function snap() { return { room: window.currentStageName, key: window.__captionKey(), state: window.__captionState() }; }
+  function snap() { return { room: window.__currentStageName, key: window.__captionKey(), state: window.__captionState() }; }
   window.addEventListener("load", function () { setTimeout(async function () { try {
     window.__endAttract(); window.__unlockAllRooms();
 
-    window.goToStage("cuddly"); click("cuddly-outlet"); window.goToStage("office");
+    window.__goToStage("cuddly"); click("cuddly-outlet"); window.__goToStage("office");
     await sleep(150); report.steps.outletLeave = snap();
 
-    window.goToStage("cuddly"); click("cuddly-outlet"); window.goToStage("garden");
-    window.goToStage("cuddly"); window.setCaption("cuddly_pull", true);
+    window.__goToStage("cuddly"); click("cuddly-outlet"); window.__goToStage("garden");
+    window.__goToStage("cuddly"); window.__setCaption("cuddly_pull", true);
     await sleep(150); report.steps.outletReentry = snap();
 
     window.__setOfficeProgress("prague", true); window.__setOfficeProgress("pc", false);
-    window.goToStage("office"); window.computer.set(true); window.goToStage("garden");
+    window.__goToStage("office"); window.__loftControllers.computer.set(true); window.__goToStage("garden");
     await sleep(3150); report.steps.monitorLeave = snap();
 
-    window.computer.set(false); window.__setOfficeProgress("pc", false); window.computer.set(true);
-    window.goToStage("kitchen"); window.goToStage("office"); window.setCaption("office_call", true);
+    window.__loftControllers.computer.set(false); window.__setOfficeProgress("pc", false); window.__loftControllers.computer.set(true);
+    window.__goToStage("kitchen"); window.__goToStage("office"); window.__setCaption("office_call", true);
     await sleep(3150); report.steps.monitorReentry = snap();
   } catch (error) { report.errors.push(String(error && error.stack || error)); }
     report.errors = (window.__errs || []).concat(report.errors);
@@ -44,17 +44,17 @@ var LAPTOP_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9
 (function () {
   var report = { errors: [], steps: {} };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
-  function snap() { return { room: window.currentStageName, key: window.__captionKey(), state: window.__captionState() }; }
+  function snap() { return { room: window.__currentStageName, key: window.__captionKey(), state: window.__captionState() }; }
   window.addEventListener("load", function () { setTimeout(async function () { try {
-    window.__endAttract(); window.__unlockAllRooms(); window.goToStage("office");
+    window.__endAttract(); window.__unlockAllRooms(); window.__goToStage("office");
     window.__setOfficeProgress("prague", false); window.__setOfficeProgress("pc", false);
-    window.__laptopCall("prague"); window.goToStage("garden");
+    window.__laptopCall("prague"); window.__goToStage("garden");
     await sleep(3100); report.steps.hangupLeave = snap();
 
-    window.__endLaptopCall(true); window.goToStage("office");
+    window.__endLaptopCall(true); window.__goToStage("office");
     window.__setOfficeProgress("prague", false); window.__setOfficeProgress("pc", false);
     window.__laptopCall("prague"); window.__endLaptopCall();
-    window.goToStage("garden"); window.goToStage("office"); window.setCaption("office_call", true);
+    window.__goToStage("garden"); window.__goToStage("office"); window.__setCaption("office_call", true);
     await sleep(1600); report.steps.dropReentry = snap();
   } catch (error) { report.errors.push(String(error && error.stack || error)); }
     report.errors = (window.__errs || []).concat(report.errors);

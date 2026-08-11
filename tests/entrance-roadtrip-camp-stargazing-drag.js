@@ -53,13 +53,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return prevented;
   }
   function clearNight() {
-    window.storm.set(false); window.rain.set(false); window.snow.set(false); window.overcast.set(false);
+    window.__loftControllers.storm.set(false); window.__loftControllers.rain.set(false); window.__loftControllers.snow.set(false); window.__loftControllers.overcast.set(false);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
     window.__setDayNight(true);
   }
   async function prepare() {
     window.__unlockAllRooms();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     await sleep(220);
     window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");

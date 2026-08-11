@@ -9,7 +9,7 @@ var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
   var momentEchoes = [];
-  window.say = function (message) { momentEchoes.push(String(message)); };
+  window.__loftControllers.say = function (message) { momentEchoes.push(String(message)); };
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   function report() {
     out.errors = (window.__errs || []).slice();
@@ -20,9 +20,9 @@ var harness = String.raw`<script>
   window.__gameStarted = function () { return true; };
   window.__secondRound = true;
   window.__setGardenParty(true, true);
-  window.goToStage("garden");
+  window.__goToStage("garden");
   window.__summonGuests();
-  window.goToStage("balcony");
+  window.__goToStage("balcony");
   for (var attempt = 0; attempt < 24; attempt++) {
     window.__setBalconyBBQCrowd(false);
     window.__setBalconyBBQCrowd(true);
@@ -40,14 +40,14 @@ var harness = String.raw`<script>
   setTimeout(function () {
     var bubble = document.querySelector(".egg-bubble.party-toast-tour");
     check("the first toast pans to Ali in the garden",
-      window.currentStageName === "garden" && bubble && bubble.getAttribute("data-speaker") === "ali",
-      window.currentStageName + " / " + (bubble && bubble.getAttribute("data-speaker")));
+      window.__currentStageName === "garden" && bubble && bubble.getAttribute("data-speaker") === "ali",
+      window.__currentStageName + " / " + (bubble && bubble.getAttribute("data-speaker")));
   }, 1100);
   setTimeout(function () {
     var bubble = document.querySelector(".egg-bubble.party-toast-tour");
     check("the second toast pans to Farhang on the balcony",
-      window.currentStageName === "balcony" && bubble && bubble.getAttribute("data-speaker") === "farhang",
-      window.currentStageName + " / " + (bubble && bubble.getAttribute("data-speaker")));
+      window.__currentStageName === "balcony" && bubble && bubble.getAttribute("data-speaker") === "farhang",
+      window.__currentStageName + " / " + (bubble && bubble.getAttribute("data-speaker")));
   }, 5700);
   setTimeout(function () {
     check("toast tour ends cleanly", !window.__toastsOn && !document.querySelector(".egg-bubble.party-toast-tour"));

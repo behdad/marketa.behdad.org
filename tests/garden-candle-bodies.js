@@ -30,7 +30,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   window.addEventListener("load", function () {
     setTimeout(async function () {
       try {
-        window.goToStage("garden");
+        window.__goToStage("garden");
         var stage = document.getElementById("stage-garden");
         var c1 = document.getElementById("garden-candle-1");
         var c2 = document.getElementById("garden-candle-2");

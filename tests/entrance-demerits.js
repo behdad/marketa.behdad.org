@@ -52,7 +52,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.expired = copy(state());
       report.steps.normalized = JSON.parse(localStorage.getItem(recordKey));
       window.__unlockAllRooms();
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
@@ -64,7 +64,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       await sleep(150);
       report.steps.decayed = copy(state());
       report.steps.decayedPersisted = JSON.parse(localStorage.getItem(recordKey));
-      window.setLang("cs");
+      window.__setLang("cs");
       report.steps.czech = {
         suspended: window.__loftMessages.cs.hunt.entrance_roadtrip_suspended,
         warning: window.__loftMessages.cs.hunt.entrance_roadtrip_demerit_warning,

@@ -51,9 +51,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__setPartyDance("salsa");
     window.__resetActTwo();
     window.__armActTwo(true);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__summonGuests();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     if (window.__updateBalconyHangout) window.__updateBalconyHangout();
     await sleep(120);
     var audience = window.__balconyAudienceNoticed ? window.__balconyAudienceNoticed(true) : null;

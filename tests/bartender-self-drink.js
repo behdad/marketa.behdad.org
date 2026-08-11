@@ -4,7 +4,7 @@
 var lib = require("./lib");
 var harness = String.raw`<script>
 (function () {
-  window.goToStage("kitchen");
+  window.__goToStage("kitchen");
   if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
   if (window.__setPartyMode) window.__setPartyMode(false, true);
   if (window.__setDayNight) window.__setDayNight(true);
@@ -26,9 +26,9 @@ var harness = String.raw`<script>
 
   // Leaving the room lets the ambient poll tear down that first drink. Return and exercise
   // Flair-Catch's real game-over flag against both occupancy branches.
-  window.goToStage("garden");
+  window.__goToStage("garden");
   setTimeout(function () {
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     window.__whoIsHere = function () { return [person("pouria"), person("marketa")]; };
     window.__flairTest(1, 16);
     window.__flairStop(true);
@@ -39,9 +39,9 @@ var harness = String.raw`<script>
     window.__flairStop();
     flairQuitAlone = window.__bartenderSelfServing() && window.__ambientMaking();
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     setTimeout(function () {
-      window.goToStage("kitchen");
+      window.__goToStage("kitchen");
       window.__whoIsHere = function () { return [person("pouria")]; };
       window.__flairTest(1, 16);
       window.__flairStop(true);

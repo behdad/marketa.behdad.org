@@ -36,12 +36,12 @@ function harness(cfg) {
     window.__runMsgAction("bbq");
     setTimeout(function () {
       check("prompt starts the smoker and natural split", window.__partyBBQOn() && window.__bbqSplitOn && document.getElementById("balcony-smoker").classList.contains("smoking"));
-      window.goToStage("garden");
-      window.fireworks();
+      window.__goToStage("garden");
+      window.__loftControllers.fireworks();
       check("garden may render fireworks", fireworkCount() > 0, String(fireworkCount()));
-      window.goToStage("office");
+      window.__goToStage("office");
       check("office clears every firework host", fireworkCount() === 0, String(fireworkCount()));
-      window.fireworks();
+      window.__loftControllers.fireworks();
       check("office refuses new fireworks", fireworkCount() === 0, String(fireworkCount()));
       report();
     }, 900);

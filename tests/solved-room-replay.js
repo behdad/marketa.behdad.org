@@ -20,7 +20,7 @@ async function stay(name,delay){
     name==="garden"?document.getElementById("garden-candle-2").classList.contains("lit"):
     name==="cuddly"?document.getElementById("cuddly-blanket").classList.contains("done"):
     document.getElementById("office-stainedglass").classList.contains("done");
-  report.rooms[name]={room:window.currentStageName,solved:window.__roomSolved(name),completed:completed,terminal:terminal};
+  report.rooms[name]={room:window.__currentStageName,solved:window.__roomSolved(name),completed:completed,terminal:terminal};
 }
 async function run(){
   window.__endAttract();
@@ -30,7 +30,7 @@ async function run(){
   // Kitchen's repeat espresso remains available in Phase 2. The shot is the same terminal
   // click reached by the document Enter walker, and used to call the handoff again after each sip.
   window.__setSecondRound(true,{releaseHeld:false});
-  window.goToStage("kitchen");
+  window.__goToStage("kitchen");
   window.__setDayNight(false);
   window.__setKitchenCoffeeState({step:"brewed",rounds:2});
   finish(report.mode,"kitchen-shotcup");
@@ -39,14 +39,14 @@ async function run(){
 
   // Prepare each remaining solved room one real action before its terminal prop. Only the
   // setup is direct; the completion itself always uses the tested scene-input path.
-  window.goToStage("garden");
-  window.markGardenWatered();
+  window.__goToStage("garden");
+  window.__markGardenWatered();
   click("garden-guitar");
   click("garden-candle-1");
   finish(report.mode,"garden-candle-2");
   await stay("garden",850);
 
-  window.goToStage("cuddly");
+  window.__goToStage("cuddly");
   document.getElementById("cuddly-octopus").classList.add("played");
   document.getElementById("cuddly-balcony-door").classList.add("open");
   if(report.mode==="enter")enter();
@@ -57,19 +57,19 @@ async function run(){
   }
   await stay("cuddly",850);
 
-  window.goToStage("office");
+  window.__goToStage("office");
   window.__setOfficeProgress("prague",true);
   window.__setOfficeProgress("pc",true);
   window.__settleOfficeLamps(true,true);
   finish(report.mode,"office-stainedglass");
   await stay("office",2150);
   if(report.mode==="pointer"){
-    var imported=window.loftSessionImport(JSON.stringify({kind:"loft-session",version:1,progress:{room:"office",maxUnlocked:4,solvedRooms:["kitchen","garden","cuddly","office"],seenRooms:["kitchen","garden","cuddly","office"],phase2:false,party:false,daylight:true,bbq:false},puzzle:{office:{prague:true,pc:true,lamp:true,pendant:true,glass:true}}}));
+    var imported=window.__loftSessionImport(JSON.stringify({kind:"loft-session",version:1,progress:{room:"office",maxUnlocked:4,solvedRooms:["kitchen","garden","cuddly","office"],seenRooms:["kitchen","garden","cuddly","office"],phase2:false,party:false,daylight:true,bbq:false},puzzle:{office:{prague:true,pc:true,lamp:true,pendant:true,glass:true}}}));
     var restoredGlass=document.getElementById("office-stainedglass");
     restoredGlass.classList.remove("done","zoomed");
     restoredGlass.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));
     await sleep(2150);
-    report.checkpoint={imported:imported,room:window.currentStageName,solved:window.__roomSolved("office"),completed:restoredGlass.classList.contains("done")};
+    report.checkpoint={imported:imported,room:window.__currentStageName,solved:window.__roomSolved("office"),completed:restoredGlass.classList.contains("done")};
   }
 }
 window.addEventListener("load",function(){setTimeout(function(){run().catch(function(error){window.__errs.push("harness: "+String(error&&error.stack||error));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});

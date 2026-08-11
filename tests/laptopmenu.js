@@ -28,7 +28,7 @@ var HARNESS = [
   "  function el(id){ return document.getElementById(id); }",
   "  function calling(l){ return l.classList.contains('calling')||l.classList.contains('connecting')||l.classList.contains('connected'); }",
   "  async function run(){",
-  "    if (window.goToStage) window.goToStage('office');",
+  "    if (window.__goToStage) window.__goToStage('office');",
   "    await sleep(200);",
   "    var l = lap();",
   // closed laptop → Open wakes it

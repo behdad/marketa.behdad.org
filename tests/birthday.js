@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Birthday-axis smoke test (the 'b' key + birthday() console command).
+// Birthday-axis smoke test (the 'b' key + typed Loft calendar API).
 // Loads rsvp.html headless and drives ONLY the birthday controls: asserts the ring
 // leads with Markéta, that each stop time-travels the loft to that person's date +
-// season + hat/crown class + reveal venue, that a season() clears the birthday axis,
+// season + hat/crown class + reveal venue, that a season change clears the birthday axis,
 // and that no uncaught JS error fires. Same one-shot runner as play.js/state.js.
 //
 // Usage: node tests/birthday.js
@@ -24,7 +24,7 @@ var HARNESS = [
   "  var report={errors:[],steps:{}};",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness: '+String(e&&e.stack||e));}).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "  async function run(){",
-  "    report.steps.hasHooks = (typeof window.birthday==='function') && (typeof window.__stepBirthday==='function');",
+  "    report.steps.hasHooks = (typeof window.__loftControllers.birthday==='function') && (typeof window.__stepBirthday==='function');",
   "    // first 'b' → the ring leader, Markéta (Jan 20)",
   "    pressB(false);",
   "    report.steps.first = { bdMarketa: hasCls('bd-marketa'), toast: toastText(), sd: window.__seasonDate && window.__seasonDate() };",
@@ -32,8 +32,8 @@ var HARNESS = [
   "    report.steps.first.crownVisible = vis('.bd-crown-marketa');",
   "    report.steps.first.plainHat = (document.querySelector('.bd-hat-marketa') ? vis('.bd-hat-marketa') : 'none');",
   "    // Dateless people stay outside the birthday ring; their dormant art remains hidden.",
-  "    var birthdayList = window.birthday('list');",
-  "    report.steps.dateless = { ali: window.birthday('ali'), goli: window.birthday('goli'), son: window.birthday('patricia-son'), daughter: window.birthday('patricia-daughter'), list: birthdayList, bdAli: hasCls('bd-ali'), bdGoli: hasCls('bd-goli'), bdSon: hasCls('bd-patricia-son'), bdDaughter: hasCls('bd-patricia-daughter'), aliHat: vis('.bd-hat-ali'), goliHat: vis('.bd-hat-goli'), sonHat: vis('.bd-hat-patricia-son'), daughterHat: vis('.bd-hat-patricia-daughter') };",
+  "    var birthdayList = window.__loftControllers.birthday('list');",
+  "    report.steps.dateless = { ali: window.__loftControllers.birthday('ali'), goli: window.__loftControllers.birthday('goli'), son: window.__loftControllers.birthday('patricia-son'), daughter: window.__loftControllers.birthday('patricia-daughter'), list: birthdayList, bdAli: hasCls('bd-ali'), bdGoli: hasCls('bd-goli'), bdSon: hasCls('bd-patricia-son'), bdDaughter: hasCls('bd-patricia-daughter'), aliHat: vis('.bd-hat-ali'), goliHat: vis('.bd-hat-goli'), sonHat: vis('.bd-hat-patricia-son'), daughterHat: vis('.bd-hat-patricia-daughter') };",
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
   "    // REGRESSION (the Madla floating-crown bug): start from an exact small floor where Madla has",
   "    // not arrived. Her birthday must force her visible under the crown, temporarily summon the",
@@ -44,11 +44,11 @@ var HARNESS = [
   "    var gg=document.getElementById('garden-guests'); if(gg) gg.classList.add('guests-in','trickle');",
   "    ['.g-chinnell','.g-rafi','.g-ayushi'].forEach(function(sel){var el=gg&&gg.querySelector(sel);if(el)el.classList.add('arrived');});",
   "    var gmPre=document.querySelector('.g-madla'); if(gmPre) gmPre.classList.remove('arrived','bd-cutter','leaving');",
-  "    // birthday('madla') runs the full reveal and cake lifecycle against that seeded floor.",
+  "    // The private birthday owner runs the full reveal and cake lifecycle against that seeded floor.",
   "    report.steps.madlaPre = { guestsIn: !!(window.__guestsIn && window.__guestsIn()), madlaHidden: gmPre?getComputedStyle(gmPre).visibility:'(absent)', bdCakeOnBefore: !!window.__bdCakeOn };",
-  "    window.birthday('madla'); await sleep(800);",
+  "    window.__loftControllers.birthday('madla'); await sleep(800);",
   "    var gm=document.querySelector('.g-madla');",
-  "    report.steps.madla = { party: !!window.__gardenPartyOn, room: window.currentStageName, cutter: !!(gm&&gm.classList.contains('bd-cutter')), arrived: !!(gm&&gm.classList.contains('arrived')), figVis: gm?getComputedStyle(gm).visibility:'(absent)', crownVis: vis('.bd-crown-madla') };",
+  "    report.steps.madla = { party: !!window.__gardenPartyOn, room: window.__currentStageName, cutter: !!(gm&&gm.classList.contains('bd-cutter')), arrived: !!(gm&&gm.classList.contains('arrived')), figVis: gm?getComputedStyle(gm).visibility:'(absent)', crownVis: vis('.bd-crown-madla') };",
   "    // and she must HOLD at the cake: a floor-wide rebalance (any later arrival triggers one) must not",
   "    // glide the cutter off to a slot — rebalanceFloor skips .bd-cutter, so her --balance-x is unchanged.",
   "    var bxBefore = gm ? gm.style.getPropertyValue('--balance-x') : '';",
@@ -64,32 +64,32 @@ var HARNESS = [
   "    // Any datable birthday person with a real dance-floor model goes to the party cake.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(300);",
   "    // Elisabeth has a dance-floor model, so her crown belongs at the cake.",
-  "    window.birthday('elisabeth'); await sleep(450);",
+  "    window.__loftControllers.birthday('elisabeth'); await sleep(450);",
   "    var eFig=document.querySelector('#garden-guests .g-elisabeth');",
-  "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(eFig&&eFig.classList.contains('bd-cutter')), crownVisible: vis('#garden-guests .g-elisabeth .bd-crown-elisabeth') };",
+  "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), room: window.__currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(eFig&&eFig.classList.contains('bd-cutter')), crownVisible: vis('#garden-guests .g-elisabeth .bd-crown-elisabeth') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
   "    // Adults with floor models use the same structural rule, even if they also have a family call.",
-  "    window.birthday('madla'); await sleep(450);",
-  "    report.steps.madlaCall = { bd: hasCls('bd-madla'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-madla.bd-cutter'), crownVis: vis('#garden-guests .g-madla .bd-crown-madla') };",
+  "    window.__loftControllers.birthday('madla'); await sleep(450);",
+  "    report.steps.madlaCall = { bd: hasCls('bd-madla'), room: window.__currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-madla.bd-cutter'), crownVis: vis('#garden-guests .g-madla .bd-crown-madla') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
-  "    window.birthday('patricia'); await sleep(450);",
-  "    report.steps.patriciaCall = { bd: hasCls('bd-patricia'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-patricia.bd-cutter'), hatVis: vis('#garden-guests .g-patricia .bd-hat-patricia') };",
+  "    window.__loftControllers.birthday('patricia'); await sleep(450);",
+  "    report.steps.patriciaCall = { bd: hasCls('bd-patricia'), room: window.__currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-patricia.bd-cutter'), hatVis: vis('#garden-guests .g-patricia .bd-hat-patricia') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
   "    // Ashraf — Tehran call-only; venue routes to the office + tehran call",
-  "    window.birthday('ashraf'); await sleep(200);",
-  "    report.steps.ashraf = { bd: hasCls('bd-ashraf'), room: window.currentStageName, hatVisible: vis('.bd-hat-ashraf') };",
+  "    window.__loftControllers.birthday('ashraf'); await sleep(200);",
+  "    report.steps.ashraf = { bd: hasCls('bd-ashraf'), room: window.__currentStageName, hatVisible: vis('.bd-hat-ashraf') };",
   "    // Daniel — Prague call-only",
-  "    window.birthday('daniel'); await sleep(200);",
-  "    report.steps.daniel = { bd: hasCls('bd-daniel'), room: window.currentStageName };",
+  "    window.__loftControllers.birthday('daniel'); await sleep(200);",
+  "    report.steps.daniel = { bd: hasCls('bd-daniel'), room: window.__currentStageName };",
   "    // From a clean, party-off state, one Chinnell birthday activation must reach the cake.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(120);",
-  "    window.birthday('chinnell'); await sleep(250);",
-  "    report.steps.chinnell = { room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-chinnell.bd-cutter'), hatVis: vis('#garden-guests .g-chinnell .bd-hat-chinnell') };",
+  "    window.__loftControllers.birthday('chinnell'); await sleep(250);",
+  "    report.steps.chinnell = { room: window.__currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-chinnell.bd-cutter'), hatVis: vis('#garden-guests .g-chinnell .bd-hat-chinnell') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
   "    // Navid has a full dance-floor figure, so his birthday starts the party and brings him to the cake.",
-  "    window.birthday('navid'); await sleep(250);",
+  "    window.__loftControllers.birthday('navid'); await sleep(250);",
   "    var navidFig=document.querySelector('#garden-guests .g-navid');",
-  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(navidFig&&navidFig.classList.contains('bd-cutter')), arrived: !!(navidFig&&navidFig.classList.contains('arrived')), hatVisible: vis('#garden-guests .g-navid .bd-hat-navid') };",
+  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.__currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(navidFig&&navidFig.classList.contains('bd-cutter')), arrived: !!(navidFig&&navidFig.classList.contains('arrived')), hatVisible: vis('#garden-guests .g-navid .bd-hat-navid') };",
   "    var blowStarted=window.__beginBdCandleBlow&&window.__beginBdCandleBlow();",
   "    var blowLean=document.getElementById('garden-guests').classList.contains('bd-candles-blow'); await sleep(800);",
   "    report.steps.navidBlow = { started:!!blowStarted, leaned:blowLean, blown:document.getElementById('garden-bd-cake').classList.contains('blown') };",
@@ -97,13 +97,13 @@ var HARNESS = [
   "    if (window.__setPartyKidFormation) window.__setPartyKidFormation('play'); await sleep(80);",
   "    report.steps.navidAfterCake = { arrived: !!(navidFig&&navidFig.classList.contains('arrived')), honoree: !!(navidFig&&navidFig.classList.contains('bd-honoree')), cutter: !!(navidFig&&navidFig.classList.contains('bd-cutter')), away: !!(navidFig&&(navidFig.classList.contains('off-with-kids')||navidFig.classList.contains('off-at-games')||navidFig.classList.contains('off-asleep')||navidFig.classList.contains('off-at-bbq'))) };",
   "    // Hannah has a dance-floor model too, so the model-derived rule routes her to the cake.",
-  "    window.birthday('hannah'); await sleep(250);",
-  "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-hannah.bd-cutter'), hatVis: vis('#garden-guests .g-hannah .bd-hat-hannah') };",
-  "    // a season() must CLEAR the birthday axis (mutually exclusive pretend-dates)",
-  "    window.season('summer'); await sleep(150);",
+  "    window.__loftControllers.birthday('hannah'); await sleep(250);",
+  "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.__currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-hannah.bd-cutter'), hatVis: vis('#garden-guests .g-hannah .bd-hat-hannah') };",
+  "    // A typed season change must CLEAR the birthday axis (mutually exclusive pretend-dates)",
+  "    window.__loftControllers.season('summer'); await sleep(150);",
   "    report.steps.seasonClears = { anyBd: /\\bbd-[a-z]+\\b/.test(strip().className), summer: hasCls('season-pride')||true, sd: window.__seasonDate() };",
   "    // list + advance-with-no-arg",
-  "    report.steps.list = window.birthday('list');",
+  "    report.steps.list = window.__loftControllers.birthday('list');",
   "  }",
   "})();",
   "</script>"
@@ -118,12 +118,12 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 13000, { patchRaf: true, forceMoti
 if (!r) { fail("harness reported (page error before load, or budget too small)"); }
 else {
   var s = r.steps || {};
-  if (s.hasHooks) pass("birthday() + __stepBirthday hooks are wired"); else fail("birthday hooks wired");
+  if (s.hasHooks) pass("typed birthday + __stepBirthday hooks are wired"); else fail("birthday hooks wired");
   if (s.first && s.first.bdMarketa) pass("first 'b' press leads with Markéta (bd-marketa set)"); else fail("first 'b' → Markéta", JSON.stringify(s.first));
   if (s.first && s.first.sd && s.first.sd.m === 0 && s.first.sd.d === 20) pass("Markéta's stop time-travels to Jan 20"); else fail("Markéta date = Jan 20", JSON.stringify(s.first && s.first.sd));
   if (s.first && /Mark/.test(s.first.toast)) pass("birthday toast names the person (" + (s.first && s.first.toast) + ")"); else fail("toast names the person", JSON.stringify(s.first && s.first.toast));
   if (s.first && s.first.crownVisible === "visible" && s.first.plainHat === "none") pass("Markéta wears a CROWN (bd-crown, no bd-hat)"); else fail("Markéta crown visible / no hat", JSON.stringify(s.first && { crown: s.first.crownVisible, hat: s.first.plainHat }));
-  if (s.dateless && [s.dateless.ali, s.dateless.goli, s.dateless.son, s.dateless.daughter].every(function (v) { return /^no birthday/.test(v); }) && !/\"ali\"|\"goli\"|patricia-son|patricia-daughter/.test(s.dateless.list)) pass("dateless people stay outside birthday() and its ring"); else fail("dateless people have no birthday records", JSON.stringify(s.dateless));
+  if (s.dateless && [s.dateless.ali, s.dateless.goli, s.dateless.son, s.dateless.daughter].every(function (v) { return /^no birthday/.test(v); }) && !/\"ali\"|\"goli\"|patricia-son|patricia-daughter/.test(s.dateless.list)) pass("dateless people stay outside the birthday API and its ring"); else fail("dateless people have no birthday records", JSON.stringify(s.dateless));
   if (s.dateless && !s.dateless.bdAli && !s.dateless.bdGoli && !s.dateless.bdSon && !s.dateless.bdDaughter && [s.dateless.aliHat, s.dateless.goliHat, s.dateless.sonHat, s.dateless.daughterHat].every(function (v) { return v === "hidden"; })) pass("their retained birthday props remain dormant without active birthday classes"); else fail("retained birthday props dormant", JSON.stringify(s.dateless));
   if (s.madlaPre && s.madlaPre.guestsIn && s.madlaPre.madlaHidden === "hidden") pass("bug precondition set: floor populated (guests-in) with Madla still hidden off-floor"); else fail("Madla precondition (guests-in + madla hidden)", JSON.stringify(s.madlaPre));
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
@@ -139,8 +139,8 @@ else {
   if (s.navid && s.navid.bd && s.navid.room === "garden" && s.navid.party && s.navid.cakeOn && s.navid.cutter && s.navid.arrived && s.navid.hatVisible === "visible") pass("Navid's birthday starts the party and brings him to the cake in his hat"); else fail("Navid party-room birthday cake", JSON.stringify(s.navid));
   if (s.navidBlow && s.navidBlow.started && s.navidBlow.leaned && s.navidBlow.blown) pass("the birthday honoree leans in and blows out the candles"); else fail("birthday honoree blows out candles", JSON.stringify(s.navidBlow));
   if (s.navidAfterCake && s.navidAfterCake.arrived && s.navidAfterCake.honoree && !s.navidAfterCake.cutter && !s.navidAfterCake.away) pass("the birthday honoree stays dancing after cake and cannot be reassigned"); else fail("birthday honoree persists all night", JSON.stringify(s.navidAfterCake));
-  if (s.seasonClears && s.seasonClears.anyBd === false) pass("season() clears the birthday axis (no stray bd-* class)"); else fail("season clears bd axis", JSON.stringify(s.seasonClears));
-  if (typeof s.list === "string" && /marketa/.test(s.list)) pass("birthday('list') prints the ring"); else fail("birthday list", JSON.stringify(s.list));
+  if (s.seasonClears && s.seasonClears.anyBd === false) pass("typed season change clears the birthday axis (no stray bd-* class)"); else fail("season clears bd axis", JSON.stringify(s.seasonClears));
+  if (typeof s.list === "string" && /marketa/.test(s.list)) pass("birthday owner lists the ring"); else fail("birthday list", JSON.stringify(s.list));
   if (r.errors.length === 0) pass("no uncaught JS errors across the run"); else fail("no uncaught JS errors", r.errors.slice(0,12).join("\n"));
 }
 
@@ -148,7 +148,7 @@ var reducedHarness = [
   "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
   "<script>",
   "window.addEventListener('load',function(){setTimeout(function(){",
-  "  birthday('navid');",
+  "  loft.calendar.birthday.show('navid');",
   "  var g=document.getElementById('stage-garden'),r=document.getElementById('garden-kid-navid');",
   "  if(g)g.style.setProperty('visibility','visible','important');",
   "  if(r)r.classList.add('chasing');",

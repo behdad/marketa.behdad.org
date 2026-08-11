@@ -21,7 +21,7 @@ var HARNESS = String.raw`<script>
   addEventListener("load", function () {
     setTimeout(function () {
       try {
-        goToStage("garden");
+        window.__goToStage("garden");
         var plant = document.getElementById("garden-potstand");
         var home = plant.parentNode;
         var lift = document.getElementById("garden-potstand-lift");
@@ -63,7 +63,7 @@ var HARNESS = String.raw`<script>
             await later(80);
             sample("tripReset");
 
-            window.waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
+            window.__waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
             await later(70);
             sample("waterStart");
             await later(180);
@@ -71,7 +71,7 @@ var HARNESS = String.raw`<script>
             await later(360);
             sample("waterEnd");
 
-            window.waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
+            window.__waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
             await later(70);
             sample("replay");
             await window.__resetLoftGame("instant");

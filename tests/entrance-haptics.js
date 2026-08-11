@@ -15,7 +15,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         value: function (pattern) { report.pulses.push(copy(pattern)); return true; }, configurable: true
       });
       window.__unlockAllRooms();
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       window.__toggleEntrancePorscheEngine();

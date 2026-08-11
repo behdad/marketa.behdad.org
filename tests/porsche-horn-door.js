@@ -8,7 +8,7 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:window.__errs||[],steps:{}};function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();await sleep(40);',
+  'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();await sleep(40);',
   'var horn=document.getElementById("entrance-drive-horn"),steering=document.getElementById("entrance-drive-steering"),door=document.getElementById("entrance-door-art");function pointer(type){horn.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:17,pointerType:"mouse"}));}',
   'report.steps.before={door:door.classList.contains("horn-answering"),horn:steering.classList.contains("horn-pressed")};pointer("pointerdown");report.steps.held={door:door.classList.contains("horn-answering"),horn:steering.classList.contains("horn-pressed")};pointer("pointerup");await sleep(30);report.steps.released={door:door.classList.contains("horn-answering"),horn:steering.classList.contains("horn-pressed")};pointer("pointerdown");pointer("pointercancel");await sleep(30);report.steps.cancelled={door:door.classList.contains("horn-answering"),horn:steering.classList.contains("horn-pressed")};',
   '}catch(error){report.errors.push(String(error&&error.stack||error));}',

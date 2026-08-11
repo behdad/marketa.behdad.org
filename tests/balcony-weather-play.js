@@ -10,7 +10,7 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:[],steps:{}};',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
-  ' Math.random=function(){return .999;};window.__setSecondRound(true,{releaseHeld:false});window.goToStage("balcony");window.__setDayNight(false);window.__setOutdoorTemp(-5);',
+  ' Math.random=function(){return .999;};window.__setSecondRound(true,{releaseHeld:false});window.__goToStage("balcony");window.__setDayNight(false);window.__setOutdoorTemp(-5);',
   ' report.steps.closed={snowman:!!window.__snowmanOn,door:document.getElementById("balcony-door").classList.contains("open")};',
   ' document.getElementById("balcony-door").dispatchEvent(new MouseEvent("click",{bubbles:true}));',
   ' var kids=[document.getElementById("balcony-snowman-kidL"),document.getElementById("balcony-snowman-kidR")];',

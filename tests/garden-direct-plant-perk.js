@@ -25,9 +25,9 @@ var HARNESS = String.raw`<script>
       if (window.__endAttract) window.__endAttract();
       if (window.__removeClickMe) window.__removeClickMe();
       if (window.__stopHintBlink) window.__stopHintBlink();
-      goToStage("garden");
+      window.__goToStage("garden");
       await sleep(850);
-      var spots = window.gardenPlantSpots;
+      var spots = window.__gardenPlantSpots;
       var ids = Object.keys(spots).filter(function (id) { return !spots[id].tripProp; });
       var plants = ids.map(function (id) { return document.getElementById(id); });
       var bottles = [1, 2, 3].map(function (n) { return document.getElementById("garden-empty-bottle-wiggle-" + n); });
@@ -81,7 +81,7 @@ var HARNESS = String.raw`<script>
       report.cleanup = { active: activePerks(ids), additions: Object.assign({}, additions) };
 
       var toolPlant = document.getElementById("garden-potstand");
-      var toolAccepted = window.waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
+      var toolAccepted = window.__waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
       await sleep(70);
       report.tool = {
         accepted: toolAccepted,
@@ -91,7 +91,7 @@ var HARNESS = String.raw`<script>
       };
       await sleep(600);
 
-      for (var d = 0; d < 3; d++) while (window.drainBottleByIndex(d)) {}
+      for (var d = 0; d < 3; d++) while (window.__drainBottleByIndex(d)) {}
       var failedPlant = document.getElementById("garden-peacelily");
       var failedState = JSON.stringify(window.__plantWaterState());
       var failedLevels = JSON.stringify(levels());
@@ -138,11 +138,11 @@ var HARNESS = String.raw`<script>
         levelsSame: JSON.stringify(levels()) === failedLevels
       };
 
-      window.resetBottles();
+      window.__resetBottles();
       document.getElementById("garden-money-tree").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
       await window.__resetLoftGame("instant");
       await sleep(100);
-      goToStage("garden");
+      window.__goToStage("garden");
       await sleep(850);
       report.reset = {
         perks: activePerks(ids),
@@ -175,9 +175,9 @@ var REDUCED_HARNESS = String.raw`<script>
   function rect(el) { var r = el.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }
   addEventListener("load", function () { setTimeout(async function () {
     try {
-      goToStage("garden");
+      window.__goToStage("garden");
       await sleep(850);
-      for (var i = 0; i < 3; i++) while (window.drainBottleByIndex(i)) {}
+      for (var i = 0; i < 3; i++) while (window.__drainBottleByIndex(i)) {}
       var plant = document.getElementById("garden-potstand");
       var before = rect(plant);
       plant.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));

@@ -34,12 +34,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         room.style.transition = "none";
         viewport.style.transition = "none";
         coats.style.transition = "none";
-        window.goToStage("office");
+        window.__goToStage("office");
         window.__openBedroomRoom();
         await sleep(80);
 
         var swishes = [];
-        window.playSwishSound = function (id) { swishes.push(id); };
+        window.__playSwishSound = function (id) { swishes.push(id); };
         report.steps.idle = state(coats);
         click(coatPath);
         report.steps.idleClick = { state: state(coats), swishes: swishes.slice(), bed: bed.classList.contains("made") };

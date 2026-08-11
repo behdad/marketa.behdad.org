@@ -505,7 +505,7 @@ function checkCodeSnippetDelivery() {
   if (new Set(transports).size !== transports.length) issues.push("manifest repeats a transport path");
   var expectedFiles = new Set(["manifest.js"]);
   entries.forEach(function (entry) {
-    var filename = entry && entry.filename, transport = entry && entry.path;
+    var filename = entry && entry.filename, transport = entry && entry.path, version = entry && entry.version;
     if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
         typeof filename !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]*\.(?:js|py)$/.test(filename)) {
       issues.push("invalid canonical descriptor: " + JSON.stringify(entry));
@@ -520,6 +520,9 @@ function checkCodeSnippetDelivery() {
     var source = path.join(ROOT, transport);
     if (!fs.existsSync(source) || !fs.statSync(source).isFile()) {
       issues.push("missing source transport: " + transport);
+    } else {
+      var sourceToken = "source-" + crypto.createHash("sha256").update(fs.readFileSync(source)).digest("hex").slice(0, 12);
+      if (version !== sourceToken) issues.push("source cache token for " + filename + " must be " + sourceToken);
     }
   });
   fs.readdirSync(dir, { withFileTypes: true }).filter(function (entry) { return entry.isFile(); }).forEach(function (entry) {
@@ -1186,46 +1189,24 @@ function checkConsoleOutClipSlack(file, style) {
   else fail(file + ": .console-out clip-slack invariant broken", issues.join("\n"));
 }
 
-// The console's Tab-autocomplete roster (`CONSOLE_CMDS`, a static array in the console
-// setup) must stay a mirror of the documented command set — the keys of the `CONSOLE_HELP`
-// object (hoisted to the shared console/code scope so BOTH the console AND the code
-// app's autocomplete read the same source). This parity check keeps the two in lockstep, so
-// a command added to (or removed from) CONSOLE_HELP that isn't reflected in the roster fails
-// loudly here (naming the offending keys) instead of silently not completing. It also guards
-// that every bareword in CONSOLE_CMDS_BARE (the set of non-function commands — the code
-// autocomplete reads it to decide whether to append "(" on insert) is a real command, so a
-// typo'd bareword can't slip a "(" onto a paren-less command (or vice-versa).
+// The console is real JavaScript with one app-owned public root. Guard against rebuilding the
+// deleted command dialect beside `loft.*`: completion comes from the live Loft tree, help is a
+// Loft method, and the evaluator has no private-controller shortcut path.
 function checkConsoleCmdRoster(file, script) {
   if (file !== "loft-day.html" || !script) return;
-  var helpM = script.match(/var CONSOLE_HELP = \{([\s\S]*?)\n\s*\};/);
-  if (!helpM) { fail(file + ": CONSOLE_HELP object not found for autocomplete-roster parity check"); return; }
-  var helpKeys = [];
-  helpM[1].split("\n").forEach(function (line) {
-    var km = line.match(/^\s*([A-Za-z_$][\w$]*)\s*:/);
-    if (km) helpKeys.push(km[1]);
+  var retired = ["CONSOLE_HELP", "CONSOLE_CMDS", "CONSOLE_CMDS_BARE", "CONSOLE_ALIASES"].filter(function (name) {
+    return new RegExp("\\b" + name + "\\b").test(script);
   });
-  var rosterM = script.match(/var CONSOLE_CMDS = \[([\s\S]*?)\];/);
-  if (!rosterM) { fail(file + ": CONSOLE_CMDS roster array not found for autocomplete-roster parity check"); return; }
-  var roster = (rosterM[1].match(/"([^"]+)"/g) || []).map(function (q) { return q.slice(1, -1); });
-  var helpSet = new Set(helpKeys);
-  var rosterSet = new Set(roster);
-  var missing = helpKeys.filter(function (k) { return !rosterSet.has(k); }); // in CONSOLE_HELP, not in roster
-  var extra = roster.filter(function (k) { return !helpSet.has(k); });       // in roster, not a real command
-  if (missing.length === 0 && extra.length === 0) {
-    pass(file + ": Tab-autocomplete roster matches CONSOLE_HELP keys (" + rosterSet.size + " commands)");
-  } else {
-    fail(file + ": Tab-autocomplete roster out of sync with CONSOLE_HELP (add/remove keys in CONSOLE_CMDS)",
-      (missing.length ? "missing from roster: " + missing.join(", ") + "\n" : "") +
-      (extra.length ? "roster has non-command(s): " + extra.join(", ") : ""));
-  }
-  // Every bareword must be a documented command (a key of CONSOLE_HELP), else the code
-  // autocomplete's "append (" decision is keyed off a phantom.
-  var bareM = script.match(/var CONSOLE_CMDS_BARE = \{([\s\S]*?)\};/);
-  if (!bareM) { fail(file + ": CONSOLE_CMDS_BARE set not found for bareword parity check"); return; }
-  var bareKeys = (bareM[1].match(/([A-Za-z_$][\w$]*)\s*:/g) || []).map(function (s) { return s.replace(/\s*:$/, ""); });
-  var bareOrphans = bareKeys.filter(function (k) { return !helpSet.has(k); });
-  if (bareOrphans.length === 0) pass(file + ": CONSOLE_CMDS_BARE barewords are all documented commands (" + bareKeys.length + ")");
-  else fail(file + ": CONSOLE_CMDS_BARE has bareword(s) with no CONSOLE_HELP entry", bareOrphans.join(", "));
+  if (retired.length) fail(file + ": legacy console command tables stay deleted", retired.join(", "));
+  else pass(file + ": legacy console command tables stay deleted");
+  if (/window\.loft\.help\s*=\s*function/.test(script) && /function consoleTabComplete[\s\S]*?\(loft\(\?:\\\./.test(script) && /function loftCommandCatalog\s*\(/.test(script)) {
+    pass(file + ": Console and Code autocomplete discover only the live loft.* tree");
+  } else fail(file + ": loft-only help/autocomplete contract is missing");
+  var run = script.match(/function consoleRun\(cmd, ctx\) \{([\s\S]*?)\n  \}\n  \/\/ iOS auto-zooms/);
+  if (!run) fail(file + ": consoleRun body not found for public-API boundary check");
+  else if (/controllers\.|window\.__loftControllers|\b(?:birthday|party|season|sharecard)\s*\(/.test(run[1])) {
+    fail(file + ": consoleRun contains a private or legacy app-command shortcut");
+  } else pass(file + ": consoleRun evaluates JavaScript without a private command dialect");
 }
 
 // The two shared particle spawners (spawnSteamWisps, spawnMusicNotes) have autonomous
@@ -1328,7 +1309,7 @@ function checkSeasonRosters(file, script) {
   if (seasNoAuto.join(",") === cycle.join(",")) {
     pass(file + ": SEAS and SEASON_CYCLE list the same seasons in the same order (" + cycle.length + ")");
   } else {
-    fail(file + ": SEAS and SEASON_CYCLE have desynced — the 's' key and season() disagree",
+    fail(file + ": SEAS and SEASON_CYCLE have desynced — the 's' key and typed season API disagree",
       "SEAS (minus auto): " + seasNoAuto.join(" ") + "\nSEASON_CYCLE:      " + cycle.join(" "));
   }
   var noSaid = seasNoAuto.filter(function (k) { return saidBody.indexOf(k + ":") < 0; });
@@ -1343,7 +1324,7 @@ function checkSeasonRosters(file, script) {
 }
 
 // The garden party's dances are synth beds with a KNOWN bpm each (DANCE_BPM, driving the
-// tempo-sync retuneDancers + the console beat() helper) and an explicit mood each (DANCE_MOOD,
+// tempo-sync retuneDancers + the private tempo controller) and an explicit mood each (DANCE_MOOD,
 // driving the per-song amplitude keyframe swap). Both maps MUST cover exactly the set of dance
 // ids registered on window.__partyDances (same spirit as the EN/CS + CONSOLE_CMDS parity checks):
 // a dance added to the registry without a bpm would fall back to 500ms/no-retune and its guests

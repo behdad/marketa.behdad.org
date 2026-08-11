@@ -26,7 +26,7 @@ var HARNESS = String.raw`<style>
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();

@@ -24,7 +24,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
-        window.goToStage("office");
+        window.__goToStage("office");
         var kitchen = document.getElementById("stage-kitchen");
         var office = document.getElementById("stage-office");
         var balcony = document.getElementById("stage-balcony");
@@ -38,7 +38,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.steps.roomPacman = hold("", roomPacman, document.getElementById("pacman-room-host"));
         report.steps.monitorPacman = hold("show-pacman", monitor, document.getElementById("monitor-pacman-wrap"));
         roomPacman.hidden = roomPacmanWasHidden;
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         report.steps.entranceCar = hold("", document.getElementById("entrance-room"),
           document.getElementById("entrance-porsche"));

@@ -15,7 +15,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         document.hasFocus = function () { return true; };
         window.__secondRound = true;
         window.__unlockAllRooms();
-        window.goToStage("garden");
+        window.__goToStage("garden");
         var lamp = document.getElementById("garden-lamp");
         var genie = document.getElementById("garden-genie");
         click(lamp);

@@ -15,12 +15,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   try { Object.defineProperty(document, "hasFocus", { configurable: true, value: function () { return focused; } }); } catch (_error) {}
   window.addEventListener("load", function () { setTimeout(async function () { try {
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__unlockPacman(false);
     window.__openRoomPacman();
-    var realSound = window.playHackManSound, realStop = window.stopHackManSounds;
+    var realSound = window.__playHackManSound, realStop = window.__stopHackManSounds;
     var cues = [];
-    window.playHackManSound = function (kind) { cues.push(kind); return true; };
+    window.__playHackManSound = function (kind) { cues.push(kind); return true; };
     var base = window.__pacmanCapture(), pelletMask = base.pellets.map(function () { return true; });
 
     var run = clone(base);
@@ -71,8 +71,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         value.stop = function () {}; value.kind = activeKind; fakeOscillators.push(value); return value;
       }
     };
-    window.getSfxCtx = function () { fakeCalls++; return fakeCtx; };
-    window.playHackManSound = realSound;
+    window.__getSfxCtx = function () { fakeCalls++; return fakeCtx; };
+    window.__playHackManSound = realSound;
     ["pellet", "ghost", "death", "start", "end"].forEach(function (kind) {
       activeKind = kind; var before = fakeOscillators.length;
       var played = realSound(kind, kind === "death");
@@ -88,7 +88,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.unfocused = { played: realSound("start"), getSfxCalls: fakeCalls - callsBeforeBlur };
     focused = true; window.dispatchEvent(new Event("focus"));
     var stopCalls = 0;
-    window.stopHackManSounds = function () { stopCalls++; realStop(); };
+    window.__stopHackManSounds = function () { stopCalls++; realStop(); };
     window.__closeMonitorPacman();
     var callsBeforeClose = fakeCalls;
     report.steps.closed = { played: realSound("start"), getSfxCalls: fakeCalls - callsBeforeClose,

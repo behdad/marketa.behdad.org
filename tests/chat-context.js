@@ -41,7 +41,7 @@ var HARNESS = [
   ' window.__realWx={code:2};window.__realOutdoorC=21.6;window.__realWxPrague={code:61};window.__realPragueC=13.2;window.__realDaily=[{time:["2026-07-21","2026-07-22","2026-07-23","2026-07-24"],code:[0,2,61,95],max:[25,24.6,18.2,16.9],min:[14,12.4,9.8,8.1]},{time:["2026-07-21","2026-07-22","2026-07-23","2026-07-24"],code:[61,3,0,71],max:[18,20.1,23.7,4.3],min:[9,10.2,12.1,-1.2]}];',
   ' window.__wxRain=true;window.__wxStorm=true;window.__wxOvercast=true;var balcony=document.getElementById("stage-balcony"),strip=document.getElementById("loft-game-strip");balcony.classList.add("dusk","solar-eclipse");strip.classList.add("uv-mode");var environment=window.__chatContext("What is the weather forecast during this eclipse?");S("environment",environment);',
   ' balcony.classList.remove("dusk","solar-eclipse");strip.classList.remove("uv-mode");window.__realWx=oldWx;window.__realOutdoorC=oldC;window.__realWxPrague=oldWp;window.__realPragueC=oldCp;window.__realDaily=oldDaily;window.__wxRain=oldRain;window.__wxStorm=oldStorm;window.__wxOvercast=oldOver;',
-  ' setLang("cs");await sleep(30);var csCatalog=window.__chatContext("Jaké aplikace jsou v telefonu a na počítači?").apps.catalog;S("csCatalog",csCatalog);setLang("en");window.__secondRound=wasRound;',
+  ' window.__setLang("cs");await sleep(30);var csCatalog=window.__chatContext("Jaké aplikace jsou v telefonu a na počítači?").apps.catalog;S("csCatalog",csCatalog);window.__setLang("en");window.__secondRound=wasRound;',
   '}',
   '})();</script>'
 ].join("\n");

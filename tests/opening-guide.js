@@ -24,7 +24,7 @@ var harness = String.raw`<script>
       inner.top >= outer.top - 1 && inner.bottom <= outer.bottom + 1;
   }
   async function showGuide(lang) {
-    setLang(lang);
+    window.__setLang(lang);
     if (window.__showHuntIntro) window.__showHuntIntro();
     await sleep(30);
     click(document.getElementById("click-me-overlay"));
@@ -103,10 +103,10 @@ var harness = String.raw`<script>
   if (gardenHit) gardenHit.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
   await sleep(40);
   check("double-clicking a locked room dot unlocks and navigates while the coach remains",
-    gardenHit && gardenHit.closest(".hunt-dot") && window.currentStageName === "garden" &&
+    gardenHit && gardenHit.closest(".hunt-dot") && window.__currentStageName === "garden" &&
       !gardenDot.classList.contains("locked") && window.__openingGuideShowing() &&
       window.__openingGuideStep() === "nav",
-    JSON.stringify({ room: window.currentStageName, locked: gardenDot.classList.contains("locked"),
+    JSON.stringify({ room: window.__currentStageName, locked: gardenDot.classList.contains("locked"),
       showing: window.__openingGuideShowing(), step: window.__openingGuideStep() }));
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
   await sleep(50); window.dispatchEvent(new Event("resize")); await sleep(30);
@@ -122,7 +122,7 @@ var harness = String.raw`<script>
   window.__kitchenDoNext = realKitchenDoNext;
   check("room-level Escape and Backspace never advance the morning routine", solveCalls === 0 && !machine.classList.contains("powered-on"), String(solveCalls));
 
-  window.goToStage("kitchen");
+  window.__goToStage("kitchen");
   await showGuide("cs");
   check("Czech nav coach is concise and localized", copy.textContent === "Navigace je tady." && !/pokračuj/i.test(copy.textContent));
   click(x); await sleep(50);
@@ -151,12 +151,12 @@ var harness = String.raw`<script>
     resetHit && resetHit.closest("#hunt-restart-btn") && confirmations === 1,
     JSON.stringify({ hit: resetHit && (resetHit.id || String(resetHit.className)), confirmations: confirmations }));
   check("Phase-one Kitchen Reset returns to CLICK ME with Trailer selectable",
-    window.currentStageName === "kitchen" && !window.__secondRound && window.__maxUnlocked() === 0 &&
+    window.__currentStageName === "kitchen" && !window.__secondRound && window.__maxUnlocked() === 0 &&
       !window.__gameStarted() && !!document.getElementById("click-me-overlay") &&
       document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
       !document.getElementById("hunt-fullscreen-area").classList.contains("opening-guide-active") &&
       watchHit && watchHit.closest("#watch-loft-btn"),
-    JSON.stringify({ room: window.currentStageName, phase2: !!window.__secondRound,
+    JSON.stringify({ room: window.__currentStageName, phase2: !!window.__secondRound,
       max: window.__maxUnlocked(), started: window.__gameStarted(), watchHit: watchHit && (watchHit.id || String(watchHit.className)) }));
   check("explicit Reset clears the resumable checkpoint but preserves unrelated browser data",
     localStorage.getItem("loftCheckpoint:v1") === null &&

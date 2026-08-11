@@ -19,7 +19,7 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     }));
   }
   async function run() {
-    window.goToStage("office");
+    window.__goToStage("office");
     await sleep(60);
     var chair = document.getElementById("office-chair"), cr = chair.getBoundingClientRect();
     var cx = cr.left + cr.width / 2, cy = cr.top + cr.height / 2;
@@ -34,7 +34,7 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     S("chair_tap", window.__arcadeState().active);
     window.__arcadeStop();
 
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setPartyMode(false, true);
     window.__setDayNight(true);
@@ -52,7 +52,7 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     S("pouria_tap", window.__flairState().active);
     window.__flairStop();
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     await sleep(50);
     var chaseCalls = 0, realChase = window.__startGardenChase;
     window.__startGardenChase = function () { chaseCalls++; };
@@ -63,7 +63,7 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     S("garden_nearby_pair", chaseCalls === 1);
     window.__startGardenChase = realChase;
 
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     await sleep(60);
     var apartment = document.querySelector(".balcony-building-window"), ar = apartment.getBoundingClientRect();
     var ax = ar.left + ar.width / 2, ay = ar.top + ar.height / 2;

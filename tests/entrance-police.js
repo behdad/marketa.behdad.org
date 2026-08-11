@@ -107,7 +107,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__setSecondRound(true, { releaseHeld: false });
       window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
         "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
@@ -546,7 +546,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var courtKnock = copy(trip());
       window.__entranceRoadtripPoliceStep(0, .8);
       var courtCard = copy(trip());
-      window.setLang("cs");
+      window.__setLang("cs");
       var courtCzech = {
         kicker: document.getElementById("entrance-roadtrip-arrest-kicker").textContent.trim(),
         title: document.getElementById("entrance-roadtrip-arrest-title").textContent.trim(),
@@ -560,7 +560,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.dispatchEvent(new Event("focus"));
       window.__entranceDriveControl("steerLeft", true);
       window.__entranceDriveControl("steerLeft", false);
-      window.setLang("en");
+      window.__setLang("en");
       window.__entranceRoadtripPoliceStep(0, 2);
       var courtFade = copy(trip());
       window.__entranceRoadtripPoliceStep(0, .6);
@@ -627,7 +627,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(0, 1.8);
       window.__entranceRoadtripPoliceStep(0, 1.5);
       var ninetyOverEnglish = copy(trip());
-      window.setLang("cs");
+      window.__setLang("cs");
       var ninetyOverCzech = copy(trip());
       document.hasFocus = function () { return false; };
       window.dispatchEvent(new Event("blur"));
@@ -637,7 +637,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.dispatchEvent(new Event("focus"));
       window.__entranceDriveControl("steerLeft", true);
       window.__entranceDriveControl("steerLeft", false);
-      window.setLang("en");
+      window.__setLang("en");
       report.steps.shoutThreshold = {
         eightyNineStopped: eightyNineStopped,
         eightyNineOver: eightyNineOver,
@@ -860,7 +860,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripSetDemerits(0, 0);
 
-      window.setLang("cs");
+      window.__setLang("cs");
       prepareEncounter();
       meetPolice(180);
       window.__entranceRoadtripPoliceStep(180, 1);
@@ -907,7 +907,7 @@ var REDUCED_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed
     var report = { errors: [], steps: {} };
     try {
       window.__unlockAllRooms();
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       await new Promise(function (resolve) { setTimeout(resolve, 40); });
       window.__openEntrancePorscheDriveHud();

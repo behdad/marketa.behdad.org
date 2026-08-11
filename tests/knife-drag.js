@@ -10,7 +10,7 @@ var harness = [
   'var report={errors:[],steps:{},debug:{}};',
   'function pointer(el,type,id,x,y){el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:"mouse",isPrimary:true,button:0,buttons:type==="pointerup"?0:1,clientX:x,clientY:y}));}',
   'window.addEventListener("load",function(){setTimeout(function(){',
-  'window.goToStage("cuddly");',
+  'window.__goToStage("cuddly");',
   'var knife=document.getElementById("cuddly-knife-1"),r=knife.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;',
   'pointer(knife,"pointerdown",71,x,y);pointer(knife,"pointermove",71,x+120,y+80);',
   'report.steps.moved=knife.style.translate!=="0px 0px";',

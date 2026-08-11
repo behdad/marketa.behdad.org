@@ -54,7 +54,7 @@ var harness = String.raw`<script>
       !!document.querySelector("#kitchen-bartender > .guest-spot-arrow") &&
       !document.querySelector("#kitchen-bartender-hit .guest-spot-arrow"));
 
-    window.couples("alireza");
+    window.__loftControllers.couples("alireza");
     var bar = document.querySelector("#kitchen-bar-couples .bc-alirezamahzad");
     click(bar && bar.querySelector(".bc-p1"));
     check("clicking the first bar figure opens Alireza's bio", cardName() === "Alireza", cardName());
@@ -62,8 +62,8 @@ var harness = String.raw`<script>
     click(bar && bar.querySelector(".bc-p2"));
     check("clicking the second bar figure opens Mahzad's bio", cardName() === "Mahzad", cardName());
 
-    window.goToStage("office");
-    window.officefolks("spencer");
+    window.__goToStage("office");
+    window.__loftControllers.officefolks("spencer");
     var office = document.querySelector("#office-hangout .of-spencerjay");
     click(office && office.querySelector(".of-p1"));
     check("clicking the first office figure opens Spencer's bio", cardName() === "Spencer", cardName());
@@ -71,7 +71,7 @@ var harness = String.raw`<script>
     click(office && office.querySelector(".of-p2"));
     check("clicking the second office figure opens Jay's bio", cardName() === "Jay", cardName());
 
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     var cuddlyBehdad = document.getElementById("cuddly-behdad");
     click(cuddlyBehdad);
     check("clicking a Cuddly resident opens their individual bio", cardName() === "behdad", cardName());
@@ -156,7 +156,7 @@ var harness = String.raw`<script>
       runners.length === 10 && unstable.length === 0,
       "runners=" + runners.length + " unstable=" + unstable.join(","));
 
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     window.__cuddlyVisit("ali", true);
     click(document.getElementById("cuddly-vis-ali"));
     setTimeout(function () {

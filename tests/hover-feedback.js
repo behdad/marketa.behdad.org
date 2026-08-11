@@ -9,7 +9,7 @@ var harness = String.raw`
 (async function () {
   var sleep = function (ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); };
   var el = document.getElementById("office-laptop");
-  window.goToStage("office");
+  window.__goToStage("office");
   el.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
   await sleep(240);
   var shown = !!document.querySelector(".egg-bubble.show");

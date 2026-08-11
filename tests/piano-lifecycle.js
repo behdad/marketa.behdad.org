@@ -24,7 +24,7 @@ var HARNESS = String.raw`<script>
   }
 
   window.__setPartyMode(true, true);
-  window.goToStage("cuddly");
+  window.__goToStage("cuddly");
   window.__cuddlyProjector.set("stars");
   var piano = document.getElementById("cuddly-projector-piano");
   var close = piano.querySelector(".piano-dismiss");
@@ -44,9 +44,9 @@ var HARNESS = String.raw`<script>
     JSON.stringify({ visible: visibleClose.getAttribute("r"), hit: hit.getAttribute("r") }));
   check("dismiss artwork uses the piano's dark wood and cream palette",
     visibleClose.getAttribute("fill") === "#302924" && visibleClose.getAttribute("stroke") === "#f8f5ec");
-  window.setLang("cs");
+  window.__setLang("cs");
   check("dismiss control has Czech accessibility copy", close.querySelector("title").textContent === "Zavřít piano");
-  window.setLang("en");
+  window.__setLang("en");
 
   close.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   state = window.__projectorPianoState();
@@ -57,8 +57,8 @@ var HARNESS = String.raw`<script>
   state = window.__projectorPianoState();
   check("selecting the same projector channel does not rearm the keybed", state.dismissed && !state.enabled);
 
-  window.goToStage("garden");
-  window.goToStage("cuddly");
+  window.__goToStage("garden");
+  window.__goToStage("cuddly");
   state = window.__projectorPianoState();
   check("leaving and returning preserves dismissal", state.dismissed && !state.enabled);
 
@@ -79,8 +79,8 @@ var HARNESS = String.raw`<script>
   var escape = key("Escape");
   state = window.__projectorPianoState();
   check("Escape dismisses the keybed", escape.defaultPrevented && state.dismissed && !state.enabled);
-  window.goToStage("garden");
-  window.goToStage("cuddly");
+  window.__goToStage("garden");
+  window.__goToStage("cuddly");
   state = window.__projectorPianoState();
   check("room navigation does not undo Escape dismissal", state.dismissed && !state.enabled);
 
@@ -128,7 +128,7 @@ var HARNESS = String.raw`<script>
 var COARSE_HARNESS = String.raw`<script>
 (function () {
   window.__setPartyMode(true, true);
-  window.goToStage("cuddly");
+  window.__goToStage("cuddly");
   window.__cuddlyProjector.set("stars");
   var piano = document.getElementById("cuddly-projector-piano");
   var labels = [].slice.call(piano.querySelectorAll(".piano-key-label"));

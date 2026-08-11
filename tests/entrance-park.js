@@ -19,7 +19,7 @@ window.addEventListener("load", function () { setTimeout(function () {
       value: function () { return true; }, configurable: true
     });
     window.__unlockAllRooms();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(

@@ -19,7 +19,7 @@ var HARNESS = [
   ' var firstState=window.__arcadeCrossPromotionState(),thread=window.__phoneMessageThread();',
   ' S("first_offer",first==="invaders"&&again==="tetris"&&firstState.played.join(",")==="flair"&&firstState.suggested.join(",")==="invaders,tetris"&&thread.indexOf("arcade_offer_invaders")!==-1&&thread.indexOf("arcade_offer_tetris")!==-1);',
   ' window.__runMsgAction("arcade_offer_invaders");await sleep(180);',
-  ' S("action_launches",window.currentStageName==="office"&&window.__arcadeState().active);window.__arcadeStop(false);',
+  ' S("action_launches",window.__currentStageName==="office"&&window.__arcadeState().active);window.__arcadeStop(false);',
   ' window.__arcadeRunStarted("invaders");var second=window.__arcadeOfferNext("invaders");window.__arcadeRunStarted("tetris");var third=window.__arcadeOfferNext("tetris");window.__arcadeRunStarted("pacman");var none=window.__arcadeOfferNext("pacman");',
   ' var finalState=window.__arcadeCrossPromotionState();',
   ' S("unplayed_only",second==="pacman"&&third===null&&none===null&&finalState.played.length===4&&finalState.suggested.join(",")==="invaders,tetris,pacman");',

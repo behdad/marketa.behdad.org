@@ -48,7 +48,7 @@ var HARNESS = [
   'function carBits(car){return [car.roofOpen,car.doorOpen,car.windowOpen,car.frunkOpen,car.trunkOpen,car.engineOn,car.headlightOn,car.taillightOn];}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});',
-  ' window.getSfxCtx=function(){report.sfx++;return null;};',
+  ' window.__getSfxCtx=function(){report.sfx++;return null;};',
   ' var realOpen=window.__openEntranceRoom;window.__openEntranceRoom=function(){if(!report.steps.beforeOpen)report.steps.beforeOpen=state();return realOpen();};',
   ' var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn.primary");if(!button)throw new Error("missing recovery Continue");button.click();',
   ' await sleep(520);var restored=state(),car=document.getElementById("entrance-porsche");',

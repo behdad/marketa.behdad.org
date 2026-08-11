@@ -9,7 +9,7 @@ var HARNESS = [
   'var ids={};(qs||[]).forEach(function(q){q.a.forEach(function(a){a.who.forEach(function(w){ids[w]=1;});});});',
   'var oldRandom=Math.random;Math.random=function(){return 0;};window.__openPhoneAppHere("quiz");run=window.__quizRunQuestions();',
   'var picks={quiz_q2:4,quiz_q6:3,quiz_q7:1};run.forEach(function(key,step){var answers=document.querySelectorAll(".pm-quiz-ans");if(Object.prototype.hasOwnProperty.call(picks,key))answers[picks[key]].click();if(step===run.length-1)Math.random=function(){return .7;};document.querySelector(Object.prototype.hasOwnProperty.call(picks,key)?".pm-quiz-actions .pm-btn:not(.ghost)":".pm-quiz-actions .pm-btn.ghost").click();});',
-  'var en={name:document.querySelector(".pm-quiz-name").textContent,fun:document.querySelector(".pm-quiz-fun").textContent};setLang("cs");var cs={name:document.querySelector(".pm-quiz-name").textContent,fun:document.querySelector(".pm-quiz-fun").textContent};Math.random=oldRandom;',
+  'var en={name:document.querySelector(".pm-quiz-name").textContent,fun:document.querySelector(".pm-quiz-fun").textContent};window.__setLang("cs");var cs={name:document.querySelector(".pm-quiz-name").textContent,fun:document.querySelector(".pm-quiz-fun").textContent};Math.random=oldRandom;',
   'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,questions:qs,run:run,ids:Object.keys(ids),en:en,cs:cs});',
   '},250);});})();</script>'
 ].join("\n");

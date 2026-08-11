@@ -25,19 +25,19 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       try {
         document.hasFocus = function () { return true; };
         window.__unlockAllRooms();
-        window.goToStage("garden");
-        window.setCaption("garden", true);
+        window.__goToStage("garden");
+        window.__setCaption("garden", true);
         variants.forEach(function (variant) {
           window.__startTrip(variant);
           report.english[variant] = state();
         });
-        setLang("cs");
+        window.__setLang("cs");
         report.czech = state();
-        setLang("en");
-        window.goToStage("office");
+        window.__setLang("en");
+        window.__goToStage("office");
         report.roomChange = state();
-        window.goToStage("garden");
-        window.setCaption("garden", true);
+        window.__goToStage("garden");
+        window.__setCaption("garden", true);
         window.__startTrip("acid");
         window.__stopTrip(true);
         report.stopped = state();

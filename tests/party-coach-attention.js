@@ -15,7 +15,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   function snap(name) {
     var overlay = document.getElementById("party-switch-coach");
     report.steps[name] = {
-      room: window.currentStageName,
+      room: window.__currentStageName,
       party: !!window.__gardenPartyOn,
       coach: !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive()),
       coachDue: !!(window.__partyLifecycleState && window.__partyLifecycleState().switchCoachSeen),
@@ -34,14 +34,14 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     if (window.__endAttract) window.__endAttract();
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setGardenParty(true, false);
-    window.goToStage("garden");
+    window.__goToStage("garden");
 
     window.__deliverPhoneMessage("cue_mail");
     await sleep(40);
     window.__showPartySwitchCoach();
     snap("popupBeforeCoach");
-    window.goToStage("kitchen");
-    window.goToStage("garden");
+    window.__goToStage("kitchen");
+    window.__goToStage("garden");
     await sleep(40);
     snap("popupOnReentry");
     window.__hideMessageThumb();
@@ -90,7 +90,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     if (window.__dismissMsgBadgeCoach) window.__dismissMsgBadgeCoach();
 
     window.__resetPartyExitHint();
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__madlaRingForced();
     await sleep(30);
     window.__showPartySwitchCoach();
@@ -111,7 +111,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__hideCallRing();
     window.__hideMessageThumb();
     window.__resetPartyExitHint();
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__showPartySwitchCoach();
     await sleep(40);
     document.getElementById("garden-lightswitch").dispatchEvent(

@@ -23,7 +23,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return run;
   }
   window.addEventListener("load", function () { setTimeout(async function () { try {
-    window.goToStage("garden"); window.__unlockPacman(false); window.__openRoomPacman();
+    window.__goToStage("garden"); window.__unlockPacman(false); window.__openRoomPacman();
     var player = document.querySelector(".pac-player:not(.pac-wrap-copy)"), base = window.__pacmanCapture();
     var facing = {};
     [["right", "270deg"], ["down", "0deg"], ["left", "90deg"], ["up", "180deg"]].forEach(function (pair) {
@@ -67,7 +67,7 @@ var REDUCED = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function key(value) { document.dispatchEvent(new KeyboardEvent("keydown", { key: value, bubbles: true, cancelable: true })); }
   window.addEventListener("load", function () { setTimeout(async function () { try {
-    window.goToStage("garden"); window.__unlockPacman(false); window.__openRoomPacman();
+    window.__goToStage("garden"); window.__unlockPacman(false); window.__openRoomPacman();
     var run = window.__pacmanCapture(), target = 13 * 19 + 8;
     run.status = "ready"; run.player = { r: 13, c: 9 }; run.direction = run.desired = "left";
     run.ghosts.forEach(function (ghost, i) { ghost.r = 1; ghost.c = 1 + i * 8; ghost.released = false; ghost.releaseAt = 999; });

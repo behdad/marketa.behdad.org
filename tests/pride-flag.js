@@ -18,8 +18,8 @@ var HARNESS = [
   ' click();await sleep(80);S("second",state());',
   ' click();await sleep(80);S("third",state());',
   ' await sleep(2150);S("settled",state());',
-  ' window.__setSeason("pride");click();click();await sleep(80);window.season("canada");window.season("pride");await sleep(2150);click();await sleep(80);S("seasonReset",state());',
-  ' click();click();await sleep(80);window.__activateExtinguisher();await sleep(1300);window.season("pride");await sleep(2150);click();await sleep(80);S("fullReset",state());',
+  ' window.__setSeason("pride");click();click();await sleep(80);window.__loftControllers.season("canada");window.__loftControllers.season("pride");await sleep(2150);click();await sleep(80);S("seasonReset",state());',
+  ' click();click();await sleep(80);window.__activateExtinguisher();await sleep(1300);window.__loftControllers.season("pride");await sleep(2150);click();await sleep(80);S("fullReset",state());',
   ' window.__setSeason("canada");click();await sleep(80);S("hiddenGate",state());',
   '}',
   '})();</script>'

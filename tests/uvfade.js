@@ -212,9 +212,9 @@ office.classList.remove("arcade");
 
 // 4e. BALCONY — outside: inline "none" (beats the class filter), never faded
 strip.classList.add("uv-mode"); evaluate(); advance(2000);
-window.currentStageName = "balcony"; evaluate();
+window.__currentStageName = "balcony"; evaluate();
 ok(strip.style.filter === "none", "balcony: strip.style.filter is \"none\" (outside, no blacklight)");
-window.currentStageName = "kitchen"; evaluate(); advance(2000);
+window.__currentStageName = "kitchen"; evaluate(); advance(2000);
 ok(Math.abs(brightness(strip.style.filter) - 0.5) < 0.01, "back indoors: UV restored to full");
 
 // 5. REDUCED MOTION — a fresh IIFE with prefers-reduced-motion snaps (no ramp frames)

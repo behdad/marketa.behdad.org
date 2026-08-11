@@ -13,7 +13,7 @@ var harness = String.raw`<script>
       try {
         window.__unlockAllRooms();
         window.__setGardenParty(true, false);
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__photoMomentNow();
         await sleep(60);
         var bubble = document.querySelector(".egg-bubble");

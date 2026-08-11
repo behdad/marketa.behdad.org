@@ -15,7 +15,7 @@ function harness(lang) {
     'function snap(sel){return Array.prototype.map.call(document.querySelectorAll(sel),function(svg){var b=svg.getBBox();return {id:svg.getAttribute("data-phone-vector-icon"),direct:svg.children.length>0&&!svg.querySelector("use"),box:[b.x,b.y,b.width,b.height],localDepth:!svg.innerHTML.includes("url(#dicon-cream-depth)")};});}',
     'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
     'async function run(){',
-    ' setLang(' + JSON.stringify(lang) + ');window.__openPhoneModal(true);await sleep(100);',
+    ' window.__setLang(' + JSON.stringify(lang) + ');window.__openPhoneModal(true);await sleep(100);',
     ' report.home=snap(".phone-app-tile .pat-ico svg[data-phone-vector-icon]");',
     ' var expected=["call","mail","album","photobooth","music","weather","currency","browser","mines"];report.ids=expected.map(function(id){var t=document.getElementById("phone-app-"+id),s=t&&t.querySelector("svg[data-phone-vector-icon]");return {id:id,found:!!s,label:!!(t&&t.querySelector(".pat-label")&&t.querySelector(".pat-label").textContent.trim())};});',
     ' document.getElementById("phone-app-call").click();await sleep(30);var call=document.querySelector(".dial-call-btn svg[data-phone-vector-icon=phone]");report.dial=call?{direct:!call.querySelector("use"),box:(function(b){return [b.x,b.y,b.width,b.height];})(call.getBBox())}:null;',

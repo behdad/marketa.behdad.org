@@ -24,7 +24,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         document.getElementById("stage-garden").classList.add("garden-party");
         document.documentElement.style.setProperty("--party-window-beat", ".533s");
         window.__syncScopeMirrors();
-        window.goToStage("office");
+        window.__goToStage("office");
         window.__openBedroomRoom();
         await sleep(80);
         var glass = document.getElementById("bedroom-stained-glass");
@@ -48,7 +48,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         window.__setPartyForegroundSuspended(false);
 
         window.__closeBedroomRoom();
-        window.goToStage("cuddly");
+        window.__goToStage("cuddly");
         window.__openCinemaRoom();
         await sleep(900);
         report.steps.cinema = motion("cinema-window");

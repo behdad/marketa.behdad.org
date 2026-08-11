@@ -22,7 +22,7 @@ var HARNESS = [
   ' var charlieMessages=window.__chatContext("What messages did Charlie send?").apps.messages;var charlieMessage=charlieMessages&&charlieMessages.find(function(m){return m.id==="charlie";});S("copy",{text:charlieMessage&&charlieMessage.text,messages:charlieMessages});',
   ' var tower=document.getElementById("office-pc-desk-trio"), mon=document.getElementById("office-monitor"); if(tower)tower.classList.add("on"); if(mon)mon.classList.add("here","screen-on","show-caps");',
   ' window.__monitorChatTurnstile=function(){return Promise.resolve("test-token");}; window.__runMsgAction("charlie"); await sleep(120);',
-  ' S("action",{room:window.currentStageName,chat:mon&&mon.classList.contains("show-chat"),opened:window.__monitorChatWasOpened&&window.__monitorChatWasOpened()});',
+  ' S("action",{room:window.__currentStageName,chat:mon&&mon.classList.contains("show-chat"),opened:window.__monitorChatWasOpened&&window.__monitorChatWasOpened()});',
   ' if(window.__resetPhoneApps)window.__resetPhoneApps(); window.__secondRound=true; window.__deliverPhoneMessage("cue_mail");',
   ' S("once",{redelivered:window.__deliverCharlieIntroNow&&window.__deliverCharlieIntroNow(),received:window.__phoneMessageReceived&&window.__phoneMessageReceived("charlie")});',
   '}',

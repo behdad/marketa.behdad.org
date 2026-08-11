@@ -138,14 +138,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     document.getElementById("__report").textContent = JSON.stringify(report);
   }
   window.addEventListener("load", function () {
-    window.playCampBearCodaSound = function (kind) { report.sounds.push(kind); };
+    window.__playCampBearCodaSound = function (kind) { report.sounds.push(kind); };
     window.__unlockAllRooms();
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms([
       "kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"
     ]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     setTimeout(function () {
       try {
         window.__openEntranceRoom();
@@ -176,9 +176,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             document.getElementById("entrance-roadtrip-camp-tent").classList.add("open");
             click(document.getElementById("entrance-roadtrip-camp-wisdom-continue"));
             report.prompt = snap();
-            window.setLang("cs");
+            window.__setLang("cs");
             report.czechPrompt = snap().captionText;
-            window.setLang("en");
+            window.__setLang("en");
 
             click(document.getElementById("entrance-roadtrip-dismiss"));
             report.promptExit = snap();
@@ -224,9 +224,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.warningExit = snap();
             reenterCamp();
             report.warningReturn = snap();
-            window.setLang("cs");
+            window.__setLang("cs");
             report.czechWarning = snap().captionText;
-            window.setLang("en");
+            window.__setLang("en");
             setTimeout(function () {
               try {
                 focused = false;
@@ -270,17 +270,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             setTimeout(function () {
               try {
                 report.attendedCaption = snap();
-                window.setLang("cs");
+                window.__setLang("cs");
                 report.czechAttendedCaption = snap().captionText;
-                window.setLang("en");
+                window.__setLang("en");
                 var finCheckpoint = window.__captureCheckpointSystems();
                 window.__restoreCheckpointSystems(finCheckpoint, "afterStage");
                 report.congratsReload = snap();
                 report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
                 report.completeAfterClick = snap();
-                window.setLang("cs");
+                window.__setLang("cs");
                 report.czechCongrats = snap().captionText;
-                window.setLang("en");
+                window.__setLang("en");
                 click(document.getElementById("entrance-roadtrip-dismiss"));
                 report.completeExit = snap();
                 reenterCamp();
@@ -326,7 +326,7 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
       "kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"
     ]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     setTimeout(function () {
       try {
         window.__openEntranceRoom();

@@ -11,7 +11,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");',
-  ' window.goToStage("office");if(tower)tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");',
+  ' window.__goToStage("office");if(tower)tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");',
   ' document.title="Wedding host title";window.__openMonitorApp("doom");await sleep(30);',
   ' var first=document.querySelector("#monitor-shoot-host iframe");',
   ' S("launch",{title:document.title,running:window.__doomRunning(),open:mon.classList.contains("show-doom"),frame:!!first});',

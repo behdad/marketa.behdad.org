@@ -151,14 +151,14 @@ global.Math_random_real = Math.random;
 var jumping = false, isPerchJump = false, isNapJump = false, jumpAnim = null, jumpTimer = null;
 var catRoom = "kitchen";
 var IDX = { kitchen: 0, garden: 1, cuddly: 2, office: 3, balcony: 4 };
-global.window.currentStageIndex = 0; // matches catRoom so canJumpNow's room check passes
+global.window.__currentStageIndex = 0; // matches catRoom so canJumpNow's room check passes
 var PERCHES = { kitchen: [{}], garden: [{}], cuddly: [{}], office: [{}], balcony: [{}] };
 
 function reducedMotion() { return !!(global.window.matchMedia && global.window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
 function canJumpNow() {
   return walk.classList.contains("out") && !jumping && !reducedMotion() &&
     global.document.visibilityState !== "hidden" &&
-    global.window.currentStageIndex === IDX[catRoom] && !!PERCHES[catRoom];
+    global.window.__currentStageIndex === IDX[catRoom] && !!PERCHES[catRoom];
 }
 function baseFeet() {
   var m = (pos.getAttribute("transform") || "").match(/translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)/);
@@ -289,9 +289,9 @@ global.__reduced = false;
 
 // 5. off-room / not-out: driver no-op
 resetScene();
-global.window.currentStageIndex = 3; // cat is in kitchen (0) but viewing office (3)
+global.window.__currentStageIndex = 3; // cat is in kitchen (0) but viewing office (3)
 assert(!API.canAnticNow(), "off-room: canAnticNow() is false (cat not in the viewed room)");
-global.window.currentStageIndex = 0;
+global.window.__currentStageIndex = 0;
 walk.classList.remove("out");
 assert(!API.canAnticNow(), "stowed (not .out): canAnticNow() is false");
 walk.classList.add("out");

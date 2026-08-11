@@ -22,29 +22,29 @@ var harness = String.raw`<script>
   }
   async function run() {
     window.__setSecondRound(true, { releaseHeld: false });
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     await sleep(850);
 
     key("ArrowRight");
     check("first press starts one adjacent slide",
-      window.currentStageName === "garden" && window.__upperRoomKeyboardNavigationState().settling,
-      window.currentStageName);
+      window.__currentStageName === "garden" && window.__upperRoomKeyboardNavigationState().settling,
+      window.__currentStageName);
     await sleep(80);
     key("ArrowRight", true);
-    check("repeat during the slide cannot skip the garden", window.currentStageName === "garden", window.currentStageName);
+    check("repeat during the slide cannot skip the garden", window.__currentStageName === "garden", window.__currentStageName);
 
     await sleep(680);
     key("ArrowRight", true);
-    check("held key advances after the garden settles", window.currentStageName === "cuddly", window.currentStageName);
+    check("held key advances after the garden settles", window.__currentStageName === "cuddly", window.__currentStageName);
     await sleep(80);
     key("ArrowLeft", true);
-    check("opposite key also waits for the current slide", window.currentStageName === "cuddly", window.currentStageName);
+    check("opposite key also waits for the current slide", window.__currentStageName === "cuddly", window.__currentStageName);
 
     await sleep(680);
     key("ArrowLeft");
-    check("next settled press moves one room back", window.currentStageName === "garden", window.currentStageName);
+    check("next settled press moves one room back", window.__currentStageName === "garden", window.__currentStageName);
     document.getElementById("hunt-next").dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-    check("pointer arrows remain direct during keyboard settling", window.currentStageName === "cuddly", window.currentStageName);
+    check("pointer arrows remain direct during keyboard settling", window.__currentStageName === "cuddly", window.__currentStageName);
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

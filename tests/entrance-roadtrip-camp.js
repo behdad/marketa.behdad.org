@@ -13,7 +13,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var state = window.__entranceRoomState();
     return {
       entranceOpen: !!window.__entranceRoomOpen,
-      stage: window.currentStageName,
+      stage: window.__currentStageName,
       roadtripActive: state.drive.roadtrip.active,
       roadtripPaused: state.drive.roadtrip.paused,
       campVisited: state.drive.roadtrip.campVisited,
@@ -48,7 +48,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__setSecondRound(true, { releaseHeld: false });
         window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
           "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
@@ -69,9 +69,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           transform: campSign.getAttribute("transform"),
           en: document.querySelector("#entrance-roadtrip-camp-sign text").textContent
         };
-        setLang("cs");
+        window.__setLang("cs");
         report.signApproach.cs = document.querySelector("#entrance-roadtrip-camp-sign text").textContent;
-        setLang("en");
+        window.__setLang("en");
         window.__entranceDriveStep(500);
         report.slowing = snapshot();
         report.signAfterEntrance = campSign.getAttribute("visibility");

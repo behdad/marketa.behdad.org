@@ -14,8 +14,8 @@ var HARNESS = [
   'async function run(){',
   ' window.__secondRound=true;randomSeq([0,0]);window.__deliverPhoneMessage("sina_helpers");if(window.__hideMessageThumb)window.__hideMessageThumb();',
   ' randomSeq([.999,.999]);window.__deliverPhoneMessage("alireza_vitamin");if(window.__hideMessageThumb)window.__hideMessageThumb();',
-  ' window.phone.open("messages");await sleep(80);var rows=[].slice.call(document.querySelectorAll(".pm-msg-row"));S("english",rows.map(function(r){return {from:r.querySelector(".pm-msg-from").textContent,body:r.querySelector(".pm-msg-text").textContent};}));',
-  ' setLang("cs");await sleep(30);rows=[].slice.call(document.querySelectorAll(".pm-msg-row"));S("czech",rows.map(function(r){return {from:r.querySelector(".pm-msg-from").textContent,body:r.querySelector(".pm-msg-text").textContent};}));',
+  ' window.__loftControllers.phone.open("messages");await sleep(80);var rows=[].slice.call(document.querySelectorAll(".pm-msg-row"));S("english",rows.map(function(r){return {from:r.querySelector(".pm-msg-from").textContent,body:r.querySelector(".pm-msg-text").textContent};}));',
+  ' window.__setLang("cs");await sleep(30);rows=[].slice.call(document.querySelectorAll(".pm-msg-row"));S("czech",rows.map(function(r){return {from:r.querySelector(".pm-msg-from").textContent,body:r.querySelector(".pm-msg-text").textContent};}));',
   '}',
   '})();</script>'
 ].join("\n");

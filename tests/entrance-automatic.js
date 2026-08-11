@@ -41,7 +41,7 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       window.__setSecondRound(true, { releaseHeld: false });
       window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
         "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
@@ -153,11 +153,11 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       var reverseAtLimitAccepted = window.__entranceDriveRange("R");
       var afterReverseAtLimit = copy(drive());
       var reverseAtLimitCaption = document.getElementById("hunt-caption").textContent;
-      setLang("cs");
+      window.__setLang("cs");
       window.__entranceDriveSetMotion(-10, -1);
       var driveAtLimitAccepted = window.__entranceDriveRange("D");
       var driveAtLimitCaption = document.getElementById("hunt-caption").textContent;
-      setLang("en");
+      window.__setLang("en");
       report.steps.interlocks = {
         rollingReverseAccepted: rollingReverseAccepted,
         afterRollingReverse: afterRollingReverse,

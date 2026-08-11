@@ -19,7 +19,7 @@ var harness = [
   ' window.__monitorMessageRewrite=function(value){request=value;return Promise.resolve(JSON.stringify({en:"Bahareh says there is a letter waiting for you 💌"}));};',
   ' var accepted=window.__deliverAutonomousPhoneMessage("cue_mail");var duplicate=window.__deliverAutonomousPhoneMessage("cue_mail");var pending=window.__messageRewritePending();',
   ' await sleep(40);if(window.__hideMessageThumb)window.__hideMessageThumb();window.__openMessagesAt("cue_mail");await sleep(40);',
-  ' var en=row("cue_mail");var english=en&&en.textContent;document.documentElement.lang="cs";if(window.refreshPhoneText)window.refreshPhoneText();await sleep(30);var cs=row("cue_mail");',
+  ' var en=row("cue_mail");var english=en&&en.textContent;document.documentElement.lang="cs";if(window.__refreshPhoneText)window.__refreshPhoneText();await sleep(30);var cs=row("cue_mail");',
   ' S("success",{accepted:accepted,duplicate:duplicate,pending:pending,request:request,logs:aiLogs.splice(0),thread:window.__phoneMessageThread(),en:english,cs:cs&&cs.textContent,remaining:window.__messageRewritePending()});',
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);await sleep(280);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
   ' window.__monitorMessageRewrite=function(){return Promise.reject(new Error("offline"));};',

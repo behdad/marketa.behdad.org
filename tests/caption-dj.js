@@ -23,11 +23,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
-        window.goToStage("garden");
-        window.setLang("en");
+        window.__goToStage("garden");
+        window.__setLang("en");
         window.__swapDj();
         report.en = snap();
-        window.setLang("cs");
+        window.__setLang("cs");
         report.cs = snap();
         report.rawHtmlSeam = typeof window.__captionArbiter.html;
       } catch (error) {

@@ -10,7 +10,7 @@ window.addEventListener("load", function () {
     var report = { errors: window.__errs || [] };
     try {
       window.__unlockAllRooms();
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       window.__toggleEntrancePorscheEngine();

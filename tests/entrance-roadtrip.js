@@ -289,7 +289,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "dungeon", "cinema", "bedroom", "entrance"]);
     window.__setSecondRound(true, { releaseHeld: false });
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     await sleep(40);
     window.__setBalconySnow(false, "test");
@@ -355,13 +355,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       dismissControl: !!document.getElementById("entrance-roadtrip-invite-later"),
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim()
     };
-    window.setLang("cs");
+    window.__setLang("cs");
     offer.czech = {
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim(),
       accept: invitation.querySelector("[data-i=entrance_roadtrip_invite_accept]").textContent.trim(),
       acceptMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-accept"))
     };
-    window.setLang("en");
+    window.__setLang("en");
     pressKey("Escape");
     var firstDismissed = {
       state: copy(state()),
@@ -958,9 +958,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       button: box(reentryButton),
       steering: box(document.getElementById("entrance-drive-steering"))
     };
-    window.setLang("cs");
+    window.__setLang("cs");
     reopened.czechLabel = document.getElementById("entrance-roadtrip-reenter-text").textContent.trim();
-    window.setLang("en");
+    window.__setLang("en");
     if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
     var reentryBeforeEnter = copy(state());
     pressDocumentKey("Enter");

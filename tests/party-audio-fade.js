@@ -18,7 +18,7 @@ var harness = String.raw`<script>
   try {
     document.hasFocus = function () { return true; };
     if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
-    if (window.goToStage) window.goToStage("garden");
+    if (window.__goToStage) window.__goToStage("garden");
     await sleep(500);
     if (window.__setPartyMode) window.__setPartyMode(true, true, false);
     if (window.__summonGuests) window.__summonGuests();

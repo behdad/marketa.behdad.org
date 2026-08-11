@@ -85,7 +85,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
           "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
         window.__setSecondRound(true, { releaseHeld: false });
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         begin();

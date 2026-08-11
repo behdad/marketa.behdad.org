@@ -64,7 +64,7 @@ var harness = String.raw`<script>
   window.addEventListener("load", function () {
     setTimeout(function () {
       (async function () {
-        window.garden.set(true);
+        window.loft.garden.set(true);
         await sleep(20); // deferred room coordination settles without nesting inside party startup
         var firstRooms = occupancy();
         var balconySocial = firstRooms.balcony.filter(function (name) {
@@ -80,8 +80,8 @@ var harness = String.raw`<script>
         check("room occupancy survives an unfocused-tab lifecycle update",
           afterBlurRooms.bar.length > 0 && afterBlurRooms.office.length > 0 && afterBlurRooms.balcony.length >= 3,
           JSON.stringify({ before: firstRooms, after: afterBlurRooms }));
-        window.couples(true);
-        window.officefolks(true);
+        window.__loftControllers.couples(true);
+        window.__loftControllers.officefolks(true);
         window.__rotateBalconyHangout();
         var rotatedRooms = occupancy();
         var earlyAudit = window.__peopleManager.audit();

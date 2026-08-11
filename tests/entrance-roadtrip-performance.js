@@ -88,7 +88,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       value: function () { return true; }, configurable: true
     });
     window.__unlockAllRooms();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();

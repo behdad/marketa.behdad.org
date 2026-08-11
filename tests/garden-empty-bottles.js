@@ -39,7 +39,7 @@ var HARNESS = String.raw`<script>
   }
   addEventListener("load", function () { setTimeout(async function () {
     try {
-      goToStage("garden");
+      window.__goToStage("garden");
       await sleep(850);
       var bottles = document.getElementById("garden-bottles");
       var wiggles = [1, 2, 3].map(function (n) { return document.getElementById("garden-empty-bottle-wiggle-" + n); });
@@ -57,8 +57,8 @@ var HARNESS = String.raw`<script>
         }).observe(wiggle, { attributes: true, attributeFilter: ["class"] });
       });
       var clinks = [];
-      var originalClink = window.playGlassClinkSound;
-      window.playGlassClinkSound = function (pitch, panId) {
+      var originalClink = window.__playGlassClinkSound;
+      window.__playGlassClinkSound = function (pitch, panId) {
         clinks.push({ pitch: pitch, panId: panId });
         return originalClink.apply(this, arguments);
       };
@@ -72,7 +72,7 @@ var HARNESS = String.raw`<script>
         additions: additions.slice()
       };
 
-      for (var empty = 0; empty < 3; empty++) drainBottleByIndex(1);
+      for (var empty = 0; empty < 3; empty++) window.__drainBottleByIndex(1);
       var partialLevelsBefore = levels();
       var partialClinksBefore = clinks.length;
       tapBottle(bottles, 1);
@@ -86,12 +86,12 @@ var HARNESS = String.raw`<script>
       };
       await sleep(760);
       report.partiallyEmptyBottle.cleaned = wiggles.every(function (wiggle) { return !wiggle.classList.contains("empty-wiggle"); });
-      resetBottles();
+      window.__resetBottles();
       additions = [0, 0, 0];
 
-      for (var a = 0; a < 4; a++) drainBottleByIndex(0);
-      for (var b = 0; b < 4; b++) drainBottleByIndex(1);
-      for (var c = 0; c < 3; c++) drainBottleByIndex(2);
+      for (var a = 0; a < 4; a++) window.__drainBottleByIndex(0);
+      for (var b = 0; b < 4; b++) window.__drainBottleByIndex(1);
+      for (var c = 0; c < 3; c++) window.__drainBottleByIndex(2);
       var usableBefore = levels();
       moneyTree.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
       await sleep(150);
@@ -181,9 +181,9 @@ var HARNESS = String.raw`<script>
         levelsSame: JSON.stringify(levels()) === JSON.stringify(levelsBefore)
       };
 
-      for (var d = 0; d < 5; d++) waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
+      for (var d = 0; d < 5; d++) window.__waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
       var rottedBefore = JSON.stringify(__gardenTripPropWaterState());
-      waterSpecificPlant("garden-mushroom", function () { return false; }, "bottle");
+      window.__waterSpecificPlant("garden-mushroom", function () { return false; }, "bottle");
       await sleep(150);
       report.unrelatedGate = {
         active: wiggles.some(function (wiggle) { return wiggle.classList.contains("empty-wiggle"); }),
@@ -196,7 +196,7 @@ var HARNESS = String.raw`<script>
       await sleep(150);
       var activeBeforeReset = wiggles.every(function (wiggle) { return wiggle.classList.contains("empty-wiggle"); });
       var plantsBeforeReset = JSON.stringify(__plantWaterState());
-      resetBottles();
+      window.__resetBottles();
       report.reset = {
         activeBefore: activeBeforeReset,
         cleaned: wiggles.every(function (wiggle) { return !wiggle.classList.contains("empty-wiggle"); }),
@@ -206,7 +206,7 @@ var HARNESS = String.raw`<script>
         bottleHomes: bottleEls.every(function (el, index) { return sameBox(homeBottleBoxes[index], box(el)); }),
         childTranslate: bottleEls.map(function (el) { return el.style.translate || ""; })
       };
-      window.playGlassClinkSound = originalClink;
+      window.__playGlassClinkSound = originalClink;
       removeEventListener("loft:statechange", changed);
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
@@ -228,11 +228,11 @@ var REDUCED_HARNESS = String.raw`<script>
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   addEventListener("load", function () { setTimeout(async function () {
     try {
-      goToStage("garden");
+      window.__goToStage("garden");
       await sleep(850);
       var wiggles = [1, 2, 3].map(function (n) { return document.getElementById("garden-empty-bottle-wiggle-" + n); });
       var before = wiggles.map(function (wiggle) { return wiggle.getBoundingClientRect(); });
-      for (var i = 0; i < 3; i++) while (drainBottleByIndex(i)) {}
+      for (var i = 0; i < 3; i++) while (window.__drainBottleByIndex(i)) {}
       document.getElementById("garden-money-tree").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
       await sleep(150);
       var during = wiggles.map(function (wiggle) { return wiggle.getBoundingClientRect(); });

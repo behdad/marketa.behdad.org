@@ -42,12 +42,12 @@ var harness = String.raw`<script>
 
   async function run() {
     window.__unlockAllRooms();
-    window.goToStage("office");
+    window.__goToStage("office");
     await sleep(850);
     capturePan = true;
     key("ArrowRight");
     capturePan = false;
-    check("keyboard navigation reaches the Balcony", window.currentStageName === "balcony", window.currentStageName);
+    check("keyboard navigation reaches the Balcony", window.__currentStageName === "balcony", window.__currentStageName);
     check("the Balcony is paintable before the strip transform changes",
       panStart && panStart.transformBeforeUnpark === "translateX(-60%)" && !panStart.parked &&
         panStart.backgroundVisibility === "visible" && panStart.cityVisibility === "visible",

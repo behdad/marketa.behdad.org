@@ -12,7 +12,7 @@ window.addEventListener("load", function () {
     var street = window.__entranceDriveBrakeAudio(180, false);
     var highway = window.__entranceDriveBrakeAudio(180, true);
     Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
-    window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+    window.__unlockAllRooms(); window.__goToStage("balcony"); window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     window.__entranceRoadtripDevStart(); window.__entranceRoadtripSetRoute("banff", 0);
     var setupTrip = window.__entranceRoomState().drive.roadtrip;

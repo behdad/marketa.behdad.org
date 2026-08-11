@@ -15,8 +15,8 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   ' S("initial",nav("hunt-next"));S("dots_initial",dotState());',
   ' window.__unlockSolvedRoom("garden");S("solved",nav("hunt-next"));S("dots_solved",dotState());',
-  ' window.goToStage("garden");S("garden_prev",nav("hunt-prev"));S("garden_next_locked",nav("hunt-next"));',
-  ' document.querySelectorAll(".hunt-dot")[4].dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));S("dot_cheat",{room:window.currentStageName,max:window.__maxUnlocked()});window.goToStage("garden");S("cheat_next",nav("hunt-next"));S("hover_rule",hoverRule());S("dots_unlocked",dotState());',
+  ' window.__goToStage("garden");S("garden_prev",nav("hunt-prev"));S("garden_next_locked",nav("hunt-next"));',
+  ' document.querySelectorAll(".hunt-dot")[4].dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));S("dot_cheat",{room:window.__currentStageName,max:window.__maxUnlocked()});window.__goToStage("garden");S("cheat_next",nav("hunt-next"));S("hover_rule",hoverRule());S("dots_unlocked",dotState());',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},250);});',
   '})();</script>'
 ].join("\n");

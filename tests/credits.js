@@ -9,7 +9,7 @@ var harness = String.raw`<script>
   var out = { checks: [], errors: [] };
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   try {
-    var names = window.LOFT_CREDITS.people.filter(function (person) {
+    var names = window.__loftCredits.people.filter(function (person) {
       return person.role === "credits_tester";
     }).map(function (person) { return person.name; });
     check("Nima appears in the language-neutral tester roster",
@@ -25,7 +25,7 @@ var harness = String.raw`<script>
       names.slice(-10).join(",") ===
         "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash",
       names.join(", "));
-    var marketa = window.LOFT_CREDITS.people.find(function (person) { return person.name === "Markéta"; });
+    var marketa = window.__loftCredits.people.find(function (person) { return person.name === "Markéta"; });
     check("Markéta is credited for co-design and Czech translation",
       marketa && marketa.role === "credits_codesigner_translator",
       marketa && marketa.role);
@@ -47,7 +47,7 @@ var harness = String.raw`<script>
       window.__loftCreditsLines("cs").indexOf("s láskou vytvořili behdad, Claude a Codex") !== -1,
       JSON.stringify({ en: creditsLines.slice(-3), cs: window.__loftCreditsLines("cs").slice(-3) }));
 
-    var otherPeopleCount = window.LOFT_CREDITS.people.length - names.length;
+    var otherPeopleCount = window.__loftCredits.people.length - names.length;
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);
     var crowded = window.__loftCreditsLayout(50, otherPeopleCount);
     check("software credits move below every tester",

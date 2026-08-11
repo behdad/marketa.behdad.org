@@ -7,9 +7,9 @@ var harness = String.raw`<script>
   var report = { errors: [] };
   addEventListener("load", function () { setTimeout(function () {
     try {
-      goToStage("garden");
-      for (var i = 0; i < 4; i++) window.waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
-      for (var j = 0; j < 2; j++) window.waterSpecificPlant("garden-frog", function () { return true; }, "reusable");
+      window.__goToStage("garden");
+      for (var i = 0; i < 4; i++) window.__waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
+      for (var j = 0; j < 2; j++) window.__waterSpecificPlant("garden-frog", function () { return true; }, "reusable");
       report.grown = __gardenTripPropWaterState();
       report.growthTransforms = {
         mushroom: document.getElementById("garden-mushroom").getAttribute("transform"),
@@ -27,9 +27,9 @@ var harness = String.raw`<script>
       };
       __stopTrip();
 
-      for (var k = 0; k < 5; k++) window.waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
+      for (var k = 0; k < 5; k++) window.__waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
       mushroom.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      window.waterSpecificPlant("garden-frog", function () { return true; }, "bottle");
+      window.__waterSpecificPlant("garden-frog", function () { return true; }, "bottle");
       var frog = document.getElementById("garden-frog");
       frog.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       frog.dispatchEvent(new MouseEvent("click", { bubbles: true }));

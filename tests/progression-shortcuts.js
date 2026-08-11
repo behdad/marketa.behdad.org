@@ -36,11 +36,11 @@ var harness = String.raw`<script>
     var entrance = window.__entranceRoomState && window.__entranceRoomState();
     check("Shift+R winds down the Party and lands at the Road Trip-ready Entrance",
       !shiftR && !window.__gardenPartyOn && window.__secondRound &&
-      window.__seenRooms().length === 10 && window.currentStageName === "balcony" &&
+      window.__seenRooms().length === 10 && window.__currentStageName === "balcony" &&
       window.__entranceRoomOpen && entrance && entrance.drive.hud === false &&
       entrance.drive.roadtrip.unlocked && entrance.drive.roadtrip.invitationReady,
       JSON.stringify({ eventResult: shiftR, party: window.__gardenPartyOn,
-        phase2: window.__secondRound, seen: window.__seenRooms(), stage: window.currentStageName,
+        phase2: window.__secondRound, seen: window.__seenRooms(), stage: window.__currentStageName,
         entrance: entrance && { open: entrance.open, hud: entrance.drive.hud,
           unlocked: entrance.drive.roadtrip.unlocked,
           invitationReady: entrance.drive.roadtrip.invitationReady } }));

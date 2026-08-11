@@ -27,7 +27,7 @@ var harness = String.raw`<script>
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: end.x, clientY: end.y }));
   }
   addEventListener("load", function () { setTimeout(async function () {
-    goToStage("garden");
+    window.__goToStage("garden");
     var before = __plantWaterState(), bottles = __gardenWaterInventoryState();
     drag(document.getElementById("garden-watering-can"), 1090, 200, 41, { x: 856, y: 285 });
     var afterCan = __plantWaterState();

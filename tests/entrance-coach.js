@@ -28,7 +28,7 @@ window.addEventListener("load", function () { setTimeout(function () {
   try {
     Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
     window.__unlockAllRooms();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     report.fresh = coach();
@@ -217,7 +217,7 @@ var RECOVERY_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:
       var saved = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
       var gate = document.getElementById("loft-recovery-gate");
       gate.querySelector(".loft-recovery-btn.primary").click();
-      window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+      window.__unlockAllRooms(); window.__goToStage("balcony"); window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       var root = document.getElementById("entrance-drive-coach");
       var active = root.querySelector("[data-coach-step].active");
@@ -255,7 +255,7 @@ window.addEventListener("load", function () { setTimeout(function () {
   }
   try {
     Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
-    window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+    window.__unlockAllRooms(); window.__goToStage("balcony"); window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud(); report.fresh = coach();
     var touchPedals = document.getElementById("entrance-drive-touch-pedals");
     var pedalBox = touchPedals.getBoundingClientRect();
@@ -283,10 +283,10 @@ window.addEventListener("load", function () { setTimeout(function () {
       cs: window.__loftMessages.cs.hunt.entrance_drive_coach_auto_pedals_touch,
       liveWidth: document.getElementById("entrance-drive-coach-pedals-touch").getComputedTextLength()
     };
-    window.setLang("cs");
+    window.__setLang("cs");
     report.copy.csLiveWidth = document.getElementById(
       "entrance-drive-coach-pedals-touch").getComputedTextLength();
-    window.setLang("en");
+    window.__setLang("en");
     var reentry = document.getElementById("entrance-roadtrip-reenter");
     reentry.classList.add("show");
     var reentryBox = reentry.getBoundingClientRect();

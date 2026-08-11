@@ -27,7 +27,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-    window.goToStage("balcony"); window.__openEntranceRoom();
+    window.__goToStage("balcony"); window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
     window.__openEntrancePorscheDriveHud(); window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute("camp", 0); window.__updateRoadtripCampAudio();
@@ -71,9 +71,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       complete: true, wisdomDismissed: false, wisdomHandoffReady: false, sleepPhase: "idle"
     };
     window.__restoreCheckpointSystems({ entrance: wisdomCheckpoint }, "afterStage");
-    var attendedWisdomMurmurs = [0, 1, 2, 3].map(window.playCampWisdomMurmurSound);
+    var attendedWisdomMurmurs = [0, 1, 2, 3].map(window.__playCampWisdomMurmurSound);
     focused = false;
-    var unfocusedWisdomMurmur = window.playCampWisdomMurmurSound(0);
+    var unfocusedWisdomMurmur = window.__playCampWisdomMurmurSound(0);
     focused = true;
     report.steps.wisdomMurmur = {
       attended: attendedWisdomMurmurs,

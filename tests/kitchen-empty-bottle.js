@@ -17,7 +17,7 @@ var HARNESS = String.raw`<script>
   function sameBox(a, b) { return a.every(function (value, index) { return Math.abs(value - b[index]) < 0.2; }); }
   addEventListener("load", function () { setTimeout(async function () {
     try {
-      goToStage("kitchen");
+      window.__goToStage("kitchen");
       await sleep(850);
       var bottle = document.getElementById("kitchen-waterbottle");
       var inner = document.getElementById("kitchen-waterbottle-inner");
@@ -33,8 +33,8 @@ var HARNESS = String.raw`<script>
         });
       }).observe(wiggle, { attributes: true, attributeFilter: ["class"] });
       var clinks = [];
-      var originalClink = window.playGlassClinkSound;
-      window.playGlassClinkSound = function (pitch, panId) {
+      var originalClink = window.__playGlassClinkSound;
+      window.__playGlassClinkSound = function (pitch, panId) {
         clinks.push({ pitch: pitch, panId: panId, levelAtSound: __kitchenWaterState().level,
           activeAtSound: wiggle.classList.contains("empty-wiggle") });
         return originalClink.apply(this, arguments);
@@ -94,14 +94,14 @@ var HARNESS = String.raw`<script>
       click(bottle);
       await sleep(150);
       var activeBeforeReset = wiggle.classList.contains("empty-wiggle");
-      resetWaterBottle();
+      window.__resetWaterBottle();
       report.reset = {
         activeBefore: activeBeforeReset, cleaned: !wiggle.classList.contains("empty-wiggle"),
         level: __kitchenWaterState().level, home: sameBox(homeBox, box(bottle)),
         transform: bottle.getAttribute("transform"), hitGeometry: hitGeometry
       };
       removeEventListener("loft:statechange", changed);
-      window.playGlassClinkSound = originalClink;
+      window.__playGlassClinkSound = originalClink;
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -121,7 +121,7 @@ var REDUCED_HARNESS = String.raw`<script>
   function click(el) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
   addEventListener("load", function () { setTimeout(async function () {
     try {
-      goToStage("kitchen");
+      window.__goToStage("kitchen");
       await sleep(850);
       var bottle = document.getElementById("kitchen-waterbottle");
       var wiggle = document.getElementById("kitchen-empty-waterbottle-wiggle");

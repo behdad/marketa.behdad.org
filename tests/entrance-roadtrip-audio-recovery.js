@@ -37,7 +37,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   } catch (_error) {}
   window.addEventListener("load", function () { setTimeout(async function () { try {
     window.__unlockAllRooms();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
@@ -47,7 +47,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveStep(80);
     await sleep(320);
 
-    var ctx = window.getSfxCtx()._ac;
+    var ctx = window.__getSfxCtx()._ac;
     var realResume = ctx.resume.bind(ctx), resumeCalls = 0;
     try {
       ctx.resume = function () { resumeCalls++; return realResume(); };

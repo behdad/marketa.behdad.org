@@ -118,6 +118,29 @@ function likelySources(name, files) {
   }).slice(0, 3);
 }
 
+function staticPublicWindowWrites(files) {
+  var writes = [];
+  var patterns = [
+    { label: "property assignment", re: /\b(?:window|globalThis)\s*\.\s*([A-Za-z_$][\w$]*)\s*(?:=(?!=|>)|\+\+|--|\+=|-=|\*=|\/=|\?\?=|&&=|\|\|=)/g },
+    { label: "literal property assignment", re: /\b(?:window|globalThis)\s*\[\s*["']([^"']+)["']\s*\]\s*(?:=(?!=|>)|\+\+|--|\+=|-=|\*=|\/=|\?\?=|&&=|\|\|=)/g },
+    { label: "defineProperty export", re: /\bObject\.defineProperty\s*\(\s*(?:window|globalThis)\s*,\s*["']([^"']+)["']/g }
+  ];
+  files.forEach(function (file) {
+    file.text.split("\n").forEach(function (line, index) {
+      patterns.forEach(function (pattern) {
+        pattern.re.lastIndex = 0;
+        var match;
+        while ((match = pattern.re.exec(line))) {
+          var name = match[1];
+          if (name === "loft" || name.indexOf("__") === 0) continue;
+          writes.push({ name: name, file: file.name, line: index + 1, label: pattern.label, text: line.trim().slice(0, 180) });
+        }
+      });
+    });
+  });
+  return writes;
+}
+
 function shapeText(shape) {
   if (!shape) return "unknown";
   var flags = [];
@@ -156,6 +179,10 @@ check(result.probe && !result.probe.baseline && result.probe.resolves && result.
 check(result.allowed.length === 1 && result.allowed[0].name === "loft" && result.allowed[0].shape.type === "object", "window.loft is the one app-authored public root", JSON.stringify(result.allowed));
 
 var files = sourceFiles();
+var staticWrites = staticPublicWindowWrites(files);
+check(staticWrites.length === 0, "authored sources contain no explicit public Window writes outside window.loft", staticWrites.map(function (hit) {
+  return hit.file + ":" + hit.line + " " + hit.label + " " + hit.name + " — " + hit.text;
+}).join("\n"));
 if (result.forbidden.length) {
   console.log("\n  Forbidden app-authored globals (" + result.forbidden.length + "):");
   result.forbidden.forEach(function (entry) {

@@ -11,7 +11,7 @@ var harness = [
   'function S(k,v){report.steps[k]=!!v;}',
   'function previewType(){var cell=document.querySelector(".tetris-next-piece .tetris-preview-cell");return cell&&[].slice.call(cell.classList).find(function(c){return /^tetris-[ijlostz]$/.test(c);});}',
   'window.addEventListener("load",function(){setTimeout(function(){',
-  'window.goToStage("balcony");window.__startBalconyTetris();',
+  'window.__goToStage("balcony");window.__startBalconyTetris();',
   'var before=window.__balconyTetrisState(),shown=previewType();',
   'S("true_preview",before.active&&before.next&&shown==="tetris-"+before.next&&document.querySelectorAll(".tetris-next-piece .tetris-preview-cell").length===4);',
   'window.__balconyTetrisTest("drop");',

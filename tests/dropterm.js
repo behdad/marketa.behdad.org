@@ -152,7 +152,7 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
     "    var c = (cmd||'').trim(); if(!c) return;",
     "    var hist = ctx.hist || consoleHist;",
     "    hist.push(cmd); if(ctx.setHistIdx) ctx.setHistIdx(hist.length); else consoleHistIdx = hist.length;",
-    "    if (c === 'garden.set(true)') { consolePrint('party started'); return; }", // a representative command
+    "    if (c === 'loft.garden.set(true)') { consolePrint('party started'); return; }", // a representative command
     "    consolePrint('undefined');",
     "  } finally { activeConsoleOut = prevOut; }",
     "}"
@@ -206,10 +206,10 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
   // (2) run a command through the shared interpreter via the drop-down input keydown
   win.__toggleDropTerm(); // open again
   var dropBefore = dOut.childNodes.length, monBefore = monOut.childNodes.length;
-  dIn.value = "garden.set(true)";
+  dIn.value = "loft.garden.set(true)";
   dIn.dispatch("keydown", { key: "Enter", stopPropagation: function () {}, preventDefault: function () {} });
   var newDropLines = dOut.childNodes.slice(dropBefore).map(function (n) { return n._text; });
-  assert(newDropLines.indexOf("❯ garden.set(true)") !== -1, "the typed line is echoed into the drop-down scrollback");
+  assert(newDropLines.indexOf("❯ loft.garden.set(true)") !== -1, "the typed line is echoed into the drop-down scrollback");
   assert(newDropLines.indexOf("party started") !== -1, "the command's OUTPUT is printed into the drop-down scrollback (shared interpreter)");
   assert(monOut.childNodes.length === monBefore, "NONE of it leaked into the monitor console's scrollback (activeConsoleOut restored)", "monitor gained " + (monOut.childNodes.length - monBefore) + " lines");
   assert(dIn.value === "", "the input is cleared after Enter");

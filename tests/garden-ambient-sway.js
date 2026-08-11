@@ -7,7 +7,7 @@ var harness = String.raw`<script>
   var report = { errors: [], propSways: [], plantSways: [] };
   addEventListener("load", function () {
     setTimeout(function () {
-      goToStage("garden");
+      window.__goToStage("garden");
       // The first ambient-sway delay was chosen during page setup and is at most 14s.
       // Pin subsequent choices to the end of the candidate list: before the fix that
       // deterministically selected the frog; now it selects the last actual plant.

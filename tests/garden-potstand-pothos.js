@@ -13,7 +13,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   window.addEventListener("load", function () {
     setTimeout(async function () {
       try {
-        window.goToStage("garden");
+        window.__goToStage("garden");
         var plant = document.getElementById("garden-potstand");
         var home = plant.parentNode;
         var lift = document.getElementById("garden-potstand-lift");
@@ -30,7 +30,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
           offsetClass: offset && offset.getAttribute("class"),
           offsetTransform: offset && offset.getAttribute("transform"),
           transform: plant.getAttribute("transform"),
-          waterSpot: window.gardenPlantSpots && window.gardenPlantSpots["garden-potstand"],
+          waterSpot: window.__gardenPlantSpots && window.__gardenPlantSpots["garden-potstand"],
           hit: [hit.getAttribute("x"), hit.getAttribute("y"), hit.getAttribute("width"), hit.getAttribute("height")],
           pot: [pot.getAttribute("x"), pot.getAttribute("y"), pot.getAttribute("width"), pot.getAttribute("height"), pot.getAttribute("rx")],
           legs: Array.from(document.querySelectorAll("#garden-potstand-legs line")).map(function (line) {
@@ -45,12 +45,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         };
 
         var baseFilter = getComputedStyle(plant).filter;
-        window.drainRandomBottle = function () { report.drains++; return true; };
+        window.__drainRandomBottle = function () { report.drains++; return true; };
         plant.dispatchEvent(new MouseEvent("click", { bubbles: true }));
         await new Promise(function (resolve) { setTimeout(resolve, 40); });
         var afterClick = window.__plantWaterState().counts["garden-potstand"];
-        window.waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
-        window.waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
+        window.__waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
+        window.__waterSpecificPlant("garden-potstand", function () { return true; }, "reusable");
         await new Promise(function (resolve) { setTimeout(resolve, 80); });
         var wet = window.__plantWaterState();
         var overFilter = getComputedStyle(plant).filter;

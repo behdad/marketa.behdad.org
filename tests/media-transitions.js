@@ -15,7 +15,7 @@ var HARNESS = [
   ' window.__setMusicPaused(true);S("paused",{flag:!!window.__musicPaused,frozen:strip.classList.contains("dance-frozen")});window.__setMusicPaused(false);S("playing",{flag:!!window.__musicPaused,frozen:strip.classList.contains("dance-frozen")});',
   ' window.__setPartyDance("bandari");S("bandari",{playing:!!(window.__bandariPlaying&&window.__bandariPlaying()),label:window.__nowPlayingLabel(),bpm:window.__DANCE_BPM&&window.__DANCE_BPM.bandari,volume:typeof window.__applyBandariMusicVolume==="function"});',
   ' window.__toggleMusicPlayback();S("bandariPaused",{paused:!!window.__musicPaused,playing:!!window.__bandariPlaying()});window.__toggleMusicPlayback();S("bandariResumed",{paused:!!window.__musicPaused,playing:!!window.__bandariPlaying()});',
-  ' setLang("cs");S("bandariCs",window.__nowPlayingLabel());setLang("en");',
+  ' window.__setLang("cs");S("bandariCs",window.__nowPlayingLabel());window.__setLang("en");',
   ' var set=window.__setPartyDance("salsa");S("dance",{set:set,mirror:window.__partyDance,stage:garden.getAttribute("data-partydance"),mode:document.getElementById("trip-melt-dancers").getAttribute("data-dance")});',
   ' var before=window.__partyDance;window.__nextPartyDance();S("advance",{before:before,after:window.__partyDance,stage:garden.getAttribute("data-partydance")});',
   ' window.__setPartyMode(false,true);S("off",{party:!!window.__gardenPartyOn,dance:window.__partyDance,stage:garden.getAttribute("data-partydance"),mode:document.getElementById("trip-melt-dancers").getAttribute("data-dance"),paused:!!window.__musicPaused});',

@@ -29,7 +29,7 @@ var harness = String.raw`<script>
   try {
     window.__secondRound = true;
     window.__setPartyMode(true, true);
-    window.goToStage("office");
+    window.__goToStage("office");
     window.__deliverPhoneMessage("sunset_bed");
     window.__deliverPhoneMessage("sunset_irene_code");
     window.__deliverPhoneMessage("sunset_bahareh_awake");
@@ -50,34 +50,34 @@ var harness = String.raw`<script>
     var monitor = document.getElementById("office-monitor");
     pc.classList.add("on");
     monitor.classList.add("here", "screen-on", "show-caps");
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__runMsgAction("sunset_irene_code");
     setTimeout(function () {
       check("Irene's turtle-art reply opens the office Code app",
-        window.currentStageName === "office" && monitor.classList.contains("show-code"),
-        window.currentStageName + " / " + monitor.getAttribute("class"));
-      window.goToStage("balcony");
+        window.__currentStageName === "office" && monitor.classList.contains("show-code"),
+        window.__currentStageName + " / " + monitor.getAttribute("class"));
+      window.__goToStage("balcony");
       window.__runMsgAction("sunset_hannah_tattoo");
     }, 100);
     setTimeout(function () {
       check("Hannah's tattoo reply opens the office Tattoo app",
-        window.currentStageName === "office" && monitor.classList.contains("show-tattoo"),
-        window.currentStageName + " / " + monitor.getAttribute("class"));
+        window.__currentStageName === "office" && monitor.classList.contains("show-tattoo"),
+        window.__currentStageName + " / " + monitor.getAttribute("class"));
       window.__runMsgAction("sunset_bed");
     }, 220);
     setTimeout(function () {
       check("Athena's bedtime reply leaves the last guest in charge",
-        window.currentStageName === "garden" && window.__gardenPartyOn,
-        window.currentStageName + " / party=" + window.__gardenPartyOn);
+        window.__currentStageName === "garden" && window.__gardenPartyOn,
+        window.__currentStageName + " / party=" + window.__gardenPartyOn);
       check("Athena's bedtime reply points out the wall switch",
         document.getElementById("garden-lightswitch").classList.contains("invite-pulse"),
         document.getElementById("garden-lightswitch").getAttribute("class"));
-      window.goToStage("office");
+      window.__goToStage("office");
       window.__runMsgAction("sunset_magicbox");
     }, 1050);
     setTimeout(function () {
       check("magic-box reply pans back to the party room",
-        window.currentStageName === "garden", window.currentStageName);
+        window.__currentStageName === "garden", window.__currentStageName);
       check("magic-box reply opens the box",
         document.getElementById("garden-boxlock").classList.contains("showing"),
         "locked=" + window.__drugsboxLocked() + " class=" + document.getElementById("garden-boxlock").getAttribute("class"));

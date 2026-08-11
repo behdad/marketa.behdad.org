@@ -33,10 +33,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.restored = copy(window.__drinkState());
       window.__entranceRoadtripSetDemerits(3, 0);
       report.nonzero = hud();
-      window.setLang("cs");
+      window.__setLang("cs");
       window.__refreshEntranceRoadtripHud();
       report.czech = hud();
-      window.setLang("en");
+      window.__setLang("en");
 
       window.__resetWineSips();
       for (var i = 0; i < 4; i++) window.__registerDrink();
@@ -72,7 +72,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       window.__secondRound = true;
-      window.currentStageName = "kitchen";
+      window.__currentStageName = "kitchen";
       document.getElementById("stage-kitchen").classList.add("dusk");
       document.getElementById("kitchen-bar-tap-a").dispatchEvent(new MouseEvent("click", { bubbles: true }));
       report.barDraft = copy(window.__drinkState());

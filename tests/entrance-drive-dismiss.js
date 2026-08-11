@@ -11,7 +11,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     try {
       Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
       window.__unlockAllRooms();
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       var hudClose = document.getElementById("entrance-drive-dismiss-hud");

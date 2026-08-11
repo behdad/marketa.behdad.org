@@ -23,23 +23,23 @@ var harness = String.raw`<script>
 
   async function run() {
     window.__gameStarted = function () { return true; };
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     window.__secondRound = false;
     // A stopped/restored party may briefly retain the old Garden arrival class even
     // though no party room is visible. It must not hide a directly started cookout.
     document.querySelector("#garden-guests .g-hamid").classList.add("arrived");
     var started = await window.loft.api.perform("balcony.bbq.set", { on: true }, { source: "test" });
     check("a Phase-1 Kitchen script visibly routes to the BBQ and summons Hamid",
-      started.ok && started.value.on && !window.__secondRound && window.currentStageName === "balcony" &&
+      started.ok && started.value.on && !window.__secondRound && window.__currentStageName === "balcony" &&
       !window.__gardenPartyOn && lit() && shown() && plateVisible());
 
     Math.random = function () { return 0.99; }; // the old drift roll hid him at this value
     window.__balconyGrillmasterDriftNow();
     check("ambient drift keeps Hamid and plate through the fire cycle", lit() && shown() && plateVisible());
 
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     check("leaving the balcony hides the projection", lit() && !shown());
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     check("returning to the lit smoker restores the same grillmaster setup", lit() && shown() && plateVisible());
 
     document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));

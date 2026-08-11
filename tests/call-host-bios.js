@@ -39,7 +39,7 @@ var harness = String.raw`<script>
       /markéta/i.test(laptop) && /the bride/i.test(laptop) &&
       /Behdad's partner/i.test(laptop) && /sports, reading/i.test(laptop),
       laptop);
-    window.phone.open("call");
+    window.__loftControllers.phone.open("call");
     click(document.querySelector(".dial-call-btn"));
     var outgoingSelf = document.querySelector(".phone-incall .pic-self");
     click(outgoingSelf);
@@ -52,7 +52,7 @@ var harness = String.raw`<script>
         var card = document.querySelector(".egg-bubble.who-pop.phone-tooltip");
         return card && Number(getComputedStyle(card).zIndex) > 65;
       })());
-    window.phone.set(false);
+    window.__loftControllers.phone.set(false);
     setTimeout(function () {
       try {
         window.__answerPrague();

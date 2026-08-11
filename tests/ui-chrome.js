@@ -28,7 +28,7 @@ function harness(lang) {
   addEventListener("load", function () { setTimeout(async function () {
     var out={viewport:[innerWidth,innerHeight], lang:"", samples:[], errors:(window.__errs||[]).slice()};
     try {
-      setLang(${JSON.stringify(lang)}); out.lang=document.documentElement.lang;
+      window.__setLang(${JSON.stringify(lang)}); out.lang=document.documentElement.lang;
       window.__openKbdHelp(); await new Promise(function(resolve){setTimeout(resolve,50);});
       var keyboard=document.querySelector(".kbd-dialog");
       out.samples.push(sample("keyboard",keyboard.querySelector(".pb-dlg-x"),keyboard.querySelector(".pb-dlg-lead")));
@@ -41,11 +41,11 @@ function harness(lang) {
       }
       dollhouse.hidden=true;
 
-      window.phone.set(true); await new Promise(function(resolve){setTimeout(resolve,50);});
+      window.__loftControllers.phone.set(true); await new Promise(function(resolve){setTimeout(resolve,50);});
       out.samples.push(sample("phone",document.querySelector(".phone-close"),document.querySelector(".psb-right")));
-      window.phone.set(false);
+      window.__loftControllers.phone.set(false);
 
-      await window.shareCard(); await new Promise(function(resolve){setTimeout(resolve,50);});
+      await window.__shareCard(); await new Promise(function(resolve){setTimeout(resolve,50);});
       var share=document.querySelector(".sharecard-box");
       out.samples.push(sample("sharecard",share.querySelector(".sharecard-x"),share.querySelector(".sharecard-img")));
       out.sharecard=box(share);

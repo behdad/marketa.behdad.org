@@ -53,7 +53,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         window.__entranceRoadtripDevStart();
@@ -120,9 +120,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           keptOffset: marketaMover.getAttribute("transform") === marketaTransform,
           didNotDrag: !marketa.classList.contains("dragging")
         };
-        window.setLang("cs");
+        window.__setLang("cs");
         report.head.czechTitle = marketaHead.getAttribute("title");
-        window.setLang("en");
+        window.__setLang("en");
 
         marketaHead.classList.remove("laughing");
         var bookPoint = centre(notebook);
@@ -137,11 +137,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           layout: notebookLayout()
         };
         document.querySelector(".entrance-roadtrip-notebook-close").click();
-        window.setLang("cs");
+        window.__setLang("cs");
         click(notebook);
         report.notebook.czechLayout = notebookLayout();
         document.querySelector(".entrance-roadtrip-notebook-close").click();
-        window.setLang("en");
+        window.__setLang("en");
 
         click(marketaHit);
         report.bodyClick = {

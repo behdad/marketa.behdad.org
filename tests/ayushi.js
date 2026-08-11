@@ -41,17 +41,17 @@ var harness = String.raw`<script>
             profile.relationship === "" && /Stand-up comedian in practice\./.test(profile.fun_fact)),
           JSON.stringify(profile || null));
 
-        window.setLang("en");
-        var en = window.castPersonCard("ayushi");
-        window.setLang("cs");
-        var cs = window.castPersonCard("ayushi");
-        window.setLang("en");
+        window.__setLang("en");
+        var en = window.__castPersonCard("ayushi");
+        window.__setLang("cs");
+        var cs = window.__castPersonCard("ayushi");
+        window.__setLang("en");
         check("the English direct-person card carries the supplied role and fun fact",
           /Ayushi/.test(en) && /diva/.test(en) && !/from India/.test(en) && /Stand-up comedian in practice\./.test(en), en);
         check("the Czech direct-person card mirrors all Ayushi copy",
           /Ayushi/.test(cs) && /diva/.test(cs) && !/z Indie/.test(cs) && /stand-up komička v zácviku\./.test(cs), cs);
 
-        window.goToStage("cuddly");
+        window.__goToStage("cuddly");
         document.getElementById("stage-cuddly").classList.remove("dusk");
         var cuddlyStarted = window.__cuddlyVisit("ayushi", true);
         await sleep(120);
@@ -68,7 +68,7 @@ var harness = String.raw`<script>
             cuddlyUse.getAttribute("xlink:href") === "#garden-ayushi-avatar")));
         window.__resetCuddlyVisitors();
 
-        window.garden.set(true);
+        await window.loft.garden.set(true);
         window.__duoArrive("ayushi");
         await sleep(150);
         var here = window.__whoIsHere("garden").filter(function (p) { return p.key === "ayushi"; })[0];
@@ -82,17 +82,17 @@ var harness = String.raw`<script>
         check("Ayushi's portrait drink maps to a cocktail",
           window.__partyDrinkPreference("Ayushi") === "cocktail");
 
-        window.goToStage("kitchen");
+        window.__goToStage("kitchen");
         var realAttended = window.__partyGuestAttended;
         var realCuddlyNow = window.__cuddlyVisitorsNow;
         window.__partyGuestAttended = function (name) { return name === "ayushi"; };
         window.__cuddlyVisitorsNow = function () { return [{ key: "ayushi" }]; };
-        window.couples(false);
-        var blockedBar = window.couples(true);
+        window.__loftControllers.couples(false);
+        var blockedBar = window.__loftControllers.couples(true);
         check("the bar one-room rule excludes a Cuddly visitor", blockedBar === null, JSON.stringify(blockedBar));
         window.__partyGuestAttended = realAttended;
         window.__cuddlyVisitorsNow = realCuddlyNow;
-        var barNow = window.couples("ayushi");
+        var barNow = window.__loftControllers.couples("ayushi");
         var barHere = window.__whoIsHere("kitchen").filter(function (p) { return p.key === "ayushi"; })[0];
         check("Ayushi joins the bar rotation as a solo appearance",
           JSON.stringify(barNow) === '["ayushi"]' &&
@@ -100,15 +100,15 @@ var harness = String.raw`<script>
             document.querySelectorAll(".bc-ayushi .bc-person").length === 1 && !!barHere && barHere.roleKey === "role_diva",
           JSON.stringify({ now: barNow, here: barHere && barHere.key }));
 
-        window.goToStage("office");
+        window.__goToStage("office");
         window.__partyGuestAttended = function (name) { return name === "ayushi"; };
         window.__cuddlyVisitorsNow = function () { return [{ key: "ayushi" }]; };
-        window.officefolks(false);
-        var blockedOffice = window.officefolks(true);
+        window.__loftControllers.officefolks(false);
+        var blockedOffice = window.__loftControllers.officefolks(true);
         check("the office one-room rule excludes a Cuddly visitor", blockedOffice === null, JSON.stringify(blockedOffice));
         window.__partyGuestAttended = realAttended;
         window.__cuddlyVisitorsNow = realCuddlyNow;
-        var officeNow = window.officefolks("ayushi");
+        var officeNow = window.__loftControllers.officefolks("ayushi");
         var officeHere = window.__whoIsHere("office").filter(function (p) { return p.key === "ayushi"; })[0];
         check("Ayushi joins the office rotation as a solo appearance",
           JSON.stringify(officeNow) === '["ayushi"]' &&
@@ -117,15 +117,15 @@ var harness = String.raw`<script>
           JSON.stringify({ now: officeNow, here: officeHere && officeHere.key }));
 
         if (window.__endBdCakeCutting) window.__endBdCakeCutting();
-        window.birthday("ayushi");
+        window.__loftControllers.birthday("ayushi");
         await sleep(550);
         var strip = document.getElementById("loft-game-strip");
         var portrait = window.__bdPortrait({ who: "ayushi", type: "hat" });
         check("Dec 10 birthday routes Ayushi to her garden cake",
-          strip.classList.contains("bd-ayushi") && window.currentStageName === "garden" &&
+          strip.classList.contains("bd-ayushi") && window.__currentStageName === "garden" &&
             !!window.__bdCakeOn && fig.classList.contains("arrived") && fig.classList.contains("bd-cutter") &&
             getComputedStyle(avatar.querySelector(".bd-hat-ayushi")).visibility === "visible",
-          JSON.stringify({ classes: strip.className, room: window.currentStageName, cake: !!window.__bdCakeOn, fig: fig.getAttribute("class") }));
+          JSON.stringify({ classes: strip.className, room: window.__currentStageName, cake: !!window.__bdCakeOn, fig: fig.getAttribute("class") }));
         var portraitHost = document.createElement("div");
         portraitHost.innerHTML = portrait;
         check("Ayushi has a glasses-and-bun birthday portrait",

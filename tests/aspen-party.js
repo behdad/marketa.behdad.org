@@ -28,7 +28,7 @@ var harness = String.raw`<script>
   var report = { errs: window.__errs, steps: {} };
   function click(el, detail) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: detail == null ? 1 : detail })); }
   function dblclick(el) { el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true })); }
-  window.goToStage("garden");
+  window.__goToStage("garden");
   window.__setGardenParty(true, false);
   if (window.__summonGuests) window.__summonGuests();
   var stage = document.getElementById("stage-garden");

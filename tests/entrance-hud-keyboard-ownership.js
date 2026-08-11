@@ -27,7 +27,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function snap(extra) {
     var room = document.getElementById("entrance-room");
     return Object.assign({
-      room: window.currentStageName,
+      room: window.__currentStageName,
       entranceOpen: !!window.__entranceRoomOpen,
       lowerSlide: copy(window.__lowerRoomNavigationState()),
       hudClass: room.classList.contains("drive-hud-visible"),
@@ -42,7 +42,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         value: function () { return true; }, configurable: true
       });
       window.__unlockAllRooms();
-      window.goToStage("garden");
+      window.__goToStage("garden");
       window.__openGardenPrince();
       await sleep(50);
 

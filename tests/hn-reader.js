@@ -24,7 +24,7 @@ var HARNESS = [
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},300);',
   'async function run(){',
-  ' window.phone.open("hn");await sleep(180);',
+  ' window.__loftControllers.phone.open("hn");await sleep(180);',
   ' var rows=document.querySelectorAll(".pmh-item");S("list",{rows:rows.length,opened:opened.length,topCalls:topCalls,titles:[].map.call(rows,function(x){return x.querySelector(".pmh-t").textContent;})});',
   ' rows[0].click();await sleep(180);var ext=document.querySelector(".pm-hn");',
   ' S("external",{detail:!!ext.getAttribute("data-story-id"),title:ext.querySelector(".pmh-detail-title").textContent,source:ext.querySelector(".pmh-source").textContent,landing:!!ext.querySelector(".pmh-landing"),story:!!ext.querySelector(".pmh-story"),comments:[].map.call(ext.querySelectorAll(".pmh-comment .pmh-rich"),function(x){return x.textContent.trim();}),depths:[].map.call(ext.querySelectorAll(".pmh-comment"),function(x){return x.style.getPropertyValue("--depth");}),opened:opened.length,itemCalls:itemCalls.slice(),injected:!!window.__hnInjected,img:!!ext.querySelector(".pmh-comment img")});',
@@ -32,9 +32,9 @@ var HARNESS = [
   ' document.querySelector(".pnav-back").click();await sleep(40);S("back",{rows:document.querySelectorAll(".pmh-item").length,app:document.querySelector(".phone-shell").classList.contains("pm-app"),topCalls:topCalls});',
   ' document.querySelectorAll(".pmh-item")[1].click();await sleep(100);var self=document.querySelector(".pm-hn"),safe=self.querySelector(".pmh-story a");',
   ' S("self",{landing:!!self.querySelector(".pmh-landing"),story:self.querySelector(".pmh-story .pmh-rich").textContent.trim(),links:self.querySelectorAll(".pmh-story a").length,safeHref:safe&&safe.getAttribute("href"),script:!!self.querySelector("script"),injected:!!window.__hnInjected,comments:self.querySelectorAll(".pmh-comment").length});',
-  ' window.__closePhoneModal(true);await sleep(260);window.phone.open("hn");await sleep(80);S("resume",{detail:document.querySelector(".pm-hn").getAttribute("data-story-id"),topCalls:topCalls});',
+  ' window.__closePhoneModal(true);await sleep(260);window.__loftControllers.phone.open("hn");await sleep(80);S("resume",{detail:document.querySelector(".pm-hn").getAttribute("data-story-id"),topCalls:topCalls});',
   ' document.querySelector(".phone-shell").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));await sleep(40);S("escapeBack",{rows:document.querySelectorAll(".pmh-item").length,open:!!document.querySelector(".phone-backdrop.show")});',
-  ' window.__closePhoneModal(true);await sleep(260);window.__resetPhoneApps();window.phone.open("hn");await sleep(160);S("reset",{detail:document.querySelector(".pm-hn").getAttribute("data-story-id"),rows:document.querySelectorAll(".pmh-item").length,topCalls:topCalls});',
+  ' window.__closePhoneModal(true);await sleep(260);window.__resetPhoneApps();window.__loftControllers.phone.open("hn");await sleep(160);S("reset",{detail:document.querySelector(".pm-hn").getAttribute("data-story-id"),rows:document.querySelectorAll(".pmh-item").length,topCalls:topCalls});',
   '}',
   '})();</script>'
 ].join("\n");

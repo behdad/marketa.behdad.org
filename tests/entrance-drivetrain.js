@@ -43,9 +43,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         Object.defineProperty(document, "hasFocus", {
           value: function () { return attended; }, configurable: true
         });
-        window.getSfxCtx = function () { return null; };
+        window.__getSfxCtx = function () { return null; };
         window.__unlockAllRooms();
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         window.__entranceDriveTransmissionMode("manual", false);

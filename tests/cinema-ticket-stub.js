@@ -11,13 +11,13 @@ var INTERACTION_HARNESS = [
   'var report={errors:window.__errs,steps:{}};function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function visible(el){return getComputedStyle(el).display!=="none";}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  'window.__endAttract();window.__unlockAllRooms();window.goToStage("cuddly");await sleep(80);',
+  'window.__endAttract();window.__unlockAllRooms();window.__goToStage("cuddly");await sleep(80);',
   'var ticket=document.getElementById("cuddly-cinema-ticket"),intact=ticket.querySelector(".cinema-ticket-intact"),used=ticket.querySelector(".cinema-ticket-used");',
-  'report.steps.before={room:window.currentStageName,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:visible(intact),used:visible(used),tabindex:ticket.getAttribute("tabindex")};',
+  'report.steps.before={room:window.__currentStageName,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:visible(intact),used:visible(used),tabindex:ticket.getAttribute("tabindex")};',
   'ticket.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(520);',
-  'var saved=JSON.parse(localStorage.getItem("loftCheckpoint:v1")||"null");report.steps.opened={room:window.currentStageName,open:window.__cinemaRoomState().open,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:visible(intact),used:visible(used),savedSeen:!!(saved&&saved.progress&&saved.progress.seenRooms&&saved.progress.seenRooms.indexOf("cinema")!==-1)};',
+  'var saved=JSON.parse(localStorage.getItem("loftCheckpoint:v1")||"null");report.steps.opened={room:window.__currentStageName,open:window.__cinemaRoomState().open,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:visible(intact),used:visible(used),savedSeen:!!(saved&&saved.progress&&saved.progress.seenRooms&&saved.progress.seenRooms.indexOf("cinema")!==-1)};',
   'window.__closeCinemaRoom();await sleep(500);var stub=ticket.querySelector(".cinema-ticket-left-stub").getBoundingClientRect(),main=ticket.querySelector(".cinema-ticket-main").getBoundingClientRect(),hit=ticket.querySelector(":scope > .cinema-ticket-wobble > rect");report.steps.pair={stub:[stub.left,stub.top,stub.right,stub.bottom],main:[main.left,main.top,main.right,main.bottom],separated:stub.right<main.left,hit:[hit.getAttribute("x"),hit.getAttribute("y"),hit.getAttribute("width"),hit.getAttribute("height")]};',
-  'await window.__resetLoftGame("instant");report.steps.reset={room:window.currentStageName,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:visible(intact),used:visible(used),entry:!!document.getElementById("click-me-overlay")};',
+  'await window.__resetLoftGame("instant");report.steps.reset={room:window.__currentStageName,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:visible(intact),used:visible(used),entry:!!document.getElementById("click-me-overlay")};',
   '}catch(error){window.__errs.push("harness: "+String(error&&error.stack||error));}',
   'document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -28,7 +28,7 @@ var RECOVERY_HARNESS = [
   '<script>(function(){',
   'var saved={version:1,savedAt:Date.now()-120000,progress:{room:"cuddly",lowerRoom:"cinema",maxUnlocked:4,solvedRooms:["kitchen","garden"],seenRooms:["kitchen","garden","cuddly","cinema"],phase2:false,party:false,daylight:true,bbq:false},puzzle:{},phone:null,album:null,systems:{}};',
   'if(!sessionStorage.getItem("cinema-ticket-stub-seeded")){sessionStorage.setItem("cinema-ticket-stub-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
-  'window.addEventListener("load",function(){setTimeout(function(){var gate=document.getElementById("loft-recovery-gate");if(gate)gate.querySelector(".loft-recovery-btn.primary").click();setTimeout(function(){var ticket=document.getElementById("cuddly-cinema-ticket");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,gate:!!gate,room:window.currentStageName,open:window.__cinemaRoomState().open,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:getComputedStyle(ticket.querySelector(".cinema-ticket-intact")).display!=="none",used:getComputedStyle(ticket.querySelector(".cinema-ticket-used")).display!=="none"});},280);},100);});',
+  'window.addEventListener("load",function(){setTimeout(function(){var gate=document.getElementById("loft-recovery-gate");if(gate)gate.querySelector(".loft-recovery-btn.primary").click();setTimeout(function(){var ticket=document.getElementById("cuddly-cinema-ticket");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,gate:!!gate,room:window.__currentStageName,open:window.__cinemaRoomState().open,seen:window.__roomSeen("cinema"),usedClass:ticket.classList.contains("ticket-used"),intact:getComputedStyle(ticket.querySelector(".cinema-ticket-intact")).display!=="none",used:getComputedStyle(ticket.querySelector(".cinema-ticket-used")).display!=="none"});},280);},100);});',
   '})();</script>'
 ].join("\n");
 

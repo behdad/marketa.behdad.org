@@ -7,7 +7,7 @@ var harness = String.raw`<script>
   var report = { errors: [], tries: [], additions: 0 };
   addEventListener("load", function () { setTimeout(function () {
     try {
-      goToStage("garden");
+      window.__goToStage("garden");
       Math.random = function () { return 0.999999; }; // the former click-chance path always rejected this value
       var now = 100000;
       Date.now = function () { return now; };

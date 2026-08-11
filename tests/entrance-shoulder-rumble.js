@@ -8,7 +8,7 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:window.__errs||[]};function snap(){var svg=document.getElementById("entrance-drive-hud-svg"),car=document.getElementById("entrance-porsche");return {state:window.__entranceRoomState().drive,active:svg.classList.contains("roadtrip-shoulder-rumble"),amplitude:parseFloat(svg.style.getPropertyValue("--roadtrip-rumble-y")),period:parseFloat(svg.style.getPropertyValue("--roadtrip-rumble-period")),carVibrating:car.classList.contains("engine-idling"),carVibeX:parseFloat(car.style.getPropertyValue("--porsche-vibe-x"))};}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
-  'window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();window.__entranceRoadtripDevStart();window.__entranceRoadtripSetRoute("banff",0);window.__entranceRoadtripSetLane(2.14);',
+  'window.__unlockAllRooms();window.__goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();window.__entranceRoadtripDevStart();window.__entranceRoadtripSetRoute("banff",0);window.__entranceRoadtripSetLane(2.14);',
   'window.__entranceDriveSetMotion(0,0);window.__entranceDriveStep(20);report.stopped=snap();',
   'window.__entranceDriveControl("throttle",true);window.__entranceDriveStep(1000);report.highRpm=snap();window.__entranceDriveControl("throttle",false);',
   'window.__entranceDriveSetMotion(15,1);window.__entranceDriveStep(20);report.slow=snap();',

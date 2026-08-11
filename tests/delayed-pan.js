@@ -12,9 +12,9 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' S("hook",typeof window.__finishSolveAdvance);',
-  ' window.goToStage("office");window.__finishSolveAdvance("kitchen","garden");S("stale",{room:window.currentStageName,unlocked:window.__maxUnlocked()});',
-  ' window.goToStage("kitchen");var cup=document.getElementById("kitchen-shotcup");cup.classList.add("filled");cup.dispatchEvent(new MouseEvent("click",{bubbles:true}));window.goToStage("office");await sleep(780);S("espresso",{room:window.currentStageName,unlocked:window.__maxUnlocked()});',
-  ' window.__setSolvedRooms([]);window.goToStage("office");window.__finishSolveAdvance("office","balcony",250);window.goToStage("garden");window.goToStage("office");await sleep(320);S("reentry",{room:window.currentStageName,solved:window.__roomSolved("office")});',
+  ' window.__goToStage("office");window.__finishSolveAdvance("kitchen","garden");S("stale",{room:window.__currentStageName,unlocked:window.__maxUnlocked()});',
+  ' window.__goToStage("kitchen");var cup=document.getElementById("kitchen-shotcup");cup.classList.add("filled");cup.dispatchEvent(new MouseEvent("click",{bubbles:true}));window.__goToStage("office");await sleep(780);S("espresso",{room:window.__currentStageName,unlocked:window.__maxUnlocked()});',
+  ' window.__setSolvedRooms([]);window.__goToStage("office");window.__finishSolveAdvance("office","balcony",250);window.__goToStage("garden");window.__goToStage("office");await sleep(320);S("reentry",{room:window.__currentStageName,solved:window.__roomSolved("office")});',
   '}',
   '})();</script>'
 ].join("\n");

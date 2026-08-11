@@ -21,9 +21,9 @@ var HARNESS = String.raw`<script>
   }
 
   window.__setPartyMode(true, true);
-  window.goToStage("garden");
-  var realPiano = window.piano, pianoCalls = 0;
-  window.piano = function () {
+  window.__goToStage("garden");
+  var realPiano = window.__loftControllers.piano, pianoCalls = 0;
+  window.__loftControllers.piano = function () {
     pianoCalls++;
     return realPiano.apply(window, arguments);
   };
@@ -33,9 +33,9 @@ var HARNESS = String.raw`<script>
   var delivered = window.__deliverPhoneMessage("hannah_piano");
   Math.random = realRandom;
   var enRow = window.__chatMessagesKnowledge().filter(function (m) { return m.id === "hannah_piano"; })[0];
-  window.setLang("cs");
+  window.__setLang("cs");
   var csRow = window.__chatMessagesKnowledge().filter(function (m) { return m.id === "hannah_piano"; })[0];
-  window.setLang("en");
+  window.__setLang("en");
   window.__runMsgAction("hannah_piano");
   setTimeout(function () {
     var piano = document.getElementById("cuddly-projector-piano");
@@ -55,10 +55,10 @@ var HARNESS = String.raw`<script>
       window.__partyTextChoices && window.__partyTextChoices().indexOf("hannah_piano") !== -1);
     check("Hannah's message uses the canonical piano transition", pianoCalls === 1, String(pianoCalls));
     check("Hannah's message opens the cuddly piano channel",
-      window.currentStageName === "cuddly" &&
+      window.__currentStageName === "cuddly" &&
       window.__cuddlyProjector &&
       window.__cuddlyProjector.channel() === "stars",
-      window.currentStageName + "/" + (window.__cuddlyProjector && window.__cuddlyProjector.channel()));
+      window.__currentStageName + "/" + (window.__cuddlyProjector && window.__cuddlyProjector.channel()));
     check("piano foreground ducks the party bed", window.__partyDuck === 0.06, String(window.__partyDuck));
     check("night-sky channel reveals a non-Tab one-octave keybed",
       piano && screen.classList.contains("chan-stars") &&
@@ -76,9 +76,9 @@ var HARNESS = String.raw`<script>
     // Pause only the backing score: the live keys stay available and polyphonic.
     window.__setGardenParty(false, false);
     var roomLocalStart = window.__starsPlaying();
-    window.goToStage("garden");
+    window.__goToStage("garden");
     var roomLocalAway = !window.__starsPlaying();
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     var roomLocalReturn = window.__starsPlaying();
     check("the night-sky score stops outside Cuddly and resumes on return",
       roomLocalStart && roomLocalAway && roomLocalReturn,
@@ -127,12 +127,12 @@ var HARNESS = String.raw`<script>
 
     // A long room fade must keep each score's look-ahead scheduler alive. Otherwise the
     // queued notes run out in ~1–2s even though the gain claims to be fading for three.
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     ["coffee", "stars", "workout", "aqua", "totoro"].forEach(function (channel) {
       window.__cuddlyProjector.set(channel);
-      window.goToStage("garden");
+      window.__goToStage("garden");
       var away = window.__projectorRoomFadeState()[channel];
-      window.goToStage("cuddly");
+      window.__goToStage("cuddly");
       var returned = window.__projectorRoomFadeState()[channel];
       check(channel + " score feeds the full room fade and revives on return",
         away.fading && away.scheduled && !returned.fading && returned.scheduled,

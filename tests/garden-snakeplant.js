@@ -7,7 +7,7 @@ var HARNESS = String.raw`<script>
 (function () {
   var report = { errors: [] };
   addEventListener("load", function () { setTimeout(async function () {
-    goToStage("garden");
+    window.__goToStage("garden");
     var plant = document.getElementById("garden-snakeplant");
     var hit = plant && plant.querySelector('rect[fill="transparent"]');
     var foliage = plant && plant.querySelector(':scope > g[pointer-events="none"]');

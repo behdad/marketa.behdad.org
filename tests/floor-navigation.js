@@ -28,7 +28,7 @@ var harness = String.raw`<script>
       hasTitle: button.hasAttribute("title"),
       bottomNavZ: parseInt(getComputedStyle(document.getElementById("hunt-bottom-nav")).zIndex, 10),
       lowerRoomZ: parseInt(getComputedStyle(document.getElementById("lower-room-track")).zIndex, 10),
-      room: window.currentStageName,
+      room: window.__currentStageName,
       max: window.__maxUnlocked(),
       bathroom: !!window.__bathroomRoomOpen,
       bathroomHidden: document.getElementById("bathroom-room").hidden,
@@ -55,7 +55,7 @@ var harness = String.raw`<script>
   async function run() {
     window.__endAttract();
     window.__resetLowerRoomDiscovery();
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     check("fresh upstairs chrome shows a disabled Down until discovery",
       !floorState().hidden && floorState().disabled && !document.getElementById("hunt-dollhouse-btn").hidden, floorState());
     key("ArrowDown");
@@ -165,7 +165,7 @@ var harness = String.raw`<script>
     window.__closeMonitorPrince();
     await sleep(760);
     window.__setMaxUnlocked(0);
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     window.__openBathroomRoom();
     key("ArrowRight");
     await sleep(40);
@@ -182,7 +182,7 @@ var harness = String.raw`<script>
     window.__closeMonitorPrince();
     await sleep(760);
     window.__unlockAllRooms();
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     window.__toggleEntrancePorscheEngine();

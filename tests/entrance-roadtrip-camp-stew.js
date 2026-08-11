@@ -71,7 +71,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     setTimeout(function () {
       try {
         window.__openEntranceRoom();
@@ -116,7 +116,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               lambPieces: game.querySelectorAll('[data-stew-pot-item="lamb"] .entrance-roadtrip-stew-lamb-piece').length,
               sceneLambPieces: pot.querySelectorAll('[data-stew-scene-item="lamb"] .entrance-roadtrip-stew-lamb-piece').length
             };
-            window.setLang("cs");
+            window.__setLang("cs");
             report.builder.czech = {
               headings: Array.from(game.querySelectorAll('[data-i="entrance_roadtrip_stew_protein"],[data-i="entrance_roadtrip_stew_starch"]')).map(function (node) { return node.textContent; }),
               onion: document.querySelector('[data-i="entrance_roadtrip_stew_onion"]').textContent,
@@ -127,7 +127,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               mushrooms: document.querySelector('[data-i="entrance_roadtrip_stew_mushrooms"]').textContent,
               coriander: document.querySelector('[data-i="entrance_roadtrip_stew_coriander"]').textContent
             };
-            window.setLang("en");
+            window.__setLang("en");
             choose("chicken"); choose("beef");
             var proteinSwap = stew();
             choose("barley"); choose("pasta");

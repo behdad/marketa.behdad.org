@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Share-card generator smoke test (rsvp.html). Loads the game headless, then drives
-// window.shareCard() for three occasions — the default day, a forced SEASON, and a
+// window.__shareCard() for three occasions — the default day, a forced SEASON, and a
 // forced BIRTHDAY — asserting each yields a non-empty PNG data-URL, opens the preview
 // modal, wires a Download href, exposes Email only for birthdays, and badges the right
 // occasion (season key vs. person).
@@ -23,7 +23,7 @@ var HARNESS = [
   "    try { if (setup) setup(); } catch (e) { report.errors.push('setup ' + name + ': ' + e); }",
   "    await sleep(60);",
   "    var url = '';",
-  "    try { url = await window.shareCard(); } catch (e) { report.errors.push('shareCard ' + name + ': ' + (e && e.stack || e)); }",
+  "    try { url = await window.__shareCard(); } catch (e) { report.errors.push('shareCard ' + name + ': ' + (e && e.stack || e)); }",
   "    await sleep(400);", // let toBlob() land the object-url on the Download anchor
   "    var modal = document.getElementById('sharecard-modal');",
   "    var dl = modal && modal.querySelector('.sharecard-dl');",
@@ -46,12 +46,12 @@ var HARNESS = [
   "  window.addEventListener('load', function () {",
   "    setTimeout(function () {",
   "      make('default', null)",
-  "        .then(function () { return make('season', function () { window.season('spooky'); }); })",
-  "        .then(function () { return make('birthday', function () { window.birthday('jay'); }); })",
+  "        .then(function () { return make('season', function () { window.__loftControllers.season('spooky'); }); })",
+  "        .then(function () { return make('birthday', function () { window.__loftControllers.birthday('jay'); }); })",
   "        .then(async function () {",
   "          var prior = window.__summonCurrentFestivity;",
   "          window.__summonCurrentFestivity = function () { report.autoBirthdayActivations++; return true; };",
-  "          await window.shareCard(null, { activateFestivityOnClose: true });",
+  "          await window.__shareCard(null, { activateFestivityOnClose: true });",
   "          window.__shareCloseModal();",
   "          await sleep(120);",
   "          window.__summonCurrentFestivity = prior;",

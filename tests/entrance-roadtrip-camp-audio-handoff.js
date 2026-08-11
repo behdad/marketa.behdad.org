@@ -21,7 +21,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       configurable: true, value: function () { return true; }
     });
     window.__setOutdoorTemp(30);
-    window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+    window.__unlockAllRooms(); window.__goToStage("balcony"); window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
     window.__entranceRoadtripDevStart(); window.__entranceRoadtripSetRoute("abraham", 2);

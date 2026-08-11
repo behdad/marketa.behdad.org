@@ -4,7 +4,7 @@
 var lib = require("./lib");
 var harness = String.raw`<script>
 (function () {
-  window.goToStage("garden");
+  window.__goToStage("garden");
   var bug = document.getElementById("garden-ladybug");
   function tap(detail) {
     bug.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: detail }));
@@ -30,7 +30,7 @@ var harness = String.raw`<script>
   report.afterThree = window.__insectVisionActive();
   window.__insectVision(false);
   report.cleared = !window.__insectVisionActive() && !overlay.classList.contains("show");
-  window.goToStage("office");
+  window.__goToStage("office");
   window.__startTrip("acid");
   var acidWaits = 0;
   function reportAcidVision() {

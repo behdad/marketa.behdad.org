@@ -15,7 +15,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "dungeon", "cinema", "bedroom", "entrance"]);
     window.__setSecondRound(true, { releaseHeld: false });
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(

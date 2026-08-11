@@ -12,7 +12,7 @@ var HARNESS = [
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
   ' document.getElementById("loft-game-strip").style.transition="none";["bathroom-room","cinema-room","bedroom-room","entrance-room","prince-basement"].forEach(function(id){var el=document.getElementById(id);if(el)el.style.transition="none";});',
   ' var day=0,next=0,trip=0;window.__toggleDayNight=function(){day++;};window.__skipCurrentMusic=function(){next++;};window.__nextTrip=function(){trip++;};',
-  ' async function probe(name,stage,open,close){window.goToStage(stage);await sleep(30);open();await sleep(40);var before=[day,next,trip];key("d");key("n");key("t");await sleep(20);report.rooms[name]={before:before,after:[day,next,trip]};close();await sleep(30);}',
+  ' async function probe(name,stage,open,close){window.__goToStage(stage);await sleep(30);open();await sleep(40);var before=[day,next,trip];key("d");key("n");key("t");await sleep(20);report.rooms[name]={before:before,after:[day,next,trip]};close();await sleep(30);}',
   ' await probe("bathroom","kitchen",window.__openBathroomRoom,window.__closeBathroomRoom);',
   ' await probe("dungeon","garden",window.__openGardenPrince,window.__closeMonitorPrince);',
   ' await probe("cinema","cuddly",window.__openCinemaRoom,window.__closeCinemaRoom);',

@@ -20,7 +20,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   }
   addEventListener("load", function () { setTimeout(function () {
     try {
-      goToStage("garden");
+      window.__goToStage("garden");
       var definitions = {
         "garden-monstera": {
           lift: "garden-monstera-lift", hit: ["215", "185", "105", "145"],
@@ -81,7 +81,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       };
       var beforeState = window.__plantWaterState();
       var accepted = ["garden-monstera", "garden-peacelily"].map(function (id) {
-        return window.waterSpecificPlant(id, function () { return true; }, "reusable");
+        return window.__waterSpecificPlant(id, function () { return true; }, "reusable");
       });
       var afterState = window.__plantWaterState();
       report.water = {

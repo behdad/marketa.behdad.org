@@ -284,8 +284,8 @@ under a transient, while scope exit cancels scoped transient ownership.
 Use `__captionBase`, `__captionOverlay`, `__captionExclusive`, and
 `__cancelCaption(tokenOrOwner)`. `setCaption` and `__setLowerRoomCaption` remain stable-base helpers;
 `__captureCaptionPublisher()` is the canonical delayed-base helper because it captures both viewport
-scope and the room-visit generation. Keyed claims rerender on language changes; the `caption()`
-console toy is literal-only, including when legacy callers pass `{html:true}`. Intro, recovery, and
+scope and the room-visit generation. Keyed claims rerender on language changes;
+`loft.caption.show()` is literal-only. Intro, recovery, and
 Trailer are exclusive; Road Trip story beats outrank score/collision feedback; police and Camping
 terminal state reject incidental copy. Checkpoint restoration batches caption derivation and paints
 the resulting semantic base once.
@@ -328,7 +328,7 @@ source through `loadPackagesFromImports()` before evaluation, so ordinary import
 unbundled official wheel from the pinned v314.0.2 package CDN. Keep `indexURL` local, keep
 `packageBaseUrl` version-pinned, and do not point automatic import loading at unversioned PyPI;
 explicit `micropip` remains the separate path for compatible pure-Python PyPI packages.
-The typed `app.python.status()` query reports the runtime owner's real stopped/loading/ready/failed state;
+The typed `loft.app.python.status()` query reports the runtime owner's real stopped/loading/ready/failed state;
 use it when a public script must wait for the visible CPython prompt rather than treating app-open
 as interpreter readiness. A load-generation guard prevents a reset or Kill during initialization
 from letting a stale Pyodide promise resurrect the discarded runtime.
@@ -353,14 +353,19 @@ addition to the established party, media, apps, calls, weather, minigames, and a
 ids stay canonical in results. The same registry mechanically creates discoverable JavaScript namespaces:
 `loft.kitchen`, `loft.cuddly.chest`, `loft.roadtrip`, and so on. `loft.bar === loft.kitchen` and
 `loft.party === loft.garden`; aliases never create duplicate capabilities or noncanonical results.
-`help(loft.kitchen)` and `help(loft.cuddly.chest)` resolve by registry object identity, not object
-stringification. Bare `help` (and `help(loft)`) lists only immediate top-level namespaces;
+`loft.help(loft.kitchen)` and `loft.help(loft.cuddly.chest)` resolve by registry object identity, not
+object stringification. `loft.help()` lists only immediate top-level namespaces;
 namespace help drills down one level at a time, and callable help prints one exact typed signature.
 The transport methods keep their names under `loft.api`; non-conflicting registered API leaves such
 as `loft.api.info()` are installed and documented by the same namespace builder.
 Its groups, namespaces, and capability rows use one fixed code-unit comparator, keeping JavaScript
 and Python help identical across browser locales.
-Legacy console prose remains available only through direct string lookup, such as `help("dance")`.
+Calendar birthdays live under `loft.calendar.birthday.*`, authored season previews under
+`loft.environment.season.*`, and the occasion-card preview under `loft.share.card.open()`.
+Calendar date/time previews live under `loft.calendar.date.*` and `loft.calendar.time.*`; their
+status queries return the effective values while their reset actions restore automatic timekeeping.
+JavaScript-native helpers that deliberately return raw values rather than transport envelopes stay
+under `loft.util`, `loft.typography`, `loft.fonts`, and `loft.presentation.svg`.
 `capabilities()` remains the complete structured machine discovery surface. Every row carries both
 the compatibility `available` boolean and an `availability` object. An unavailable row or
 `describe(id, args)` result includes the exact current `reason` and only includes a structured
@@ -399,25 +404,25 @@ Successful owner transitions call `__loftStateChanged`, which increments `stateV
 `loft:statechange`. If an API action changes the game but subscribers do not hear about it, fix the
 owner transition; do not make the API mutate a DOM projection directly.
 
-The in-game JavaScript console is a separate human-facing interface. Its command roster
-`CONSOLE_CMDS` and help table `CONSOLE_HELP` must remain in parity. Internal `__…` hooks may change as
-the implementation changes; do not document them as a compatibility promise to external clients.
-Boolean console controls are frozen command objects: `rain.status()` reads, while
-`rain.set(true|false)` strictly sets and returns the resulting state. Device commands add named
-operations such as `phone.open("messages")`; numeric variants likewise use named methods, such as
-`wildfires.intensity(0.5)` and `aurora.intensity(7)`. The former callable boolean syntax is not
-supported by a compatibility shim.
+The in-game console is ordinary JavaScript over the same public `loft.*` tree. It has no command
+roster, prose alias table, or compatibility globals; Tab completion walks the live Loft object and
+Code autocomplete combines that tree with the typed manifest. `window.loft` is the sole app-authored
+public Window root. Split-script data and implementation/test integration may use descriptive
+`window.__…` names, but those are private and may change without compatibility notice. The runtime
+`tests/global-surface.js` snapshot distinguishes browser baseline and verified named-element globals
+from app additions, then fails on any non-`loft`, non-`__…` app-owned property.
 
 `__chatApiManifest()` is the compact machine boundary for JavaScript Code assistance: typed
-capability rows plus a short primitives/signatures list. Do not add `CONSOLE_HELP` or the human
-command index to that payload. Code's model treats the manifest as authoritative; its examples and
-generated drafts use the `loft.*` namespaces and completion metadata.
+capability rows plus a short primitives/signatures list. Do not add a parallel human command index
+to that payload. Code's model treats the manifest as authoritative; its examples and generated
+drafts use the `loft.*` namespaces and completion metadata.
 
 Code's canonical virtual-file descriptors live in `code-snippets/manifest.js`; each pairs the
 visitor-facing `.js` / `.py` filename (which determines language) with its one same-origin source
 path. IONOS executes raw `.py` extension components as CGI, so every physical and requested source
 uses a handler-safe `*-js.txt` / `*-py.txt` transport while Code still presents the conventional
-filename. `tests/check.js` keeps every descriptor exact, unique, present, and free of duplicate or
+filename. Each descriptor carries the exact content token Code appends to its source fetch.
+`tests/check.js` keeps every descriptor and token exact, unique, present, and free of duplicate or
 raw `.js` / `.py` source files, and locks the content-versioned manifest load.
 The sidebar always puts the unsaved buffer first, then sorts canonical and visitor-created basenames
 only while rendering. Unsaved and untouched canonical filenames are italic; edited canonical and
@@ -461,10 +466,10 @@ The bridge recursively converts Python `None` to JavaScript `null`—Pyodide oth
 API results raise `loft.LoftError` when read or awaited. The module calls only discovered typed ids;
 it does not expose arbitrary JavaScript evaluation or private `window.__…` hooks.
 
-Importing `loft` installs a narrow `builtins.help` adapter: no-argument help and `_Namespace`
-targets print the same recursive `window.help` text as JavaScript, while every non-Loft target
-delegates to Python's original helper. The adapter carries its original helper through module reloads
-so a Python restart, reimport, or refresh cannot stack wrappers.
+The module leaves Python builtins untouched. `loft.help()` and `loft.help(loft.weather)` print the
+same recursive text as JavaScript, while ordinary `help(str)` keeps Python's native behavior. Native
+font and graphics helpers also stay under the module root (`loft.fonts.*` and
+`loft.presentation.svg.*`); the REPL receives no bare compatibility commands.
 
 Keep the Python Code-assistant prompt compact. It describes `import loft` and a few representative
 forms while the runtime manifest supplies discovery; do not send the large human console help table

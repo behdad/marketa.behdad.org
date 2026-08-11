@@ -25,33 +25,33 @@ var harness = String.raw`<script>
     var lower = ["bathroom", "dungeon", "cinema", "bedroom", "entrance"];
     var lowerKeys = ["6", "7", "8", "9", "0"];
     for (var i = 0; i < upper.length; i++) {
-      window.goToStage("kitchen");
+      window.__goToStage("kitchen");
       key(lowerKeys[i]);
       await sleep(60);
       check(lowerKeys[i] + " opens " + lower[i],
-        window.currentStageName === upper[i] && lowerId() === lower[i],
-        window.currentStageName + "/" + lowerId());
+        window.__currentStageName === upper[i] && lowerId() === lower[i],
+        window.__currentStageName + "/" + lowerId());
       key("Escape");
       await sleep(20);
       var afterEscape = lowerId();
       key("Backspace");
       await sleep(20);
       check("bare back keys keep " + lower[i] + " open",
-        window.currentStageName === upper[i] && afterEscape === lower[i] && lowerId() === lower[i],
-        window.currentStageName + "/" + afterEscape + "/" + lowerId());
+        window.__currentStageName === upper[i] && afterEscape === lower[i] && lowerId() === lower[i],
+        window.__currentStageName + "/" + afterEscape + "/" + lowerId());
       key(String(i + 1));
       await sleep(800);
       check(String(i + 1) + " returns to " + upper[i] + " upstairs",
-        window.currentStageName === upper[i] && lowerId() === null,
-        window.currentStageName + "/" + lowerId());
+        window.__currentStageName === upper[i] && lowerId() === null,
+        window.__currentStageName + "/" + lowerId());
     }
     key("0");
     await sleep(60);
     key("6");
     await sleep(800);
     check("6–0 navigate directly along the lower floor",
-      window.currentStageName === "kitchen" && lowerId() === "bathroom",
-      window.currentStageName + "/" + lowerId());
+      window.__currentStageName === "kitchen" && lowerId() === "bathroom",
+      window.__currentStageName + "/" + lowerId());
     key("?");
     await sleep(30);
     var english = document.querySelector(".kbd-dialog");
@@ -60,7 +60,7 @@ var harness = String.raw`<script>
       english.textContent.indexOf("downstairs room") !== -1, english && english.textContent);
     key("?");
     await sleep(280);
-    setLang("cs");
+    window.__setLang("cs");
     key("?");
     await sleep(30);
     var czech = document.querySelector(".kbd-dialog");
@@ -69,7 +69,7 @@ var harness = String.raw`<script>
       czech.textContent.indexOf("místnost dole") !== -1, czech && czech.textContent);
     key("?");
     await sleep(280);
-    setLang("en");
+    window.__setLang("en");
     key("5");
     await sleep(60);
     window.__openEntranceRoom();
@@ -88,7 +88,7 @@ var harness = String.raw`<script>
     var returnedState = window.__entranceRoomState();
     var returned = returnedState.drive.roadtrip;
     check("0 restores the exact parked Entrance state without resuming Road Trip",
-      window.currentStageName === "balcony" && window.__entranceRoomOpen &&
+      window.__currentStageName === "balcony" && window.__entranceRoomOpen &&
       beforeDetour.active && !parked.active && parked.paused && !returned.active &&
       returned.paused && returnedState.drive.hud === false &&
       returned.route === beforeDetour.route && returned.banffDistance === beforeDetour.banffDistance,

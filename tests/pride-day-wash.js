@@ -15,17 +15,17 @@ var HARNESS = [
   'function clickFlag(){document.getElementById("office-pride-flag-hit").dispatchEvent(new MouseEvent("click",{bubbles:true}));}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
-  ' window.__gameStarted=function(){return true;};window.season("pride");await sleep(80);',
+  ' window.__gameStarted=function(){return true;};window.__loftControllers.season("pride");await sleep(80);',
   ' var wash=document.getElementById("pride-day-wash"),view=document.querySelector(".hunt-viewport"),wr=wash.getBoundingClientRect(),vr=view.getBoundingClientRect();',
   ' S("activation",{state:q(),covers:wr.left<=vr.left&&wr.right>=vr.right&&wr.top<=vr.top&&wr.bottom>=vr.bottom,parent:wash.parentNode&&wash.parentNode.className});',
-  ' window.goToStage("balcony");await sleep(10150);S("recurrence",{state:q(),room:window.currentStageName,sameParent:wash.parentNode===view});',
+  ' window.__goToStage("balcony");await sleep(10150);S("recurrence",{state:q(),room:window.__currentStageName,sameParent:wash.parentNode===view});',
   ' focused=false;window.dispatchEvent(new Event("blur"));await sleep(40);var beforeBlur=q();window.__prideDayWashTick();await sleep(40);S("blur",{before:beforeBlur,after:q()});',
   ' focused=true;window.dispatchEvent(new Event("focus"));await sleep(80);S("refocus",q());',
   ' var strip=document.getElementById("loft-game-strip"),beforeTrip=q().count;window.__tripActive=true;strip.classList.add("acid");await sleep(40);var tripStart=q();window.__prideDayWashTick();await sleep(60);S("trip",{before:beforeTrip,start:tripStart,after:q()});',
   ' strip.classList.remove("acid");window.__tripActive=false;await sleep(40);var beforeFlag=q();clickFlag();clickFlag();clickFlag();await sleep(80);S("flag",{before:beforeFlag,after:q()});',
   ' var card=document.getElementById("mol-card-ethanol"),beforeChem=q().count;card.classList.add("mol-show");await sleep(40);var chemStart=q();var triggerResult=window.__triggerPrideDayWash();await sleep(40);S("chem",{before:beforeChem,start:chemStart,result:triggerResult,after:q()});card.classList.remove("mol-show");',
-  ' window.season("canada");await sleep(40);var left=q();window.__prideDayWashTick();await sleep(40);S("seasonExit",{left:left,after:q()});',
-  ' window.season("pride");await sleep(80);window.__activateExtinguisher();await sleep(1300);S("reset",q());',
+  ' window.__loftControllers.season("canada");await sleep(40);var left=q();window.__prideDayWashTick();await sleep(40);S("seasonExit",{left:left,after:q()});',
+  ' window.__loftControllers.season("pride");await sleep(80);window.__activateExtinguisher();await sleep(1300);S("reset",q());',
   '}',
   '})();</script>'
 ].join("\n");
@@ -36,7 +36,7 @@ var REDUCED = [
   'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'var report={errors:[],steps:{}};',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
-  'async function run(){window.__gameStarted=function(){return true;};window.season("pride");await sleep(80);var w=document.getElementById("pride-day-wash");report.steps.on={state:window.__prideDayWashState(),animation:getComputedStyle(w).animationName,opacity:getComputedStyle(w).opacity};await sleep(2150);report.steps.off=window.__prideDayWashState();window.season("canada");}',
+  'async function run(){window.__gameStarted=function(){return true;};window.__loftControllers.season("pride");await sleep(80);var w=document.getElementById("pride-day-wash");report.steps.on={state:window.__prideDayWashState(),animation:getComputedStyle(w).animationName,opacity:getComputedStyle(w).opacity};await sleep(2150);report.steps.off=window.__prideDayWashState();window.__loftControllers.season("canada");}',
   '})();</script>'
 ].join("\n");
 

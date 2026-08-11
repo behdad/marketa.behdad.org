@@ -13,7 +13,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     setTimeout(async function () {
       try {
         if (window.__finishOpeningGuide) window.__finishOpeningGuide();
-        window.goToStage("kitchen");
+        window.__goToStage("kitchen");
         var plant = document.getElementById("kitchen-plant");
         var hit = plant.querySelector(":scope > rect");
         var stems = document.getElementById("kitchen-euphorbia-stems");
@@ -72,8 +72,8 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         };
 
         var sounds = [], droplets = [];
-        window.playWaterSound = function (id) { sounds.push(id); };
-        window.spawnWaterDroplets = function (owner, x, y) { droplets.push([owner && owner.id, x, y]); };
+        window.__playWaterSound = function (id) { sounds.push(id); };
+        window.__spawnWaterDroplets = function (owner, x, y) { droplets.push([owner && owner.id, x, y]); };
         plant.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         await new Promise(function (resolve) { setTimeout(resolve, 70); });
         var clickState = { watered: plant.classList.contains("watered"), animation: getComputedStyle(plant).animationName };

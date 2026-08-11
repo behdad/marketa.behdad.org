@@ -13,7 +13,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   window.addEventListener("load", function () {
     setTimeout(async function () {
       try {
-        window.goToStage("garden");
+        window.__goToStage("garden");
         var plant = document.getElementById("garden-peacelily");
         var lift = document.getElementById("garden-peacelily-lift");
         var hit = plant.querySelector(":scope > rect");
@@ -33,7 +33,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         var before = window.__plantWaterState().counts["garden-peacelily"];
         var baseFilter = getComputedStyle(plant).filter;
         for (var i = 0; i < 3; i++) {
-          window.waterSpecificPlant("garden-peacelily", function () { return true; }, "reusable");
+          window.__waterSpecificPlant("garden-peacelily", function () { return true; }, "reusable");
         }
         await new Promise(function (resolve) { setTimeout(resolve, 80); });
         var wet = window.__plantWaterState();

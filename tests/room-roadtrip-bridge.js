@@ -55,7 +55,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       document.querySelector('.loft-dollhouse-room[data-dollhouse-room="' + room + '"]').dispatchEvent(
         new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
     });
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     report.steps.push({ label: "phase-one-ten",
@@ -71,7 +71,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "dungeon", "cinema", "bedroom", "entrance"]);
     window.__setSecondRound(true, { releaseHeld: false });
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     var earlyStart = window.__entranceRoadtripStart();
@@ -96,7 +96,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__markRoomSeen("bathroom");
     await sleep(80);
     snapshot("party-on-ten-first-beat");
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     document.querySelector(".entrance-road-cursor").dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
@@ -105,7 +105,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__hideEntrancePorscheDriveHud();
     window.__closeEntranceRoom();
     window.__setPartyMode(true);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     document.dispatchEvent(new KeyboardEvent("keydown", {
       key: "Enter", code: "Enter", bubbles: true, cancelable: true
@@ -146,7 +146,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__runMsgAction("downstairs_roadtrip_go");
     await sleep(3900);
     var entrance = window.__entranceRoomState();
-    report.steps.push({ label: "go-action", room: window.currentStageName,
+    report.steps.push({ label: "go-action", room: window.__currentStageName,
       entranceOpen: !!window.__entranceRoomOpen, hud: entrance.drive.hud,
       party: !!window.__gardenPartyOn,
       act: window.__actTwoState ? copy(window.__actTwoState()) : null,

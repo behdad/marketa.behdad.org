@@ -12,7 +12,7 @@ var HARNESS = [
   'var report={errors:[],sounds:0,steps:{}};',
   'function snap(){var box=document.getElementById("garden-drugsbox"),panel=document.getElementById("garden-boxlock"),shackle=document.getElementById("garden-boxlock-shackle");return {locked:window.__drugsboxLocked(),box:box.classList.contains("unlocked"),panel:panel.classList.contains("unlocked"),showing:panel.classList.contains("showing"),open:shackle.classList.contains("open"),popped:shackle.classList.contains("popped"),transform:getComputedStyle(shackle).transform,miniClosed:getComputedStyle(box.querySelector(".boxlock-mini-shackle-closed")).opacity,miniOpen:getComputedStyle(box.querySelector(".boxlock-mini-shackle-open")).opacity,trip:!!window.__tripActive};}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
-  ' window.playBoxlockClunkSound=function(){report.sounds++;};',
+  ' window.__playBoxlockClunkSound=function(){report.sounds++;};',
   ' var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn");if(button)button.click();',
   ' setTimeout(function(){try{',
   '  report.steps.restored=snap();report.steps.persisted=JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems["magic-box"];',

@@ -23,7 +23,7 @@ var harness = String.raw`<script>
 
   try {
     window.__setGardenParty(true, false);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     if (window.__summonGuests) window.__summonGuests();
     var rosterToggle = document.querySelector(".roster-toggle");
     check("the Who's here chip is click-only scene chrome", rosterToggle && rosterToggle.tabIndex === -1,
@@ -39,7 +39,7 @@ var harness = String.raw`<script>
     window.__startGardenChase(true);
     var liveRunner = document.querySelector('[id^="garden-kid-"].chasing');
     var liveCross = liveRunner && liveRunner.querySelector(".gk-run");
-    window.roster.set(true);
+    window.__loftControllers.roster.set(true);
     var rosterClose = document.querySelector(".roster-close");
     var rosterCloseRect = rosterClose && rosterClose.getBoundingClientRect();
     check("the roster has a plainly sized circular dismiss control",
@@ -91,7 +91,7 @@ var harness = String.raw`<script>
         getComputedStyle(booth).animationName !== "roster-person-wiggle",
       getComputedStyle(dj).animationName + "/" + getComputedStyle(booth).animationName);
 
-    window.roster.set(false);
+    window.__loftControllers.roster.set(false);
     check("closing the roster resumes the same chase timeline",
       liveCross && state(liveCross) === "running" &&
         !document.getElementById("loft-game-strip").classList.contains("roster-freeze-runners"),
@@ -100,7 +100,7 @@ var harness = String.raw`<script>
     check("closing the roster removes its freeze", !stage.classList.contains("roster-freeze") && state(aliPart) === "running",
       state(aliPart));
 
-    window.roster.set(true);
+    window.__loftControllers.roster.set(true);
     backdrop.dispatchEvent(new MouseEvent("click", {
       bubbles: true,
       clientX: aliRect.left + aliRect.width / 2,
@@ -117,29 +117,29 @@ var harness = String.raw`<script>
           pr && ar ? JSON.stringify({ popupBottom: pr.bottom, arrowTop: ar.top }) : "missing");
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
         check("ArrowRight changes rooms while keeping the roster open",
-          window.currentStageName === "cuddly" && window.__rosterOpen(),
-          window.currentStageName + "/" + window.__rosterOpen());
+          window.__currentStageName === "cuddly" && window.__rosterOpen(),
+          window.__currentStageName + "/" + window.__rosterOpen());
         document.getElementById("hunt-next").click();
         check("the next button changes rooms while keeping the roster open",
-          window.currentStageName === "office" && window.__rosterOpen(),
-          window.currentStageName + "/" + window.__rosterOpen());
+          window.__currentStageName === "office" && window.__rosterOpen(),
+          window.__currentStageName + "/" + window.__rosterOpen());
         document.getElementById("hunt-prev").click();
         check("the previous button changes rooms while keeping the roster open",
-          window.currentStageName === "cuddly" && window.__rosterOpen(),
-          window.currentStageName + "/" + window.__rosterOpen());
+          window.__currentStageName === "cuddly" && window.__rosterOpen(),
+          window.__currentStageName + "/" + window.__rosterOpen());
         document.querySelectorAll(".hunt-dot")[4].click();
         check("a room dot changes rooms while keeping the roster open",
-          window.currentStageName === "balcony" && window.__rosterOpen(),
-          window.currentStageName + "/" + window.__rosterOpen());
+          window.__currentStageName === "balcony" && window.__rosterOpen(),
+          window.__currentStageName + "/" + window.__rosterOpen());
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true, cancelable: true }));
         check("number keys change rooms while keeping the roster open",
-          window.currentStageName === "kitchen" && window.__rosterOpen(),
-          window.currentStageName + "/" + window.__rosterOpen());
+          window.__currentStageName === "kitchen" && window.__rosterOpen(),
+          window.__currentStageName + "/" + window.__rosterOpen());
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, cancelable: true }));
         check("ArrowLeft changes rooms while keeping the roster open",
-          window.currentStageName === "kitchen" && window.__rosterOpen(),
-          window.currentStageName + "/" + window.__rosterOpen());
+          window.__currentStageName === "kitchen" && window.__rosterOpen(),
+          window.__currentStageName + "/" + window.__rosterOpen());
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
         var fading = document.querySelector(".egg-bubble.who-pop");
         check("Escape closes the roster and starts dismissing its person card after a backdrop pick",

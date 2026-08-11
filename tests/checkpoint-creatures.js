@@ -15,7 +15,7 @@ var HARNESS = [
   'function octiSnap(){var o=document.getElementById("cuddly-octopus"),s=window.__octiCheckpointCapture();return {inside:s.inside,played:o.classList.contains("played"),inChest:o.classList.contains("in-chest"),opacity:getComputedStyle(o).opacity,transient:o.classList.contains("falling-in")||o.classList.contains("popping-out")||o.classList.contains("wobble")||o.classList.contains("twitch")||o.classList.contains("sneezing")||o.classList.contains("ouch")||o.classList.contains("stabbed")};}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   ' var gate=document.getElementById("loft-recovery-gate");gate.querySelector(".loft-recovery-btn").click();',
-  ' report.continued={room:window.currentStageName,cat:catSnap(),octi:octiSnap(),persisted:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.creatures};',
+  ' report.continued={room:window.__currentStageName,cat:catSnap(),octi:octiSnap(),persisted:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.creatures};',
   ' window.__catCheckpointRestore({loose:true,room:"balcony",gone:true});var release=window.__releaseCat(true);report.gone={cat:catSnap(),release:release};',
   ' window.__catCheckpointRestore({loose:false,room:"office",gone:false});window.__octiCheckpointRestore({inside:false});report.defaults={cat:catSnap(),octi:octiSnap()};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',

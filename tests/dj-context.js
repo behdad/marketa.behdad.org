@@ -13,8 +13,8 @@ addEventListener("load", function () {
     try {
       document.hasFocus = function () { return true; };
       window.__unlockAllRooms();
-      window.garden.set(true);
-      window.goToStage("garden");
+      window.loft.garden.set(true);
+      window.__goToStage("garden");
       var head = document.getElementById("garden-dj-headbang");
       var trigger = document.getElementById("garden-dj-request");
       var picker = document.getElementById("garden-djpicker");
@@ -43,7 +43,7 @@ addEventListener("load", function () {
           closed: !picker.classList.contains("open"),
           danceUnchanged: window.__partyDance === danceBeforeDismiss,
           partyOn: !!window.__gardenPartyOn,
-          stage: window.currentStageName
+          stage: window.__currentStageName
         };
         head.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 }));
         report.contextOpen = picker.classList.contains("open");
@@ -63,7 +63,7 @@ addEventListener("load", function () {
           closed: !picker.classList.contains("open"),
           danceUnchanged: window.__partyDance === touchDance,
           partyOn: !!window.__gardenPartyOn,
-          stage: window.currentStageName
+          stage: window.__currentStageName
         };
         report.errors = window.__errs;
         document.getElementById("__report").textContent = JSON.stringify(report);

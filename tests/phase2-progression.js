@@ -18,16 +18,16 @@ var harness = String.raw`<script>
   async function run() {
     window.__setSecondRound(true, { releaseHeld: false });
     check("phase two unlocks the complete manual room map", window.__secondRound && window.__maxUnlocked() === 4);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     var staleResult = window.__finishSolveAdvance("garden", "cuddly");
     await sleep(850);
     check("a stale phase-one completion cannot pan in phase two",
-      staleResult === false && window.currentStageName === "garden", window.currentStageName);
-    if (window.party && window.party.status()) window.garden.set(false);
+      staleResult === false && window.__currentStageName === "garden", window.__currentStageName);
+    if (window.__loftControllers.party && window.__loftControllers.party.status()) window.loft.garden.set(false);
     if (window.__setDayNight) window.__setDayNight(false);
     if (window.__setKitchenCoffeeState) window.__setKitchenCoffeeState({ step: "spent", rounds: 1 });
     if (window.__setSeenRooms) window.__setSeenRooms(["kitchen"]); // isolate the room caption from the first-visit progress flash
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     await sleep(120);
     check("a solved daytime Kitchen revisit has a quiet repeat invitation",
       window.__captionKey() === "kitchen_again" &&
@@ -55,45 +55,45 @@ var harness = String.raw`<script>
       retiredWalkers.every(function (value) { return value === null || value === false; }),
       JSON.stringify({ kitchen: kitchenWalker, clicks: grinderClicks, caption: window.__captionKey(), retired: retiredWalkers }));
 
-    window.goToStage("garden");
-    var partyBefore = !!(window.party && window.party.status());
+    window.__goToStage("garden");
+    var partyBefore = !!(window.__loftControllers.party && window.__loftControllers.party.status());
     var activated = window.__activateCurrentRoom();
     check("the room activation key toggles the Garden's main Party activity",
-      activated === true && !partyBefore && !!(window.party && window.party.status()), String(activated));
-    if (window.party && window.party.status()) window.garden.set(false);
+      activated === true && !partyBefore && !!(window.__loftControllers.party && window.__loftControllers.party.status()), String(activated));
+    if (window.__loftControllers.party && window.__loftControllers.party.status()) window.loft.garden.set(false);
     check("phase-one clue targets and nudges are retired",
       window.__gardenClueTarget() === null && window.__cuddlyDoorNeeded() === false &&
       !document.getElementById("office-pc-desk-trio").classList.contains("inviting") &&
       !document.getElementById("office-monitor").classList.contains("await-turn"));
 
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     document.getElementById("cuddly-octopus").classList.add("played");
     document.getElementById("cuddly-balcony-door").classList.add("open");
     window.__pullMainBlanket();
     await sleep(850);
     check("a phase-two blanket completion stays in the cuddly room",
-      window.currentStageName === "cuddly" && !document.getElementById("cuddly-blanket").classList.contains("done"),
-      window.currentStageName);
+      window.__currentStageName === "cuddly" && !document.getElementById("cuddly-blanket").classList.contains("done"),
+      window.__currentStageName);
 
-    window.goToStage("office");
+    window.__goToStage("office");
     window.__pragueCalled = true; window.__pcPlayed = true;
     document.getElementById("office-lamp").classList.add("dimmed");
     document.getElementById("office-pendant").classList.add("dimmed");
     document.getElementById("office-stainedglass").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await sleep(2150);
     check("a phase-two butterfly completion stays in the office",
-      window.currentStageName === "office" && !document.getElementById("office-stainedglass").classList.contains("done"),
-      window.currentStageName);
+      window.__currentStageName === "office" && !document.getElementById("office-stainedglass").classList.contains("done"),
+      window.__currentStageName);
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     document.getElementById("hunt-next").dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-    check("the next-room arrow remains functional", window.currentStageName === "cuddly", window.currentStageName);
+    check("the next-room arrow remains functional", window.__currentStageName === "cuddly", window.__currentStageName);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
-    check("room arrow keys remain functional", window.currentStageName === "office", window.currentStageName);
+    check("room arrow keys remain functional", window.__currentStageName === "office", window.__currentStageName);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true, cancelable: true }));
-    check("room number keys remain functional", window.currentStageName === "kitchen", window.currentStageName);
+    check("room number keys remain functional", window.__currentStageName === "kitchen", window.__currentStageName);
     document.querySelectorAll(".hunt-dot")[4].dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    check("room dots remain functional", window.currentStageName === "balcony", window.currentStageName);
+    check("room dots remain functional", window.__currentStageName === "balcony", window.__currentStageName);
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

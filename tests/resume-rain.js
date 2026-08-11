@@ -14,14 +14,14 @@ function harness(mode) {
     'window.addEventListener("load",function(){setTimeout(async function(){try{',
     'var seen=[];',
     'new MutationObserver(function(records){records.forEach(function(record){Array.prototype.forEach.call(record.addedNodes,function(node){',
-    ' if(node.nodeType===1&&node.localName==="line"&&node.getAttribute("stroke")==="#a8c4d4"&&Number(node.getAttribute("x1"))>=400){seen.push({parent:node.parentNode&&node.parentNode.id,stage:node.closest("[id^=stage-]")&&node.closest("[id^=stage-]").id,room:window.currentStageName,x:Number(node.getAttribute("x1"))});}',
+    ' if(node.nodeType===1&&node.localName==="line"&&node.getAttribute("stroke")==="#a8c4d4"&&Number(node.getAttribute("x1"))>=400){seen.push({parent:node.parentNode&&node.parentNode.id,stage:node.closest("[id^=stage-]")&&node.closest("[id^=stage-]").id,room:window.__currentStageName,x:Number(node.getAttribute("x1"))});}',
     '});});}).observe(document.getElementById("loft-game-strip"),{childList:true,subtree:true});',
     mode === "hide" ? 'var fakeHidden=false;Object.defineProperty(document,"hidden",{configurable:true,get:function(){return fakeHidden;}});Object.defineProperty(document,"visibilityState",{configurable:true,get:function(){return fakeHidden?"hidden":"visible";}});' : '',
-    'window.__endAttract();window.goToStage("balcony");',
-    mode === "leave" ? 'setTimeout(function(){window.goToStage("kitchen");},60);' : '',
+    'window.__endAttract();window.__goToStage("balcony");',
+    mode === "leave" ? 'setTimeout(function(){window.__goToStage("kitchen");},60);' : '',
     mode === "hide" ? 'setTimeout(function(){fakeHidden=true;document.dispatchEvent(new Event("visibilitychange"));},60);setTimeout(function(){fakeHidden=false;document.dispatchEvent(new Event("visibilitychange"));},900);' : '',
     'await new Promise(function(resolve){setTimeout(resolve,1250);});',
-    'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,room:window.currentStageName,seen:seen,live:document.querySelectorAll(".balcony-finale-drop").length,direct:document.querySelectorAll("#loft-game-strip > .balcony-finale-drop").length});',
+    'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,room:window.__currentStageName,seen:seen,live:document.querySelectorAll(".balcony-finale-drop").length,direct:document.querySelectorAll("#loft-game-strip > .balcony-finale-drop").length});',
     '}catch(e){document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs.concat([String(e&&e.stack||e)])});}},80);});',
     '})();</script>'
   ].join("\n");

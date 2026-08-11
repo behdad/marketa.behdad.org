@@ -44,7 +44,7 @@ function setupScript(body) {
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     await wait(140);
     window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
@@ -73,7 +73,7 @@ function setupScript(body) {
     window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
     // Camping deliberately clears its own visible sky without erasing the shared weather
     // override. Reapply the night after overcast.set(true), whose normal console contract selects day.
-    window.overcast.set(true);
+    window.__loftControllers.overcast.set(true);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
     window.__setDayNight(true);
     await wait(120);

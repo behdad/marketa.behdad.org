@@ -17,7 +17,7 @@ var harness = String.raw`<script>
   function smoking() { return document.getElementById("balcony-smoker").classList.contains("smoking"); }
 
   window.__gameStarted = function () { return true; };
-  window.goToStage("balcony");
+  window.__goToStage("balcony");
   window.__setDayNight(true);
   window.__setPartyMode(true);
   setTimeout(function () {

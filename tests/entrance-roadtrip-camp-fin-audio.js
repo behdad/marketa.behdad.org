@@ -56,7 +56,7 @@ window.addEventListener("load", function () {
       window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
         "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
       window.__setSecondRound(true, { releaseHeld: false });
-      window.goToStage("balcony");
+      window.__goToStage("balcony");
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       window.__entranceRoadtripDevStart();
@@ -72,17 +72,17 @@ window.addEventListener("load", function () {
       report.trip = window.__entranceRoomState().drive.roadtrip;
       report.roomCovered = window.__roomAmbienceCovered();
       report.foregroundCovered = window.__foregroundAmbienceCovered();
-      report.allowed = window.campFinLoveVoiceAllowed();
+      report.allowed = window.__campFinLoveVoiceAllowed();
       report.voices = [];
-      window.playILoveYouSound = function (pan, pitch, gain) {
+      window.__playILoveYouSound = function (pan, pitch, gain) {
         report.voices.push({ pan: pan, pitch: pitch, gain: gain });
       };
       var congratsHold = setInterval(function () { camp.classList.add("camp-sleep-congrats"); }, 1);
-      window.CAMP_FIN_MELODY_SECONDS = -1.45;
-      setTimeout(function () { window.scheduleCampFinLoveVoices(); }, 20);
+      window.__CAMP_FIN_MELODY_SECONDS = -1.45;
+      setTimeout(function () { window.__scheduleCampFinLoveVoices(); }, 20);
       setTimeout(function () {
         clearInterval(congratsHold);
-        report.finalAllowed = window.campFinLoveVoiceAllowed();
+        report.finalAllowed = window.__campFinLoveVoiceAllowed();
         report.finalClass = camp.classList.contains("camp-sleep-congrats");
         report.errors.console = window.__errs || [];
         document.getElementById("__report").textContent = JSON.stringify(report);

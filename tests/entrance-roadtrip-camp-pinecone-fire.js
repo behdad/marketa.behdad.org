@@ -62,7 +62,7 @@ var HARNESS = `
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     setTimeout(function () {
       try {
         window.__openEntranceRoom();

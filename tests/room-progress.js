@@ -27,28 +27,28 @@ var harness = String.raw`<script>
   }
   async function run() {
     window.__endAttract();
-    setLang("en");
+    window.__setLang("en");
     window.__secondRound = false;
     window.__setSeenRooms(["kitchen"]);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     var phaseOne = snapshot();
     check("Phase 1 tracks an upstairs visit without replacing its game clue",
       phaseOne.seen.length === 2 && phaseOne.key !== "room_progress" &&
       (!phaseOne.flash || phaseOne.flash.owner !== "room-progress"), phaseOne);
 
     window.__secondRound = true;
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     var english = snapshot();
     check("a first Phase 2 visit reports compact English progress",
       english.seen.length === 3 && english.key === "room_progress" &&
       english.caption === "Rooms seen: 3/10 · keep exploring." &&
       english.flash && english.flash.owner === "room-progress", english);
 
-    setLang("cs");
+    window.__setLang("cs");
     var czechLive = snapshot();
     check("a live progress caption keeps its count when switched to Czech",
       czechLive.caption === "Navštíveno: 3/10 · pokračuj dál.", czechLive);
-    setLang("en");
+    window.__setLang("en");
 
     window.__clearFlashCaption("room-progress");
     window.__setSeenRooms([
@@ -61,11 +61,11 @@ var harness = String.raw`<script>
     check("completion points toward the street even while the party remains optional",
       partyComplete.key === "room_visit_entrance_complete_party" &&
       partyComplete.caption === "You’ve seen the whole loft. The road is right outside.", partyComplete);
-    setLang("cs");
+    window.__setLang("cs");
     var partyCompleteCzech = snapshot();
     check("party-on completion keeps the same street direction in Czech",
       partyCompleteCzech.caption === "Celý loft je prozkoumaný. Silnice čeká hned venku.", partyCompleteCzech);
-    setLang("en");
+    window.__setLang("en");
     window.__gardenPartyOn = false;
 
     window.__clearFlashCaption("room-progress");
@@ -75,27 +75,27 @@ var harness = String.raw`<script>
     check("a Bathroom first visit gives its own order-independent remaining count",
       bathroom.seen.length === 7 && bathroom.key === "room_visit_bathroom_few" &&
       bathroom.caption === "Here’s the bathroom. 3 more rooms to go.", bathroom);
-    setLang("cs");
+    window.__setLang("cs");
     var bathroomCzech = snapshot();
     check("room-specific progress remains grammatical and live in Czech",
       bathroomCzech.caption === "Tady je koupelna. Zbývají ještě 3 místnosti.", bathroomCzech);
-    setLang("en");
+    window.__setLang("en");
 
     window.__clearFlashCaption("room-progress");
     window.__setSeenRooms(["kitchen", "garden", "cuddly"]);
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     var revisit = snapshot();
     check("revisiting a room neither increments nor replays progress",
       revisit.seen.length === 3 && (!revisit.flash || revisit.flash.owner !== "room-progress"), revisit);
 
     window.__cinematic = true;
-    window.goToStage("office");
+    window.__goToStage("office");
     window.__cinematic = false;
     var editorial = snapshot();
     check("editorial cinematic cuts do not count as room visits",
       editorial.seen.length === 3 && editorial.seen.indexOf("office") === -1, editorial);
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__saveLoftCheckpoint();
     var checkpoint = window.__loadLoftCheckpoint();
     check("checkpoints persist the exact seen-room set",
@@ -104,7 +104,7 @@ var harness = String.raw`<script>
       checkpoint && checkpoint.progress);
 
     window.__setSeenRooms(["kitchen", "garden", "dungeon"]);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__openGardenPrince();
     await sleep(40);
     window.__navigateLowerRoom("cuddly");
@@ -130,13 +130,13 @@ var harness = String.raw`<script>
       balconyReturn.caption.indexOf("6/10") !== -1,
       balconyReturn);
 
-    setLang("en");
+    window.__setLang("en");
     window.__unlockAllRooms();
     window.__setSeenRooms([
       "kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom"
     ]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__openEntranceRoom();
     await sleep(40);
     var complete = snapshot();
@@ -145,11 +145,11 @@ var harness = String.raw`<script>
       complete.caption === "You’ve seen the whole loft. The road is right outside." &&
       complete.flash && complete.flash.owner === "room-progress", complete);
 
-    setLang("cs");
+    window.__setLang("cs");
     var czechComplete = snapshot();
     check("the live completion line switches to Czech",
       czechComplete.caption === "Celý loft je prozkoumaný. Silnice čeká hned venku.", czechComplete);
-    setLang("en");
+    window.__setLang("en");
 
     window.__clearFlashCaption("room-progress");
     window.__closeEntranceRoom();

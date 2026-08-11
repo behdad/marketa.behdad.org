@@ -11,7 +11,7 @@ var HARNESS = [
   'function search(q){q.split("").forEach(key);var state=window.__monitorDockSearch();key("Escape");return state;}',
   'try {',
   ' var gate=document.getElementById("loft-recovery-gate");if(gate)gate.querySelector(".loft-recovery-btn:not(.primary)").click();',
-  ' var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");window.__endAttract();window.goToStage("office");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();',
+  ' var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");window.__endAttract();window.__goToStage("office");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();',
   ' S("dock",{classics:!!document.getElementById("monitor-dock-classics"),mines:!!document.getElementById("monitor-dock-mines"),label:document.querySelector("#monitor-dock-classics .dock-label").textContent,icon:!!document.querySelector("#monitor-dock-classics use[href=\\"#dicon-classics\\"]")});',
   ' S("search",{classics:search("classics"),mines:search("mines"),solitaire:search("solitaire"),cards:search("cards")});',
   ' document.getElementById("monitor-dock-classics").click();S("chooser",{view:window.__classicsView(),show:mon.classList.contains("show-mines"),choices:[].slice.call(document.querySelectorAll(".classics-choice")).map(function(x){return x.getAttribute("data-classics-view");})});',
@@ -26,7 +26,7 @@ var HARNESS = [
   ' window.__openMonitorApp("classics");if(window.__classicsView()!=="chooser")back.dispatchEvent(new MouseEvent("click",{bubbles:true}));window.__killMonitorClassics();S("killChooser",{chooser:mon.classList.contains("death-classics"),mine:mon.classList.contains("death-mines")});window.__deathFlashCleanup();',
   ' window.__openMonitorApp("mines");window.__killMonitorClassics();S("killMines",{mine:mon.classList.contains("death-mines"),sol:mon.classList.contains("death-solitaire")});window.__deathFlashCleanup();',
   ' window.__openMonitorApp("solitaire");window.__killMonitorClassics();S("killSol",{sol:mon.classList.contains("death-solitaire"),mine:mon.classList.contains("death-mines"),cards:document.querySelectorAll(".sol-pickup-card").length});window.__deathFlashCleanup();',
-  ' S("commands",{mines:typeof window.mines,solitaire:typeof window.solitaire,cards:window.__openMonitorApp("cards")});',
+  ' S("commands",{mines:typeof window.__loftControllers.mines,solitaire:typeof window.__loftControllers.solitaire,cards:window.__openMonitorApp("cards")});',
   '} catch(e) { window.__errs.push("harness: "+String(e&&e.stack||e)); }',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);',
   '})();</script>'

@@ -65,7 +65,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
         window.__setSecondRound(true, { releaseHeld: false });
         if (window.__gardenPartyOn) window.__setPartyMode(false, true);
-        window.goToStage("balcony");
+        window.__goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
 
@@ -81,9 +81,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.forward = hud();
         driveAt(-36, -1, 4);
         report.reversed = hud();
-        window.setLang("cs");
+        window.__setLang("cs");
         report.czechStats = hud().stats;
-        window.setLang("en");
+        window.__setLang("en");
 
         window.__exitEntranceRoadtrip();
         var checkpoint = window.__captureCheckpointSystems().entrance;

@@ -17,18 +17,18 @@ var harness = String.raw`<script>
 
   try {
     window.__setGardenParty(true, false);
-    window.goToStage("kitchen");
-    window.couples(false);
+    window.__goToStage("kitchen");
+    window.__loftControllers.couples(false);
     var barAspen = document.getElementById("kitchen-photographer");
     check("the bar can settle with no guest couple", window.__barCoupleNow() === null);
     check("Aspen stays away while Pouria works alone", barAspen && !barAspen.classList.contains("showing"));
-    window.couples("alireza");
+    window.__loftControllers.couples("alireza");
     check("Aspen joins when bar guests arrive", barAspen.classList.contains("showing"));
-    window.couples(false);
+    window.__loftControllers.couples(false);
     check("Aspen leaves when the bar returns to Pouria alone", !barAspen.classList.contains("showing"));
 
-    window.goToStage("office");
-    window.officefolks(false);
+    window.__goToStage("office");
+    window.__loftControllers.officefolks(false);
     var aspen = document.getElementById("office-photographer");
     var cam = aspen && aspen.querySelector(".photog-cam");
     var before = window.__albumList().length;
@@ -37,17 +37,17 @@ var harness = String.raw`<script>
     check("Aspen stays out of an empty office", aspen && !aspen.classList.contains("showing"));
     check("empty office rejects flash, shutter and keepsake", emptyShot === null && window.__albumList().length === before && !(cam && cam.classList.contains("aiming")));
 
-    window.officefolks("madla");
+    window.__loftControllers.officefolks("madla");
     var names = window.__roomOccupants("office").map(function (person) { return person.name; });
     check("office couple creates photographable occupancy", window.__roomHasPhotoSubjects("office") && names.indexOf("Madla") !== -1 && names.indexOf("Robert") !== -1, names.join(","));
     check("Aspen follows subjects into the office", aspen.classList.contains("showing"));
     var occupiedShot = window.__photogSnap("office", false, true);
     check("occupied office accepts a keepsake", !!occupiedShot && occupiedShot.room === "office" && window.__albumList().length === before + 1);
 
-    window.officefolks(false);
+    window.__loftControllers.officefolks(false);
     check("Aspen leaves as soon as the office empties", !window.__roomHasPhotoSubjects("office") && !aspen.classList.contains("showing"));
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     if (window.__summonGuests) window.__summonGuests();
     var childKeys = { irene: 1, robin: 1, navid: 1, elisabeth: 1, felix: 1, "patricia-son": 1, "patricia-daughter": 1, hannah: 1 };
     document.querySelectorAll("#garden-guests .guest").forEach(function (el) {

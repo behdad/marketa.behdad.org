@@ -15,13 +15,13 @@ var HARNESS = [
   'function fire(type,detail){grill().dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,detail:detail||1}));}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
-  ' baseWisps=window.spawnSteamWisps;window.spawnSteamWisps=function(){dust++;};',
+  ' baseWisps=window.__spawnSteamWisps;window.__spawnSteamWisps=function(){dust++;};',
   ' S("initial",st());fire("click");await sleep(340);S("uncovered",st());',
   ' fire("click");await sleep(340);S("lidOpen",st());',
   ' fire("click");await sleep(340);S("lidClosed",st());',
   ' window.__startBBQ("test");var smoker=document.getElementById("balcony-smoker");S("bbq",{cover:st(),smoking:smoker.classList.contains("smoking"),smokerOpen:smoker.classList.contains("open")});',
   ' window.__activateExtinguisher();await sleep(1300);S("reset",st());',
-  ' window.spawnSteamWisps=baseWisps;',
+  ' window.__spawnSteamWisps=baseWisps;',
   '}',
   '})();</script>'
 ].join("\n");

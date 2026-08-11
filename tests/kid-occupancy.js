@@ -14,7 +14,7 @@ var harness = String.raw`<script>
   }
   try {
     var kids = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     window.__setDayNight(false);
     window.__ireneShow("irene-sit");
     window.__setDayNight(true);
@@ -52,7 +52,7 @@ var harness = String.raw`<script>
       ["irene", "robin", "navid"].every(function (name) {
         return !document.getElementById("cuddly-" + name).classList.contains("showing");
       }));
-    window.goToStage("garden");
+    window.__goToStage("garden");
     if (window.__syncMousesVisitingClass) { window.__mousesVisiting = true; window.__syncMousesVisitingClass(); }
     if (window.__summonGuests) window.__summonGuests();
     kids.concat(["bahareh", "madla", "robert", "patricia", "baharak", "payman"]).forEach(function (name) {
@@ -60,7 +60,7 @@ var harness = String.raw`<script>
       if (figure) { figure.classList.add("arrived"); figure.classList.remove("leaving", "off-at-bbq"); }
     });
     window.__assignPartyKids(true);
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     window.__updateKidGames();
 
     var gameKeys = window.__kidGamesNow().map(function (p) { return p.key; });
@@ -79,7 +79,7 @@ var harness = String.raw`<script>
         return [placement.games, placement.dancing, placement.asleep].filter(function (group) { return group.indexOf(name) !== -1; }).length === 1;
       }), JSON.stringify(placement));
 
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     window.__cuddlyProjector.set("totoro");
     window.__setKidsAsleep(true);
     var totoroPlacement = window.__assignPartyKids(false);
@@ -93,7 +93,7 @@ var harness = String.raw`<script>
     window.__setKidsAsleep(false);
     window.__cuddlyProjector.set("fire");
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__duoDepart("family");
     window.__assignPartyKids(true);
     check("children remain in the party inventory when their adults rotate off the floor",
@@ -102,7 +102,7 @@ var harness = String.raw`<script>
         return window.__partyGuestAttended(name) && floor.classList.contains("arrived") && floor.classList.contains("off-at-games");
       }));
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__updateKidGames();
     var stillAssigned = kids.filter(function (name) {
       var floor = document.querySelector("#garden-guests .g-" + name);
@@ -116,7 +116,7 @@ var harness = String.raw`<script>
     var oldRandom = Math.random;
     Math.random = function () { return 0.99; };
     window.__setKidsAsleep(true);
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     window.__updateKidGames();
     var asleep = kids.filter(function (name) {
       var floor = document.querySelector("#garden-guests .g-" + name);
@@ -135,9 +135,9 @@ var harness = String.raw`<script>
       }));
     if (visitor) visitor.classList.remove("showing");
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__assignPartyKids(true);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     window.__setSnowman(true);
     var seasonal = window.__balconyBorrowedKidNames();
     var balconyNames = window.__whoIsHere("balcony").map(function (p) { return p.key; });
@@ -150,9 +150,9 @@ var harness = String.raw`<script>
     window.__setSnowman(false);
     check("ending seasonal play releases its temporary borrowing", window.__balconyBorrowedKidNames().length === 0);
 
-    window.goToStage("garden");
+    window.__goToStage("garden");
     window.__assignPartyKids(true);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     var smoresPool = window.__cuddlyAssignedKidNames().slice();
     var smoresPlacement = window.__partyKidPlacement || {};
     (smoresPlacement.games || []).concat(smoresPlacement.dancing || []).forEach(function (name) {
@@ -173,7 +173,7 @@ var harness = String.raw`<script>
       smores.every(function (name) { return smoresNames.indexOf(name) !== -1; }), smoresNames.join(","));
     window.__setSmores(false);
 
-    window.goToStage("cuddly");
+    window.__goToStage("cuddly");
     kids.forEach(function (name, index) {
       var floor = document.querySelector("#garden-guests .g-" + name);
       floor.classList.toggle("off-at-games", index < 5);

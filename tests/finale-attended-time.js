@@ -25,7 +25,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         if (phase === "seed") {
           window.__endAttract();
           window.__unlockAllRooms();
-          window.goToStage("garden");
+          window.__goToStage("garden");
           await sleep(120);
           window.__saveLoftCheckpoint();
           var saved = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
@@ -74,7 +74,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           out.visibleAgain = state();
 
           window.__unlockAllRooms();
-          window.goToStage("balcony");
+          window.__goToStage("balcony");
           window.__openEntranceRoom();
           document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
           window.__openEntrancePorscheDriveHud();
@@ -102,9 +102,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           out.czechDuration = window.__formatLoftAttendedTime(47 * 60 * 1000, "cs");
           out.hourDuration = window.__formatLoftAttendedTime(65 * 60 * 1000, "en");
           out.englishCaption = window.__showLoftAttendedTimeCaption();
-          window.setLang("cs");
+          window.__setLang("cs");
           out.czechCaption = document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim();
-          window.setLang("en");
+          window.__setLang("en");
           window.__saveLoftCheckpoint();
           out.finalSaved = JSON.parse(localStorage.getItem("loftCheckpoint:v1")).progress;
           sessionStorage.setItem("finale-attended-result", JSON.stringify(out));

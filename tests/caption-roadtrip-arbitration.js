@@ -37,7 +37,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__setSecondRound(true, { releaseHeld: false });
         window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
           "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-        window.goToStage("balcony"); window.__openEntranceRoom(); await sleep(40);
+        window.__goToStage("balcony"); window.__openEntranceRoom(); await sleep(40);
         window.__openEntrancePorscheDriveHud();
         if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripDevStart(); window.__entranceRoadtripSetLane(.5);
@@ -52,7 +52,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceRoadtripSetRoute("banff", 0); window.__entranceRoadtripSetLane(.5);
         report.chatter = { first: resolve("heart", "tokens") };
         report.chatter.second = resolve("kiss", "tokens");
-        setLang("cs"); report.chatter.cs = snap(); setLang("en");
+        window.__setLang("cs"); report.chatter.cs = snap(); window.__setLang("en");
 
         ["roadtrip-score", "roadtrip-story", "roadtrip-police"].forEach(window.__cancelCaption);
         window.__entranceRoadtripSetRoute("banff", 0); window.__entranceRoadtripSetLane(.5);
@@ -103,7 +103,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           owner: "camp-progress", scope: "lower:entrance", priority: 80,
           duration: 500, clock: "attended"
         });
-        setLang("cs"); report.camp.terminal.cs = snap(); setLang("en");
+        window.__setLang("cs"); report.camp.terminal.cs = snap(); window.__setLang("en");
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }

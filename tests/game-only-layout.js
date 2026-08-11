@@ -58,13 +58,13 @@ function run(width, height, standalone, fullPage, entryFile) {
         portraitBrand && portraitBrand.textContent.trim().length > 0 &&
         portraitBrand.getBoundingClientRect().width > 0 &&
         portraitBrand.getBoundingClientRect().top < document.getElementById("portrait-orientation-title").getBoundingClientRect().top);
-      setLang("cs");
+      window.__setLang("cs");
       check("Czech portrait copy stays inside the orientation banner",
         gate.scrollWidth <= gate.clientWidth &&
         Array.prototype.every.call(gate.children, function (child) {
           return child.getBoundingClientRect().right <= gate.getBoundingClientRect().right + 1;
         }));
-      setLang("en");
+      window.__setLang("en");
       check("portrait suppresses the caption, scene, game controls, and watch actions",
         getComputedStyle(document.getElementById("hunt-caption")).display === "none" &&
         getComputedStyle(document.querySelector(".hunt-frame")).display === "none" &&
@@ -192,7 +192,7 @@ function run(width, height, standalone, fullPage, entryFile) {
           document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
           document.querySelector(".watch-controls").parentNode.id === "hunt-bottom-nav");
         window.__endAttract();
-        window.reset();
+        window.__loftControllers.reset();
         setTimeout(function () {
           check("the public reset() API preserves enlarged page mode and returns to CLICK ME",
             window.__gameOnlyEntered() && !window.__gameStarted() && !!document.getElementById("click-me-overlay") &&

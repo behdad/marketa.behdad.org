@@ -13,7 +13,7 @@ var HARNESS = [
   '["__restoreCheckpointSystems","__setPartyMode","__stopBBQ","__setDayNight"].forEach(function(name){var original=window[name];if(typeof original!=="function")return;window[name]=function(){covered.push({name:name,gate:!!document.getElementById("loft-recovery-gate"),args:Array.prototype.slice.call(arguments)});return original.apply(this,arguments);};});',
   'if(button)button.click();',
   'var restoreCovered=covered.slice();',
-  'var restored={room:window.currentStageName,weather:window.__weatherCheckpointState(),aurora:window.__auroraCheckpointState(),season:window.__seasonPreviewName(),temp:window.__outdoorTempOverride(),units:window.__tempDisplayUnits(),particles:{rain:document.querySelectorAll(".balc-drop").length,meteors:document.querySelectorAll(".sky-meteor").length}};',
+  'var restored={room:window.__currentStageName,weather:window.__weatherCheckpointState(),aurora:window.__auroraCheckpointState(),season:window.__seasonPreviewName(),temp:window.__outdoorTempOverride(),units:window.__tempDisplayUnits(),particles:{rain:document.querySelectorAll(".balc-drop").length,meteors:document.querySelectorAll(".sky-meteor").length}};',
   'window.__saveLoftCheckpoint();var recaptured=JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.environment;',
   'window.__restoreCheckpointSystems({environment:{weather:{rain:"yes"},aurora:{mode:"on",kp:12},smoke:"yes",outdoorC:200,units:{indoor:"K",outdoor:"F"}}},"beforeStage");',
   'window.__restoreCheckpointSystems({environment:{weather:{rain:"yes"},aurora:{mode:"on",kp:12},smoke:"yes",outdoorC:200,units:{indoor:"K",outdoor:"F"}}},"afterStage");',

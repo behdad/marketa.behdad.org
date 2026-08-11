@@ -33,18 +33,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__captionOverlay("room_progress", { owner: "dynamic", scope: "stage:kitchen",
           priority: 40, replacements: { n: 2 } });
         report.replacements = { en: snap() };
-        setLang("cs"); report.replacements.cs = snap();
-        setLang("en"); window.__cancelCaption("dynamic");
+        window.__setLang("cs"); report.replacements.cs = snap();
+        window.__setLang("en"); window.__cancelCaption("dynamic");
 
-        window.caption("<b>literal & untouched</b>", { html: true });
+        window.__loftControllers.caption("<b>literal & untouched</b>", { html: true });
         report.literal = { en: snap() };
-        setLang("cs"); report.literal.cs = snap();
-        setLang("en");
+        window.__setLang("cs"); report.literal.cs = snap();
+        window.__setLang("en");
         report.literal.partyAccepted = !!window.__captionOverlay("party_exit_hint", {
           owner: "party-story", scope: "stage:kitchen", priority: 60, duration: 500, clock: "wall"
         });
-        window.setCaption("party_exit_hint", true); report.literal.overStory = snap();
-        window.__cancelCaption("console"); window.setCaption("kitchen", true); report.literal.reclaimed = snap();
+        window.__setCaption("party_exit_hint", true); report.literal.overStory = snap();
+        window.__cancelCaption("console"); window.__setCaption("kitchen", true); report.literal.reclaimed = snap();
 
         window.__captionOverlay("trip_caption_molly", { owner: "stale", scope: "stage:kitchen",
           priority: 30, duration: 180, clock: "wall" });
@@ -98,11 +98,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             owner: "late-kitchen", scope: "stage:kitchen", priority: 80, duration: 200, clock: "wall"
           });
         }, 100);
-        window.__unlockAllRooms(); window.goToStage("garden");
+        window.__unlockAllRooms(); window.__goToStage("garden");
         await sleep(150);
         report.delayedScope = { accepted: delayedAccepted, caption: snap() };
 
-        window.goToStage("kitchen");
+        window.__goToStage("kitchen");
         window.__captionOverlay("trip_caption_molly", { owner: "upstairs", scope: "stage:kitchen",
           priority: 30, duration: 600, clock: "wall" });
         window.__openBathroomRoom(); await sleep(40);
@@ -111,20 +111,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           priority: 30, duration: 600, clock: "wall" });
         window.__closeBathroomRoom(); report.lowerScope.left = snap();
 
-        window.goToStage("garden");
-        var ordinarySession = window.loftSessionExport();
+        window.__goToStage("garden");
+        var ordinarySession = window.__loftSessionExport();
         window.__captionOverlay("trip_caption_molly", { owner: "checkpoint-transient", scope: "stage:garden",
           priority: 30, duration: 1000, clock: "wall" });
         var checkpointPaints = window.__captionState().paintCount;
-        report.checkpoint = { before: snap(), imported: window.loftSessionImport(ordinarySession), after: snap(),
+        report.checkpoint = { before: snap(), imported: window.__loftSessionImport(ordinarySession), after: snap(),
           paints: window.__captionState().paintCount - checkpointPaints };
 
-        window.goToStage("office"); window.__setSecondRound(true, { releaseHeld: false });
+        window.__goToStage("office"); window.__setSecondRound(true, { releaseHeld: false });
         document.getElementById("office-abstract-butterfly").dispatchEvent(
           new MouseEvent("click", { bubbles: true, cancelable: true }));
         await sleep(30); report.butterfly = { en: snap() };
-        setLang("cs"); report.butterfly.cs = snap(); setLang("en");
-        window.goToStage("garden"); report.butterfly.left = snap();
+        window.__setLang("cs"); report.butterfly.cs = snap(); window.__setLang("en");
+        window.__goToStage("garden"); report.butterfly.left = snap();
 
         window.__captionArbiter.exclusive("recovery_title", { owner: "recovery", scope: "global", priority: 120 });
         report.recovery = { exclusive: snap() };
@@ -148,10 +148,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         };
 
         window.__showRsvpNudge();
-        var rejectedPrev = window.caption("must not displace RSVP", { blink: 80, hold: 100 });
+        var rejectedPrev = window.__loftControllers.caption("must not displace RSVP", { blink: 80, hold: 100 });
         report.rejectedEffects = { previous: rejectedPrev, immediate: snap() };
         await sleep(120); report.rejectedEffects.after = snap();
-        window.setCaption("garden", true);
+        window.__setCaption("garden", true);
 
         var resetHandoffFired = false;
         var resetHandoff = window.__scheduleAttended(function () { resetHandoffFired = true; }, 3000,

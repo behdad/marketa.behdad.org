@@ -9,7 +9,7 @@ var HARNESS = [
   'var report={errors:[],steps:{}};',
   'window.addEventListener("load",function(){setTimeout(function(){',
   'if(window.__endAttract)window.__endAttract();window.__secondRound=true;window.__deliverPhoneMessage("mb");window.__runMsgAction("mb");',
-  'setTimeout(function(){var shell=document.querySelector(".phone-shell"),form=document.querySelector(".pm-mail-form");report.steps.message={room:window.currentStageName,mail:!!(shell&&shell.classList.contains("pm-app")&&form),to:form&&form.querySelector("#pm-mail-f-to").value,subject:form&&form.querySelector("#pm-mail-f-subject").value,body:form&&form.querySelector("#pm-mail-f-body").value};',
+  'setTimeout(function(){var shell=document.querySelector(".phone-shell"),form=document.querySelector(".pm-mail-form");report.steps.message={room:window.__currentStageName,mail:!!(shell&&shell.classList.contains("pm-app")&&form),to:form&&form.querySelector("#pm-mail-f-to").value,subject:form&&form.querySelector("#pm-mail-f-subject").value,body:form&&form.querySelector("#pm-mail-f-body").value};',
   // lib.js blocks every anchor in capture phase to prevent headless navigation. Let this one
   // in-game action continue past that generic guard so its target listener is exercised.
   'window.__closePhoneModal(true);setTimeout(function(){var composeCalls=0,openCompose=window.__openPhoneRsvpCompose;window.__openPhoneRsvpCompose=function(){composeCalls++;return openCompose();};window.__showRsvpNudge();var link=document.querySelector("#hunt-caption a"),oldStopI=Event.prototype.stopImmediatePropagation;Event.prototype.stopImmediatePropagation=function(){};var allowed=link&&link.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));Event.prototype.stopImmediatePropagation=oldStopI;',

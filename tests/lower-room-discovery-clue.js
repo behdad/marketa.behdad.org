@@ -46,22 +46,22 @@ var harness = String.raw`<script>
       document.getElementById("hunt-caption").textContent ===
         "The loft may have kept a few rooms out of sight.",
       document.getElementById("hunt-caption").textContent);
-    setLang("cs");
+    window.__setLang("cs");
     check("the live clue follows the language switch",
       document.getElementById("hunt-caption").textContent ===
         "Loft možná pár pokojů schoval před očima.",
       document.getElementById("hunt-caption").textContent);
 
-    setLang("en");
+    window.__setLang("en");
     window.__clearFlashCaption("lower-room-discovery");
-    window.setCaption("kitchen", true);
+    window.__setCaption("kitchen", true);
     window.__lowerRoomDiscoveryClueTick(600000, true);
     check("the clue does not repeat in the same page session",
       window.__captionKey() === "kitchen" &&
       window.__lowerRoomDiscoveryClueState().shown === true,
       JSON.stringify(window.__lowerRoomDiscoveryClueState()));
 
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     key("ArrowDown");
     check("the first Down press only arms the undiscovered lower floor",
       !window.__bathroomRoomState().open &&
@@ -84,7 +84,7 @@ var harness = String.raw`<script>
 
     key("ArrowUp");
     await sleep(760);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     key("ArrowDown");
     check("one Down press enters every lower room after discovery",
       window.__princeState().basement === true &&
@@ -99,7 +99,7 @@ var harness = String.raw`<script>
       localStorage.getItem("lowerRoomDiscovered:v1") === null,
       JSON.stringify(window.__lowerRoomDiscoveryClueState()));
 
-    window.goToStage("kitchen");
+    window.__goToStage("kitchen");
     key("ArrowDown");
     check("Start over re-arms deliberate double-press discovery",
       !window.__bathroomRoomState().open &&

@@ -4,7 +4,7 @@
 var lib = require("./lib");
 var harness = String.raw`<script>
 (function () {
-  window.goToStage("kitchen");
+  window.__goToStage("kitchen");
   if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
   if (window.__setPartyMode) window.__setPartyMode(false, true);
   if (window.__setDayNight) window.__setDayNight(true);

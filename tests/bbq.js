@@ -24,12 +24,12 @@ var harness = String.raw`<script>
   try { localStorage.setItem("dateInvite:bbq:4-2", "1"); } catch (e) {} // simulate an earlier May-2 playthrough in this browser
   if (window.__deliverDateInvite) window.__deliverDateInvite();
   check("BBQ message waits during phase one", !(window.__phoneMessageReceived && window.__phoneMessageReceived("bbq")) && !window.__secondRound);
-  if (window.goToStage) window.goToStage("balcony");
+  if (window.__goToStage) window.__goToStage("balcony");
   var partySwitch = document.getElementById("balcony-partyswitch");
   if (partySwitch) partySwitch.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   setTimeout(function () {
     var garden = document.getElementById("stage-garden"), balcony = document.getElementById("stage-balcony");
-    check("May-2 switch drops into the garden", window.currentStageName === "garden", window.currentStageName);
+    check("May-2 switch drops into the garden", window.__currentStageName === "garden", window.__currentStageName);
     check("May-2 switch starts a party", !!window.__gardenPartyOn);
     check("May-2 party stays daylight", !garden.classList.contains("dusk") && !balcony.classList.contains("dusk"));
     check("May-2 party starts without UV", !document.getElementById("loft-game-strip").classList.contains("uv-mode"));
@@ -56,7 +56,7 @@ var harness = String.raw`<script>
       var peopleAudit = window.__peopleManager && window.__peopleManager.audit();
       check("people manager is the occupancy authority", !!(window.__peopleManager && window.__peopleManager.occupants && window.__peopleManager.inventory && window.__peopleManager.locate));
       check("BBQ split has no cross-room duplicates", !!peopleAudit && peopleAudit.ok, peopleAudit ? JSON.stringify(peopleAudit.duplicates) : "manager missing");
-      check("invitation pans to balcony", window.currentStageName === "balcony", window.currentStageName);
+      check("invitation pans to balcony", window.__currentStageName === "balcony", window.__currentStageName);
       check("invitation starts split", state.on && window.__bbqSplitOn);
       check("exactly four adults rotate", selected.length === 4, selected.join(","));
       check("host pair changes the deck from five to seven figures", window.__balconyHangoutNow().length === (state.hostsOnBalcony ? 7 : 5), window.__balconyHangoutNow().map(function (p) { return p.name; }).join(","));
@@ -129,16 +129,16 @@ var harness = String.raw`<script>
       var hostsOutside = names("balcony");
       check("outside host assignment moves both hosts off the party floor", hostsOutside.indexOf("Behdad") !== -1 && hostsOutside.indexOf("Markéta") !== -1 && names("garden").indexOf("Behdad") === -1, hostsOutside.join(","));
 
-      window.roster.set(true);
+      window.__loftControllers.roster.set(true);
       var held = window.__bbqSplitState().guests.slice();
       var heldResult = window.__rotateBBQSplit();
       check("open roster freezes BBQ rotation", heldResult === false && same(held, window.__bbqSplitState().guests));
-      window.roster.set(false);
+      window.__loftControllers.roster.set(false);
       var movedResult = window.__rotateBBQSplit();
       var moved = window.__bbqSplitState().guests.slice();
       check("closing roster resumes BBQ rotation", movedResult === true && intersection(held, moved).length === 3, held.join(",") + " -> " + moved.join(","));
 
-      window.goToStage("cuddly");
+      window.__goToStage("cuddly");
       setTimeout(function () {
         var kids = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
         check("all eight game kids are in the cuddly room", names("cuddly").filter(function (n) { return ["Irene","Robin","Navid","Elisabeth","Felix","Patricia’s son","Patricia’s daughter","Hannah"].indexOf(n) !== -1; }).length === 8, names("cuddly").join(","));

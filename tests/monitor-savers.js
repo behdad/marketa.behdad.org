@@ -14,12 +14,12 @@ var HARNESS = [
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
-  ' window.goToStage("office");await sleep(920);',
+  ' window.__goToStage("office");await sleep(920);',
   ' var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");mon.classList.remove("show-saver","saver-pipes","saver-flower");',
   ' var hit=document.getElementById("monitor-saver-cycle-hit");function tapHit(){hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,button:0}));hit.dispatchEvent(new MouseEvent("click",{bubbles:true}));}tapHit();await sleep(360);var first=window.__monitorSaverState();tapHit();await sleep(360);var second=window.__monitorSaverState();S("bezelCycle",{first:first.kind,second:second.kind,awake:mon.classList.contains("show-saver")});window.__wakeMonitorSaver();',
   ' var cycles=[];for(var i=0;i<4;i++){window.__startMonitorSaver();await sleep(360);var state=window.__monitorSaverState();cycles.push({kind:state.kind,painted:state.painted,running:state.running,segments:state.segments,backend:state.backend,order:state.order,next:state.next,pipesClass:mon.classList.contains("saver-pipes"),flowerClass:mon.classList.contains("saver-flower")});if(i<3)window.__wakeMonitorSaver();}',
   ' S("cycles",cycles);',
-  ' window.goToStage("garden");await sleep(80);S("parked",{running:window.__monitorSaverLoopRunning(),state:window.__monitorSaverState()});',
+  ' window.__goToStage("garden");await sleep(80);S("parked",{running:window.__monitorSaverLoopRunning(),state:window.__monitorSaverState()});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -27,7 +27,7 @@ var HARNESS = [
 var REDUCED_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>window.addEventListener("load",function(){setTimeout(function(){',
-  'window.goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
+  'window.__goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
   'window.__startMonitorSaver("flower");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,state:window.__monitorSaverState()});',
   '},350);});</script>'
 ].join("\n");

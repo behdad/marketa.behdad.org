@@ -28,7 +28,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return target && target.id;
   }
   function clearNight() {
-    window.storm.set(false); window.rain.set(false); window.snow.set(false); window.overcast.set(false);
+    window.__loftControllers.storm.set(false); window.__loftControllers.rain.set(false); window.__loftControllers.snow.set(false); window.__loftControllers.overcast.set(false);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
     window.__setDayNight(true);
   }
@@ -249,7 +249,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
-    window.goToStage("balcony");
+    window.__goToStage("balcony");
     setTimeout(function () {
       try {
         window.__openEntranceRoom();
@@ -273,7 +273,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             window.__setDayNight(false);
             setTimeout(function () {
               try {
-                window.overcast.set(true);
+                window.__loftControllers.overcast.set(true);
                 if (window.__applyBalconyWeather) window.__applyBalconyWeather();
                 click(document.getElementById("entrance-roadtrip-camp-sky-hit"));
                 report.dayOpen = snap().state.sunsetting ? "sunset" : false;
@@ -299,8 +299,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                         report.earlyTarget = clickPoint(tent);
                         report.earlyClick = snap();
                         report.wisdomMurmurs = [];
-                        var originalWisdomMurmur = window.playCampWisdomMurmurSound;
-                        window.playCampWisdomMurmurSound = function (index) {
+                        var originalWisdomMurmur = window.__playCampWisdomMurmurSound;
+                        window.__playCampWisdomMurmurSound = function (index) {
                           report.wisdomMurmurs.push(index);
                           return true;
                         };
@@ -313,13 +313,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                             });
                             bubble.dispatchEvent(reveal);
                           });
-                        window.playCampWisdomMurmurSound = originalWisdomMurmur;
+                        window.__playCampWisdomMurmurSound = originalWisdomMurmur;
                         setTimeout(function () {
                           try {
                             report.handoff = snap();
                             var completeCheckpoint = window.__captureCheckpointSystems().entrance;
                             report.englishContinue = document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim();
-                            window.setLang("cs");
+                            window.__setLang("cs");
                             report.czech = {
                               title: document.querySelector('[data-i="entrance_roadtrip_stargazing_title"]').textContent,
                               builderNames: Array.prototype.map.call(document.querySelectorAll('#entrance-roadtrip-stargazing-game [data-i^="entrance_roadtrip_stargazing_ursa"],#entrance-roadtrip-stargazing-game [data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
@@ -329,7 +329,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                               continueButton: document.getElementById("entrance-roadtrip-camp-wisdom-continue").textContent.trim(),
                               continueText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim()
                             };
-                            window.setLang("en");
+                            window.__setLang("en");
                             report.backdropTarget = clickPoint(tent);
                             report.backdropAfter = snap();
                             report.dismissTarget = "entrance-roadtrip-camp-wisdom-continue";
@@ -349,7 +349,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                                 report.exited = snap();
                                 click(document.querySelector('[data-roadtrip-reentry-choice="camp"]'));
                                 report.preservedArrival = snap();
-                                window.overcast.set(false); clearNight();
+                                window.__loftControllers.overcast.set(false); clearNight();
                               } catch (error) { report.errors.push(String(error && error.stack || error)); }
                               finish();
                             }, 180);

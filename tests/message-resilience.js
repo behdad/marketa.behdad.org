@@ -22,7 +22,7 @@ var HARNESS = String.raw`<script>
   async function run() {
     window.__secondRound = true;
     window.__gameStarted = function () { return true; };
-    if (window.goToStage) window.goToStage("office");
+    if (window.__goToStage) window.__goToStage("office");
     var monitor = document.getElementById("office-monitor");
     monitor.classList.add("here", "screen-on", "show-caps");
     window.__monitorChatTurnstile = function () { return Promise.resolve("test-token"); };
@@ -59,7 +59,7 @@ var HARNESS = String.raw`<script>
       return groupAttempts === 1 ? Promise.reject(new Error("offline")) : Promise.resolve(JSON.stringify({ sender: "Bahareh", text: "I hear you now.", reply_to_id: null, action: null }));
     };
     window.__openMessagesAt(null);
-    window.message("Save me a dance!");
+    window.__loftControllers.message("Save me a dance!");
     await sleep(80);
     var outgoing = document.querySelector(".pm-msg-row.outgoing");
     step("messages_failed", {
@@ -101,7 +101,7 @@ var HARNESS = String.raw`<script>
     if (window.__closePhoneModal) window.__closePhoneModal(true);
     await sleep(250);
     window.__gardenPartyOn = true;
-    window.roster.set(true);
+    window.__loftControllers.roster.set(true);
     var rosterAutonomous = window.__deliverAutonomousPhoneMessage("cue_mail");
     var rosterDirect = window.__deliverPhoneMessage("cue_calendar");
     step("roster_hold", {
@@ -113,7 +113,7 @@ var HARNESS = String.raw`<script>
       badge: !!document.querySelector(".msg-badge.show"),
       balconyBadge: document.getElementById("balcony-phone-badge").style.display
     });
-    window.roster.set(false);
+    window.__loftControllers.roster.set(false);
     window.__flushDeferredPhoneMessages();
     step("roster_release", {
       autonomousDelivered: window.__phoneMessageReceived("cue_mail"),
@@ -201,7 +201,7 @@ var HARNESS = String.raw`<script>
     if (window.__resetPhoneApps) window.__resetPhoneApps();
     window.__secondRound = true;
     window.__monitorGroupChatAsk = function (text) { return Promise.resolve(JSON.stringify({ sender: "Charlie", text: "Reply to " + text, reply_to_id: null, action: null })); };
-    for (var i = 1; i <= 23; i++) window.message("Question " + i);
+    for (var i = 1; i <= 23; i++) window.__loftControllers.message("Question " + i);
     await sleep(180);
     var beforeAuthored = window.__phoneMessageThread();
     for (var n = 0; n < 12; n++) window.__nextPhoneNudge();

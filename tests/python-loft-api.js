@@ -70,8 +70,10 @@ async function main() {
     }
   };
   globalThis.window = {
-    loft: { api: api },
-    help: function (topic) { return arguments.length ? "JS HELP " + String(topic) : "JS HELP ROOT"; }
+    loft: {
+      api: api,
+      help: function (topic) { return arguments.length ? "JS HELP " + String(topic) : "JS HELP ROOT"; }
+    }
   };
   globalThis.__loftTurtleCommand = function () { return true; };
   globalThis.__loftBridgeCallCount = function () { return calls.length; };
@@ -92,23 +94,26 @@ async function main() {
     "import js",
     "import loft",
     "",
-    "original_help = builtins.help.__loft_original__",
-    "first_loft_help = builtins.help",
+    "original_help = builtins.help",
     "loft = importlib.reload(loft)",
-    "assert builtins.help is not first_loft_help",
-    "assert builtins.help.__loft_original__ is original_help",
-    "def rendered_help(*args):",
+    "assert builtins.help is original_help",
+    "def rendered_loft_help(*args):",
     "    output = io.StringIO()",
     "    with contextlib.redirect_stdout(output):",
-    "        result = help(*args)",
+    "        result = loft.help(*args)",
     "    assert result is None",
     "    return output.getvalue().rstrip('\\n')",
-    "assert rendered_help() == 'JS HELP ROOT'",
-    "assert rendered_help(loft) == 'JS HELP ROOT'",
-    "assert rendered_help(loft.weather) == 'JS HELP weather'",
-    "assert rendered_help(loft.weather.rain) == 'JS HELP weather.rain'",
-    "assert rendered_help(loft.weather.rain.set) == 'JS HELP weather.rain.set'",
-    "assert 'Help on class str in module builtins' in rendered_help(str)",
+    "assert rendered_loft_help() == 'JS HELP ROOT'",
+    "assert rendered_loft_help(loft) == 'JS HELP ROOT'",
+    "assert rendered_loft_help(loft.weather) == 'JS HELP weather'",
+    "assert rendered_loft_help(loft.weather.rain) == 'JS HELP weather.rain'",
+    "assert rendered_loft_help(loft.weather.rain.set) == 'JS HELP weather.rain.set'",
+    "assert loft.presentation.svg.show('<svg/>') is None",
+    "assert 'fonts' in dir(loft) and 'google' in dir(loft.fonts)",
+    "ordinary = io.StringIO()",
+    "with contextlib.redirect_stdout(ordinary):",
+    "    help(str)",
+    "assert 'Help on class str in module builtins' in ordinary.getvalue()",
     "",
     "status = loft.game.status()",
     "assert status == {'room': 'kitchen', 'optional': None, 'rooms': ['kitchen', None]}",

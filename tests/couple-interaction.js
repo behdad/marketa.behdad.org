@@ -16,7 +16,7 @@ var harness = String.raw`<script>
   }
   try {
     window.__setGardenParty(true, false);
-    window.goToStage("garden");
+    window.__goToStage("garden");
     var strip = document.getElementById("loft-game-strip");
     var behdad = document.querySelector("#garden-guests .g-behdad");
     var marketa = document.querySelector("#garden-guests .g-marketa");

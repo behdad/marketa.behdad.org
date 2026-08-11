@@ -244,25 +244,72 @@ function lexicalModel(ast) {
     });
     return expanded;
   }
-  function fixedString(node, seen) {
+  function fixedStrings(node, seen) {
     if (!node) return null;
-    if (node.type === "Literal" && (typeof node.value === "string" || typeof node.value === "number")) return String(node.value);
-    if (node.type === "TemplateLiteral" && !node.expressions.length) return node.quasis[0].value.cooked;
+    if (node.type === "Literal" && (typeof node.value === "string" || typeof node.value === "number")) return new Set([String(node.value)]);
+    if (node.type === "TemplateLiteral") {
+      var templateValues = new Set([node.quasis[0].value.cooked]);
+      for (var templateIndex = 0; templateIndex < node.expressions.length; templateIndex++) {
+        var expressionValues = fixedStrings(node.expressions[templateIndex], seen), nextTemplateValues = new Set();
+        if (!expressionValues) return null;
+        templateValues.forEach(function (left) { expressionValues.forEach(function (right) { nextTemplateValues.add(left + right + node.quasis[templateIndex + 1].value.cooked); }); });
+        templateValues = nextTemplateValues;
+      }
+      return templateValues;
+    }
+    if (node.type === "BinaryExpression" && node.operator === "+") {
+      var leftValues = fixedStrings(node.left, seen), rightValues = fixedStrings(node.right, seen), binaryValues = new Set();
+      if (!leftValues || !rightValues) return null;
+      leftValues.forEach(function (left) { rightValues.forEach(function (right) { binaryValues.add(left + right); }); });
+      return binaryValues;
+    }
+    if (node.type === "ConditionalExpression" || node.type === "LogicalExpression") {
+      var firstValues = fixedStrings(node.type === "ConditionalExpression" ? node.consequent : node.left, seen);
+      var secondValues = fixedStrings(node.type === "ConditionalExpression" ? node.alternate : node.right, seen);
+      if (!firstValues || !secondValues) return null;
+      return new Set(Array.from(firstValues).concat(Array.from(secondValues)));
+    }
+    if (node.type === "SequenceExpression" && node.expressions.length) return fixedStrings(node.expressions[node.expressions.length - 1], seen);
+    if (node.type === "AssignmentExpression") return fixedStrings(node.right, seen);
     if (node.type === "Identifier") {
       var found = resolve(nodeScopes.get(node), node.name);
       if (!found || (seen = seen || new Set()).has(found) || !found.sources.length) return null;
       seen.add(found);
-      var values = found.sources.map(function (sourceRef) { return sourceRef.node && !(sourceRef.path && sourceRef.path.length) ? fixedString(sourceRef.node, seen) : null; });
+      var values = found.sources.map(function (sourceRef) { return sourceRef.node && !(sourceRef.path && sourceRef.path.length) ? fixedStrings(sourceRef.node, seen) : null; });
       seen.delete(found);
-      return values.length && values.every(function (value) { return value !== null && value === values[0]; }) ? values[0] : null;
+      if (!values.length || values.some(function (value) { return value === null; })) return null;
+      return new Set([].concat.apply([], values.map(function (value) { return Array.from(value); })));
     }
     return null;
+  }
+  function fixedString(node, seen) {
+    var values = fixedStrings(node, seen);
+    return values && values.size === 1 ? Array.from(values)[0] : null;
   }
   function fixedMemberName(node) {
     if (!node || node.type !== "MemberExpression") return null;
     if (!node.computed && node.property.type === "Identifier") return node.property.name;
     if (node.computed) return fixedString(node.property, new Set());
     return null;
+  }
+  function pathPartName(part) {
+    if (part.type === "key" || part.type === "index") return String(part.value);
+    if (part.type === "computed") return fixedString(part.node, new Set());
+    return null;
+  }
+  function ownerKeyReference(sourceRef, seen) {
+    if (sourceRef && sourceRef.alternatives) {
+      var alternativeKeys = sourceRef.alternatives.map(function (alternative) { return ownerKeyReference(alternative, seen); });
+      return alternativeKeys.length && alternativeKeys[0] !== null && alternativeKeys.every(function (key) { return key === alternativeKeys[0]; }) ? alternativeKeys[0] : null;
+    }
+    var key = sourceRef && sourceRef.node ? ownerKey(sourceRef.node, seen) : null;
+    if (key === null) return null;
+    for (var index = 0; index < (sourceRef.path || []).length; index++) {
+      var name = pathPartName(sourceRef.path[index]);
+      if (name === null) return null;
+      key += "." + name;
+    }
+    return key;
   }
   function ownerKey(node, seen) {
     if (!node) return null;
@@ -272,7 +319,7 @@ function lexicalModel(ast) {
         seen = seen || new Set();
         if (!seen.has(found) && found.sources.length) {
           seen.add(found);
-          var sourceKeys = found.sources.map(function (sourceRef) { return sourceRef.node && !(sourceRef.path && sourceRef.path.length) ? ownerKey(sourceRef.node, seen) : null; });
+          var sourceKeys = found.sources.map(function (sourceRef) { return ownerKeyReference(sourceRef, seen); });
           seen.delete(found);
           if (sourceKeys.length && sourceKeys[0] !== null && sourceKeys.every(function (key) { return key === sourceKeys[0]; })) return sourceKeys[0];
         }
@@ -281,6 +328,8 @@ function lexicalModel(ast) {
       if (node.name === "window" || node.name === "globalThis" || node.name === "self" || node.name === "top" || node.name === "parent" || node.name === "frames") return "window";
       if (node.name === "loft") return "loft";
       if (node.name === "document") return "document";
+      if (node.name === "setTimeout" || node.name === "setInterval" || node.name === "addEventListener") return "window." + node.name;
+      if (node.name === "Promise") return "promise-constructor";
       return "global:" + node.name;
     }
     if (node.type === "MemberExpression") {
@@ -292,9 +341,67 @@ function lexicalModel(ast) {
       if (base === "document" && name === "defaultView") return "window";
       return base + "." + name;
     }
+    if (node.type === "CallExpression") {
+      var calledKey = ownerKey(node.callee, seen);
+      if (calledKey && /^promise(?:-constructor\.(?:resolve|reject|all|allSettled|any|race)|\.(?:then|catch|finally))$/.test(calledKey)) return "promise";
+      if (calledKey && /\.(?:bind)$/.test(calledKey)) return calledKey.slice(0, -5);
+      return null;
+    }
     if (node.type === "AssignmentExpression") return ownerKey(node.right, seen);
     if (node.type === "SequenceExpression" && node.expressions.length) return ownerKey(node.expressions[node.expressions.length - 1], seen);
     return null;
+  }
+  function possibleOwnerKeysReference(sourceRef, seen) {
+    if (sourceRef && sourceRef.alternatives) {
+      var alternativeKeys = new Set();
+      sourceRef.alternatives.forEach(function (alternative) { possibleOwnerKeysReference(alternative, seen).forEach(function (key) { alternativeKeys.add(key); }); });
+      return alternativeKeys;
+    }
+    var keys = sourceRef && sourceRef.node ? possibleOwnerKeys(sourceRef.node, seen) : new Set();
+    (sourceRef && sourceRef.path || []).forEach(function (part) {
+      var name = pathPartName(part), projectedKeys = new Set();
+      if (name !== null) keys.forEach(function (key) { projectedKeys.add(key + "." + name); });
+      keys = projectedKeys;
+    });
+    return keys;
+  }
+  function possibleOwnerKeys(node, seen) {
+    if (!node) return new Set();
+    if (node.type === "Identifier") {
+      var found = resolve(nodeScopes.get(node), node.name);
+      if (found) {
+        seen = seen || new Set();
+        if (seen.has(found)) return new Set();
+        seen.add(found);
+        var sourceKeys = new Set();
+        found.sources.forEach(function (sourceRef) { possibleOwnerKeysReference(sourceRef, seen).forEach(function (key) { sourceKeys.add(key); }); });
+        seen.delete(found);
+        if (sourceKeys.size) return sourceKeys;
+      }
+      var identifierKey = ownerKey(node); return identifierKey === null ? new Set() : new Set([identifierKey]);
+    }
+    if (node.type === "ConditionalExpression" || node.type === "LogicalExpression") {
+      var branchKeys = possibleOwnerKeys(node.type === "ConditionalExpression" ? node.consequent : node.left, seen);
+      possibleOwnerKeys(node.type === "ConditionalExpression" ? node.alternate : node.right, seen).forEach(function (key) { branchKeys.add(key); });
+      return branchKeys;
+    }
+    if (node.type === "MemberExpression") {
+      var memberName = fixedMemberName(node), memberKeys = new Set();
+      if (memberName === null) return memberKeys;
+      possibleOwnerKeys(node.object, seen).forEach(function (key) { memberKeys.add(key + "." + memberName); });
+      return memberKeys;
+    }
+    if (node.type === "CallExpression") {
+      var callKeys = possibleOwnerKeys(node.callee, seen), resultKeys = new Set();
+      callKeys.forEach(function (key) {
+        if (/^promise(?:-constructor\.(?:resolve|reject|all|allSettled|any|race)|\.(?:then|catch|finally))$/.test(key)) resultKeys.add("promise");
+        else if (/\.bind$/.test(key)) resultKeys.add(key.slice(0, -5));
+      });
+      return resultKeys;
+    }
+    if (node.type === "AssignmentExpression") return possibleOwnerKeys(node.right, seen);
+    if (node.type === "SequenceExpression" && node.expressions.length) return possibleOwnerKeys(node.expressions[node.expressions.length - 1], seen);
+    var key = ownerKey(node, seen); return key === null ? new Set() : new Set([key]);
   }
   function propertyName(property) {
     if (!property || property.type !== "Property") return null;
@@ -302,20 +409,46 @@ function lexicalModel(ast) {
     if (property.computed) return fixedString(property.key, new Set());
     return null;
   }
-  function flowContainer(node) {
-    while (node && node.type !== "Program" && node.type !== "BlockStatement") node = nodeParents.get(node);
-    return node || null;
+  function executionRoot(node) {
+    while (node) {
+      if (node.type === "Program" || node.type === "FunctionDeclaration" || node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") return node;
+      node = nodeParents.get(node);
+    }
+    return null;
+  }
+  function staticTruth(node) {
+    if (!node) return null;
+    if (node.type === "Literal") return !!node.value;
+    if (node.type === "UnaryExpression" && node.operator === "!") { var argumentTruth = staticTruth(node.argument); return argumentTruth === null ? null : !argumentTruth; }
+    if (node.type === "SequenceExpression" && node.expressions.length) return staticTruth(node.expressions[node.expressions.length - 1]);
+    return null;
   }
   function definiteBefore(assignment, readNode) {
-    if (!readNode || assignment.start >= readNode.start || flowContainer(assignment) !== flowContainer(readNode)) return false;
-    var node = assignment, container = flowContainer(assignment);
-    while (node && node !== container) {
+    if (!readNode || assignment.start >= readNode.start || executionRoot(assignment) !== executionRoot(readNode)) return false;
+    var node = assignment, root = executionRoot(assignment);
+    while (node && node !== root) {
       var parent = nodeParents.get(node);
       if (!parent) return false;
-      if (parent.type === "IfStatement" || parent.type === "ConditionalExpression" || parent.type === "LogicalExpression" || parent.type === "SwitchCase" || parent.type === "SwitchStatement" || parent.type === "TryStatement" || parent.type === "ForStatement" || parent.type === "ForInStatement" || parent.type === "ForOfStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement") return false;
+      if (parent.type === "IfStatement") {
+        var truth = staticTruth(parent.test);
+        if ((node === parent.consequent && truth !== true) || (node === parent.alternate && truth !== false) || (node !== parent.consequent && node !== parent.alternate)) return false;
+      } else if (parent.type === "ConditionalExpression" || parent.type === "LogicalExpression" || parent.type === "SwitchCase" || parent.type === "SwitchStatement" || parent.type === "TryStatement" || parent.type === "CatchClause" || parent.type === "ForStatement" || parent.type === "ForInStatement" || parent.type === "ForOfStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement") return false;
       node = parent;
     }
-    return node === container;
+    return node === root;
+  }
+  function possiblyExecutes(assignment) {
+    var node = assignment, root = executionRoot(assignment);
+    while (node && node !== root) {
+      var parent = nodeParents.get(node);
+      if (!parent) return true;
+      if (parent.type === "IfStatement") {
+        var truth = staticTruth(parent.test);
+        if ((node === parent.consequent && truth === false) || (node === parent.alternate && truth === true)) return false;
+      }
+      node = parent;
+    }
+    return true;
   }
   function memberSourceNodes(memberNode, seen, readNode) {
     var name = fixedMemberName(memberNode), sources = [];
@@ -325,7 +458,7 @@ function lexicalModel(ast) {
     if (seen.has(memberToken)) return sources;
     seen.add(memberToken);
     var assignments = wantedOwner === null ? [] : memberAssignments.filter(function (assignment) {
-      return assignment.name === name && ownerKey(assignment.owner) === wantedOwner && (!readNode || assignment.node.start < readNode.start);
+      return assignment.name === name && ownerKey(assignment.owner) === wantedOwner && possiblyExecutes(assignment.node) && (!readNode || assignment.node.start < readNode.start);
     }).sort(function (a, b) { return a.node.start - b.node.start; });
     var lastDefinite = null;
     assignments.forEach(function (assignment) { if (definiteBefore(assignment.node, readNode)) lastDefinite = assignment; });
@@ -355,6 +488,45 @@ function lexicalModel(ast) {
     });
     return sources;
   }
+  function functionDescriptorsAtPath(node, path, seen, readNode) {
+    if (!path.length) return functionDescriptors(node, seen, readNode);
+    if (!node) return [];
+    var part = path[0], name = pathPartName(part), rest = path.slice(1), targets = [];
+    if (name === null) return targets;
+    function append(sourceNode) {
+      functionDescriptorsAtPath(sourceNode, rest, seen, readNode).forEach(function (target) { targets.push(target); });
+    }
+    if (node.type === "Identifier") {
+      var found = resolve(nodeScopes.get(node), node.name);
+      if (!found || seen.has(found)) return targets;
+      seen.add(found);
+      found.sources.forEach(function (sourceRef) { functionDescriptorsFromReference({ node: sourceRef.node, scope: sourceRef.scope, path: (sourceRef.path || []).concat(path) }, seen, readNode).forEach(function (target) { targets.push(target); }); });
+      seen.delete(found);
+    } else if (node.type === "ObjectExpression") {
+      node.properties.forEach(function (property) { if (propertyName(property) === name) append(property.value); });
+    } else if (node.type === "ArrayExpression" && /^(?:0|[1-9]\d*)$/.test(name)) {
+      var entry = node.elements[Number(name)]; if (entry) append(entry.type === "SpreadElement" ? entry.argument : entry);
+    } else if (node.type === "MemberExpression") {
+      memberSourceNodes(node, seen, readNode).forEach(function (sourceNode) { functionDescriptorsAtPath(sourceNode, path, seen, readNode).forEach(function (target) { targets.push(target); }); });
+    } else if (node.type === "ConditionalExpression" || node.type === "LogicalExpression") {
+      functionDescriptorsAtPath(node.type === "ConditionalExpression" ? node.consequent : node.left, path, seen, readNode).forEach(function (target) { targets.push(target); });
+      functionDescriptorsAtPath(node.type === "ConditionalExpression" ? node.alternate : node.right, path, seen, readNode).forEach(function (target) { targets.push(target); });
+    } else if (node.type === "SequenceExpression" && node.expressions.length) {
+      functionDescriptorsAtPath(node.expressions[node.expressions.length - 1], path, seen, readNode).forEach(function (target) { targets.push(target); });
+    } else if (node.type === "AssignmentExpression") {
+      functionDescriptorsAtPath(node.right, path, seen, readNode).forEach(function (target) { targets.push(target); });
+    }
+    return targets;
+  }
+  function functionDescriptorsFromReference(sourceRef, seen, readNode) {
+    if (sourceRef && sourceRef.alternatives) {
+      var alternativeTargets = [];
+      sourceRef.alternatives.forEach(function (alternative) { functionDescriptorsFromReference(alternative, seen, readNode).forEach(function (target) { alternativeTargets.push(target); }); });
+      return alternativeTargets;
+    }
+    if (!sourceRef || !sourceRef.node) return [];
+    return functionDescriptorsAtPath(sourceRef.node, sourceRef.path || [], seen, readNode);
+  }
   function functionDescriptors(node, seen, readNode) {
     if (!node) return [];
     if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") return [{ target: functionBindings.get(node), boundArgs: [], boundThis: null }];
@@ -377,17 +549,30 @@ function lexicalModel(ast) {
     if (found.functionNode) return [{ target: functionBindings.get(found.functionNode), boundArgs: [], boundThis: null }];
     seen.add(found);
     var targets = [];
-    found.sources.forEach(function (sourceRef) { if (sourceRef.node) functionDescriptors(sourceRef.node, seen, readNode).forEach(function (target) { if (target && targets.indexOf(target) < 0) targets.push(target); }); });
+    found.sources.forEach(function (sourceRef) { functionDescriptorsFromReference(sourceRef, seen, readNode).forEach(function (target) { if (target && targets.indexOf(target) < 0) targets.push(target); }); });
     seen.delete(found);
     return targets;
   }
   function functionTargets(node, seen, readNode) { return functionDescriptors(node, seen, readNode).map(function (descriptor) { return descriptor.target; }); }
+  function functionTargetsReference(sourceRef, seen, readNode) { return functionDescriptorsFromReference(sourceRef, seen, readNode).map(function (descriptor) { return descriptor.target; }); }
   function iterationName(callee) { return fixedMemberName(callee); }
   var iterationMethods = new Set(["forEach", "map", "filter", "some", "every", "find", "findIndex", "flatMap", "reduce", "reduceRight"]);
   function effectiveThisSource(target, source) {
     if (target.strict) return source;
     if (!source || source.safe || (source.node && ((source.node.type === "Literal" && source.node.value === null) || (source.node.type === "Identifier" && source.node.name === "undefined" && !resolve(nodeScopes.get(source.node), "undefined"))))) return { window: true };
     return source;
+  }
+  function hostInvocation(node) {
+    var keys = possibleOwnerKeys(node.callee, new Set()), args = expandedArguments(node.arguments), suffix = fixedMemberName(node.callee);
+    if (node.callee.type === "MemberExpression" && (suffix === "call" || suffix === "apply")) {
+      keys = possibleOwnerKeys(node.callee.object, new Set());
+      args = suffix === "call" ? expandedArguments(node.arguments.slice(1)) : (node.arguments[1] && arrayItems(node.arguments[1], new Set()) || []);
+    }
+    if (keys.has("window.setTimeout") || keys.has("window.setInterval")) return { callback: args[0], thisSource: { window: true }, substituteThis: false };
+    if (keys.has("window.addEventListener")) return { callback: args[1], thisSource: { window: true }, substituteThis: false };
+    if (keys.has("promise.then")) return { callbacks: [args[0], args[1]], thisSource: { safe: true }, substituteThis: true };
+    if (keys.has("promise.catch") || keys.has("promise.finally")) return { callbacks: [args[0]], thisSource: { safe: true }, substituteThis: true };
+    return null;
   }
   walk.simple(ast, {
     CallExpression: function (node) {
@@ -426,19 +611,14 @@ function lexicalModel(ast) {
           target.thisSources.push(effectiveThisSource(target, callbackThis));
         }
       });
-      var hostCallback = null, hostThis = null;
-      if (callee.type === "Identifier" && !resolve(nodeScopes.get(callee), callee.name) && (callee.name === "setTimeout" || callee.name === "setInterval" || callee.name === "addEventListener")) {
-        hostCallback = node.arguments[callee.name === "addEventListener" ? 1 : 0]; hostThis = { window: true };
-      } else if (callee.type === "MemberExpression") {
-        var hostMethod = fixedMemberName(callee), hostOwner = ownerKey(callee.object);
-        if (hostOwner === "window" && (hostMethod === "setTimeout" || hostMethod === "setInterval")) {
-          hostCallback = node.arguments[0]; hostThis = { window: true };
-        } else if (hostMethod === "addEventListener") {
-          hostCallback = node.arguments[1]; hostThis = hostOwner === "window" ? { window: true } : ref(callee.object);
-        }
+      var hostCall = hostInvocation(node);
+      if (!hostCall && callee.type === "MemberExpression" && fixedMemberName(callee) === "addEventListener") {
+        hostCall = { callbacks: [node.arguments[1] && ref(node.arguments[1])], thisSource: ref(callee.object), substituteThis: false };
       }
-      if (hostCallback) functionTargets(hostCallback, new Set(), node).forEach(function (target) {
-        if (!target.arrow) target.thisSources.push(hostThis);
+      if (hostCall) (hostCall.callbacks || [hostCall.callback]).forEach(function (callback) {
+        if (callback) functionTargetsReference(callback, new Set(), node).forEach(function (target) {
+          if (!target.arrow) target.thisSources.push(hostCall.substituteThis ? effectiveThisSource(target, hostCall.thisSource) : hostCall.thisSource);
+        });
       });
     }
   });
@@ -658,13 +838,29 @@ function auditSource(source, file) {
         if (callable.method === "Function.call") calls.push(invokeCallable(targetCallable, args.slice(1)));
         else {
           var applied = args[1] && arrayReferenceValues(args[1]);
-          calls.push({ method: targetCallable.method, args: applied ? targetCallable.bound.concat(applied) : null });
+          calls.push(applied ? invokeCallable(targetCallable, applied) : { method: targetCallable.method, args: null });
         }
       });
       return calls;
     }
     calls.push(invokeCallable(callable, args));
     return calls;
+  }
+  function normalizeInvocation(call, depth) {
+    if (!call || call.method !== "Reflect.apply") return call ? [call] : [];
+    if (depth > 12 || !call.args || !call.args[0]) return [];
+    var target = evalReference(call.args[0]), reflected = call.args[2] && arrayReferenceValues(call.args[2]), normalized = [];
+    target.callables.forEach(function (targetCallable) {
+      var invoked = reflected ? invokeWithThis(targetCallable, call.args[1] || { safe: true }, reflected) : [{ method: targetCallable.method, args: null }];
+      invoked.forEach(function (nextCall) { normalized = normalized.concat(normalizeInvocation(nextCall, depth + 1)); });
+    });
+    if (!target.callables.length && (target.origins.has("meta-hazard") || target.unknown)) normalized.push({ method: "<unknown-meta>", args: reflected });
+    return normalized;
+  }
+  function normalizeInvocations(calls) {
+    var normalized = [];
+    calls.forEach(function (call) { normalized = normalized.concat(normalizeInvocation(call, 0)); });
+    return normalized;
   }
   function invocationList(node) {
     if (!node || node.type !== "CallExpression") return [];
@@ -675,7 +871,7 @@ function auditSource(source, file) {
         if (suffix === "call" && base.callables.length) {
           var callRefs = expandedMetaArguments(node.arguments), called = callRefs.slice(1), callThis = callRefs[0] || { safe: true }, calledList = [];
           base.callables.forEach(function (callable) { calledList = calledList.concat(invokeWithThis(callable, callThis, called)); });
-          return calledList;
+          return normalizeInvocations(calledList);
         }
         if (suffix === "apply") {
           var applied = node.arguments[1] && arrayReferences(node.arguments[1], nodeScopes.get(node.arguments[1]));
@@ -685,7 +881,7 @@ function auditSource(source, file) {
               if (!applied) appliedList.push({ method: callable.method, args: null });
               else appliedList = appliedList.concat(invokeWithThis(callable, applyThis, applied));
             });
-            return appliedList;
+            return normalizeInvocations(appliedList);
           }
         }
       }
@@ -693,18 +889,9 @@ function auditSource(source, file) {
     var callee = evalExpr(node.callee, nodeScopes.get(node.callee));
     var directArgs = expandedMetaArguments(node.arguments);
     var calls = [];
-    callee.callables.forEach(function (callable) {
-      if (callable.method === "Reflect.apply") {
-        var reflectArgs = callable.bound.concat(directArgs), target = reflectArgs[0] && evalReference(reflectArgs[0]);
-        var reflected = reflectArgs[2] && arrayReferenceValues(reflectArgs[2]);
-        target.callables.forEach(function (targetCallable) {
-          if (!reflected) calls.push({ method: targetCallable.method, args: null });
-          else calls = calls.concat(invokeWithThis(targetCallable, reflectArgs[1] || { safe: true }, reflected));
-        });
-      } else calls.push(invokeCallable(callable, directArgs));
-    });
+    callee.callables.forEach(function (callable) { calls.push(invokeCallable(callable, directArgs)); });
     if (callee.origins.has("meta-hazard")) calls.push({ method: "<unknown-meta>", args: directArgs });
-    return calls;
+    return normalizeInvocations(calls);
   }
   function evalExpr(node, scope) {
     if (!node) return unknownValue();

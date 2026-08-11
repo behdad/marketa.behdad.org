@@ -6844,7 +6844,7 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer} /* same keycap metrics as .code-side-btn so the whole toolbar reads as one even set */
 .code-btn:hover{background:#26332b}
 .code-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
-.code-btn-run.code-btn-stop{color:#e39191} /* ■ stop state while a script is looping (repeat()) */
+.code-btn-run.code-btn-stop{color:#e39191} /* ■ stop state while a script is looping */
 .code-wrap button:disabled{opacity:.35;cursor:default}
 .code-editor{grid-row:2; grid-column:1; min-width:0; min-height:0; display:grid; grid-template-columns:max-content minmax(0,1fr); overflow:hidden; background:#0d130e; border:0.3px solid #202b2b; border-radius:0.8px}
 .code-lines{grid-column:1; min-width:2.6px; min-height:0; box-sizing:border-box; overflow:hidden; padding:0.6px 0.45px; border-right:0.3px solid #202b2b; background:#0a0d10; color:#5f7a5f; font:2px/1.4 ui-monospace,Menlo,monospace; text-align:right; white-space:pre; user-select:none; pointer-events:none}
@@ -77596,7 +77596,7 @@ setOfficeProgress("pc", false);
   }
   // Surface a script error in the visible JS console and retain it for Code's Fix helper.
   function surfaceScriptError(name, err, codeRun) {
-    if (err && err.__scriptStop) return ""; // a deliberate stop() abort, not a real error — stay quiet
+    if (err && err.__scriptStop) return ""; // a deliberate Code-runner abort, not a real error — stay quiet
     var detail = err && (err.stack || err.message) ? String(err.stack || err.message) : String(err);
     var msg = "✗ " + name + ":\n" + detail.slice(0, 6000);
     if (codeRun || monitor.classList.contains("show-code")) codeSetRunError("js", msg);
@@ -77792,7 +77792,7 @@ setOfficeProgress("pc", false);
     try { codeCode.setSelectionRange(codeCode.value.length, codeCode.value.length); } catch (e) {}
   }
   function openCode() {
-    // only from the lit desktop, and not stacked over a console (edit() clears those first)
+    // only from the lit desktop, and not stacked over a console (opening the editor clears those first)
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-code") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone editing
@@ -77800,7 +77800,7 @@ setOfficeProgress("pc", false);
     codeSyncBuiltinControls();
     codeRefreshPicker(codeName && codeName.value.trim() ? codeName.value.trim() : null);
     codeSyncLineNumbers();
-    // seed (+ focus) in a tick so it runs AFTER any synchronous codeLoad/codeNew from edit() — it then
+    // seed (+ focus) in a tick so it runs AFTER any synchronous codeLoad/codeNew from the editor — it then
     // sees the final buffer state and only fills a genuinely blank first-visit slate.
     if (codeCode) setTimeout(function () {
       var draft = readCodeDraft();
@@ -77955,7 +77955,7 @@ setOfficeProgress("pc", false);
       codeStopRepeat();
     });
     else codeLoopStep(tok, key, code);
-    return "🔁 repeating " + key + " — Esc, the ■ button, or stop() to end.";
+    return "🔁 repeating " + key + " — Esc or the ■ button ends the loop.";
   };
   function codeResetFiles() {
     var lang = document.documentElement.lang;
@@ -89404,7 +89404,7 @@ def colormode(mode=None):
         lifeGen = 0; lifePlaying = false; lifeStationary = false; lifeSpeedIdx = 1; lifeSeeded = false;
         if (lifeBuilt) { lifeSetSpeed(1); lifePaintGen(); lifePaintPlayBtn(); lifeRender(); }
         break;
-      case "mines": // compatibility alias for older tests and console integrations
+      case "mines": // retained-state id used by older private test seams
       case "classics":
         closeMinesApp();
         if (minesSeeded) { minesSeeded = false; if (minesBoardEl && !__minesInPhone) minesNewGame(); }
@@ -105710,7 +105710,7 @@ function spawnCrystalSparkle() {
     }
     fwTimer = setTimeout(fwVolley, 900 + Math.random() * 900);
   }
-  // Public entry: run the finale over the balcony sky (~8s of volleys). Turns the sky to dusk so
+  // Shared private controller: run the finale over the balcony sky (~8s of volleys). Turns the sky to dusk so
   // it reads as a proper night finale. dur (ms) overrides the length.
   window.__startFireworks = function (dur) {
     var host = fwHost();
@@ -105811,7 +105811,7 @@ function spawnCrystalSparkle() {
     if (lantTimer) { clearTimeout(lantTimer); lantTimer = null; }
     clearParticles(lantHost(), "blant-particle");
   }
-  // Public entry: release a batch of wish-lanterns over the balcony (heads to the balcony + dusk).
+  // Shared private controller: release a batch of wish-lanterns over the balcony (heads to the balcony + dusk).
   window.__releaseLanterns = function () {
     var host = lantHost();
     if (!host) { if (window.__goToStage) window.__goToStage("balcony"); }

@@ -29321,8 +29321,8 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <g id="balcony-fireworks" pointer-events="none"></g>
-<!-- night-sky celebrations over the deck: a fireworks FINALE (window.__startFireworks / console
-     fireworks() on the balcony) and a WISH-LANTERNS release (window.__releaseLanterns / lanterns()).
+<!-- night-sky celebrations over the deck: a fireworks FINALE (window.__startFireworks) and a
+     WISH-LANTERNS release (window.__releaseLanterns).
      Both are timer/loop-spawned WAAPI particles from the balcony-sky-shows IIFE — each tagged with a
      class (.bfw-particle / .blant-particle), self-cleaning on its own onfinish, gated on
      !hidden && hasFocus, capped/cleared before each spawn, and fully torn down on room-leave /
@@ -61632,7 +61632,8 @@ setMusicPausedState(false);
   // cycle before any repeats — no random droughts. The bag REFILLS from the currently-valid
   // pool, so when the cat enters/leaves the nook the cat poses drop in/out at refill (never a
   // cat pose picked with no cat present). Guard the bag boundary so a fresh shuffle can't
-  // repeat the just-shown pose. Forced poses (irene.pose('catjump'), __ireneShow) bypass this.
+  // repeat the just-shown pose. Forced poses (loft.people.irene.pose('catjump'), __ireneShow)
+  // bypass this.
   var ireneBag = [];
   function pickBehavior() {
     if (!ireneBag.length) {
@@ -69645,7 +69646,7 @@ setOfficeProgress("pc", false);
       }
     }
     // Private hook: place a video call to a contact ("prague" | "lueb"), opening the lid first
-    // if needed (startCall requires it open). Used by laptop.call("prague"/"lubeck").
+    // if needed (startCall requires it open). Used by loft.call.video.start().
     window.__laptopCall = function (callee) {
       callee = callee === "lueb" ? "lueb" : "prague";
       stopLaptopInvite();
@@ -75263,6 +75264,23 @@ setOfficeProgress("pc", false);
     registerOverride("weather.wildfires", "Weather / Environment", "wildfires");
     registerOverride("sky.aurora", "Weather / Environment", "aurora");
     registerOverride("sky.twilight", "Weather / Environment", "twilight");
+    register({ id: "weather.wildfires.intensity", group: "Weather / Environment", kind: "action", risk: "ambient",
+      description: "Pin wildfire smoke to an exact intensity from clear (0) to severe (1).",
+      args: { level: { type: "number", min: 0, max: 1, required: true } }, run: function (args) {
+        if (!controllers.wildfires || typeof controllers.wildfires.intensity !== "function") throw new Error("The wildfire controller is not ready.");
+        var level = controllers.wildfires.intensity(args.level);
+        return { level: level, on: level > 0 };
+      } });
+    register({ id: "sky.aurora.details", group: "Weather / Environment", kind: "query",
+      description: "Full aurora state, including Kp, source, visibility, and sky conditions.", run: function () {
+        return window.__auroraStatus ? window.__auroraStatus() : null;
+      } });
+    register({ id: "sky.aurora.intensity", group: "Weather / Environment", kind: "action", risk: "scene",
+      description: "Pin the aurora to a planetary Kp intensity from 0 to 9.",
+      args: { kp: { type: "number", min: 0, max: 9, required: true } }, run: function (args) {
+        if (!controllers.aurora || typeof controllers.aurora.intensity !== "function") throw new Error("The aurora controller is not ready.");
+        return controllers.aurora.intensity(args.kp);
+      } });
     registerToggle("garden.guests", "Garden / Party", "guests", { read: function () { return !!(window.__guestsIn && window.__guestsIn()); } });
     registerToggle("garden.kids-asleep", "Garden / Party", "kidsAsleep", { read: function () { return !!window.__kidsAsleep; } });
     registerToggle("garden.mouses", "Garden / Party", "mouses", { read: function () { return !!window.__mousesVisiting; } });
@@ -75278,6 +75296,14 @@ setOfficeProgress("pc", false);
     registerToggle("people.irene", "People / Animals", "irene", { read: function () {
       var el = document.getElementById("cuddly-irene"); return !!(el && el.classList.contains("showing"));
     } });
+    register({ id: "people.irene.pose", group: "People / Animals", kind: "action", risk: "scene",
+      description: "Bring Irene into the Cuddly room in one authored pose.",
+      args: { pose: { type: "string", enum: ["roam", "bounce", "sit", "hug", "hugb", "catplay", "catjump", "octiplay", "swing"], required: true } },
+      available: function () { return roomRouteReady("cuddly") && !!(controllers.irene && controllers.irene.pose); }, unavailable: function () {
+        return blockedBy([!roomRouteReady("cuddly") && roomRouteReason("cuddly"), !(controllers.irene && controllers.irene.pose) && "Irene's pose controller is not ready."], null);
+      }, run: function (args) {
+        return runInRoom("cuddly", function () { return { pose: args.pose, previous: controllers.irene.pose(args.pose) }; });
+      } });
     registerToggle("devices.phone", "Office / Devices", "phone", { read: function () { return !!phoneState().open; } });
     registerToggle("devices.laptop", "Office / Devices", "laptop", { read: function () {
       var el = document.getElementById("office-laptop"); return !!(el && el.classList.contains("open"));
@@ -76397,11 +76423,6 @@ setOfficeProgress("pc", false);
     presentationSvg.clear = function () { return controllers.display_svg(false); };
     window.__loftHelpTarget = function (value) { return namespaceMeta && namespaceMeta.get(value) || null; };
   })();
-  controllers.capabilities = function (kind) {
-    if (!window.loft || !window.loft.api) return [];
-    if (kind != null && kind !== "query" && kind !== "action") throw new Error('kind must be "query" or "action"');
-    return window.loft.api.capabilities(kind ? { kind: kind } : {});
-  };
   function consoleT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   var consoleLastCmd = "";
   function updateConsoleTile() {
@@ -77062,7 +77083,7 @@ setOfficeProgress("pc", false);
   // ── CODE APP ─────────────────────────────────────────────────────────────────────
   // A tiny local-script workspace, sibling to the consoles: write JavaScript or Python, name
   // it, and autosave it. Each language has a localStorage { name: code } file map; both are
-  // deliberately outside game state, so reset()/reboot() never removes them. JavaScript
+  // deliberately outside game state, so app resets never remove them. JavaScript
   // files run here (or by name through the private runner); Python files hand off to the Python app.
   var codeWrap = document.getElementById("monitor-code-wrap");
   var codeName = document.getElementById("monitor-code-name");
@@ -89436,7 +89457,7 @@ def colormode(mode=None):
         closeCode();
         clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null; // drop a pending autosave so it can't resurrect the cleared buffer
         // fresh empty buffer — but the SAVED scripts in both language stores are FILES,
-        // deliberately kept (they survive reset()/reboot() too). Inline clear, never codeNew(),
+        // deliberately kept (they survive app resets too). Inline clear, never codeNew(),
         // whose trailing editor-focus behavior would target an off-screen input here.
         if (codeName) codeName.value = ""; if (codeCode) codeSetBuffer("");
         clearCodeUnsaved();
@@ -110380,7 +110401,7 @@ function singLuebRefrain(ctx, dest, t0, pf, ff, gain, track, syl, wob) {
 // into the summerhouse garden beside her parents and grandmother, and the couple step into
 // their own frame. It's the same call, opened out — not a different scene — so it arrives
 // as one slow cross-fade rather than a swap.
-// Armed deliberately (__pragueGathering), never automatically: a casual laptop.call("prague")
+// Armed deliberately (__pragueGathering), never automatically: a casual loft.call.video.start("prague")
 // stays the intimate three, and only the occasion gathers everyone.
 // The whole state is ONE class on #laptop-call, so teardown is removing it; the only timer
 // is the arm→widen delay, cleared on every exit path (hangup, room change, tab hide, reset).
@@ -131192,7 +131213,6 @@ function spawnDustMote(container) {
   // They are never copied to Window as public commands. Each guards optional hooks and returns
   // a useful value so the typed API can report what happened. Spawned effects self-clean and
   // pause on a hidden tab.
-  var ROOM_NAMES = ["kitchen", "garden", "cuddly", "office", "balcony"];
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function currentStage() { return document.getElementById("stage-" + (window.__currentStageName || "kitchen")); }
 
@@ -131473,24 +131493,6 @@ function spawnDustMote(container) {
     return window.__loftAwaitLifecycle(function () { return !!(window.__gardenChaseRunning && window.__gardenChaseRunning()); }, {
       label: "kids chase", startTimeout: 2000,
       value: { completed: true }
-    });
-  };
-
-  controllers.tetris = function () {
-    if (window.__goToStage) window.__goToStage("balcony");
-    setTimeout(function () {
-      if (window.__startBalconyTetris) window.__startBalconyTetris();
-    }, 60);
-    if (controllers.echo) controllers.echo("🧱 Block Party lights up across the street.");
-    return window.__loftAwaitLifecycle(function () {
-      return !!(window.__balconyTetrisState && window.__balconyTetrisState().active);
-    }, {
-      label: "Block Party",
-      startTimeout: 2000,
-      value: function () {
-        var state = window.__balconyTetrisState ? window.__balconyTetrisState() : {};
-        return { completed: true, score: state.score || 0, lines: state.lines || 0 };
-      }
     });
   };
 
@@ -132739,52 +132741,9 @@ function spawnDustMote(container) {
     });
   };
 
-  // Private room controller: no arg returns {n, name}; a name or 1–5 navigates there.
-  controllers.room = function (r) {
-    if (arguments.length === 0 || r == null || r === "") {
-      var cur = window.__currentStageName || "";
-      return { n: ROOM_NAMES.indexOf(cur) + 1, name: cur }; // unknown/off-room → {n:0, name:""}
-    }
-    var rfi = fracToIndex(r, ROOM_NAMES.length); if (rfi) r = rfi; // random() → a random room
-    r = String(r).toLowerCase().trim();
-    if (r === "bar") r = "kitchen";
-    if (r === "party") r = "garden";
-    var n = parseInt(r, 10); // also accept a room number 1..5 (same order as the keyboard 1-5)
-    if (String(n) === r && n >= 1 && n <= ROOM_NAMES.length) r = ROOM_NAMES[n - 1];
-    if (ROOM_NAMES.indexOf(r) === -1) return "rooms (in quotes, or 1–5): " + ROOM_NAMES.map(function (x) { return "\"" + x + "\""; }).join(" · ");
-    if (!window.__goToStage) return "the navigation hook isn't ready yet.";
-    window.__goToStage(r);
-    return "→ " + r;
-  };
-
-  controllers.porsche = function (arg) {
-    if (arguments.length === 0) {
-      var state = window.__entranceRoomState ? window.__entranceRoomState() : null;
-      return state && state.car ? state.car : { room: "entrance", hud: false };
-    }
-    var on = !!arg;
-    if (!on) return window.__hideEntrancePorscheDriveHud ? window.__hideEntrancePorscheDriveHud() : false;
-    var openHud = function () {
-      if (window.__openEntranceRoom && !window.__entranceRoomOpen) window.__openEntranceRoom();
-      if (window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
-      return true;
-    };
-    if (window.__entranceRoomOpen) return openHud();
-    if (window.__navigateLowerRoom && window.__currentStageName !== "balcony" && window.__lowerRoomNavigationState) {
-      var lower = window.__lowerRoomNavigationState();
-      if (lower && lower.active) {
-        window.__navigateLowerRoom("balcony");
-        setTimeout(openHud, 780);
-        return true;
-      }
-    }
-    if (window.__currentStageName !== "balcony" && window.__goToStage) window.__goToStage("balcony");
-    return openHud();
-  };
-
   function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
   // Internal daylight controller, captured by loft.environment.daylight.status()/set(true|false|null):
-  // it and returns the PREVIOUS state. The typed daylight capability owns public access. Narrates via narrate().
+  // it returns the PREVIOUS state. The typed daylight capability owns public access. Narrates via narrate().
   controllers.daylight = function (arg) {
     var prev = !isNight(); // true = day
     if (arguments.length === 0) return prev;
@@ -132864,21 +132823,6 @@ function spawnDustMote(container) {
     return SEASON_SAID[canon];
   };
 
-  // Directional + idempotent over the unified transport (same as the spacebar / rail button).
-  controllers.pause = function () {
-    if (!window.__toggleMusicPlayback) return "the music hook isn't ready yet.";
-    if (window.__musicPaused) return "⏸ already paused.";
-    if (!(window.__anyMusicPlaying && window.__anyMusicPlaying())) return "nothing's playing.";
-    window.__toggleMusicPlayback();
-    return "⏸ paused.";
-  };
-  controllers.play = function () {
-    if (!window.__toggleMusicPlayback) return "the music hook isn't ready yet.";
-    if (window.__musicPaused) { window.__toggleMusicPlayback(); return "▶ playing."; }
-    if (window.__anyMusicPlaying && window.__anyMusicPlaying()) return "▶ already playing.";
-    return "nothing to resume — start a track first.";
-  };
-
   controllers.temp = function (v) {
     if (!window.__loftTempSet) return "the thermometer isn't ready yet.";
     if (arguments.length && window.__setOutdoorTemp) {
@@ -132894,14 +132838,6 @@ function spawnDustMote(container) {
     return "🌡 inside " + Math.round(t[0]) + "°C · outside " + Math.round(t[1]) + "°C" +
       (typeof set === "number" ? " (set by hand — temp(false) hands it back to the real weather)"
         : (window.__weatherApprox && !window.__weatherApprox.loading ? " (historical approximation for the pretend date/time)" : ""));
-  };
-
-  controllers.weather = function () { // live city weather, or Edmonton archive approximation while previewing another date/time
-    var e = window.__realOutdoorC, p = window.__realPragueC;
-    if (typeof e !== "number" && typeof p !== "number") return "weather's still loading… (it fetches once on load — try again in a moment)";
-    function g(wx) { return (wx && window.__wmoGlyph) ? window.__wmoGlyph(wx.code) + " " : ""; }
-    function t(v) { return typeof v === "number" ? Math.round(v) + "°C" : "—"; }
-    return "🌍 Edmonton " + g(window.__realWx) + (window.__weatherApprox && !window.__weatherApprox.loading ? "≈" : "") + t(e) + " · Prague " + g(window.__realWxPrague) + t(p);
   };
 
   // Friendly projector names follow the wall-screen's live seasonal order: coffee then
@@ -132934,18 +132870,7 @@ function spawnDustMote(container) {
     return canon === "off" ? "📺 off." : "📺 " + projFriendly(canon) + " on.";
   };
 
-  controllers.clock = function () { // the real current time and date
-    var d = new Date();
-    function p2(n) { return (n < 10 ? "0" : "") + n; }
-    var h12 = ((d.getHours() + 11) % 12) + 1;
-    // the clock-face emoji for this hour (🕐…🕛), half-past variant (🕜…🕧) after :30
-    var face = String.fromCodePoint((d.getMinutes() >= 30 ? 0x1F55C : 0x1F550) + (h12 - 1));
-    var when;
-    try { when = d.toLocaleDateString(document.documentElement.lang === "cs" ? "cs" : "en", { weekday: "long", month: "long", day: "numeric" }); }
-    catch (e) { when = d.toDateString(); }
-    return face + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + " · " + when;
-  };
-  // Private owner for loft.calendar.time.*; the clock controller prints the readable real time.
+  // Private owner for loft.calendar.time.*.
   controllers.time = function (a, m) {
     var mins = window.__loftMinsNow ? window.__loftMinsNow() : (function () { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
     mins = Math.floor(((mins % 1440) + 1440) % 1440);
@@ -133096,8 +133021,8 @@ function spawnDustMote(container) {
     return shown;
   };
 
-  // Internal twilight controller, captured below by loft.sky.twilight.status()/set(true|false|null):
-  // balcony on/off. Ramps up on its own over the computed twilight window around Edmonton's real
+  // Internal twilight controller, captured below by loft.sky.twilight.status()/set(true|false|null).
+  // Ramps up on its own over the computed twilight window around Edmonton's real
   // sunrise/sunset (hours wide at midsummer, see twiSpan); this summons it at full depth.
   controllers.twilight = function (arg) {
     if (!window.__setTwilight) return false;
@@ -133120,64 +133045,9 @@ function spawnDustMote(container) {
     return r;
   };
 
-  controllers.dance = function (name) {
-    if (!window.__gardenPartyOn) return "the garden's dark — use loft.party.set(true) first, then pick a dance.";
-    var ids = (window.__partyDances || []).map(function (d) { return d.id; });
-    if (arguments.length === 0 || name == null || name === "") { // no arg → the current dance as {n, name}
-      var cur = window.__partyDance || "";
-      return { n: ids.indexOf(cur) + 1, name: cur };
-    }
-    if (String(name).toLowerCase().trim() === "next") { // skip ahead to the next dance in the set
-      if (!window.__nextPartyDance || !window.__nextPartyDance()) return "the dance hook isn't ready yet.";
-      return "💃 next up — " + (window.__partyDance || "");
-    }
-    var dfi = fracToIndex(name, ids.length); if (dfi) name = dfi; // fraction → a random dance
-    var key = String(name).toLowerCase().trim();
-    var kn = parseInt(key, 10); if (String(kn) === key && kn >= 1 && kn <= ids.length) key = ids[kn - 1]; // also accept 1..N
-    if (ids.indexOf(key) === -1) return "dances (in quotes, 1–" + ids.length + ", or \"next\"): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
-    if (!window.__setPartyDance || !window.__setPartyDance(key)) return "the dance hook isn't ready yet.";
-    return "💃 " + key + " — the garden shifts into step.";
-  };
-
-  // The private jukebox owner mirrors the on-scene DJ-booth request picker. It lists the styles
-  // (with the current one starred) or requests one. Routes through __requestDance —
-  // the SAME set-dance path the picker uses (crossfades the bed via its want-gate, glides the
-  // dancers, re-arms the ~15s auto-rotation, and throws a DJ scratch). Also accepts 1–N / random().
-  controllers.jukebox = function (name) {
-    if (!window.__gardenPartyOn) return "the garden's dark — use loft.party.set(true) first, then request a song.";
-    var ids = (window.__partyDances || []).map(function (d) { return d.id; });
-    if (arguments.length === 0 || name == null || name === "") { // no arg → the style menu, current one starred
-      var cur = window.__partyDance || "";
-      return "🎶 requestable styles (in quotes, or 1–" + ids.length + "): " +
-        ids.map(function (d) { return (d === cur ? "★ " : "") + "\"" + d + "\""; }).join(" · ");
-    }
-    var jfi = fracToIndex(name, ids.length); if (jfi) name = jfi; // random() → a random style
-    var key = String(name).toLowerCase().trim();
-    var kn = parseInt(key, 10); if (String(kn) === key && kn >= 1 && kn <= ids.length) key = ids[kn - 1]; // also accept 1..N
-    if (ids.indexOf(key) === -1) return "styles (in quotes, or 1–" + ids.length + "): " + ids.map(function (d) { return "\"" + d + "\""; }).join(" · ");
-    if (!window.__requestDance || !window.__requestDance(key)) return "the jukebox hook isn't ready yet.";
-    return "🎶 requested " + key + " — the DJ drops the needle.";
-  };
-
-  // The cocktail owner makes one of the bar's real drinks, randomly or by partial/case-insensitive
-  // recipe match. If the party's dark it
-  // lights it first, steps behind the bar (kitchen), and mixes. He also mixes on his own while
-  // you watch the bar during the party (see the make module near the bartender code).
-  controllers.cocktail = function (name) {
-    if (typeof window.__makeCocktail !== "function") return "the bar hook isn't ready yet.";
-    var message = window.__makeCocktail(arguments.length ? name : undefined);
-    if (!(window.__ambientMaking && window.__ambientMaking())) return message;
-    if (controllers.echo) controllers.echo(message);
-    return window.__loftAwaitLifecycle(function () { return !!(window.__ambientMaking && window.__ambientMaking()); }, {
-      label: "cocktail", startTimeout: 0,
-      value: { completed: true, drink: name == null ? null : String(name) }
-    });
-  };
-
-  // mixer — the hands-on version: instead of watching Pouria mix, YOU dose the shaker at the bar.
-  // mixer() runs a self-mixing demo of a random named drink; mixer("negroni") mixes that one;
-  // mixer("gin") (an unknown drink) improvises a house pour. In-scene, tap the ingredient bottles
-  // + the shaker at the bar. Raises the bar + steps behind it first if it's dark.
+  // Private owner for loft.kitchen.mixer.start(): instead of watching Pouria mix, YOU dose the
+  // shaker at the bar. A named recipe runs its self-mixing demo; an unknown name improvises a
+  // house pour. In-scene, tap the ingredient bottles + the shaker at the bar.
   controllers.mixer = function (name) {
     if (typeof window.__runMixer !== "function") return "the bar hook isn't ready yet.";
     var message = window.__runMixer(arguments.length ? name : undefined);
@@ -133209,20 +133079,6 @@ function spawnDustMote(container) {
       if (window.__loftStateChanged) window.__loftStateChanged("party.dj", { dj: DJ_NAMES[idx] }, "ui");
     }
     return "🎧 " + DJ_NAMES[idx] + " takes the decks.";
-  };
-
-  var LANG_ALIASES = { cs: "cs", cz: "cs", czech: "cs", cesky: "cs", en: "en", eng: "en", english: "en" };
-  controllers.lang = function (code) {
-    if (arguments.length === 0 || code == null || code === "") {
-      var cur = document.documentElement.lang === "cs" ? "cs" : "en";
-      return "🌐 language: " + cur + (cur === "cs" ? " (čeština)" : " (english)");
-    }
-    if (typeof setLang !== "function") return "the language hook isn't ready yet.";
-    var key = String(code).toLowerCase().trim();
-    if (!(key in LANG_ALIASES)) return "languages: en · cs";
-    var l = LANG_ALIASES[key];
-    setLang(l);
-    return l === "cs" ? "🌐 přepnuto do češtiny." : "🌐 switched to English.";
   };
 
   controllers.fullscreen = function (arg) {
@@ -133403,32 +133259,6 @@ function spawnDustMote(container) {
     return prev;
   };
 
-  // album() — open the pocket-phone WEDDING ALBUM: Aspen's captured party polaroids, newest-first.
-  // Opens the phone to the album app (like phone.open("album")); album() also echoes the count.
-  controllers.album = function () {
-    if (window.__openPhoneApp) window.__openPhoneApp("album");
-    var shots = (window.__albumList && window.__albumList()) || [];
-    if (controllers.echo) controllers.echo(shots.length ? ("📸 the wedding album: " + shots.length + " photo" + (shots.length === 1 ? "" : "s") + " — newest first.") : "📸 the wedding album is empty — throw the party and let Aspen shoot.");
-    return shots.length;
-  };
-
-  // snap() — Aspen takes a photo of the room you're standing in RIGHT NOW: camera up, flash,
-  // shutter, and a keepsake of exactly whoever's in there. snap("office") shoots that room
-  // instead (heading there first so you can watch her do it). Lights the party if it's dark —
-  // she only works the party — and echoes who ended up in frame.
-  controllers.snap = function (room) {
-    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
-    var want = typeof room === "string" ? room : (window.__currentStageName || "garden");
-    if (window.__goToStage && window.__currentStageName !== want) window.__goToStage(want);
-    var fire = function () {
-      var rec = window.__photogSnap ? window.__photogSnap(want, false, true) : null;
-      var who = rec ? (rec.people || []).map(function (p) { return p.name; }).filter(Boolean) : [];
-      if (controllers.echo) controllers.echo(rec ? ("📸 " + who.join(", ") + " — straight into the album.") : "📸 Aspen lifts the camera… nobody's in here (or she's already got this exact shot).");
-    };
-    if (window.__currentStageName === want) fire(); else setTimeout(fire, 760); // let the room slide settle so you see the flash land
-    return want;
-  };
-
   // Madla — Markéta's sister, a doctor in Germany, calling on her night shift. INCOMING-ONLY:
   // there's no way to dial HER (she's off the phone dialer + CITY_ORDER on purpose). This private
   // owner explicitly triggers the incoming ring regardless of phase/party. Passing true answers
@@ -133455,20 +133285,6 @@ function spawnDustMote(container) {
     var lap = document.getElementById("office-laptop");
     var prev = !!(lap && lap.classList.contains("open"));
     if (arguments.length === 0 || !lap) return prev; // no arg → is the laptop open?
-    if (typeof arg === "string" && arg !== "") { // a contact name → place a video call to them
-      var CALLEES = { prague: "prague", praha: "prague", lubeck: "lueb", "lübeck": "lueb", lueb: "lueb", lubek: "lueb" };
-      var callee = CALLEES[arg.toLowerCase().trim()];
-      if (!callee) return ["prague", "lubeck"]; // a bad name → the list of callable contacts
-      if (window.__goToStage) window.__goToStage("office");
-      var started = window.__laptopCall && window.__laptopCall(callee);
-      if (!started) return "the call hook isn't ready yet.";
-      if (controllers.echo) controllers.echo(callee === "lueb" ? "💻 calling Lübeck — her sister's family." : "💻 calling Prague — her parents' garden.");
-      return window.__loftAwaitLifecycle(function () { return !!(window.__loftCallBusy && window.__loftCallBusy()); }, {
-        label: (callee === "lueb" ? "Lübeck" : "Prague") + " call",
-        startTimeout: 3000, timeout: Infinity, settle: 900,
-        value: { completed: true, contact: callee === "lueb" ? "lubeck" : "prague" }
-      });
-    }
     var wantOpen = !!arg; // internal controller captured by laptop.status()/set()
     if (window.__goToStage) window.__goToStage("office"); // the laptop sits on the office desk
     if (wantOpen !== lap.classList.contains("open")) lap.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real toggle path
@@ -133480,9 +133296,6 @@ function spawnDustMote(container) {
     var pc = document.getElementById("office-pc-desk-trio");
     var prev = !!(pc && pc.classList.contains("on"));
     if (arguments.length === 0 || !pc) return prev; // no arg → is the PC on?
-    if (typeof arg === "string" && arg !== "") { // an app name → open it on the office monitor (boots the PC first if off)
-      return window.__openMonitorApp ? window.__openMonitorApp(arg) : prev;
-    }
     var wantOn = !!arg; // internal controller captured by computer.status()/set()
     if (window.__goToStage) window.__goToStage("office");
     if (wantOn !== pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); // its real power toggle (boots on / clears off)
@@ -133491,36 +133304,8 @@ function spawnDustMote(container) {
   };
   controllers.mines = function () { return window.__openMonitorApp ? window.__openMonitorApp("mines") : false; };
   controllers.solitaire = function () { return window.__openMonitorApp ? window.__openMonitorApp("solitaire") : false; };
-  controllers.prince = function () { return window.__openMonitorApp ? window.__openMonitorApp("prince") : false; };
-  controllers.reboot = function () { // power-cycle the loft OS — a proper `sudo reboot` from inside its own console
-    var pc = document.getElementById("office-pc-desk-trio");
-    if (!pc) return "no computer here.";
-    if (window.__goToStage) window.__goToStage("office");
-    if (pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); // power down…
-    setTimeout(function () { if (pc && !pc.classList.contains("on")) pc.dispatchEvent(new MouseEvent("click", { bubbles: true })); }, 900); // …then back up → boots Fedora → the caps desktop
-    return "🔄 rebooting the loft OS…";
-  };
   // ── audio sources ──────────────────────────────────────────────────────────
-  // The four real recordings in the shared monitor/phone player: report the current song or play
-  // one by id/index/fraction.
-  // guitar()/ukulele() instead poke the physical garden instruments, preserving their toggles.
-  var MUSIC_NAMES = ["tumbala", "dan", "orit", "marketa-czech"]; // index ↔ shared songAudios order
-  function playingSongIdx() {
-    var ids = ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio", "marketa-czech-song-audio"];
-    for (var i = 0; i < ids.length; i++) { var a = document.getElementById(ids[i]); if (a && !a.paused && !a.ended) return i; }
-    return -1;
-  }
-  controllers.music = function (which) {
-    if (arguments.length === 0 || which == null || which === "") { var i = playingSongIdx(); return { n: i + 1, name: i < 0 ? "" : MUSIC_NAMES[i] }; }
-    var mfi = fracToIndex(which, MUSIC_NAMES.length); if (mfi) which = mfi; // random() → a random song
-    var s = String(which).toLowerCase().trim();
-    var idx = MUSIC_NAMES.indexOf(s);
-    if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= MUSIC_NAMES.length) idx = n - 1; }
-    if (idx === -1) return MUSIC_NAMES.slice(); // a bad name → the list of songs to pick from
-    if (window.__goToStage) window.__goToStage("garden"); // the instruments live in the garden
-    if (window.__playSongAt) window.__playSongAt(idx);
-    return "♪ " + MUSIC_NAMES[idx] + " — from the loft concert.";
-  };
+  // The garden instrument owners dispatch the same scene interactions as a click.
   function gardenInstrumentTap(id, label) {
     if (window.__goToStage) window.__goToStage("garden");
     var el = document.getElementById(id);
@@ -133530,36 +133315,6 @@ function spawnDustMote(container) {
   }
   controllers.guitar = function () { return gardenInstrumentTap("garden-guitar", "guitar — Markéta rotation"); };
   controllers.ukulele = function () { return gardenInstrumentTap("garden-ukulele", "ukulele — Orit / Dan rotation"); };
-
-  // Internal audio source controller: music (garden songs), piano (night-sky classical),
-  // or dance (garden Party). The strict public object exposes named methods.
-  // The captured internal audio controller selects a source; the public object exposes
-  // audio.select(source), audio.set(boolean), audio.status(), and audio.source().
-  var AUDIO_SOURCES = ["music", "piano", "dance"];
-  function currentAudioSource() {
-    if (window.__gardenPartyOn) return "dance";
-    if (playingSongIdx() >= 0) return "music";
-    if (window.__cuddlyProjector && window.__cuddlyProjector.channel() === "stars") return "piano";
-    return "";
-  }
-  controllers.audio = function (src) {
-    if (arguments.length === 0 || src == null || src === "") {
-      var cur = currentAudioSource();
-      controllers.echo(cur ? "🔊 now playing: the " + cur + " source." : "🔇 silence — nothing's playing.");
-      return cur;
-    }
-    if (src === true) return controllers.play ? controllers.play() : "nothing to resume.";
-    if (src === false) return controllers.pause ? controllers.pause() : "nothing to pause.";
-    var afi = fracToIndex(src, AUDIO_SOURCES.length); if (afi) src = afi; // random() → a random source
-    var s = String(src).toLowerCase().trim();
-    var idx = AUDIO_SOURCES.indexOf(s);
-    if (idx === -1) { var n = parseInt(s, 10); if (String(n) === s && n >= 1 && n <= AUDIO_SOURCES.length) idx = n - 1; }
-    if (idx === -1) return AUDIO_SOURCES.slice(); // a bad name → the list of audio sources to pick from
-    s = AUDIO_SOURCES[idx];
-    if (s === "music") return controllers.music(controllers.random ? controllers.random() : 0); // a (random) concert song
-    if (s === "piano") return controllers.piano();                                     // the night-sky piano
-    controllers.party.set(true); return "dance";                                       // the garden party dance bed
-  };
 
   // scripting helpers ---------------------------------------------------------
   controllers.random = function (a, b) { // random(): 0..1 · random(n): int 0..n-1 · random(a,b): int a..b · random([…]): a random item
@@ -133673,13 +133428,6 @@ function spawnDustMote(container) {
     }
     return "🎆 boom.";
   };
-  // Wish-lanterns: heads to the balcony + night and releases a batch of drifting sky-lanterns.
-  controllers.lanterns = function () {
-    if (window.__currentStageName !== "balcony" && window.__goToStage) window.__goToStage("balcony");
-    if (window.__releaseLanterns) { window.__releaseLanterns(); return "🏮 make a wish."; }
-    return "🏮 no sky to release into.";
-  };
-
   controllers.cat = function (arg) {
     var walk = document.getElementById("witchy-chest-cat-walk");
     var prev = !!(walk && walk.classList.contains("out"));
@@ -133694,9 +133442,9 @@ function spawnDustMote(container) {
   // loft.typography.harfbuzz() loads HarfBuzz for JavaScript, mirroring the Python
   // console's uharfbuzz. Lazy-loads the self-hosted harfbuzzjs runtime (harfbuzzjs/hb.js
   // loader + hb.wasm + the hbjs.js wrapper) and a latin-subset Fraunces once, caches the
-  // parsed font, and reuses them for every call. Returns a Promise, so both the in-game
-  // console's uharfbuzz. It returns the raw hb runtime and bundled Fraunces font; callers can
-  // `const { hb, font } = await loft.typography.harfbuzz()`, then shape with those local handles.
+  // parsed font, and reuses them for every call. Its promise resolves to the raw hb runtime and
+  // bundled Fraunces font; callers can `const { hb, font } = await loft.typography.harfbuzz()`,
+  // then shape with those local handles.
   // English-only (script helpers aren't translated).
   var __hbReady = null;
   // A uharfbuzz-style facade over the raw harfbuzzjs API, so loft.typography.hb reads like the
@@ -133869,7 +133617,7 @@ function spawnDustMote(container) {
     narrate(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
     return prev;
   };
-  // irene.set(true) starts a random visit; irene.pose(name) chooses a held pose.
+  // loft.people.irene.set(true) starts a random visit; loft.people.irene.pose(name) chooses a held pose.
   // The cat behaviors only read right
   // with the loose cat in the nook, so those first fetch the cat there (releasing it from the
   // chest if need be) and let its walk-in settle before she plays with / leaps to it.
@@ -133893,15 +133641,11 @@ function spawnDustMote(container) {
     }
     return prev;
   };
-  // visitors("name") → a friend/family visit in the cuddly-puddly (heads there first). visitors("name","text")
-  // just delivers their "are you home?" text to the phone. visitors(false) sends whoever's here away.
-  // visitors() (no arg) lists the visits. Meal-day suppression is enforced by __cuddlyVisit itself.
+  // Private owner for loft.cuddly.visitor.start(): a visit moves to the Cuddly room, while text mode
+  // only delivers the visitor's "are you home?" message. Meal-day suppression is enforced by
+  // __cuddlyVisit itself.
   controllers.visitors = function (visit, mode) {
-    var visits = (window.__cuddlyVisitorDuos && window.__cuddlyVisitorDuos()) || ["ali", "spencer", "alireza", "bahareh", "ayushi"];
-    if (arguments.length === 0) return "friend visits (in quotes): " + visits.map(function (d) { return '"' + d + '"'; }).join(" · ") + " — visitors(\"name\") brings them by, visitors(\"name\",\"text\") just texts";
-    if (visit === false) { if (window.__resetCuddlyVisitors) window.__resetCuddlyVisitors(); narrate(false, "", "👋 the visitors head off — see you soon."); return true; }
     var id = String(visit).toLowerCase();
-    if (visits.indexOf(id) === -1) return "friend visits (in quotes): " + visits.map(function (d) { return '"' + d + '"'; }).join(" · ");
     if (mode === "text" || mode === true) {
       if (window.__cuddlyVisitorText && window.__cuddlyVisitorText(id)) { narrate(true, "💬 " + id + " texts “are you home?”", ""); return true; }
       return "couldn't send the text.";
@@ -134017,20 +133761,8 @@ function spawnDustMote(container) {
       return owner(app.trim());
     }; } }
   });
-  promote("laptop", {
-    read: function () { return elementClass("office-laptop", "open"); },
-    methods: { call: function (owner) { return function (contact) {
-      if (typeof contact !== "string" || !contact.trim()) throw new TypeError("laptop.call(contact) requires a contact name.");
-      return owner(contact.trim());
-    }; } }
-  });
-  promote("computer", {
-    read: function () { return elementClass("office-pc-desk-trio", "on"); },
-    methods: { open: function (owner) { return function (app) {
-      if (typeof app !== "string" || !app.trim()) throw new TypeError("computer.open(app) requires an app name.");
-      return owner(app.trim());
-    }; } }
-  });
+  promote("laptop", { read: function () { return elementClass("office-laptop", "open"); } });
+  promote("computer", { read: function () { return elementClass("office-pc-desk-trio", "on"); } });
   promote("cat");
   promote("dog", { read: function () { return !!(window.__whistlerOut && window.__whistlerOut()); } });
   promote("irene", {
@@ -134041,17 +133773,6 @@ function spawnDustMote(container) {
     }; } }
   });
   promote("mouses", { read: function () { return !!window.__mousesVisiting; } });
-  promote("porsche", { read: function () { var s = window.__entranceRoomState && window.__entranceRoomState(); return !!(s && s.drive && s.drive.hud); } });
-  promote("audio", {
-    read: function () { return !!(window.__anyMusicPlaying && window.__anyMusicPlaying()); },
-    methods: {
-      source: function (owner) { return function () { return owner(); }; },
-      select: function (owner) { return function (source) {
-        if (["music", "piano", "dance"].indexOf(source) < 0) throw new TypeError('audio.select(source) requires "music", "piano", or "dance".');
-        return owner(source);
-      }; }
-    }
-  });
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");
@@ -134102,15 +133823,7 @@ function spawnDustMote(container) {
   window.__mailComposeTarget = function (subject, body, opts) { return mailComposeTarget(subject, body, opts, false); };
   window.__mailCompose = function (subject, body, opts) { return mailLaunch(subject, body, opts, false); };
   window.__mailComposeMailto = function (subject, body, opts) { return mailLaunch(subject, body, opts, true); };
-  // private mail composer controller — compose an email (device-aware: desktop→Gmail web, mobile→native
-  // mail). mailto() → to us; mailto("a@x.com") or mailto(["a@x","b@y"]) → those recipients;
-  // mailto("a@x.com", {cc:"c@z", bcc:[...], subject:"hi", body:"…"}) → with extras.
-  controllers.mailto = function (to, o) {
-    o = (o && typeof o === "object") ? o : {};
-    var recips = mailAddrs(to) || "marketa@behdad.org";
-    window.__mailCompose(o.subject || o.su || "", o.body || "", { to: recips, cc: o.cc, bcc: o.bcc });
-    return "✉ composing to " + recips + (o.cc ? " · cc " + mailAddrs(o.cc) : "") + (o.bcc ? " · bcc " + mailAddrs(o.bcc) : "");
-  };
+  // Private device-aware mail composer: desktop opens Gmail web; mobile uses the native mail app.
   window.__openRsvpMail = function () { var l = document.documentElement.lang, d = T[l] || T.en; window.__mailCompose(d.rsvp_email_subject, d.rsvp_email_body); }; // device-aware (desktop→Gmail web, mobile→native mail); the two explicit out-of-game buttons keep their fixed flavour
   window.__openRsvpGmail = openRsvpGmail;
   if (gmailBtn) gmailBtn.addEventListener("click", openRsvpGmail);

@@ -1450,7 +1450,7 @@ T["en"] = {
   "tip_marketa_laptop": "Markéta’s laptop",
   "tip_marketa_phone": "Markéta’s phone",
   "tip_meal_martin": "<em>svatý Martin</em> — goose, red cabbage, <em>karlovarský knedlík</em>, and that year's <em>svatomartinské víno</em>",
-  "tip_meal_nowruz": "<em>sabzi polo ba mahi</em> (<bdi>سبزی‌پلو با ماهی</bdi>), herb rice and fish for the new year",
+  "tip_meal_nowruz": "<em>zerešk polo ba mahi</em> (<bdi>زرشک‌پلو با ماهی</bdi>), white rice with barberries and fish for the new year",
   "tip_meal_stedry": "<em>Štědrý večer</em> — fried carp and potato salad",
   "tip_meal_xmas": "Christmas dinner — a roast bird and cranberry, and not a fish in sight",
   "tip_meal_yalda": "<em>Shab-e Yalda</em> (<bdi>شب یلدا</bdi>) — watermelon, pomegranate and <em>ajil</em> for the longest night",

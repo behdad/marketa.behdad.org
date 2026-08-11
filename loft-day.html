@@ -84450,8 +84450,7 @@ setOfficeProgress("pc", false);
   // starter wheels self-hosted in pyodide/ (provenance in its README). Imports absent
   // from that local set load on demand from the pinned official 314.0.2 repository;
   // micropip remains available for compatible pure-Python PyPI wheels. Input supports
-  // top-level await. The banner suggests fonttools, the groom's own library. `clear` is
-  // intercepted; everything else is Python.
+  // top-level await. `clear` is intercepted; everything else is Python.
   var pyOut = document.getElementById("monitor-py-out");
   var pyIn = document.getElementById("monitor-py-in");
   var pyWrap = document.getElementById("monitor-py-wrap");
@@ -84467,6 +84466,7 @@ setOfficeProgress("pc", false);
   }
   var pyHist = [], pyHistIdx = 0, pyWelcomed = false;
   var pyRuntime = null, pyReprFn = null;
+  var pyHbInstallPromise = null;
   var pyodideLoader = null;
   var pyLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
   var pyLoadGeneration = 0, pyLoadAttempt = null, PY_LOAD_CANCELLED = {};
@@ -85332,8 +85332,8 @@ def colormode(mode=None):
           py.setStdout({ batched: function (t) { pyPrint(t); } });
           py.setStderr({ batched: function (t) { pyPrint(t, "console-err"); } });
         } catch (e) {}
-        // Code's font snippets use packages installed below. Keep installation silent and
-        // do not publish their modules into the default console namespace.
+        // micropip is the sole optional package loaded during boot. Font libraries stay
+        // absent until a command or Code buffer actually imports them.
         return py.loadPackage("micropip").then(function () { return py; }, function () { return py; });
       }).then(function (py) {
         pyLoadGuard(generation);
@@ -85342,29 +85342,10 @@ def colormode(mode=None):
         try { pyReprFn = py.runPython("repr"); } catch (e) {}
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
-        // Preinstall Code's font dependencies without importing them into the console.
-        return py.runPythonAsync("await __import__('micropip').install(['fonttools', 'brotli'])")
-          .then(function () {
-            pyLoadGuard(generation);
-            // uharfbuzz (the groom's own) — installed from the self-hosted wheel via the FS, which
-            // sidesteps the lock's stricter tag check on the abi3 wheel. Optional; a hiccup here
-            // never blocks the fontTools preload.
-            var HBWHL = "uharfbuzz-0.56.0b1-cp310-abi3-pyemscripten_2026_0_wasm32.whl";
-            return fetch("pyodide/" + HBWHL).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (buf) {
-              py.FS.writeFile("/tmp/" + HBWHL, new Uint8Array(buf));
-              return py.runPythonAsync("await __import__('micropip').install('emfs:/tmp/" + HBWHL + "')");
-            }).then(function () {
-              pyLoadGuard(generation);
-            }, function () {});
-          })
-          .catch(function () {})
-          .then(function () {
-            pyLoadGuard(generation);
-            pyLoadState = "ready";
-            pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
-            pyPrint(">>> import loft", "console-dim");
-            pyDrainCodeQueue();
-          });
+        pyLoadState = "ready";
+        pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
+        pyPrint(">>> import loft", "console-dim");
+        pyDrainCodeQueue();
       }).catch(function (error) { if (error !== PY_LOAD_CANCELLED) pyLoadFailed(generation); });
   }
   function openPython(fromCode) {
@@ -85406,7 +85387,7 @@ def colormode(mode=None):
     pyHist = []; pyHistIdx = 0; pyLastCmd = "";
     pyBusy = false;
     pyCodeQueue.length = 0;
-    pyRuntime = null; pyReprFn = null;
+    pyRuntime = null; pyReprFn = null; pyHbInstallPromise = null;
     pyLoadState = ""; // "" lets loadPythonRuntime re-init on the next open
     pyWelcomed = false; // next open re-prints the welcome — it's a fresh interpreter
     if (pyIn) { pyIn.value = ""; try { pyIn.blur(); } catch (e) {} }
@@ -85443,7 +85424,25 @@ def colormode(mode=None):
     // Pyodide's import scanner resolves only packages named in the pinned lock file;
     // ordinary stdlib/local imports are no-ops here, while e.g. `import numpy` lazily
     // fetches the matching official 314.0.2 wheel before CPython evaluates the source.
-    return pyRuntime.loadPackagesFromImports(source).then(function () {
+    // uharfbuzz is our pinned self-hosted abi3 wheel, so install that one through micropip
+    // only when the submitted source imports it.
+    var needsHb = /(?:^|\n)\s*(?:from\s+uharfbuzz\b|import\s+[^\n#]*\buharfbuzz\b)/m.test(source);
+    var hbReady = Promise.resolve();
+    if (needsHb && !pyHbInstallPromise) {
+      var wheel = "uharfbuzz-0.56.0b1-cp310-abi3-pyemscripten_2026_0_wasm32.whl";
+      pyHbInstallPromise = fetch("pyodide/" + wheel).then(function (response) {
+        if (!response.ok) throw new Error("couldn't load uharfbuzz");
+        return response.arrayBuffer();
+      }).then(function (buffer) {
+        pyRuntime.FS.writeFile("/tmp/" + wheel, new Uint8Array(buffer));
+        return pyRuntime.runPythonAsync("await __import__('micropip').install('emfs:/tmp/" + wheel + "')");
+      }).catch(function (error) {
+        pyHbInstallPromise = null;
+        throw error;
+      });
+    }
+    if (needsHb) hbReady = pyHbInstallPromise;
+    return hbReady.then(function () { return pyRuntime.loadPackagesFromImports(source); }).then(function () {
       return pyRuntime.runPythonAsync(source);
     });
   }

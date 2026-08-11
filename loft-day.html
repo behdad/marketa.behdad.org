@@ -640,6 +640,17 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
   0%,100%{rotate:var(--bathroom-sign-rest)}
   24%{rotate:9deg}50%{rotate:-7deg}74%{rotate:4deg}
 }
+#balcony-golden-key-turn{transform-box:view-box;transform-origin:158px 122px}
+#balcony-entrance-marker.key-used #balcony-golden-key-turn{rotate:12deg}
+#balcony-entrance-key-glint{opacity:0}
+#balcony-entrance-marker.key-turning #balcony-golden-key-turn{
+  animation:balcony-key-turn .42s cubic-bezier(.25,.72,.28,1) both;
+}
+#balcony-entrance-marker.key-used.key-turning #balcony-golden-key-turn{animation-name:balcony-key-turn-used}
+#balcony-entrance-marker.key-turning #balcony-entrance-key-glint{animation:balcony-key-glint .42s ease-out}
+@keyframes balcony-key-turn{0%{rotate:0deg}58%{rotate:34deg}100%{rotate:12deg}}
+@keyframes balcony-key-turn-used{0%{rotate:12deg}58%{rotate:42deg}100%{rotate:12deg}}
+@keyframes balcony-key-glint{0%,18%,100%{opacity:0}46%{opacity:.92}68%{opacity:.22}}
 .lower-room-marker.portal-insisting{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
 #balcony-entrance-marker.portal-insisting{transform-box:view-box;transform-origin:158px 108.5px}
 #cuddly-cinema-ticket.portal-insisting{animation:none}
@@ -649,6 +660,8 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
   .lower-room-marker.portal-insisting{animation:none}
   #kitchen-bathroom-marker.bathroom-sign-swinging #kitchen-bathroom-sign{animation:none}
   #garden-dungeon-door,#garden-dungeon-door-cast{transition:none}
+  #balcony-entrance-marker.key-turning #balcony-golden-key-turn,
+  #balcony-entrance-marker.key-turning #balcony-entrance-key-glint{animation:none}
 }
 #entrance-room[hidden]{display:none}
 #entrance-room{
@@ -29389,6 +29402,7 @@ section{margin:1.9rem 0}
 </linearGradient>
 </defs>
 <g pointer-events="none" transform="rotate(4 158 112)">
+<g id="balcony-golden-key-turn">
 <path d="M158 108.5 V112.5" fill="none" stroke="#76501b" stroke-width="2.2" stroke-linecap="round"/>
 <circle cx="158" cy="108.5" r="2" fill="#c99736" stroke="#6f4a17" stroke-width="1"/>
 <path d="M155.7 122.5 H160.3 V132 H165.5 V136 H162.2 V139 H160.3 V143 H155.7 Z"
@@ -29398,6 +29412,9 @@ section{margin:1.9rem 0}
 <path d="M154.1 114.8 A5.2 5.2 0 0 1 160.8 113.5 M157.1 125 V137.5"
       fill="none" stroke="#ffe68a" stroke-width="1" stroke-linecap="round" opacity=".78"/>
 <path d="M160 126 V131.2 H164.8" fill="none" stroke="#7d5014" stroke-width=".8" stroke-linecap="round" opacity=".72"/>
+<path id="balcony-entrance-key-glint" d="M151.8 115.2 L154.2 116 M152.8 112.8 L154.6 114.3 M155.1 111.8 L155.5 114"
+      fill="none" stroke="#fff6c7" stroke-width=".9" stroke-linecap="round"/>
+</g>
 </g>
 </g>
 <g id="balcony-doormat" class="hunt-hit">
@@ -113035,6 +113052,7 @@ function spawnDustMote(container) {
     });
     syncBathroomSign(true);
     syncGardenDungeonDoor(true);
+    syncBalconyEntranceKey(true);
     if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
@@ -113073,6 +113091,7 @@ function spawnDustMote(container) {
     seenRooms[name] = true;
     syncBathroomSign(false);
     syncGardenDungeonDoor(false);
+    syncBalconyEntranceKey(false);
     if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__checkpointChanged) window.__checkpointChanged();
     if (!(options && options.silent) && attractOver()) showRoomProgress(name);
@@ -113146,7 +113165,41 @@ function spawnDustMote(container) {
     }, reduced ? 1 : 520);
     return true;
   }
+  var balconyEntranceKeyTimer = null;
+  var balconyEntranceKeyEntering = false;
+  function syncBalconyEntranceKey(cancelTurning) {
+    var marker = document.getElementById("balcony-entrance-marker");
+    if (!marker) return false;
+    if (cancelTurning && balconyEntranceKeyEntering) {
+      clearTimeout(balconyEntranceKeyTimer);
+      balconyEntranceKeyTimer = null;
+      balconyEntranceKeyEntering = false;
+    }
+    marker.classList.toggle("key-used", roomSeen("entrance"));
+    if (!balconyEntranceKeyEntering) marker.classList.remove("key-turning");
+    return roomSeen("entrance");
+  }
+  function enterBalconyEntrance(open) {
+    if (balconyEntranceKeyEntering) return true;
+    var marker = document.getElementById("balcony-entrance-marker");
+    if (!marker) return !!open();
+    balconyEntranceKeyEntering = true;
+    marker.classList.remove("key-turning");
+    void marker.getBBox();
+    marker.classList.add("key-turning");
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    clearTimeout(balconyEntranceKeyTimer);
+    balconyEntranceKeyTimer = setTimeout(function () {
+      balconyEntranceKeyTimer = null;
+      var entered = !!open();
+      balconyEntranceKeyEntering = false;
+      syncBalconyEntranceKey(false);
+      if (!entered) marker.classList.remove("key-turning");
+    }, reduced ? 1 : 420);
+    return true;
+  }
   syncGardenDungeonDoor(false);
+  syncBalconyEntranceKey(false);
   window.__roomSeen = roomSeen;
   window.__seenRooms = seenRoomList;
   window.__setSeenRooms = setSeenRooms;
@@ -114127,7 +114180,9 @@ function spawnDustMote(container) {
       return window.__openBedroomRoom && window.__openBedroomRoom();
     }],
     ["balcony-entrance-marker", function () {
-      return window.__openEntranceRoom && window.__openEntranceRoom();
+      return enterBalconyEntrance(function () {
+        return window.__openEntranceRoom && window.__openEntranceRoom();
+      });
     }]
   ].forEach(function (entry) {
     var marker = document.getElementById(entry[0]);

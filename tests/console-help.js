@@ -29,7 +29,7 @@ function check(ok, message, detail) {
 console.log("JavaScript Console help:");
 var result = lib.runPageSync("loft-day.html", HARNESS, 8000, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
-var exactWelcome = "Loft Console — real JavaScript; typed Loft API ready as `loft`. try: `help loft`";
+var exactWelcome = "loft console — real JavaScript; typed Loft API ready as `loft`. try: `help loft`";
 check(result.errors.length === 0, "both console surfaces run without page errors", result.errors);
 check(result.welcome && result.welcome.en === exactWelcome && result.welcome.cs === exactWelcome,
   "English and Czech modes show the exact English-only welcome", result.welcome);

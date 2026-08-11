@@ -37601,8 +37601,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-8ce128d794c6"></script>
-<script src="loft-day.cs.js?v=dict-6eda6a866bc2"></script>
+<script src="loft-day.en.js?v=dict-102352c64765"></script>
+<script src="loft-day.cs.js?v=dict-66482e64b5d1"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -76475,6 +76475,7 @@ setOfficeProgress("pc", false);
     window.__loftHelpTarget = function (value) { return namespaceMeta && namespaceMeta.get(value) || null; };
   })();
   function consoleT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  var CONSOLE_WELCOME = "loft console — real JavaScript; typed Loft API ready as `loft`. try: `help loft`";
   var consoleLastCmd = "";
   function updateConsoleTile() {
     // the dock tile wears a plain prompt, whatever's been typed
@@ -76511,7 +76512,7 @@ setOfficeProgress("pc", false);
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone typing
     monitor.classList.add("show-console");
-    if (!consoleWelcomed) { consoleWelcomed = true; consolePrint(consoleT("console_welcome"), "console-dim"); }
+    if (!consoleWelcomed) { consoleWelcomed = true; consolePrint(CONSOLE_WELCOME, "console-dim"); }
     // Preload harfbuzzjs like the Python console preloads uharfbuzz, then print one
     // English-only banner. The returned module remains local to callers.
     // banner per session; a load failure just stays quiet. (English-only, no T-dict keys.)
@@ -77023,7 +77024,7 @@ setOfficeProgress("pc", false);
   function openDropTerm() {
     if (!dtPanel || dtOpen()) return;
     dtPanel.classList.add("open");
-    if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(consoleT("console_welcome"), "console-dim"); activeConsoleOut = prev; }
+    if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(CONSOLE_WELCOME, "console-dim"); activeConsoleOut = prev; }
     startDropTermFps();
     if (dtIn) setTimeout(function () { appAutoFocusTextControl(dtIn); }, 60);
     syncConsoleTab();
@@ -77041,9 +77042,8 @@ setOfficeProgress("pc", false);
   function syncConsoleTab() {
     var tab = document.getElementById("loft-console-hint");
     if (!tab) return;
-    var on = dtOpen(), key = on ? "console_hint_close" : "console_hint";
+    var on = dtOpen();
     tab.classList.toggle("open", on);
-    tab; tab; // setLang re-resolves these on a language flip
   }
   function toggleDropTerm() { if (dtOpen()) closeDropTerm(); else openDropTerm(); }
   // a game reset wipes the drop-down back to its fresh state (matches the monitor console's
@@ -85230,11 +85230,19 @@ def colormode(mode=None):
       py.FS.mkdirTree("/home/pyodide/loft");
       py.FS.writeFile("/home/pyodide/loft/turtle.py", PY_TURTLE_MODULE);
       py.FS.writeFile("/home/pyodide/loft/loft.py", PY_LOFT_MODULE);
-      py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)\nsys.modules.pop('loft', None)");
+      py.runPython("def __loft_install_modules():\n import sys\n p='/home/pyodide/loft'\n if p not in sys.path: sys.path.insert(0,p)\n sys.modules.pop('turtle', None)\n sys.modules.pop('loft', None)\n__loft_install_modules()\ndel __loft_install_modules");
       py.runPython("import loft");
     } catch (e) { pyPrint("Python modules could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
   }
-  function pyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  var PY_COPY = {
+    busy: "still chewing on the last one…",
+    fail: "couldn't load Python — offline, or the download broke. close and reopen to retry.",
+    loading: "summoning the snake… ~15 MB, first time only",
+    ready: "Python {v} ready.",
+    wait: "the snake is still on its way…",
+    welcome: "loft python — real CPython, right here in your page (Pyodide/WebAssembly)."
+  };
+  function pyT(key) { return PY_COPY[key.slice(3)] || ""; }
   function updatePythonTile() {
     // the Python dock icon always wears the >>> prompt (owner: not the last command)
     var glyph = dockGlyphEls.python;
@@ -85297,9 +85305,9 @@ def colormode(mode=None):
           py.setStdout({ batched: function (t) { pyPrint(t); } });
           py.setStderr({ batched: function (t) { pyPrint(t, "console-err"); } });
         } catch (e) {}
-        // micropip powers the banner's fonttools suggestion; the REPL works without
-        // it, so a failed package fetch just skips the import
-        return py.loadPackage("micropip").then(function () { return py.runPythonAsync("import micropip"); }).then(function () { return py; }, function () { return py; });
+        // Code's font snippets use packages installed below. Keep installation silent and
+        // do not publish their modules into the default console namespace.
+        return py.loadPackage("micropip").then(function () { return py; }, function () { return py; });
       }).then(function (py) {
         pyLoadGuard(generation);
         pyRuntime = py;
@@ -85307,30 +85315,20 @@ def colormode(mode=None):
         try { pyReprFn = py.runPython("repr"); } catch (e) {}
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
-        // Font helpers live on the imported `loft` module; installing fontTools and
-        // uharfbuzz below adds libraries, never bare REPL commands.
-        pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "console-dim");
-        pyPrint(">>> from fontTools.ttLib import TTFont", "console-dim");
-        return py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
-          .then(function (v) {
+        // Preinstall Code's font dependencies without importing them into the console.
+        return py.runPythonAsync("await __import__('micropip').install(['fonttools', 'brotli'])")
+          .then(function () {
             pyLoadGuard(generation);
-            pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "console-dim");
             // uharfbuzz (the groom's own) — installed from the self-hosted wheel via the FS, which
             // sidesteps the lock's stricter tag check on the abi3 wheel. Optional; a hiccup here
-            // never blocks the fontTools preload. RETURNED so the demo below prints after hb's line.
+            // never blocks the fontTools preload.
             var HBWHL = "uharfbuzz-0.56.0b1-cp310-abi3-pyemscripten_2026_0_wasm32.whl";
             return fetch("pyodide/" + HBWHL).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (buf) {
               py.FS.writeFile("/tmp/" + HBWHL, new Uint8Array(buf));
-              return py.runPythonAsync("await micropip.install('emfs:/tmp/" + HBWHL + "')\nimport uharfbuzz as hb\nhb.version_string()");
-            }).then(function (hv) {
+              return py.runPythonAsync("await __import__('micropip').install('emfs:/tmp/" + HBWHL + "')");
+            }).then(function () {
               pyLoadGuard(generation);
-              pyPrint(">>> import uharfbuzz as hb", "console-dim");
-              pyPrint(pyT("py_uharfbuzz").replace("{v}", String(hv)), "console-dim");
             }, function () {});
-          })
-          .then(function () {
-            pyLoadGuard(generation);
-            pyPrint(">>> hb.Face(await loft.fonts.google('Anton'))  # weight=700, italic=True; loft.fonts.google.list('mono')", "console-dim");
           })
           .catch(function () {})
           .then(function () {
@@ -85338,8 +85336,6 @@ def colormode(mode=None):
             pyLoadState = "ready";
             pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
             pyPrint(">>> import loft", "console-dim");
-            pyPrint("typed Loft API ready — loft.game.status() · loft.party.set(True)", "console-dim");
-            pyPrint(">>> import turtle  # browser graphics", "console-dim");
             pyDrainCodeQueue();
           });
       }).catch(function (error) { if (error !== PY_LOAD_CANCELLED) pyLoadFailed(generation); });
@@ -85549,7 +85545,14 @@ def colormode(mode=None):
     vgaBios: "linux/vgabios.bin",
     iso: "linux/linux.iso" // the stock v86 ISO repacked with hb-shape + a test font
   };
-  function lxT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  var LINUX_COPY = {
+    fail: "linux couldn't boot — offline, or the download stalled. close and reopen to retry.",
+    hint: "try: hb-shape /root/test.ttf 'markéta ∞ behdad' · hb-info /root/test.ttf — the groom's text-shaping engine, shaping (and x-raying) the wedding's own Fraunces.",
+    loading: "booting linux… ~9 MB, first time only",
+    wait: "still booting… the prompt appears once the kernel is up.",
+    welcome: "loft linux — a whole x86 PC in your page (v86/WebAssembly), booting a real kernel."
+  };
+  function lxT(key) { return LINUX_COPY[key.slice(6)] || ""; }
   function lxPrint(txt, cls) {
     if (!lxOut) return;
     var d = document.createElement("div");

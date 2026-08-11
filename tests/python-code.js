@@ -10,6 +10,8 @@ var lib = require("./lib");
 
 var ROOT = path.join(__dirname, "..");
 var html = fs.readFileSync(path.join(ROOT, "rsvp.html"), "utf8");
+var dictionaries = fs.readFileSync(path.join(ROOT, "loft-day.en.js"), "utf8") +
+  fs.readFileSync(path.join(ROOT, "loft-day.cs.js"), "utf8");
 var worker = fs.readFileSync(path.join(ROOT, "chat.js"), "utf8");
 var manifestSource = fs.readFileSync(path.join(ROOT, "code-snippets", "manifest.js"), "utf8");
 var manifestContext = { window: {} };
@@ -115,8 +117,7 @@ check(/CODE_UNSAVED_KEY\s*=\s*"deskCodeUnsaved"/.test(html) &&
       /file\.unsaved\)\s*codeLoadUnsaved\(\)/.test(html) &&
       /code-item\.unsaved/.test(html),
   "an unnamed buffer remains available as an italic unsaved sidebar item");
-check(/pyPrint\(">>> import turtle  # browser graphics"/.test(html) &&
-      /id="monitor-py-view-toggle" transform="translate\(71,29\.3\) scale\(0\.8\)"/.test(html) &&
+check(/id="monitor-py-view-toggle" transform="translate\(71,29\.3\) scale\(0\.8\)"/.test(html) &&
       /id="monitor-console-view-toggle" transform="translate\(71,29\.3\) scale\(0\.8\)"/.test(html) &&
       /id="monitor-py-view-mark"/.test(html) &&
       /id="monitor-console-view-mark"/.test(html) &&
@@ -146,14 +147,20 @@ check(/class", "py-turtle-cursor"/.test(html) &&
 check(/installPythonModules\(py\)/.test(html) &&
       /loft\.py/.test(html) &&
       /py\.runPython\("import loft"\)/.test(html) &&
-      /typed Loft API ready/.test(html) &&
       /def _clear_svg\(\):/.test(html) &&
       /_install_native\("presentation\.svg\.show", _show_svg\)/.test(html) &&
       /function pyDisplaySvg/.test(html) &&
       /sys\.path\.insert\(0,p\)/.test(html),
   "the API, Turtle and sanitized SVG modules are installed before user Python imports them");
-check(/pyLoadState\s*=\s*"ready";[\s\S]*?pyPrint\(">>> import loft", "console-dim"\)[\s\S]*?typed Loft API ready/.test(html),
-  "the completed Python boot transcript leaves the automatic import loft line visible");
+check(/pyLoadState\s*=\s*"ready";[\s\S]*?pyPrint\(">>> import loft", "console-dim"\)/.test(html) &&
+      !/pyPrint\(">>> (?:import micropip|from fontTools|import uharfbuzz|hb\.|import turtle)/.test(html) &&
+      !/typed Loft API ready —/.test(html),
+  "the completed Python boot transcript shows only its automatic import loft command");
+check(/var CONSOLE_WELCOME = "loft console/.test(html) && /var PY_COPY = \{/.test(html) &&
+      /welcome: "loft python/.test(html) && /var LINUX_COPY = \{/.test(html) &&
+      /welcome: "loft linux/.test(html) &&
+      !/"(?:console_(?:hint|hint_close|laser|welcome)|linux_(?:fail|hint|loading|wait|welcome)|py_(?:busy|fail|loading|ready|wait|welcome))"\s*:/.test(dictionaries),
+  "all three console families keep their English-only copy beside the implementation, outside the bilingual dictionaries");
 check(/window\.__pyRuntimeState\s*=\s*function \(\) \{ return pyLoadState \|\| "stopped"; \}/.test(html) &&
       /id: "app\.python\.status"[\s\S]*?run: pythonAppState/.test(html),
   "the public Python status query derives readiness from the runtime owner's real boot state");

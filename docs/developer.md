@@ -492,6 +492,10 @@ The Pyodide console installs an embedded `loft.py` module beside the browser Tur
 `import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
 namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
 there is no second capability roster to synchronize.
+Its visible boot transcript contains only the automatic `import loft`; fontTools, Brotli, and
+uharfbuzz are installed silently for Code snippets without being imported into the console namespace.
+JavaScript, Python, and Linux console chrome and runtime messages are deliberately English-only and
+live beside their implementations rather than in the bilingual game dictionaries.
 Queries return ordinary Python dictionaries, lists, and scalars. Actions start immediately and
 return an awaitable result, so a setter can be issued directly while a finite action can be awaited.
 The bridge recursively converts Python `None` to JavaScript `null`—Pyodide otherwise converts a bare

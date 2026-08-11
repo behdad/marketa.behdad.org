@@ -43,7 +43,7 @@ var harness = String.raw`<script>
     if (visitorTick) visitorTick();
     var afterDropIns = window.__cuddlyVisitorDuos().filter(function (id) { return window.__phoneMessageReceived("visit_" + id); }).length;
     check("May 2 suppresses autonomous are-you-home texts", beforeDropIns === afterDropIns, beforeDropIns + " -> " + afterDropIns);
-    var moments = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
+    var moments = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet"];
     var eligibleMoments = intersection(window.__partyTextChoices(), moments);
     check("May 2 excludes wedding-moment texts", eligibleMoments.length === 0, eligibleMoments.join(","));
     check("balcony split waits for invitation", !(window.__bbqSplitState && window.__bbqSplitState().on));

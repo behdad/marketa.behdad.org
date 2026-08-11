@@ -9,7 +9,7 @@ var HARNESS = [
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push(String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
-  'window.__secondRound=true;window.__firstDanceOn=false;window.__slowDanceOn=false;window.__toastsOn=false;window.__groupPhotoOn=false;window.__sparklersOn=false;window.__cakeOn=false;window.__bouquetOn=false;window.__chairLiftOn=false;',
+  'window.__secondRound=true;window.__firstDanceOn=false;window.__slowDanceOn=false;window.__toastsOn=false;window.__groupPhotoOn=false;window.__sparklersOn=false;window.__cakeOn=false;window.__bouquetOn=false;',
   'window.__loftAwaitLifecycle=function(active,options){return new Promise(function(resolve,reject){var saw=!!active(),started=Date.now();function poll(){var on=!!active();saw=saw||on;if(saw&&!on){resolve(options&&typeof options.value==="function"?options.value():options&&options.value);return;}if(!saw&&Date.now()-started>250){reject(new Error((options&&options.label||"action")+" did not start."));return;}setTimeout(poll,5);}poll();});};',
   'var calls=[],events=[];window.addEventListener("loft:statechange",function(e){events.push(e.detail);});',
   'window.firstdance=function(){calls.push("first-dance");return true;};',

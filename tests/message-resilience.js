@@ -80,7 +80,7 @@ var HARNESS = String.raw`<script>
     });
 
     if (window.__closePhoneModal) window.__closePhoneModal(true);
-    var flags = ["__firstDanceOn", "__slowDanceOn", "__toastsOn", "__groupPhotoOn", "__sparklersOn", "__cakeOn", "__bouquetOn", "__chairLiftOn"];
+    var flags = ["__firstDanceOn", "__slowDanceOn", "__toastsOn", "__groupPhotoOn", "__sparklersOn", "__cakeOn", "__bouquetOn"];
     var gates = [];
     flags.forEach(function (flag) {
       if (window.__resetPhoneApps) window.__resetPhoneApps();

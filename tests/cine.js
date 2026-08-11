@@ -32,7 +32,7 @@ var COMMON = [
   " if(window.__bathroomInteractionState&&window.__bathroomInteractionState().bubbles.active)r.games.bubbles=true;",
   " if(window.__bedroomTicTacToeState&&window.__bedroomTicTacToeState().phase!=='idle')r.games.ttt=true;",
   " if(window.__gardenPartyOn)r.party=true;",
-  " if(window.__firstDanceOn||window.__slowDanceOn||window.__toastsOn||window.__groupPhotoOn||window.__sparklersOn||window.__cakeOn||window.__bouquetOn||window.__chairliftOn)r.formal=true;",
+  " if(window.__firstDanceOn||window.__slowDanceOn||window.__toastsOn||window.__groupPhotoOn||window.__sparklersOn||window.__cakeOn||window.__bouquetOn)r.formal=true;",
   " var road=value(window.loft.roadtrip.status())||{},score=document.getElementById('tumbala-song-audio');",
   " if(road.active&&road.route){r.roads[road.route]=true;if(road.route==='banff'){r.roadExact=!!document.querySelector('#entrance-room.roadtrip-route-banff');r.scoreAtRoad=!!(score&&score.loop&&score._trailerPlayCalls>=2);}if(road.route==='camp'){var camp=document.getElementById('entrance-roadtrip-camp');r.campExact=!!(camp&&getComputedStyle(camp).display!=='none');r.campFire=!!(camp&&camp.classList.contains('fire-built')&&!camp.classList.contains('fire-out'));r.scoreAtCamp=!!(score&&score.loop&&score._trailerPlayCalls>=2);}}",
   " if(document.querySelector('#hunt-fullscreen-area.cinematic-running #cine-overlay'))r.presentation=true;",

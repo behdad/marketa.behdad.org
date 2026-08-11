@@ -1442,7 +1442,7 @@ function checkSharedStateOwners(file, script) {
     if (script.indexOf("function " + scalarOwners[prop] + "(") === -1) bad.push(scalarOwners[prop] + " owner is missing");
   });
   var momentProps = ["firstDanceOn", "slowDanceOn", "toastsOn", "groupPhotoOn", "sparklersOn",
-    "cakeOn", "bdCakeOn", "bouquetOn", "chairLiftOn", "photoFreeze"];
+    "cakeOn", "bdCakeOn", "bouquetOn", "photoFreeze"];
   momentProps.forEach(function (prop) {
     var writes = script.match(new RegExp("window\\.__" + prop + "\\s*=(?!=)", "g")) || [];
     if (writes.length) bad.push("__" + prop + " bypasses setPartyMomentState");

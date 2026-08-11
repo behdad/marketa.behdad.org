@@ -162,7 +162,9 @@ honestly enable it, a structured remedy. Use `await loft.caption.show("hello")` 
 Preview another date or clock time with `loft.calendar.date.set("2027-05-01")` and
 `loft.calendar.time.set({hours: 18, minutes: 0})`; the matching `.reset()` actions restore the real
 calendar and clock. `loft.poetry.hafez.read()` draws a Hafez reading; the scene-gated
-`await loft.poetry.rumi.read()` starts the quiet nighttime Cuddly exchange. Block Party is the
+`await loft.poetry.rumi.read()` starts and awaits one complete quiet nighttime Cuddly exchange;
+another reading is unavailable until it finishes, and leaving the scene or starting the Party
+cancels it. Block Party is the
 `"block-party"` choice for `loft.minigame.start(...)`. `await loft.sky.eclipse.play()` brings the
 Balcony into view and starts the eclipse appropriate to its current sky.
 `await loft.people.irene.pose("catplay")` waits for the cat's walk-in and the requested pose; sending

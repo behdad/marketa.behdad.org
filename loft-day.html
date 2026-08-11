@@ -75194,10 +75194,17 @@ setOfficeProgress("pc", false);
         var fairy = document.getElementById("cuddly-rumi-fairy");
         var balcony = document.getElementById("stage-balcony");
         return typeof controllers.rumi === "function" && !!(fairy && fairy.classList.contains("present")) &&
-          window.__currentStageName === "cuddly" && !window.__gardenPartyOn && !!(balcony && balcony.classList.contains("dusk"));
-      }, unavailable: staticBlocked("The quiet nighttime Cuddly fairy is not present."),
+          window.__currentStageName === "cuddly" && !window.__gardenPartyOn && !(window.__rumiExchangeActive && window.__rumiExchangeActive()) &&
+          !!(balcony && balcony.classList.contains("dusk"));
+      }, unavailable: function () {
+        return blocked((window.__rumiExchangeActive && window.__rumiExchangeActive()) ? "A Rumi exchange is already active." : "The quiet nighttime Cuddly fairy is not present.");
+      },
       run: function () {
-        var reading = controllers.rumi();
+        var started = controllers.rumi();
+        if (started && started.completion && typeof started.completion.then === "function") {
+          return started.completion.then(function () { return { reading: started.reading, completed: true }; });
+        }
+        var reading = started;
         return window.__loftAwaitLifecycle(function () { return !!document.querySelector(".rumi-bubble"); }, {
           label: "Rumi exchange", startTimeout: 1000, timeout: 16000,
           value: function () { return { reading: reading, completed: true }; }
@@ -102599,7 +102606,7 @@ def colormode(mode=None):
     var rj = Math.floor(Math.random() * (ri + 1));
     var rt = rumiOrder[ri]; rumiOrder[ri] = rumiOrder[rj]; rumiOrder[rj] = rt;
   }
-  var rumiCursor = 0, rumiReplyTimer = null, rumiFollowRaf = null;
+  var rumiCursor = 0, rumiReplyTimer = null, rumiFollowRaf = null, rumiOperation = null, rumiGeneration = 0;
   var rumiWakeTimer = null, rumiWakeHeld = false;
   function endRumiWake() {
     clearTimeout(rumiWakeTimer); rumiWakeTimer = null;
@@ -102608,6 +102615,48 @@ def colormode(mode=None):
     if (window.__endBehdadWake) window.__endBehdadWake();
   }
   window.__endRumiWake = endRumiWake;
+  function settleRumi(operation, error) {
+    if (!operation || rumiOperation !== operation || operation.settled) return false;
+    operation.settled = true;
+    rumiOperation = null;
+    clearTimeout(operation.pollTimer); operation.pollTimer = null;
+    clearTimeout(rumiReplyTimer); rumiReplyTimer = null;
+    endRumiWake();
+    [operation.firstBubble, operation.secondBubble].forEach(function (bubble) {
+      if (error && bubble && bubble.isConnected && bubble._rumiOperation === operation) dismissEggBubble(bubble);
+    });
+    if (error) operation.reject(new Error(error));
+    else operation.resolve();
+    return true;
+  }
+  function cancelRumi(reason) {
+    rumiGeneration++;
+    return settleRumi(rumiOperation, reason || "The Rumi exchange was cancelled.");
+  }
+  function pollRumi(operation) {
+    if (rumiOperation !== operation || operation.settled) return;
+    if (window.__currentStageName !== "cuddly" || window.__gardenPartyOn) {
+      settleRumi(operation, "The Rumi exchange was cancelled when the quiet Cuddly scene ended."); return;
+    }
+    var fairy = document.getElementById("cuddly-rumi-fairy");
+    if (!(fairy && fairy.classList.contains("present"))) {
+      settleRumi(operation, "The Rumi exchange was cancelled when the fairy left."); return;
+    }
+    if (!operation.secondBubble && operation.firstBubble && !operation.firstBubble.isConnected) {
+      settleRumi(operation, "The Rumi exchange was dismissed before the reply."); return;
+    }
+    if (operation.secondBubble && !operation.secondBubble.isConnected) {
+      if (Date.now() >= operation.expectedEnd) settleRumi(operation, null);
+      else settleRumi(operation, "The Rumi exchange was dismissed before completion.");
+      return;
+    }
+    if (Date.now() - operation.startedAt >= 17000) {
+      settleRumi(operation, "The Rumi exchange did not finish."); return;
+    }
+    operation.pollTimer = setTimeout(function () { pollRumi(operation); }, 40);
+  }
+  window.__rumiExchangeActive = function () { return !!rumiOperation; };
+  window.__cancelRumiExchange = cancelRumi;
   function rumiPick() {
     if (!rumiOrder.length) return 0;
     var i = rumiOrder[rumiCursor];
@@ -102671,7 +102720,8 @@ def colormode(mode=None):
     rumiFollowRaf = requestAnimationFrame(followHead);
     return bubble;
   }
-  window.__offerRumiAt = function (fallback) {
+  window.__offerRumiAt = function (fallback, operation) {
+    if (!operation && rumiOperation) cancelRumi("The Rumi exchange was superseded by another reading.");
     clearTimeout(rumiReplyTimer);
     clearTimeout(rumiWakeTimer); rumiWakeTimer = null;
     rumiWakeHeld = !!(window.__holdBehdadWake && window.__holdBehdadWake());
@@ -102682,14 +102732,23 @@ def colormode(mode=None):
     var marketa = hostAnchor("cuddly-marketa-head", fallback);
     var behdad = hostAnchor("cuddly-behdad-head", fallback);
     spawnFairyClueTrail(strip, fallback, marketa);
-    showRumi(marketa, "markéta", RUMI_FA[i][0], readings[i][0], RUMI_GHAZAL[i], 5, 0);
+    var firstBubble = showRumi(marketa, "markéta", RUMI_FA[i][0], readings[i][0], RUMI_GHAZAL[i], 5, 0);
+    if (operation && firstBubble) { firstBubble._rumiOperation = operation; operation.firstBubble = firstBubble; }
     rumiReplyTimer = setTimeout(function () {
+      rumiReplyTimer = null;
+      if (operation && (rumiOperation !== operation || operation.generation !== rumiGeneration)) return;
       if (window.__currentStageName !== "cuddly" || window.__gardenPartyOn) {
-        endRumiWake();
+        if (operation) settleRumi(operation, "The Rumi exchange was cancelled before the reply.");
+        else endRumiWake();
         return;
       }
       spawnFairyClueTrail(strip, fallback, behdad);
-      showRumi(behdad, "behdad", RUMI_FA[i][1], readings[i][1], RUMI_GHAZAL[i], 48, 0, "head-top-left");
+      var secondBubble = showRumi(behdad, "behdad", RUMI_FA[i][1], readings[i][1], RUMI_GHAZAL[i], 48, 0, "head-top-left");
+      if (operation && secondBubble) {
+        secondBubble._rumiOperation = operation;
+        operation.secondBubble = secondBubble;
+        operation.expectedEnd = Date.now() + 8100;
+      }
       rumiWakeTimer = setTimeout(endRumiWake, 7800);
     }, 5200);
     return i;
@@ -102699,12 +102758,19 @@ def colormode(mode=None):
     var inExchange = window.__currentStageName === "cuddly" && fairy &&
       fairy.classList.contains("present") && !window.__gardenPartyOn;
     if (!inExchange) return "🧚 loft.poetry.rumi.read() waits for the quiet nighttime Cuddly fairy.";
-    var i = window.__offerRumiAt(fairy);
+    if (rumiOperation) throw new Error("A Rumi exchange is already active.");
+    var operation = { generation: ++rumiGeneration, startedAt: Date.now(), settled: false, pollTimer: null,
+      firstBubble: null, secondBubble: null, expectedEnd: 0, resolve: null, reject: null };
+    operation.completion = new Promise(function (resolve, reject) { operation.resolve = resolve; operation.reject = reject; });
+    rumiOperation = operation;
+    var i = window.__offerRumiAt(fairy, operation);
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
-    return "📖 Rumi — Ghazal " + RUMI_GHAZAL[i] + "\n" +
+    operation.reading = "📖 Rumi — Ghazal " + RUMI_GHAZAL[i] + "\n" +
       RUMI_FA[i][0] + "\n   " + readings[i][0] + "\n" +
       RUMI_FA[i][1] + "\n   " + readings[i][1];
+    operation.pollTimer = setTimeout(function () { pollRumi(operation); }, 40);
+    return { reading: operation.reading, completion: operation.completion };
   };
 })();
 (function () {
@@ -103394,6 +103460,7 @@ def colormode(mode=None):
   }
   window.__updateCuddlyRumiFairy = syncRumiFairy;
   window.__resetRumiFairy = function () {
+    if (window.__cancelRumiExchange) window.__cancelRumiExchange("The Rumi exchange was cancelled by reset.");
     clearTimeout(fairyDepartureTimer); fairyDepartureTimer = null;
     if (window.__endRumiWake) window.__endRumiWake();
     if (fairy) fairy.classList.remove("released", "departed", "wobbling");

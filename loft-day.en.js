@@ -846,7 +846,7 @@ T["en"] = {
   "mon_ctx_stop": "Stop",
   "mon_ctx_uninstall": "Uninstall",
   "mon_help_click": "Click everything! Right-click for more options.",
-  "mon_help_clue": "Follow the clue above the scene.",
+  "mon_help_clue": "Follow the clue below the scene.",
   "mon_help_keyboard": "Press ? for the full control list.",
   "mon_help_manual": "Game manual ↗",
   "mon_help_title": "Help",

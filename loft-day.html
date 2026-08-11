@@ -74337,7 +74337,7 @@ setOfficeProgress("pc", false);
       if (box.scrollTop !== before) { e.preventDefault(); e.stopPropagation(); }
     }, { passive: false });
   });
-  var consoleHist = [], consoleHistIdx = 0, consoleWelcomed = false, hbBannerShown = false;
+  var consoleHist = [], consoleHistIdx = 0, consoleWelcomed = false;
   if (!window.loft) window.loft = {
     couple: "markéta ∞ behdad",
     // a getter so the city follows the language toggle
@@ -76512,15 +76512,6 @@ setOfficeProgress("pc", false);
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone typing
     monitor.classList.add("show-console");
     if (!consoleWelcomed) { consoleWelcomed = true; consolePrint(consoleT("console_welcome"), "console-dim"); }
-    // Preload harfbuzzjs like the Python console preloads uharfbuzz, then print one
-    // English-only banner. The returned module remains local to callers.
-    // banner per session; a load failure just stays quiet. (English-only, no T-dict keys.)
-    if (!hbBannerShown && window.loft.fonts && window.loft.fonts.harfbuzz) {
-      hbBannerShown = true;
-      window.loft.fonts.harfbuzz().then(function () {
-        if (!fromCode) consolePrint("harfbuzzjs ready — const hb = await loft.fonts.harfbuzz()", "console-dim");
-      }, function () {});
-    }
     if (consoleIn) setTimeout(function () { appAutoFocusTextControl(consoleIn); }, 60);
     playLaptopClickSound("office-monitor");
   }
@@ -76536,23 +76527,20 @@ setOfficeProgress("pc", false);
   }
   window.__closeMonitorConsole = closeConsole; // other monitor apps close the REPL before taking the screen
   // a game reset returns this console to its fresh page-load state: empty scrollback,
-  // no command history, cleared input, and the welcome + harfbuzzjs banners re-armed to
-  // print again on the next open. harfbuzzjs (the runtime the banner describes) stays
-  // loaded — only the visible session resets.
+  // no command history, cleared input, and the welcome re-armed to print on the next open.
   window.__resetMonitorTermSession = function () {
     if (consoleOut) consoleOut.innerHTML = "";
     consoleHist = []; consoleHistIdx = 0;
     consoleLastCmd = "";
     consoleWelcomed = false;
-    hbBannerShown = false;
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
     if (consoleSvgDisplay) consoleSvgDisplay.textContent = "";
     syncConsoleGraphicsToggle();
     updateConsoleTile();
   };
   // Kill (or an internal restart command) REALLY refreshes the plain console (a stateless JS
-  // REPL — no runtime to reboot): wipe the scrollback + history, re-arm the welcome + harfbuzz
-  // banners, clear/blur the input, and drop back to the desktop. (The silent ✕ / app-switch
+  // REPL — no runtime to reboot): wipe the scrollback + history, re-arm the welcome,
+  // clear/blur the input, and drop back to the desktop. (The silent ✕ / app-switch
   // close stays closeConsole — it only hides the screen, keeping the session for next time.)
   function destroyConsole() {
     consoleReturnToCode = false;
@@ -76561,7 +76549,6 @@ setOfficeProgress("pc", false);
     consoleHist = []; consoleHistIdx = 0;
     consoleLastCmd = "";
     consoleWelcomed = false; // next open reprints the welcome — a fresh shell
-    hbBannerShown = false;
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
     if (consoleSvgDisplay) consoleSvgDisplay.textContent = "";
     syncConsoleGraphicsToggle();

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
+var fs = require("fs");
+var path = require("path");
 var lib = require("./lib");
 
 var HARNESS = [
@@ -40,6 +42,9 @@ check(surface.globalHb === "undefined" && surface.globalFactory === "undefined" 
   "loading HarfBuzz publishes no module or loader globals", surface);
 check(/loft\.fonts\.harfbuzz\(\)/.test(result.help || "") && /HarfBuzz\.js module/.test(result.help || ""),
   "help describes the JavaScript module import at its public path", result.help);
+var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
+check(!/harfbuzzjs ready|hbBannerShown/.test(source),
+  "opening Console neither preloads HarfBuzz.js nor claims that a local hb import already exists");
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

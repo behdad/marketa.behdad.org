@@ -12700,7 +12700,7 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
 #loft-game-strip.froggies #garden-aurora, #loft-game-strip.dmt #garden-aurora,
 #loft-game-strip.molly #garden-aurora, #loft-game-strip.ketamine #garden-aurora,
 #loft-game-strip.iboga #garden-aurora{opacity:0}
-/* console/test overrides: force on regardless of dusk, or force off regardless of state */
+/* private/test overrides: force on regardless of dusk, or force off regardless of state */
 #stage-garden.aurora-force #garden-aurora{opacity:0.9}
 #stage-garden.aurora-force.aurora-clouded #garden-aurora,
 #stage-garden.aurora-hide #garden-aurora{opacity:0}
@@ -12752,7 +12752,7 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
 .smoke-sun{opacity:calc(var(--smoke,0) * var(--smoke-max,.9)); transition:opacity .9s ease}
 .dusk .smoke-tint{opacity:0}
 /* A plain grey OVERCAST day. This is the loft's BASE cloud state, not a fourth exclusive mode:
-   .climate-overcast is worn for Edmonton's real cloud/fog (code 2/3/45/48), for the console
+   .climate-overcast is worn for Edmonton's real cloud/fog (code 2/3/45/48), for the typed
    lever, AND underneath rain/storm — a rainy sky is an overcast sky with precip on top, so the
    grey base is shared and .storming/.raining only add their darker panes, streaks and lightning.
    Daylight-only: .dusk cuts every wash below, leaving the night cascade untouched.
@@ -60513,7 +60513,7 @@ setMusicPausedState(false);
     if (shouldRun()) start();
     else if (raf) { cancelAnimationFrame(raf); raf = 0; }
   };
-  // console/test hook: force the aurora on/off regardless of the natural state, or (no arg)
+  // Private/test hook: force the aurora on/off regardless of the natural state, or (no arg)
   // just re-evaluate. Flips the same .aurora-force / .aurora-hide classes the CSS reads, on
   // BOTH windows so a forced aurora shows in whichever room the visitor's in. Anything but a
   // force-ON also drops a pinned Kp index, so reset/cinematic-end strands nothing.
@@ -68952,7 +68952,7 @@ function quickReversalGesture(action) {
   //  mix), tap the shaker to shake it, and it pours into a glass Pouria presents. Any combo
   //  yields a drink; matching a real bar-menu recipe's ingredients NAMES it (Negroni, Yale) —
   //  everything else is a house pour. Reachable in-scene (tap the bottles / shaker while the
-  //  bar's up — party OR calm night) and from the console (controllers.mixer(...)). Self-contained:
+  //  bar's up — party OR calm night) and from loft.kitchen.bar.mixer.*. Self-contained:
   //  its own SVG nodes, no new AudioContext (it reuses the shared bar SFX), and a clean reset
   //  (shaker empty, glass gone) on bar-down / game reset / tab-hide.
   // ======================================================================================
@@ -68972,7 +68972,7 @@ function quickReversalGesture(action) {
   function barUpNow() { return !!(window.__barUpNow && window.__barUpNow()); }
   function present() { return barUpNow() && window.__currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
   function flairBusy() { return !!(window.__flairState && window.__flairState().active); } // the Flair-Catch game owns the bar
-  // crickets rule: a real tap implies focus, but the console demo's timer-driven steps can land
+  // crickets rule: a real tap implies focus, but a scripted mixer's timer-driven steps can land
   // while the tab is visible-but-UNFOCUSED — gate every mixer sound the same as the ambient beds.
   function sfx(fn) { if (document.hidden || (document.hasFocus && !document.hasFocus())) return; try { fn(); } catch (e) {} }
 
@@ -74980,12 +74980,12 @@ setOfficeProgress("pc", false);
         outdoor_temperature_c: window.__outdoorTempC ? window.__outdoorTempC() : null
       };
     }
-    function consoleBooleanStatus(name) {
+    function controllerBooleanStatus(name) {
       var command = controllers[name];
       if (command && typeof command.status === "function") return !!command.status();
       return typeof command === "function" ? !!command() : false;
     }
-    function consoleBooleanSet(name, on) {
+    function controllerBooleanSet(name, on) {
       var command = controllers[name];
       if (command && typeof command.set === "function") return !!command.set(on);
       if (typeof command === "function") { command(on); return !!command(); }
@@ -74993,8 +74993,8 @@ setOfficeProgress("pc", false);
     }
     function registerToggle(id, group, name, options) {
       options = options || {};
-      var read = options.read || function () { return consoleBooleanStatus(name); };
-      var write = options.write || function (on) { return consoleBooleanSet(name, on); };
+      var read = options.read || function () { return controllerBooleanStatus(name); };
+      var write = options.write || function (on) { return controllerBooleanSet(name, on); };
       register({ id: id + ".status", group: group, kind: "query", description: options.description || "Current on/off state.",
         run: function () { var on = !!read(); return options.snapshot ? options.snapshot(on) : { on: on }; } });
       register({ id: id + ".set", group: group, kind: "action", risk: options.risk || "ambient",
@@ -77063,7 +77063,7 @@ setOfficeProgress("pc", false);
   // A tiny local-script workspace, sibling to the consoles: write JavaScript or Python, name
   // it, and autosave it. Each language has a localStorage { name: code } file map; both are
   // deliberately outside game state, so reset()/reboot() never removes them. JavaScript
-  // files run here (or by name through run()); Python files hand off to the Python app.
+  // files run here (or by name through the private runner); Python files hand off to the Python app.
   var codeWrap = document.getElementById("monitor-code-wrap");
   var codeName = document.getElementById("monitor-code-name");
   var codeCode = document.getElementById("monitor-code-code");
@@ -77901,7 +77901,7 @@ setOfficeProgress("pc", false);
     });
   }
   window.__runCodeScript = codeRunNamedScript;
-  // repeat("name") / repeat() → run a script on a loop until Esc (or stop()/reset). A compile or
+  // The private repeat owner runs a named/current script on a loop until Esc or reset. A compile or
   // runtime error ends the loop (never spins on a broken script); it also pauses while the tab is
   // hidden so nothing piles up (the timer-accumulation bug class).
   var codeRepeatOn = false, codeRepeatToken = 0, codeOneShotOn = false, codeOneShotToken = 0;
@@ -83607,7 +83607,7 @@ setOfficeProgress("pc", false);
     var text = chatInput.value.trim();
     if (!text) return;
     chatInput.value = "";
-    askChat(text).catch(function () {}); // the app paints its own error; console callers use the rejection
+    askChat(text).catch(function () {}); // the app paints its own error; scripted callers use the rejection
   }
   function cancelQueuedChatMessages() {
     var hasDraft = !!(chatInput && chatInput.value);
@@ -90674,7 +90674,7 @@ def colormode(mode=None):
     var statusClock = null, currentApp = null, currentTitleKey = "";
     var recentApps = [], recentsReturnApp = null;
     // One owner for app-level Back/Escape. A launcher tap leaves this null (app -> home);
-    // direct scene/API/console launches use "close"; a Messages action uses "messages".
+    // direct scene/typed-API launches use "close"; a Messages action uses "messages".
     var phoneAppReturn = null;
     function setPhoneAppReturn(mode, launched, closeMessagesAfter) {
       if (!mode || !launched) { phoneAppReturn = null; return null; }
@@ -95023,7 +95023,7 @@ def colormode(mode=None):
         }
       }
     ];
-    window.__cocktailNames = function () { return COCKTAILS.map(function (c) { return c.name; }); }; // the loft.menu console getter reads this
+    window.__cocktailNames = function () { return COCKTAILS.map(function (c) { return c.name; }); }; // the typed menu catalogue reads this
     window.__cocktailFeatured = function () { return COCKTAILS[cocktailFeatured()].name; }; // signature drink used by the no-argument typed action
     window.__cocktailData = function () { // full recipe rows for the bartender's make animation (bar module reads this)
       return COCKTAILS.map(function (c) {
@@ -95246,7 +95246,7 @@ def colormode(mode=None):
         { k: "quiz_q8a5", who: ["pouria", "ali", "goli", "spencer", "jay", "lauren", "alireza", "sina", "danesh"] } ] }
     ];
     var QUIZ_NAMES = { marketa: "Markéta", behdad: "behdad" }; // proper-case exceptions; relationship labels use the shared person-name owner
-    // Test/console introspection stays read-only: the quiz uses the same public roster ids as
+    // Private/test introspection stays read-only: the quiz uses the same public roster ids as
     // the people cards, so coverage checks cannot drift into a second private data source.
     window.__quizQuestions = function () { return QUIZ_QUESTIONS.map(function (q) { return { q: q.q, multi: !!q.multi, a: q.a.map(function (a) { return { k: a.k, who: a.who.slice() }; }) }; }); };
     function quizName(w) {
@@ -96504,7 +96504,7 @@ def colormode(mode=None):
     // for 7s, buzzing once; tapping it opens the phone straight into the messages app.
     // A compatibility boundary for authored messages saved with the old string vocabulary. New
     // authored messages use apiAction directly, but these exact equivalents stay accepted so old
-    // session objects and console/test delivery hooks still execute through the typed API.
+    // session objects and private/test delivery hooks still execute through the typed API.
     var LEGACY_TYPED_MSG_ACTIONS = {
       "app:album": { id: "app.open", args: { app: "album" } },
       "app:cocktails": { id: "app.open", args: { app: "cocktails" } },
@@ -97208,7 +97208,7 @@ def colormode(mode=None):
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false; // unknown, or already received (fire once)
       if (id === "charlie" && !charlieIntroEligible()) return false; // never let a test/nudge make Charlie the first message
       // Phase one belongs entirely to solving the loft. This shared boundary covers autonomous
-      // drips, date announcements, console/test sends and chained followups without source-by-source
+      // drips, date announcements, scripted/test sends and chained followups without source-by-source
       // exceptions, so no notification or unread badge can distract from the solve.
       if (!window.__secondRound) { holdForPhaseTwo(id); return false; }
       // The party teardown handoff is checkpoint-worthy navigation, not an ambient drip.
@@ -100066,7 +100066,7 @@ def colormode(mode=None):
   window.__edmSun = null; // {sr,ss}: Edmonton sunrise/sunset in local minutes-of-day for the effective date
   window.__realWxMode = null; // Edmonton's mapped current look: "clear"|"overcast"|"rain"|"storm"|"snow", null until a fetch lands
   window.__realStormWet = true; // rolled once each time the real sky turns thunderstorm: mostly WET (rain+lightning), sometimes DRY (lightning only). Meaningless unless mode==="storm".
-  // The scene weather is independently forceable from the console and also driven by real weather:
+  // The scene weather is independently forceable through loft.weather.* and also driven by real weather:
   //   RAIN     — falling precip particles + pane streaks + rain hiss
   //   STORM    — lightning flashes + thunder (DRY-CAPABLE: runs with or without rain)
   //   OVERCAST — the flat grey daylight of a cloud deck (.climate-overcast)
@@ -100582,7 +100582,7 @@ def colormode(mode=None):
   // The single writer of the weather CLASSES, merging the game-forced layer flags with the mapped
   // real-weather combo (thunderstorm code → rain+storm; drizzle/rain/showers → rain; cloud/fog →
   // overcast; snow → its own falling; clear → none). Runs on the 1s tick AND is re-called by the
-  // storm cycle / console layer setters the instant a flag changes, so the two writers agree
+  // storm cycle / typed layer setters the instant a flag changes, so the two writers agree
   // instead of fighting (they read the same flags).
   function applyRealWx() {
     var rain = window.__weatherLayerActive ? window.__weatherLayerActive("rain") : !!window.__wxRain;
@@ -100623,7 +100623,7 @@ def colormode(mode=None):
     if (window.__updatePorscheDriveWeatherAudio) window.__updatePorscheDriveWeatherAudio();
   }
   window.__applyRealWx = applyRealWx; // the advancing-time tick re-evaluates the ambiance in step with day/night
-  window.__applyBalconyWeather = applyRealWx; // the storm cycle + console layer setters re-apply through the same merge
+  window.__applyBalconyWeather = applyRealWx; // the storm cycle + typed layer setters re-apply through the same merge
   // "is the sky cloudy?" — no shooting stars when it is (overcast/rain/storm/snow hide the stars),
   // whether that's a game-forced layer or the real Edmonton sky.
   window.__skyCloudy = function () {
@@ -100875,7 +100875,7 @@ def colormode(mode=None):
   window.__tempLimits = function () { return { min: HARD_MIN, max: HARD_MAX, step: TEMP_STEP }; };
 
   // Coarse on purpose: the popup is for getting somewhere fast (a real Edmonton +18 down to a
-  // sun-dog -25 is nine taps), and temp(-23) from the console sets an exact value.
+  // sun-dog -25 is nine taps), while the private test seam can set an exact value.
   var TEMP_STEP = 5;
   var tempPop = null;
   var thermo = document.getElementById("balcony-thermometer");
@@ -100907,7 +100907,7 @@ def colormode(mode=None):
     window.__setOutdoorTemp(next);
   }
   // Below the thermometer reads most naturally; eggBubble flips up by itself if the bottom
-  // ever runs out of room. The console utility now lives outside the scene, so it cannot collide.
+  // ever runs out of room. The popup now lives outside the scene, so it cannot collide.
   function placeTempPop() { if (tempPop && thermo) positionEggBubble(tempPop, thermo); }
   function closeTempPop() { if (tempPop) { tempPop.remove(); tempPop = null; } }
   function openTempPop() {
@@ -102541,7 +102541,7 @@ def colormode(mode=None):
     });
   }
   // loft.poetry.hafez.read() — return a random Hafez reading. The visible Yalda book keeps its separate
-  // consult() interaction; the console function has no scene side effects.
+  // consult() interaction; loft.poetry.hafez.read() has no scene side effects.
   controllers.faal = function () {
     var i = falPick();
     var t = T[document.documentElement.lang] || T.en, lines = t.fal_lines || T.en.fal_lines;
@@ -103065,7 +103065,7 @@ def colormode(mode=None):
     window.__resetBottles = function () {
       setBottleLevels([4, 4, 4]);
     };
-    // console toy: water() reports the three watering bottles' levels (0–4 each);
+    // Private water owner: the typed API reports the three watering bottles' levels (0–4 each);
     // water(true) tips a full bottle over a plant (splash + garden watered) and returns the new levels.
     function bottleLevels() { return { 1: bottlesWaterLeft[0], 2: bottlesWaterLeft[1], 3: bottlesWaterLeft[2] }; }
     controllers.water = function (go) {
@@ -103398,7 +103398,7 @@ def colormode(mode=None):
   }
   // Let the chest cat out of the bag: it starts its wide garden stroll and paints in
   // front of the door panels. Shared by the moon-door open handler (below) and the
-  // console cat command (via window.__releaseCat). Guarded — a no-op if it's already
+  // private release hook (window.__releaseCat). Guarded — a no-op if it's already
   // loose or the node is missing — so it never double-releases.
   function releaseCat(skipWobble) {
     var catWalk = document.getElementById("witchy-chest-cat-walk");
@@ -103421,7 +103421,7 @@ def colormode(mode=None):
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
-  // console/devtools hook: swing the moon door open (so it reads as the cat letting itself
+  // Private/test hook: swing the moon door open (so it reads as the cat letting itself
   // out) and release. goToStage's own __homeCat then walks it into whatever room you view.
   window.__releaseCat = function (skipWobble) {
     var d1 = document.getElementById("witchy-door-1");
@@ -104178,7 +104178,7 @@ def colormode(mode=None):
     return sayFishu(phrase);
   };
   // Public scripting command. Fishu's speech is deliberately limited to their own name;
-  // speech() remains the API for arbitrary text.
+  // Arbitrary text-to-speech is intentionally not part of the public scripting API.
   controllers.fishu = function (count) {
     var n = Math.floor(Number(count));
     if (!isFinite(n) || n < 1) n = 1;
@@ -115811,7 +115811,7 @@ function spawnDustMote(container) {
       e.preventDefault();
       // 'c' → the cellphone. If it's up, put it away; otherwise bring it up IN THE CURRENT ROOM
       // (the modal is a full-screen overlay — no need to whisk to the balcony), skipping the
-      // first-open lockscreen (the cinematic open(true) path, same as the console launches).
+      // first-open lockscreen (the cinematic open(true) path, same as scripted launches).
       if (controllers.phone && controllers.phone.status()) controllers.phone.set(false);
       else if (window.__openPhoneModal) window.__openPhoneModal(true);
     } else if (e.key === "l" || e.key === "L") {
@@ -116067,7 +116067,7 @@ function spawnDustMote(container) {
   }
   randomizeGrinderBeans(); // scatter the initial heap before the kitchen is first shown
   paintConsumedGrinderBeans(); // reflect any persisted partial level in the fresh heap
-  // console toy: beans() reports the hopper's remaining beans; beans(n) sets the level (0..22),
+  // Private beans owner: the typed API reports the hopper's remaining beans and sets 0..22,
   // re-scatters a fresh heap to match + persists, and returns the previous count.
   controllers.beans = function (n) {
     if (arguments.length === 0 || n == null) { if (controllers.echo) controllers.echo("☕ " + grinderBeansLeft + "/" + GRINDER_BEAN_USES + " beans in the hopper"); return grinderBeansLeft; }
@@ -119485,7 +119485,7 @@ function spawnDustMote(container) {
     }
     // clear the one-shot .toasting once the bubble's pop finishes, so a re-tap replays it
     if (toastEl) toastEl.addEventListener("animationend", function () { group.classList.remove("toasting"); });
-    window.__farhangToast = farhangToast; // console/programmatic hook only — no longer bound to a tap
+    window.__farhangToast = farhangToast; // private programmatic hook only — no longer bound to a tap
     // (Tapping Farhang used to fire the toast, but that competed with the inverse-roster name popup
     // and the owner never used it — removed. His signature flare still fires via wireGuestTaps.)
 
@@ -119637,7 +119637,7 @@ function spawnDustMote(container) {
       });
     }
     // a warm crowd "cheer" chord — SFX-context routed + crickets-gated like every unattended
-    // sound (a console call implies focus, but guard for parity with the phone-text path).
+    // sound (an explicit trigger implies focus, but guard for parity with the phone-text path).
     function playCheerSfx() {
       if (document.hidden || !document.hasFocus()) return; // crickets rule
       try {
@@ -120706,7 +120706,7 @@ function spawnDustMote(container) {
   window.addEventListener("loft:lowerroomenter", function () {
     if (photoMomentCallout || window.__photoFreeze) endPhotoMoment();
   });
-  window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now
+  window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // private/test: trigger one now
   // ── ASPEN AUTO-SNAPS FOR THE ALBUM ─────────────────────────────────────────────
   // Aspen quietly grabs keepsakes for the album OFTEN — a shot every ~14-22s while the party's on,
   // WITHOUT freezing the floor (the rare short photo-pose is a separate, bigger event).
@@ -121646,7 +121646,7 @@ function spawnDustMote(container) {
       }
       // The private second argument is only for state.js: virtual-time Chrome fast-forwards
       // CSS animations, so the invariant probe needs one synchronous all-runners snapshot.
-      // Every player/console path keeps the authored stagger.
+      // Every interactive/scripted path keeps the authored stagger.
       var delay = launchTogetherForTest ? 0 : k * 420;
       if (delay) gardenChaseLaunchTimers.push(setTimeout(launchRunner, delay));
       else launchRunner();
@@ -121675,7 +121675,7 @@ function spawnDustMote(container) {
     gardenChaseTimer = setTimeout(gardenChaseTick, 4000 + Math.random() * 5000); // first dash a few seconds into the party
   }
   function stopGardenChase() { clearGardenChase(); } // party over — kill the timer + reset every runner
-  window.__startGardenChase = startGardenChase; // exposed for the chase() console toy
+  window.__startGardenChase = startGardenChase; // private owner behind loft.scene.activity.start("chase")
   window.__gardenChaseRunning = function () { return !!gardenChaseRunning; };
   window.__clearGardenChase = clearGardenChase; // exposed for the kids-asleep controller (stop + reset every runner)
   window.__updateGardenChase = function () {    // goToStage pings this: leaving the garden clears any in-flight run
@@ -122194,7 +122194,7 @@ function spawnDustMote(container) {
     window.__barCoupleNow = function () {
       return current ? current.members.slice() : null;
     };
-    // console/test hook: couples(true) brings an eligible group on NOW (skips the wait);
+    // Private test hook: couples(true) brings an eligible group on NOW (skips the wait);
     // couples("madla"/"madlarobert"/"ayushi") forces that appearance (ignores eligibility — for a
     // demo/screenshot); couples(false) clears + disarms; couples() re-evaluates the gate.
     // Returns the member ids now at the bar (or null).
@@ -123851,7 +123851,7 @@ function spawnDustMote(container) {
         serveLoop();
       }, 2000 + Math.random() * 800);
     })();
-    window.__balconyServeNow = serveOne; // console/test hook: force one serve
+    window.__balconyServeNow = serveOne; // private/test hook: force one serve
     var foodCheerTimer = null;
     window.__balconyFoodReadyReaction = function () {
       var hangout = document.getElementById("balcony-hangout");
@@ -124948,7 +124948,7 @@ function spawnDustMote(container) {
     if (n && (n[1] === "1" || n[1] === "2")) return "garden-candle-" + n[1];
     return candleIds.indexOf(s) !== -1 ? s : null;
   }
-  // console toy: candle() → both candles' lit states; candle(1) → that one's state;
+  // Private candle owner behind the typed candle capability: no arg reports both states;
   // candle(1,true)/candle(2,false) → light/snuff one and return its PREVIOUS state.
   controllers.candle = function (which, on) {
     if (arguments.length === 0) {
@@ -125185,7 +125185,7 @@ function spawnDustMote(container) {
   if (glass) glass.addEventListener("animationend", function (e) {
     if (e.animationName === "butterfly-flap-left" || e.animationName === "butterfly-flap-right") glass.classList.remove("flap");
   });
-  controllers.butterfly = function () { if (window.__goToStage) window.__goToStage("office"); var completion = flapButterfly(); if (controllers.echo) controllers.echo("🦋 the stained-glass butterfly stirs its wings."); return completion; }; // console toy: go to the office and flutter the stained-glass butterfly
+  controllers.butterfly = function () { if (window.__goToStage) window.__goToStage("office"); var completion = flapButterfly(); if (controllers.echo) controllers.echo("🦋 the stained-glass butterfly stirs its wings."); return completion; }; // typed scene activity: visit the office and flutter the stained-glass butterfly
   onActivate(glass, function () {
     if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
     if (window.__secondRound) {
@@ -125292,7 +125292,7 @@ function spawnDustMote(container) {
     if (controllers.dog) controllers.dog.set(false); // drop any dog override + send Whistler home (party-off below also hides him)
     if (window.__resetCuddlyCabinet) window.__resetCuddlyCabinet(); // fresh game: cabinet shut, mouse back in the box + re-armed for its one dash
     if (window.__resetRumiFairy) window.__resetRumiFairy(); // fairy back behind the sun door; phase-two departure can happen again
-    if (window.__laserOff) window.__laserOff(); // any console laser dot mid-dart goes with it
+    if (window.__laserOff) window.__laserOff(); // any active laser dot mid-dart goes with it
     if (window.__stopPragueGathering) window.__stopPragueGathering(); // a fresh game disarms the Prague garden gathering (and drops its pending widen)
     if (window.__resetRoosterEgg) window.__resetRoosterEgg(); // no golden egg left mid-shimmer at the rooster's feet
     if (window.__resetMealPlates) window.__resetMealPlates(); // fresh game: the low table's feast is untouched again
@@ -125743,7 +125743,7 @@ function spawnDustMote(container) {
   // the garden decks, or the Tehran video call). The window (before/after days) is what the
   // real calendar reads for the DECOR; the announcement text goes out on `m`/`d` itself, the
   // person's actual birthday (see applyBirthdays) — a wide window dresses the loft early, it
-  // never wishes anyone a happy birthday early. The 'b'/console path lands the date exactly on
+  // never wishes anyone a happy birthday early. The keyboard/typed path lands the date exactly on
   // `d`, so it shows the hat and fires the text together.
   // Behdad's and Danesh's celebration windows are deliberately asymmetric custom ranges;
   // don't "fix" them back to ±3. Same-day birthdays (Bahareh & Ashraf on
@@ -125871,7 +125871,7 @@ function spawnDustMote(container) {
   window.__meteorShowerNow = function () { var s = seasonDate(); return showerFor(s.m, s.d); }; // the two sky spawners read the pretend-date through this
   // Landing on a shower night puts you where the shower is: the garden window at night,
   // mid-burst. Same shape as the season pan — only a deliberate, user-driven date change moves
-  // the view (a calendar day-click, date(), the pill's ◀◀/▶▶, meteors()); nothing autonomous
+  // the view (a calendar day-click, the typed date API, or the pill's ◀◀/▶▶); nothing autonomous
   // ever does, so a player who has navigated somewhere themselves is left where they are.
   window.__meteorSummon = function (m, d) {
     var sh = showerFor(m, d);
@@ -129542,7 +129542,7 @@ function spawnDustMote(container) {
   // cat suns itself on the balcony rail. Both read live so a sky change retimes the very next cycle.
   function wxRaining() { return !!(window.__wxRain || window.__wxStorm); }
   function wxClearDay() { return !isNight() && !(window.__skyCloudy && window.__skyCloudy()); }
-  function laserOn() { return !!(controllers.laser && controllers.laser.status()); } // the console laser dot is out — stay chase-ready, don't nap through it
+  function laserOn() { return !!(controllers.laser && controllers.laser.status()); } // the laser dot is out — stay chase-ready, don't nap through it
   function baseFeet() {                    // the roam-neutral floor position of the cat's feet
     // Read the LIVE base offset from #witchy-chest-cat-pos rather than the ROOMS table:
     // a freshly-emerged cat still carries the chest's native translate(-46,0) until a
@@ -129946,7 +129946,7 @@ function spawnDustMote(container) {
     }, duration * 0.48);
     return true;
   };
-  // The console laser command's chase hook: one best-effort pounce toward a floor-adjacent
+  // The laser controller's chase hook: one best-effort pounce toward a floor-adjacent
   // point in the cat's own room. Shares the perch-jump's busy-lock, guards (loose, on
   // the viewed room, not mid-hop, reduced motion, hidden tab — all via canJumpNow) and
   // finishJump cleanup, so however the laser ends the roam resumes on its own. The
@@ -130783,7 +130783,7 @@ function spawnDustMote(container) {
   var out = false;       // is Whistler currently shown?
   var dogRoom = null;    // "cuddly" | "balcony" while out, else null
   var seenOwner = false; // Farhang/Lauren spotted this party (latch, reset on party-off)
-  var force = false;     // console/test override (dog.set(true))
+  var force = false;     // private/test override behind loft.animals.dog.set(true)
   var dartAnim = null, darting = false;
   var chaseTimer = null, petTimer = null, grillTimer = null, sniffDelay = null, chaseTurn = 0;
 
@@ -131076,11 +131076,11 @@ function spawnDustMote(container) {
   controllers.knockbox = function () { return kAct("kitchen-knockbox"); };   // knock the spent puck out
 })();
 (function () {
-  // The console's laser command: a red dot loose in the CURRENTLY VIEWED room.
+  // The scene's private laser controller: a red dot loose in the CURRENTLY VIEWED room.
   // It shadows the visitor's cursor (mapped through the strip's live bounding box, so
   // room offsets and the monitor zoom can't skew it) and free-darts on its own whenever
   // the cursor rests >2.5s — which is also the whole behavior on touch screens. Runs
-  // until the strict command calls it off. It spawns
+  // until the same interaction calls it off. It spawns
   // INTO the current stage group (the spawn-in-parent rule) and every teardown path
   // removes it and clears its timers: the natural end, a repeated set (restart —
   // never two dots), a room change (goToStage), the extinguisher reset (resetHunt),
@@ -131187,12 +131187,11 @@ function spawnDustMote(container) {
   });
 })();
 (function () {
-  // ── LOFT CONSOLE TOYS ────────────────────────────────────────────────────────────
-  // Friendly globals on window (like laser above) so they work from BOTH the in-game
-  // office console AND real devtools. Each guards every hook it touches, never throws,
-  // no-ops gracefully if a hook isn't ready, and RETURNS a short confirmation string so
-  // the console (which prints the eval result) shows feedback. Anything they spawn
-  // self-cleans and pauses on a hidden tab.
+  // ── PRIVATE LOFT CONTROLLERS ──────────────────────────────────────────────────
+  // Lexical/private behavior owners shared by scene interactions and the typed loft.* registry.
+  // They are never copied to Window as public commands. Each guards optional hooks and returns
+  // a useful value so the typed API can report what happened. Spawned effects self-clean and
+  // pause on a hidden tab.
   var ROOM_NAMES = ["kitchen", "garden", "cuddly", "office", "balcony"];
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function currentStage() { return document.getElementById("stage-" + (window.__currentStageName || "kitchen")); }
@@ -131200,7 +131199,7 @@ function spawnDustMote(container) {
   controllers.party = function (arg) {
     var prev = !!window.__gardenPartyOn;
     if (arguments.length === 0) return prev; // no arg → is the party on?
-    var on = !!arg; // internal controller; the public console exposes party.status()/party.set(boolean)
+    var on = !!arg; // internal controller; loft.party.status()/set(boolean) is public
     // run the EXACT party-start sequence the balcony switch does: UV blacklight + garden party
     // + switch state — not just __setGardenParty (which lit the party but left the blacklight off)
     if (window.__setPartyMode) window.__setPartyMode(on, true, false);
@@ -131520,7 +131519,7 @@ function spawnDustMote(container) {
   // Live in both directions — it renders from window.__whoIsHere() (defined below) and
   // re-checks on a 1.5s poll while open, so arrivals and departures land under it, not only
   // on room entry. Toggled by the corner button, the 'h'/'w' keys, window.__toggleRoster()
-  // (test hook), or the roster command.
+  // (test hook), or the roster control.
   // This closure also owns the GARDEN's presence rules (present()/djName() below) — the floor
   // is one of the five sources __whoIsHere reads, not a special case of the panel.
   (function () {
@@ -132699,7 +132698,7 @@ function spawnDustMote(container) {
   // one. Anything else (a real 1..n index, a name string) returns null and falls through to the
   // command's normal name/number parsing.
   function fracToIndex(v, n) { return (typeof v === "number" && v >= 0 && v < 1) ? Math.min(n, Math.floor(v * n) + 1) : null; }
-  // print a cute status line to the console (if open) without disturbing the command's return
+  // print a cute status line to the console (if open) without disturbing the controller's return
   // value — the toggles return a bool for scripting but still narrate what they did. (See __loftEcho.)
   // narrate(str) ALWAYS prints to both consoles (in-game + browser). echo(str) prints via narrate() only
   // while echoing is on; echo(true)/echo(false) turn echoing on/off (returns the previous state);
@@ -132935,7 +132934,7 @@ function spawnDustMote(container) {
     return canon === "off" ? "📺 off." : "📺 " + projFriendly(canon) + " on.";
   };
 
-  controllers.clock = function () { // the real current time + date (the `date` gag prints the wedding dates)
+  controllers.clock = function () { // the real current time and date
     var d = new Date();
     function p2(n) { return (n < 10 ? "0" : "") + n; }
     var h12 = ((d.getHours() + 11) % 12) + 1;
@@ -132986,7 +132985,7 @@ function spawnDustMote(container) {
     return "🎹 " + (window.__starsPieceName ? window.__starsPieceName() : s) + ".";
   };
 
-  // The scene weather is independent, composable levers, each on its own console toggle:
+  // The scene weather is independent, composable levers, each with its own typed toggle:
   //   storm — LIGHTNING+THUNDER, dry unless rain is also on; day or night
   //   rain — falling precipitation (drops + pane streaks + rain hiss); day or night
   //   overcast — the grey daytime cloud wash
@@ -132995,7 +132994,7 @@ function spawnDustMote(container) {
   controllers.storm = function (arg) {
     var prev = window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
     if (arguments.length === 0 || !window.__setBalconyStormLayer) return prev; // no arg → is the lightning storm on?
-    var on = !!arg; // internal controller captured by the strict storm command below
+    var on = !!arg; // internal controller captured by the typed storm owner below
     if (!on) { window.__setBalconyStormLayer(false, "ui"); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
     window.__setBalconyStormLayer(true, "ui");
     narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning + thunder, no rain (works day or night; add loft.weather.rain.set(true) for the downpour, or use loft.environment.daylight.set() to set the sky).", "");
@@ -133004,7 +133003,7 @@ function spawnDustMote(container) {
   controllers.rain = function (arg) {
     var prev = window.__weatherLayerActive ? window.__weatherLayerActive("rain") : !!window.__wxRain;
     if (arguments.length === 0 || !window.__setBalconyRain) return prev; // no arg → is it raining?
-    var on = !!arg; // internal controller captured by the strict rain command below
+    var on = !!arg; // internal controller captured by the typed rain owner below
     if (!on) { window.__setBalconyRain(false, "ui"); narrate(false, "", "🌤 the rain lets up."); return prev; }
     if (window.__setBalconySnow) window.__setBalconySnow(false, "ui");
     window.__setBalconyRain(true, "ui"); // falls day or night; pair with storm.set(true)
@@ -133024,7 +133023,7 @@ function spawnDustMote(container) {
   controllers.overcast = function (arg) {
     var prev = window.__weatherLayerActive ? window.__weatherLayerActive("overcast") : !!window.__wxOvercast;
     if (arguments.length === 0 || !window.__setBalconyOvercast) return prev; // no arg → is it overcast?
-    var on = !!arg; // internal controller captured by the strict overcast command below
+    var on = !!arg; // internal controller captured by the typed overcast owner below
     if (on && window.__setDayNight) window.__setDayNight(false); // the grey wash reads against daylight
     window.__setBalconyOvercast(on, "ui");
     narrate(on, "☁ a grey overcast settles over the loft.", "☀ the overcast clears.");
@@ -133045,7 +133044,7 @@ function spawnDustMote(container) {
       return previous;
     }
     var level = arg === true ? 1 : Number(arg);
-    if (!isFinite(level) || level < 0 || level > 1) return "🔥 wildfires.intensity(level) takes a number from 0 to 1.";
+    if (!isFinite(level) || level < 0 || level > 1) return "🔥 loft.weather.wildfires.intensity(level) takes a number from 0 to 1.";
     if (window.__setDayNight) window.__setDayNight(false);
     window.__setWildfireSmoke(level);
     narrate(true, "🔥 wildfire smoke settles over the loft — " + Math.round(level * 100) + "%.", "");
@@ -133053,19 +133052,19 @@ function spawnDustMote(container) {
   };
 
   // aurora — the northern lights over the garden window, driven by the planetary Kp index.
-  //   aurora.details() → status, Kp source, and visibility reason
+  //   loft.sky.aurora.details() → status, Kp source, and visibility reason
   //                   they are / aren't visible (too light, too cloudy, quiet sky, summoned)
-  //   aurora.set(true)  → summon them (clears the weather and falls to night)
-  //   aurora.set(null)  → clear the override and pinned index back to the natural sky
-  //   aurora.intensity(0–9) → pin Kp and summon it: ~2 is a faint smudge low in the north, 5 a
+  //   loft.sky.aurora.set(true)  → summon them (clears the weather and falls to night)
+  //   loft.sky.aurora.set(null)  → clear the override and pinned index back to the natural sky
+  //   loft.sky.aurora.intensity(0–9) → pin Kp and summon it: ~2 is a faint smudge low in the north, 5 a
   //                   real display, 7+ a storm reaching up the sky with its red crown
   // The paint + its rAF loop are driven by __setAurora / __setAuroraKp / __updateGardenAurora.
-  function consoleSkyState() {
+  function skyControllerState() {
     var au = window.__auroraStatus ? window.__auroraStatus() : null;
     return { aurora: au ? { showing: !!au.showing, kp: Number(au.kp) || 0, why: au.why || "" } : null, twilight: !!(window.__setTwilight && window.__setTwilight()) };
   }
-  function reportConsoleSky(before) {
-    var after = consoleSkyState();
+  function reportSkyControllerState(before) {
+    var after = skyControllerState();
     if (JSON.stringify(before) !== JSON.stringify(after) && window.__loftStateChanged) window.__loftStateChanged("environment.sky", after, "ui");
   }
   controllers.aurora = function (arg) {
@@ -133076,28 +133075,28 @@ function spawnDustMote(container) {
       return (st.showing ? "🌌 the northern lights are showing" : "🌌 no aurora right now") +
         " — Kp " + st.kp.toFixed(1) + " (" + st.source + "), " + st.why + ". sun " +
         st.depression.toFixed(0) + "° below the horizon, sky " + (st.cloudy ? "clouded over" : "clear") + "." +
-        (st.showing ? "" : " aurora.set(true) to summon them, or aurora.intensity(7) for a storm.");
+        (st.showing ? "" : " loft.sky.aurora.set(true) summons them; loft.sky.aurora.intensity(7) makes a storm.");
     }
-    var beforeSky = consoleSkyState();
+    var beforeSky = skyControllerState();
     var kp = typeof arg === "number" ? arg : null;
-    if (kp != null && (!isFinite(kp) || kp < 0 || kp > 9)) return "🌌 the planetary Kp index runs 0–9 — aurora.intensity(2) is a faint smudge, intensity(5) a real display, intensity(8) a storm.";
-    if (kp == null && !arg) { var r = window.__setAurora(false, "ui"); narrate(r, "", "🌌 the northern lights fade out."); reportConsoleSky(beforeSky); return r; }
+    if (kp != null && (!isFinite(kp) || kp < 0 || kp > 9)) return "🌌 the planetary Kp index runs 0–9 — loft.sky.aurora.intensity(2) is a faint smudge, intensity(5) a real display, intensity(8) a storm.";
+    if (kp == null && !arg) { var r = window.__setAurora(false, "ui"); narrate(r, "", "🌌 the northern lights fade out."); reportSkyControllerState(beforeSky); return r; }
     if (window.__forceBalconyStorm) window.__forceBalconyStorm(false); // a clear night — no rain/lightning over the aurora
     if (window.__setBalconyOvercast) window.__setBalconyOvercast(false); // …and no grey overcast either
     if (window.__setDayNight) window.__setDayNight(true); // the lights need the night sky
     if (window.__setAuroraKp) window.__setAuroraKp(kp);   // a boolean summon hands Kp back to the sky, which floors the display into storm territory
     var shown = window.__setAurora(true, "ui");
-    if (kp == null) { narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead."); reportConsoleSky(beforeSky); return shown; }
+    if (kp == null) { narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead."); reportSkyControllerState(beforeSky); return shown; }
     var look = kp >= 7 ? "a full storm — curtains climbing the sky under a red crown"
       : kp >= 4.5 ? "a real display, folding and drifting"
       : kp >= 2 ? "a faint green smudge low in the north"
       : "barely a glow on the horizon";
     narrate(shown, "🌌 Kp " + kp + " over the loft — " + look + ".", "🌌 Kp " + kp + " — " + look + ", somewhere overhead.");
-    reportConsoleSky(beforeSky);
+    reportSkyControllerState(beforeSky);
     return shown;
   };
 
-  // Internal twilight controller, captured below by twilight.status()/set(true|false|null):
+  // Internal twilight controller, captured below by loft.sky.twilight.status()/set(true|false|null):
   // balcony on/off. Ramps up on its own over the computed twilight window around Edmonton's real
   // sunrise/sunset (hours wide at midsummer, see twiSpan); this summons it at full depth.
   controllers.twilight = function (arg) {
@@ -133111,13 +133110,13 @@ function spawnDustMote(container) {
       var s = window.__twiSpan ? window.__twiSpan() : null;
       return "🌅 no twilight right now — it ramps up on its own around Edmonton's sunrise/sunset" +
         (s ? ", from about " + Math.round(s.naut) + " min either side of one today" : "") +
-        ". twilight.set(true) to summon it.";
+        ". loft.sky.twilight.set(true) summons it.";
     }
-    var beforeSky = consoleSkyState();
+    var beforeSky = skyControllerState();
     var on = !!arg;
     var r = window.__setTwilight(on);
     narrate(on, "🌅 twilight settles over the balcony.", "🌅 twilight fades.");
-    reportConsoleSky(beforeSky);
+    reportSkyControllerState(beforeSky);
     return r;
   };
 
@@ -133233,7 +133232,7 @@ function spawnDustMote(container) {
     var enter = !!arg; // internal controller captured by fullscreen.status()/set()
     var btn = document.getElementById("hunt-fullscreen-btn");
     if (!btn) return prev;
-    // reuse the button's own toggle path (a console keystroke is a user gesture, so a real
+    // reuse the button's own toggle path (this call follows a user gesture, so a real
     // requestFullscreen is allowed); only click when it would change state
     if (enter !== area.classList.contains("is-fullscreen")) btn.click();
     narrate(enter, "⛶ fullscreen — the loft fills the screen (Esc or loft.display.fullscreen.set(false) to leave).", "⛶ back to windowed.");
@@ -133522,15 +133521,15 @@ function spawnDustMote(container) {
     if (window.__playSongAt) window.__playSongAt(idx);
     return "♪ " + MUSIC_NAMES[idx] + " — from the loft concert.";
   };
-  function consoleInstrumentTap(id, label) {
+  function gardenInstrumentTap(id, label) {
     if (window.__goToStage) window.__goToStage("garden");
     var el = document.getElementById(id);
     if (!el) return null;
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     return "♪ " + label;
   }
-  controllers.guitar = function () { return consoleInstrumentTap("garden-guitar", "guitar — Markéta rotation"); };
-  controllers.ukulele = function () { return consoleInstrumentTap("garden-ukulele", "ukulele — Orit / Dan rotation"); };
+  controllers.guitar = function () { return gardenInstrumentTap("garden-guitar", "guitar — Markéta rotation"); };
+  controllers.ukulele = function () { return gardenInstrumentTap("garden-ukulele", "ukulele — Orit / Dan rotation"); };
 
   // Internal audio source controller: music (garden songs), piano (night-sky classical),
   // or dance (garden Party). The strict public object exposes named methods.
@@ -133692,16 +133691,16 @@ function spawnDustMote(container) {
     narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
   };
-  // shape(text, opts) — shape text with HarfBuzz from JavaScript, mirroring the python
+  // loft.typography.harfbuzz(text, opts) — shape text with HarfBuzz from JavaScript, mirroring the Python
   // console's uharfbuzz. Lazy-loads the self-hosted harfbuzzjs runtime (harfbuzzjs/hb.js
   // loader + hb.wasm + the hbjs.js wrapper) and a latin-subset Fraunces once, caches the
   // parsed font, and reuses them for every call. Returns a Promise, so both the in-game
-  // console and real devtools can `await shape('markéta')`. opts.features takes an array
+  // console and real devtools can `await loft.typography.harfbuzz('markéta')`. opts.features takes an array
   // or comma-separated string of OpenType feature tags. English-only (script helpers
   // aren't translated).
   var __hbReady = null;
-  // A uharfbuzz-style facade over the raw harfbuzzjs API, so the JS console reads like the
-  // Python console's uharfbuzz `hb`: hb.Face(bytes), hb.Font(face), hb.Buffer(), hb.shape(
+  // A uharfbuzz-style facade over the raw harfbuzzjs API, so loft.typography.hb reads like the
+  // Python console's uharfbuzz `hb`: loft.typography.hb.Face(bytes), .Font(face), .Buffer(), .shape(
   // font, buf, features). A Buffer is the native hbjs buffer augmented IN PLACE with the
   // uharfbuzz aliases add_str/guess_segment_properties plus glyph_infos/glyph_positions
   // getters (mapped from .json()'s g/cl/ax/ay/dx/dy) — since it's the same object, the
@@ -133770,7 +133769,7 @@ function spawnDustMote(container) {
           var blob = hb.createBlob(new Uint8Array(buf));
           var face = hb.createFace(blob, 0);
           var font = hb.createFont(face);
-          try { controllers.hb = makeHbFacade(hb, font); } catch (e) {} // uharfbuzz-style handle for the JS console / devtools
+          try { controllers.hb = makeHbFacade(hb, font); } catch (e) {} // private uharfbuzz-style handle backing loft.typography.hb
           return { hb: hb, font: font };
         });
       });
@@ -133793,7 +133792,7 @@ function spawnDustMote(container) {
   // Developer API (webfonts/v1), which hands back a direct .ttf url per variant — a full,
   // uncompressed font, so no woff2 / no decompression. opts.weight → the '400'/'700'/… variant,
   // opts.italic → its italic. loft.fonts.google.list([query]) enumerates the whole catalogue.
-  //   hb.Face(await loft.fonts.google('Anton'))
+  //   loft.typography.hb.Face(await loft.fonts.google('Anton'))
   var GF_KEY = "AIzaSyCz4rU4eX3j_3bvlno8BQjmM9ty8Xs7JU0"; // Google Fonts API key — referrer-restrict it in the Google Cloud console
   var GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key=" + GF_KEY;
   function gfTtfUrl(item, opts) {
@@ -133819,7 +133818,7 @@ function spawnDustMote(container) {
       return fetch(url).then(function (r) { if (!r.ok) throw new Error("ttf " + r.status); return r.arrayBuffer(); });
     }).then(function (ab) {
       var bytes = new Uint8Array(ab);
-      console.log("⬡ loft.fonts.google(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of TTF. hb.Face(bytes) to shape it.");
+      console.log("⬡ loft.fonts.google(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of TTF. loft.typography.hb.Face(bytes) shapes it.");
       return bytes;
     }).catch(function (e) { return "loft.fonts.google failed — " + ((e && e.message) || e); });
   }
@@ -133832,7 +133831,7 @@ function spawnDustMote(container) {
   };
   // loft.fonts.local([query]) — the visitor's OWN installed fonts, via the Local Font Access API
   // (Chromium desktop; a one-time permission prompt). Each result has .bytes() → raw sfnt bytes.
-  //   hb.Face(await (await loft.fonts.local('Menlo'))[0].bytes())
+  //   loft.typography.hb.Face(await (await loft.fonts.local('Menlo'))[0].bytes())
   function localFonts(query) {
     if (!window.queryLocalFonts) return Promise.resolve("local fonts need Chromium desktop (queryLocalFonts) — not available in this browser.");
     return window.queryLocalFonts().then(function (fonts) {

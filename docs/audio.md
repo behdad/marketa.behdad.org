@@ -421,7 +421,7 @@ final timeupdate, or a true `getEnded` reply removes the iframe, restores the
 chooser, and releases the whole-loft duck. The status reply is the deterministic
 fallback for Vimeo's seek-near-end path, which can reach its recommendations card
 without emitting a terminal subscribed event. The side transport queues and sends
-play/pause commands through postMessage; the shared volume step and console master
+play/pause commands through postMessage; the shared volume step and session master
 also retarget Vimeo with `setVolume`. Teardown cancels the poll and removes the
 iframe, which remains the reliable cross-origin stop path.
 

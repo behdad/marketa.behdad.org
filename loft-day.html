@@ -76206,7 +76206,7 @@ setOfficeProgress("pc", false);
     pause: "pause() — pause the music if something's playing",
     temp: "temp() — the indoor + outdoor thermometer reading. temp(-25) SETS the outside temperature in °C (-40…40) and the loft's whole outdoor model follows it; temp(false) hands it back to Edmonton's real weather. Clicking the outdoor thermometer on the balcony wall opens the same control, in 5° steps. Take it to -20 or colder on a clear winter day and sun dogs (parhelia) come out beside the sun in the OFFICE window — the one window in the loft that doesn't look north",
     weather: "weather() — weather in both wedding cities (Edmonton · Prague); Edmonton uses a marked historical approximation on pretend dates/times",
-    sharecard: "sharecard() — compose a shareable save-the-date card from the loft's own art (the crossed caps, the names, both wedding dates) badged with the CURRENT occasion — the season, or a friend's birthday with their little portrait — and open a preview with Download + Share buttons (a PNG). reflects any time-travel / season / birthday you've set",
+    sharecard: "sharecard() — compose a shareable save-the-date card from the loft's own art (the crossed caps, the names, both wedding dates) badged with the CURRENT occasion — the season, or a friend's birthday with their little portrait — and open a PNG preview with Download (plus Email for a birthday postcard). reflects any time-travel / season / birthday you've set",
     clock: "clock() — the real current time + date, readable (🕐 HH:MM · weekday)",
     time: "time() — the loft's current time as {hours, minutes}; time(\"HH:MM\") or time(hours,minutes) SETS it (the ?time= override, driving day/night)",
     timestamp: "timestamp() — the fully-resolved current loft moment: {year, month, day, hours, minutes, iso}",
@@ -127774,19 +127774,14 @@ function spawnDustMote(container) {
     var n = window.__now ? window.__now() : new Date();
     return n.getFullYear() + "-" + calZ(n.getMonth() + 1) + "-" + calZ(n.getDate());
   }
-  // Occasion-aware mail. A mailto/Gmail-compose body is PLAIN TEXT — the card image cannot ride
+  // Birthday mail. A mailto/Gmail-compose body is PLAIN TEXT — the postcard image cannot ride
   // inside it, so the body carries the day's deep link and a note that the PNG is already on the
-  // clipboard (the auto-copy on open) for the sender to paste in as an attachment.
+  // clipboard (the auto-copy on open) for the sender to paste in as an attachment. Other occasion
+  // cards stay copy/download-only: they are not wedding-announcement email templates.
   function shareMailContent(occ) {
-    var url = "https://marketa.behdad.org/loft-day.html?date=" + shareLoftISO(), subject, intro;
-    if (occ && occ.kind === "birthday") {
-      subject = shareT("share_mail_bd_subj").replace("{name}", occ.name);
-      intro = shareT("share_mail_bd_body").replace("{name}", occ.name);
-    } else if (occ && occ.key === "wedding") {
-      subject = shareT("share_mail_wed_subj"); intro = shareT("share_mail_wed_body");
-    } else {
-      subject = shareT("share_mail_subj"); intro = shareT("share_mail_body");
-    }
+    var url = "https://marketa.behdad.org/loft-day?date=" + shareLoftISO();
+    var subject = shareT("share_mail_bd_subj").replace("{name}", occ.name);
+    var intro = shareT("share_mail_bd_body").replace("{name}", occ.name);
     return { subject: subject, body: intro + "\n\n" + url + "\n\n" + shareT("share_mail_clip") };
   }
   // Auto-copy the PNG to the clipboard and report the outcome in the modal's note line. Only
@@ -127826,7 +127821,6 @@ function spawnDustMote(container) {
         '<div class="sharecard-note"></div>' +
         '<div class="sharecard-actions">' +
           '<a class="sharecard-btn sharecard-dl">' + shareT("share_download") + '</a>' +
-          '<button type="button" class="sharecard-btn sharecard-mail">' + shareT("share_mail") + '</button>' +
         '</div>' +
       '</div>';
     (document.fullscreenElement || document.body).appendChild(overlay);
@@ -127845,7 +127839,6 @@ function spawnDustMote(container) {
     var overlay = shareOpenModal(options);
     var img = overlay.querySelector(".sharecard-img");
     var dl = overlay.querySelector(".sharecard-dl");
-    var mailBtn = overlay.querySelector(".sharecard-mail");
     var note = overlay.querySelector(".sharecard-note");
     return shareRasterize(occOverride).then(function (out) {
       if (shareModalEl !== overlay) return out.dataURL; // dismissed mid-render
@@ -127853,7 +127846,13 @@ function spawnDustMote(container) {
       var fname = shareFileName(out.occ);
       var setHref = function (href) { if (dl) { dl.setAttribute("href", href); dl.setAttribute("download", fname); } };
       setHref(out.dataURL); // a data: href downloads fine on its own; upgraded to a blob URL below when available
-      if (mailBtn) {
+      if (out.occ && out.occ.kind === "birthday") {
+        var mailBtn = document.createElement("button");
+        mailBtn.type = "button";
+        mailBtn.className = "sharecard-btn sharecard-mail";
+        mailBtn.textContent = shareT("share_mail");
+        var actions = overlay.querySelector(".sharecard-actions");
+        if (actions) actions.appendChild(mailBtn);
         var mc = shareMailContent(out.occ);
         mailBtn.addEventListener("click", function () { if (window.__mailCompose) window.__mailCompose(mc.subject, mc.body); });
       }

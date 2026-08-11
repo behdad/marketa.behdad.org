@@ -2,7 +2,8 @@
 // Share-card generator smoke test (rsvp.html). Loads the game headless, then drives
 // window.shareCard() for three occasions — the default day, a forced SEASON, and a
 // forced BIRTHDAY — asserting each yields a non-empty PNG data-URL, opens the preview
-// modal, wires a Download href, and badges the right occasion (season key vs. person).
+// modal, wires a Download href, exposes Email only for birthdays, and badges the right
+// occasion (season key vs. person).
 // The web font can't load headless/offline, so this also proves the serif fallback
 // path still produces a valid PNG. Same one-shot runner as play.js.
 //
@@ -16,7 +17,8 @@ var HARNESS = [
   "<script>",
   "(function () {",
   "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
-  "  var report = { errors: [], cards: [], autoBirthdayActivations: 0 };",
+  "  var report = { errors: [], cards: [], autoBirthdayActivations: 0, composed: [] };",
+  "  window.__mailCompose = function (subject, body) { report.composed.push({ subject: subject, body: body }); };",
   "  async function make(name, setup) {",
   "    try { if (setup) setup(); } catch (e) { report.errors.push('setup ' + name + ': ' + e); }",
   "    await sleep(60);",
@@ -26,6 +28,7 @@ var HARNESS = [
   "    var modal = document.getElementById('sharecard-modal');",
   "    var dl = modal && modal.querySelector('.sharecard-dl');",
   "    var img = modal && modal.querySelector('.sharecard-img');",
+  "    var mail = modal && modal.querySelector('.sharecard-mail');",
   "    report.cards.push({",
   "      name: name,",
   "      len: url ? url.length : 0,",
@@ -33,8 +36,10 @@ var HARNESS = [
   "      modal: !!modal,",
   "      imgSrc: !!(img && img.getAttribute('src')),",
   "      dlHref: !!(dl && dl.getAttribute('href')),",
-  "      download: dl ? dl.getAttribute('download') : ''",
+  "      download: dl ? dl.getAttribute('download') : '',",
+  "      mail: !!mail",
   "    });",
+  "    if (mail) mail.click();",
   "    if (window.__shareCloseModal) window.__shareCloseModal();",
   "    await sleep(120);",
   "  }",
@@ -86,6 +91,18 @@ if (!r) {
   var se = byName.season;
   if (se && se.download === "marketa-behdad-spooky.png") pass("season badges the occasion (filename marketa-behdad-spooky.png)");
   else fail("season badges the occasion", se ? se.download : "no card");
+  ["default", "season"].forEach(function (n) {
+    var c = byName[n];
+    if (c && !c.mail) pass(n + ": no Email action");
+    else fail(n + ": no Email action", c ? JSON.stringify(c) : "no card");
+  });
+  if (bd && bd.mail) pass("birthday: Email action is shown");
+  else fail("birthday: Email action is shown", bd ? JSON.stringify(bd) : "no card");
+  var composed = r.composed || [];
+  if (composed.length === 1 && /Happy Birthday, Jay!/.test(composed[0].subject)) pass("only birthday opens an email composition");
+  else fail("only birthday opens an email composition", JSON.stringify(composed));
+  if (composed.length === 1 && /birthday postcard/.test(composed[0].body) && /marketa\.behdad\.org\/loft-day\?date=/.test(composed[0].body) && !/save-the-date/i.test(composed[0].body)) pass("birthday email describes the postcard and Loft Day link without save-the-date language");
+  else fail("birthday email describes the postcard and Loft Day link without save-the-date language", JSON.stringify(composed));
   if (r.autoBirthdayActivations === 1) pass("dismissing an automatic birthday postcard activates its festivity once");
   else fail("dismissing an automatic birthday postcard activates its festivity once", r.autoBirthdayActivations);
   if ((r.errors || []).length === 0) pass("no uncaught JS errors across the run");

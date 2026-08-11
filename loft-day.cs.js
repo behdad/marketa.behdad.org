@@ -182,6 +182,7 @@ T["cs"] = {
   "credits_codesigner_translator": "spolutvůrkyně designu | český překlad",
   "credits_killed": "TITULKY UKONČENY",
   "credits_licenses": "Licenční informace jsou přiloženy k softwaru.",
+  "credits_made": "s láskou vytvořili behdad, Claude a Codex",
   "credits_open_source": "Open-source software",
   "credits_qa": "vedoucí testování",
   "credits_survives": "vděčnost přežívá.",

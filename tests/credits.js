@@ -42,6 +42,10 @@ var harness = String.raw`<script>
       .filter(Boolean).map(function (line) { return line.trim(); });
     check("the text credits representation uses the same alphabetized roster",
       lineNames.join(",") === sortedNames.join(","), lineNames.join(", "));
+    check("the closing credit is localized in both text representations",
+      creditsLines.indexOf("made with love by behdad, Claude & Codex") !== -1 &&
+      window.__loftCreditsLines("cs").indexOf("s láskou vytvořili behdad, Claude a Codex") !== -1,
+      JSON.stringify({ en: creditsLines.slice(-3), cs: window.__loftCreditsLines("cs").slice(-3) }));
 
     var otherPeopleCount = window.LOFT_CREDITS.people.length - names.length;
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);

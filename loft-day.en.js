@@ -182,6 +182,7 @@ T["en"] = {
   "credits_codesigner_translator": "co-designer | Czech translator",
   "credits_killed": "CREDITS KILLED",
   "credits_licenses": "Licence notices are included with the software.",
+  "credits_made": "made with love by behdad, Claude & Codex",
   "credits_open_source": "Open-source software",
   "credits_qa": "QA lead",
   "credits_survives": "the gratitude survives.",

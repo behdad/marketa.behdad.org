@@ -19,8 +19,8 @@ var HARNESS = String.raw`<script>
     plant.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     var afterClick = __plantWaterState();
     var bottlesAfter = __gardenWaterInventoryState().levels.reduce(function (sum, n) { return sum + n; }, 0);
-    var second = waterSpecificPlant("garden-snakeplant", function () { return true; }, "reusable");
-    var third = waterSpecificPlant("garden-snakeplant", function () { return true; }, "reusable");
+    var second = window.__waterSpecificPlant("garden-snakeplant", function () { return true; }, "reusable");
+    var third = window.__waterSpecificPlant("garden-snakeplant", function () { return true; }, "reusable");
     await new Promise(function (resolve) { setTimeout(resolve, 50); });
     var saturated = __plantWaterState();
     report.structure = {
@@ -36,7 +36,7 @@ var HARNESS = String.raw`<script>
       potHighlight: !!(plant && plant.querySelector(".garden-snakeplant-pot-highlight")),
       bloom: !!(plant && plant.querySelector(".trip-bloom-img")),
       acidTrails: document.querySelectorAll('use[href="#garden-snakeplant"]').length,
-      spot: gardenPlantSpots["garden-snakeplant"]
+      spot: window.__gardenPlantSpots["garden-snakeplant"]
     };
     report.water = {
       before: before.counts["garden-snakeplant"],

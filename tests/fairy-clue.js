@@ -174,8 +174,8 @@ var harness = String.raw`<script>
               fairy.classList.contains("released") &&
               fairy.parentNode.classList.contains("departing"));
             var offRoomCycle = window.__rumiCycleState();
-            check("rumi() waits without consuming its deck outside the recitation scene",
-              /^🧚 rumi\(\) waits/.test(window.__loftControllers.rumi()) &&
+            check("the private Rumi owner waits without consuming its deck outside the recitation scene",
+              /^🧚 loft\.poetry\.rumi\.read\(\) waits/.test(window.__loftControllers.rumi()) &&
               window.__rumiCycleState().cursor === offRoomCycle.cursor);
             check("faal() returns a random Hafez reading without arguments",
               /^📖 /.test(window.__loftControllers.faal()));

@@ -102,7 +102,7 @@ var window = {
   performance: { now: function () { return clock; } },
   requestAnimationFrame: function (cb) { var id = rafSeq++; rafQueue.push({ id: id, cb: cb }); return id; },
   cancelAnimationFrame: function (id) { rafQueue = rafQueue.filter(function (r) { return r.id !== id; }); },
-  currentStageName: "kitchen",
+  __currentStageName: "kitchen",
   __tripActive: false
 };
 // setInterval/setTimeout: capture but don't auto-fire (the harness drives evaluate directly)
@@ -226,7 +226,7 @@ ok(Math.abs(brightness(strip.style.filter) - 0.5) < 0.01, "back indoors: UV rest
     performance: { now: function () { return clock; } },
     requestAnimationFrame: function () { return 0; }, // if the fade tried to ramp it'd need this — it must not
     cancelAnimationFrame: function () {},
-    currentStageName: "kitchen", __tripActive: false
+    __currentStageName: "kitchen", __tripActive: false
   };
   var rDoc = {
     hidden: false, getElementById: function (id) { return byId[id] || null; },

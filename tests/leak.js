@@ -31,12 +31,12 @@ var HARNESS = [
   "        try {",
   "          var strip = document.getElementById('loft-game-strip');",
   "          if (!strip) throw new Error('no loft-game-strip');",
-  "          if (typeof spawnSteamWisps !== 'function' || typeof spawnMusicNotes !== 'function' || typeof spawnHearts !== 'function') throw new Error('spawners not global');",
+  "          if (typeof window.__spawnSteamWisps !== 'function' || typeof window.__spawnMusicNotes !== 'function' || typeof window.__spawnHearts !== 'function') throw new Error('private spawner seams unavailable');",
   // no-op .animate so onfinish never fires -> the cap is the ONLY removal path
   "          Element.prototype.animate = function () { return { onfinish: null, cancel: function () {}, finish: function () {} }; };",
-  "          for (var i = 0; i < 100; i++) spawnSteamWisps(strip, 79, 193, 0.55, -1);",
-  "          for (var j = 0; j < 100; j++) spawnMusicNotes(strip, 200, 300);",
-  "          for (var k = 0; k < 100; k++) spawnHearts(strip, 200, 300);",
+  "          for (var i = 0; i < 100; i++) window.__spawnSteamWisps(strip, 79, 193, 0.55, -1);",
+  "          for (var j = 0; j < 100; j++) window.__spawnMusicNotes(strip, 200, 300);",
+  "          for (var k = 0; k < 100; k++) window.__spawnHearts(strip, 200, 300);",
   "          await sleep(3000);", // let each helper's staggered internal setTimeouts all fire
   "          report.steam = strip.getElementsByClassName('steam-wisp').length;",
   "          report.notes = strip.getElementsByClassName('music-note').length;",

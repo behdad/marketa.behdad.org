@@ -109,7 +109,8 @@ function pendingTimers() { return timers.length; }
 // ── window/document sandbox ────────────────────────────────────────────────────────────────
 var sandbox = {
   __gardenPartyOn: true,
-  currentStageName: "office",
+  __currentStageName: "office",
+  controllers: {},
   Math: Math,
   Array: Array
 };
@@ -146,7 +147,7 @@ function ok(cond, msg) { if (cond) { passes++; console.log("  ✓ " + msg); } el
 ok(typeof sandbox.__updateOfficeHangout === "function", "__updateOfficeHangout published");
 ok(typeof sandbox.__resetOfficeHangout === "function", "__resetOfficeHangout published");
 ok(typeof sandbox.__officeCoupleNow === "function", "__officeCoupleNow published");
-ok(typeof sandbox.officefolks === "function", "officefolks() console hook published");
+ok(typeof sandbox.controllers.officefolks === "function", "the private office-guest controller is published");
 
 function presentClass() {
   for (var k = 0; k < officeLayer._children.length; k++) if (officeLayer._children[k]._classes.indexOf("present") !== -1) return officeLayer._children[k]._classes.filter(function (c) { return c !== "of-couple" && c !== "present" && c.indexOf("of-drink") !== 0 && c !== "of-beer" && c !== "of-wine" && c !== "of-cocktail"; })[0];
@@ -158,16 +159,16 @@ function presentEl() { for (var k = 0; k < officeLayer._children.length; k++) if
 ok(sandbox.__officeCoupleNow() === null, "reports null when the office is empty");
 
 // 2) forced show reports the right members + marks exactly one couple present
-var who = sandbox.officefolks("madla");
+var who = sandbox.controllers.officefolks("madla");
 ok(!!who && who.indexOf("madla") !== -1 && who.indexOf("robert") !== -1, "officefolks('madla') brings Madla+Robert (member lookup): " + JSON.stringify(who));
 ok(presentClass() === "of-madlarobert", "exactly the madlarobert couple is .present");
 var presentCount = officeLayer._children.filter(function (e) { return e._classes.indexOf("present") !== -1; }).length;
 ok(presentCount === 1, "only one couple is present at a time (" + presentCount + ")");
 ok(JSON.stringify(sandbox.__officeCoupleNow()) === JSON.stringify(who), "__officeCoupleNow() matches the shown couple");
-var travelBuddies = sandbox.officefolks("chinnell");
+var travelBuddies = sandbox.controllers.officefolks("chinnell");
 ok(!!travelBuddies && travelBuddies[0] === "chinnell" && travelBuddies[1] === "rafi" &&
   presentClass() === "of-chinnellrafi", "Chinnell+Rafi participate in forced office visits");
-var solo = sandbox.officefolks("ayushi");
+var solo = sandbox.controllers.officefolks("ayushi");
 ok(JSON.stringify(solo) === '["ayushi"]' && presentClass() === "of-ayushi" &&
   presentEl().querySelectorAll(".of-person").length === 1,
   "Ayushi participates as a solo office appearance");
@@ -176,7 +177,7 @@ ok(JSON.stringify(solo) === '["ayushi"]' && presentClass() === "of-ayushi" &&
 //    and p1-only / p2-only / both variants to all occur.
 var sawBeer = false, sawWine = false, sawEmpty = false, sawP1 = false, sawP2 = false, sawBoth = false;
 for (var s = 0; s < 400; s++) {
-  sandbox.officefolks("aligoli"); // force same couple so only the drink roll varies
+  sandbox.controllers.officefolks("aligoli"); // force same couple so only the drink roll varies
   var el = presentEl();
   var hasBeer = el._classes.indexOf("of-beer") !== -1, hasWine = el._classes.indexOf("of-wine") !== -1;
   var p1only = el._classes.indexOf("of-drink-p1-only") !== -1, p2only = el._classes.indexOf("of-drink-p2-only") !== -1;
@@ -196,7 +197,7 @@ ok(sawP1 && sawP2 && sawBoth, "drinks roll: p1-only, p2-only AND both-hold-a-dri
 function preferenceProbe(couple, preferredIndex, expected) {
   var saw = false, wrong = false;
   for (var n = 0; n < 300; n++) {
-    sandbox.officefolks(couple);
+    sandbox.controllers.officefolks(couple);
     var el = presentEl();
     var empty = el._classes.indexOf("of-beer") === -1 && el._classes.indexOf("of-wine") === -1 && el._classes.indexOf("of-cocktail") === -1;
     var preferredHolds = preferredIndex === 0
@@ -217,7 +218,7 @@ preferenceProbe("hamidathena", 1, "wine");
 
 var sawHamidCocktail = false;
 for (var h = 0; h < 500; h++) {
-  sandbox.officefolks("hamidathena");
+  sandbox.controllers.officefolks("hamidathena");
   var hamidEl = presentEl();
   if (hamidEl._classes.indexOf("of-drink-p1-only") !== -1 && hamidEl._classes.indexOf("of-cocktail") !== -1) {
     sawHamidCocktail = true;
@@ -227,7 +228,7 @@ for (var h = 0; h < 500; h++) {
 ok(sawHamidCocktail, "Hamid's random anything-pool includes cocktails");
 
 // 4) rotation varies the couple: many autonomous swaps should surface >1 distinct couple.
-sandbox.officefolks(false); // clear
+sandbox.controllers.officefolks(false); // clear
 sandbox.__updateOfficeHangout(); // arm the autonomous timer
 var seen = {};
 for (var r = 0; r < 200; r++) {
@@ -239,7 +240,7 @@ var distinct = Object.keys(seen).length;
 ok(distinct >= 3, "rotation surfaces multiple distinct couples over time (" + distinct + " seen: " + Object.keys(seen).join(",") + ")");
 
 // 5) one-room exclusion: the office excludes the garden floor, BAR, BALCONY and Cuddly.
-sandbox.officefolks(false);
+sandbox.controllers.officefolks(false);
 // Ali+Goli on the garden floor:
 gardenGuests.querySelector(".g-ali").classList.add("arrived");
 gardenGuests.querySelector(".g-goli").classList.add("arrived");
@@ -263,12 +264,12 @@ ok(!violated, "one-room rule holds: office never duplicates anyone from the floo
 ok(sawSomeone, "one-room rule still lets eligible couples in (didn't just go permanently empty)");
 
 // forcing an eligible-only pick honors exclusion (officefolks(true) skips excluded)
-sandbox.officefolks(false);
-for (var t2 = 0; t2 < 40; t2++) { var w2 = sandbox.officefolks(true); if (w2) for (var wi = 0; wi < w2.length; wi++) ok.silentViolation = ok.silentViolation || !!EXCLUDED[w2[wi]]; }
+sandbox.controllers.officefolks(false);
+for (var t2 = 0; t2 < 40; t2++) { var w2 = sandbox.controllers.officefolks(true); if (w2) for (var wi = 0; wi < w2.length; wi++) ok.silentViolation = ok.silentViolation || !!EXCLUDED[w2[wi]]; }
 ok(!ok.silentViolation, "officefolks(true) only brings eligible couples");
 
 // 6) teardown strands nothing: reset clears the couple + cancels all timers
-sandbox.officefolks("madla"); // someone in, a timer armed
+sandbox.controllers.officefolks("madla"); // someone in, a timer armed
 ok(sandbox.__officeCoupleNow() !== null && pendingTimers() > 0, "pre-teardown: a couple is present and a timer is armed");
 sandbox.__resetOfficeHangout();
 ok(sandbox.__officeCoupleNow() === null, "teardown: no couple present after reset");
@@ -283,10 +284,10 @@ ok(sandbox.__officeCoupleNow() === null && pendingTimers() === 0, "party-off tea
 
 // Room changes do not alter party attendance: the silent assignment keeps rotating.
 sandbox.__gardenPartyOn = true;
-sandbox.currentStageName = "office";
+sandbox.__currentStageName = "office";
 sandbox.__updateOfficeHangout();
 advance(60000);
-sandbox.currentStageName = "kitchen"; // walked away
+sandbox.__currentStageName = "kitchen"; // walked away
 sandbox.__updateOfficeHangout();
 ok(sandbox.__officeCoupleNow() !== null && pendingTimers() === 1,
   "room leave preserves the office assignment and its single rotation timer");

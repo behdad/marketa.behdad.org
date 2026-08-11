@@ -113,19 +113,19 @@ var HARNESS = String.raw`<script>
           };
         }
 
-        spawnWaterDroplets(svg, 100, 100);
+        window.__spawnWaterDroplets(svg, 100, 100);
         await sleep(950);
         report.phases.real = snapshot("real");
 
         mode = "repeat";
-        spawnWaterDroplets(svg, 100, 100);
+        window.__spawnWaterDroplets(svg, 100, 100);
         await sleep(40);
-        spawnWaterDroplets(svg, 100, 100);
+        window.__spawnWaterDroplets(svg, 100, 100);
         await sleep(950);
         report.phases.repeat = snapshot("repeat");
 
         mode = "fallback";
-        spawnWaterDroplets(svg, 100, 100);
+        window.__spawnWaterDroplets(svg, 100, 100);
         await sleep(950);
         report.phases.fallback = snapshot("fallback");
         Element.prototype.animate = nativeAnimate;

@@ -61790,6 +61790,7 @@ setMusicPausedState(false);
   // in-place fade; the room transition/reset wipe hides any snap), re-arm the "soon" first
   // appearance, and reschedule the single timer.
   window.__resetIrene = function () {
+    if (window.__cancelIrenePose) window.__cancelIrenePose("Irene pose was cancelled by reset.");
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     if (catPlayTimer) { clearTimeout(catPlayTimer); catPlayTimer = null; }
@@ -61816,6 +61817,7 @@ setMusicPausedState(false);
   // so a pose is deterministically screenshottable (falls back to hug if catplay is asked
   // for without the cat present). Hard-clear all timers + state first so it's instant + stable.
   window.__ireneShow = function (beh) {
+    if (window.__cancelIrenePose) window.__cancelIrenePose("Irene pose was superseded.");
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion (this hook bypasses tick)
     if (window.__resetNavid) window.__resetNavid(); // ...and the third cameo too
     if (showTimer) { clearTimeout(showTimer); showTimer = null; }
@@ -75301,13 +75303,15 @@ setOfficeProgress("pc", false);
     registerToggle("people.irene", "People / Animals", "irene", { read: function () {
       var el = document.getElementById("cuddly-irene"); return !!(el && el.classList.contains("showing"));
     } });
-    register({ id: "people.irene.pose", group: "People / Animals", kind: "action", risk: "scene",
+    register({ id: "people.irene.pose", group: "People / Animals", kind: "action", risk: "scene", completion: "finite",
       description: "Bring Irene into the Cuddly room in one authored pose.",
       args: { pose: { type: "string", enum: ["roam", "bounce", "sit", "hug", "hugb", "catplay", "catjump", "octiplay", "swing"], required: true } },
       available: function () { return roomRouteReady("cuddly") && !!(controllers.irene && controllers.irene.pose); }, unavailable: function () {
         return blockedBy([!roomRouteReady("cuddly") && roomRouteReason("cuddly"), !(controllers.irene && controllers.irene.pose) && "Irene's pose controller is not ready."], null);
       }, run: function (args) {
-        return runInRoom("cuddly", function () { return { pose: args.pose, previous: controllers.irene.pose(args.pose) }; });
+        return runInRoom("cuddly", function () {
+          return Promise.resolve(controllers.irene.pose(args.pose)).then(function (previous) { return { pose: args.pose, previous: previous }; });
+        });
       } });
     registerToggle("devices.phone", "Office / Devices", "phone", { read: function () { return !!phoneState().open; } });
     registerToggle("devices.laptop", "Office / Devices", "laptop", { read: function () {
@@ -133626,21 +133630,45 @@ function spawnDustMote(container) {
   // The cat behaviors only read right
   // with the loose cat in the nook, so those first fetch the cat there (releasing it from the
   // chest if need be) and let its walk-in settle before she plays with / leaps to it.
+  var irenePoseGeneration = 0, irenePoseOperation = null;
+  function cancelIrenePose(reason) {
+    irenePoseGeneration++;
+    var operation = irenePoseOperation;
+    irenePoseOperation = null;
+    if (!operation) return false;
+    if (operation.timer) clearTimeout(operation.timer);
+    operation.reject(new Error(reason || "Irene pose was cancelled."));
+    return true;
+  }
+  window.__cancelIrenePose = cancelIrenePose;
   controllers.irene = function (beh) {
     var el = document.getElementById("cuddly-irene");
     var prev = !!(el && el.classList.contains("showing"));
     if (arguments.length === 0) return prev; // no arg → is irene visiting?
     if (beh === false) { if (window.__resetIrene) window.__resetIrene(); narrate(false, "", "👧 irene heads off — see you soon."); return prev; } // send her away
-    if (beh === true) { if (window.__ireneSummon) window.__ireneSummon(); narrate(true, "👧 irene skips into the cuddly-puddly.", ""); return prev; } // a full random visit
+    if (beh === true) { cancelIrenePose("Irene pose was superseded by a new visit."); if (window.__ireneSummon) window.__ireneSummon(); narrate(true, "👧 irene skips into the cuddly-puddly.", ""); return prev; } // a full random visit
     // otherwise a pose name (a usage error still returns the pose list, so typos surface)
     var POSES = { roam: "irene-roam", bounce: "irene-bounce", sit: "irene-sit", hug: "irene-hug", hugb: "irene-hugb", catplay: "irene-catplay", catjump: "irene-catjump", octiplay: "irene-octiplay", swing: "irene-swing" };
     var pose = POSES[String(beh).toLowerCase().replace(/^irene-/, "")];
     if (!pose) return "irene poses (in quotes): \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"";
     if (window.__ireneShow) {
+      cancelIrenePose("Irene pose was superseded by a newer pose.");
       if (pose === "irene-catplay" || pose === "irene-catjump") {
         if (window.__releaseCat) window.__releaseCat();   // open the moon door + free the cat if it's still in the chest
         if (window.__homeCat) window.__homeCat("cuddly");  // bring the loose cat into the nook
-        setTimeout(function () { if (window.__ireneShow) window.__ireneShow(pose); }, 1000); // after the ~900ms walk-in settles, so she lands beside the cat
+        var generation = ++irenePoseGeneration;
+        return new Promise(function (resolve, reject) {
+          var operation = irenePoseOperation = { generation: generation, timer: null, reject: reject };
+          operation.timer = setTimeout(function () {
+            if (irenePoseOperation !== operation || generation !== irenePoseGeneration) return;
+            irenePoseOperation = null;
+            if (!window.__ireneShow) { reject(new Error("Irene's pose controller is not ready.")); return; }
+            window.__ireneShow(pose); // after the ~900ms walk-in settles, so she lands beside the cat
+            if (!(el && el.classList.contains("showing") && el.classList.contains(pose))) { reject(new Error("Irene's requested pose was not applied.")); return; }
+            narrate(true, "👧 irene: " + pose.replace("irene-", "") + ".", "");
+            resolve(prev);
+          }, 1000);
+        });
       } else { window.__ireneShow(pose); }
       narrate(true, "👧 irene: " + pose.replace("irene-", "") + ".", "");
     }

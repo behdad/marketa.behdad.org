@@ -44,7 +44,9 @@ public document.
   - `loft.weather.wildfires.intensity`
 - Public raw helpers retained where genuinely generic:
   `loft.help`, `loft.util.sleep/random`, `loft.presentation.svg.show/clear`,
-  `loft.typography.harfbuzz/font/hb`, and `loft.fonts.google/google.list/local`.
+  `loft.fonts.harfbuzz/google/google.list/local`. JavaScript callers keep the returned HarfBuzz.js
+  module locally with `const hb = await loft.fonts.harfbuzz()`; Python uses its native
+  `import uharfbuzz as hb`.
 - Removed 21 unreachable private command facades (341 source lines): `album`, `audio`,
   `capabilities`, `clock`, `cocktail`, `dance`, `jukebox`, `lang`, `lanterns`, `mailto`, `music`,
   `pause`, `play`, `porsche`, `prince`, `reboot`, `room`, `snap`, `tetris`, and `weather`.

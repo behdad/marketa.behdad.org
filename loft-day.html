@@ -37604,7 +37604,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <script>window.__loftMessages = {};</script>
 <script src="loft-day.en.js?v=dict-debb78173f81"></script>
 <script src="loft-day.cs.js?v=dict-26ba37c9d23c"></script>
-<script src="code-snippets/manifest.js?v=transport-e81302682356"></script>
+<script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
 "use strict";
@@ -76518,13 +76518,13 @@ setOfficeProgress("pc", false);
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone typing
     monitor.classList.add("show-console");
     if (!consoleWelcomed) { consoleWelcomed = true; consolePrint(consoleT("console_welcome"), "console-dim"); }
-    // preload harfbuzzjs like the python console preloads uharfbuzz — kick off the runtime
-    // and, once ready, print an English-only banner (controllers.hb is set inside hbReady). One
+    // Preload harfbuzzjs like the Python console preloads uharfbuzz, then print one
+    // English-only banner. The returned module remains local to callers.
     // banner per session; a load failure just stays quiet. (English-only, no T-dict keys.)
-    if (!hbBannerShown && window.loft.typography && window.loft.typography.harfbuzz) {
+    if (!hbBannerShown && window.loft.fonts && window.loft.fonts.harfbuzz) {
       hbBannerShown = true;
-      window.loft.typography.harfbuzz().then(function () {
-        if (!fromCode) consolePrint("harfbuzzjs ready — loft.typography.hb.Face(bytes), .Buffer(), .shape(...)", "console-dim");
+      window.loft.fonts.harfbuzz().then(function () {
+        if (!fromCode) consolePrint("harfbuzzjs ready — const hb = await loft.fonts.harfbuzz()", "console-dim");
       }, function () {});
     }
     if (consoleIn) setTimeout(function () { appAutoFocusTextControl(consoleIn); }, 60);
@@ -76705,7 +76705,7 @@ setOfficeProgress("pc", false);
           : "(async function(){ return (" + c.replace(/;\s*$/, "") + "); })()";
       }
       var out = window.eval(src); // indirect eval -> global scope, so var/function persist across commands
-      if (out && typeof out.then === "function") { // a Promise (for example loft.typography.harfbuzz()): print when it settles
+      if (out && typeof out.then === "function") { // a Promise (for example loft.fonts.harfbuzz()): print when it settles
         // settles in a LATER task, after activeConsoleOut has been restored — so re-point it
         // to the surface that typed this command, print, then hand it back.
         out.then(function (v) { var p = activeConsoleOut; activeConsoleOut = __capturedOut; consolePrint(fmtOut(v)); activeConsoleOut = p; },
@@ -76789,11 +76789,9 @@ setOfficeProgress("pc", false);
         "presentation.svg.show": "loft.presentation.svg.show(source) — sanitize and fit inline SVG in the Console display",
         "util.random": "loft.util.random(value|list|min, max) — bounded random selection",
         "util.sleep": "loft.util.sleep(ms) — await a cancellable script delay",
-        "typography.font": "loft.typography.font(bytes) — build a HarfBuzz font from raw TTF/OTF bytes",
-        "typography.harfbuzz": "loft.typography.harfbuzz() — load the pinned HarfBuzz runtime",
-        "typography.hb": "loft.typography.hb — the loaded uharfbuzz-style facade, or null before loading",
         "fonts.google": "loft.fonts.google(family, options?) — fetch a Google Fonts TTF",
         "fonts.google.list": "loft.fonts.google.list(query?) — list Google Fonts families",
+        "fonts.harfbuzz": "loft.fonts.harfbuzz() — load the pinned HarfBuzz.js module",
         "fonts.local": "loft.fonts.local(query?) — inspect locally installed fonts with permission"
       };
       if (helperSignatures[helperPath]) return [helperSignatures[helperPath]];
@@ -76862,7 +76860,7 @@ setOfficeProgress("pc", false);
         });
         lines.push(group + ": " + members.join(" · "));
       });
-      lines.push("JavaScript helpers: loft.help · loft.fonts · loft.typography · loft.util · loft.presentation.svg");
+      lines.push("JavaScript helpers: loft.help · loft.fonts · loft.util · loft.presentation.svg");
       lines.push("Use loft.help(loft.weather) to drill down one level at a time.");
     } else {
       names.forEach(function (name) {
@@ -133575,52 +133573,11 @@ function spawnDustMote(container) {
     narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
   };
-  // loft.typography.harfbuzz() loads HarfBuzz for JavaScript, mirroring the Python
-  // console's uharfbuzz. Lazy-loads the self-hosted harfbuzzjs runtime (harfbuzzjs/hb.js
-  // loader + hb.wasm + the hbjs.js wrapper) and a latin-subset Fraunces once, caches the
-  // parsed font, and reuses them for every call. Its promise resolves to the raw hb runtime and
-  // bundled Fraunces font; callers can `const { hb, font } = await loft.typography.harfbuzz()`,
-  // then shape with those local handles.
+  // loft.fonts.harfbuzz() lazy-loads the self-hosted HarfBuzz.js runtime and returns the raw
+  // module. It mirrors Python's `import uharfbuzz as hb` without publishing a global `hb`.
+  // Fonts remain separate: callers fetch bytes and explicitly create a blob, face, and font.
   // English-only (script helpers aren't translated).
   var __hbReady = null;
-  // A uharfbuzz-style facade over the raw harfbuzzjs API, so loft.typography.hb reads like the
-  // Python console's uharfbuzz `hb`: loft.typography.hb.Face(bytes), .Font(face), .Buffer(), .shape(
-  // font, buf, features). A Buffer is the native hbjs buffer augmented IN PLACE with the
-  // uharfbuzz aliases add_str/guess_segment_properties plus glyph_infos/glyph_positions
-  // getters (mapped from .json()'s g/cl/ax/ay/dx/dy) — since it's the same object, the
-  // native methods keep working and hb.shape(font, buf) still takes it directly. .font is
-  // the bundled Fraunces so hb.shape(hb.font, buf) works with no font load. English-only.
-  function makeHbFacade(hb, font) {
-    function asBlob(x) { // accept raw bytes OR an already-made blob (from hb.Blob()/createBlob)
-      if (x instanceof Uint8Array) return hb.createBlob(x);
-      if (x instanceof ArrayBuffer) return hb.createBlob(new Uint8Array(x));
-      return x;
-    }
-    return {
-      hb: hb,     // the raw harfbuzzjs API, for the low-level names
-      font: font, // the bundled Fraunces, so hb.shape(hb.font, buf) works out of the box
-      Blob: function (bytes) { return bytes instanceof Uint8Array ? hb.createBlob(bytes) : hb.createBlob(new Uint8Array(bytes)); },
-      Face: function (bytesOrBlob, index) { return hb.createFace(asBlob(bytesOrBlob), index || 0); },
-      Font: function (face) { return hb.createFont(face); },
-      Buffer: function () {
-        var buf = hb.createBuffer();
-        buf.add_str = function (t) { return buf.addText(t); };
-        buf.guess_segment_properties = function () { return buf.guessSegmentProperties(); };
-        Object.defineProperty(buf, "glyph_infos", { get: function () {
-          return buf.json().map(function (g) { return { codepoint: g.g, cluster: g.cl }; });
-        } });
-        Object.defineProperty(buf, "glyph_positions", { get: function () {
-          return buf.json().map(function (g) { return { x_advance: g.ax, y_advance: g.ay, x_offset: g.dx, y_offset: g.dy }; });
-        } });
-        return buf;
-      },
-      shape: function (fnt, buf, features) {
-        if (Array.isArray(features)) features = features.join(",");
-        return hb.shape(fnt, buf, features || undefined);
-      },
-      version_string: function () { return hb.version_string ? hb.version_string() : "14.0.0"; }
-    };
-  }
   function hbLoadScript(src, globalName) {
     var source = typeof window.__harfbuzzScriptResourceLoader === "function"
       ? Promise.resolve(window.__harfbuzzScriptResourceLoader(src))
@@ -133643,40 +133600,26 @@ function spawnDustMote(container) {
     var createHarfBuzz, hbjsFactory;
     var p = hbLoadScript("harfbuzzjs/hb.js", "createHarfBuzz")
       .then(function (factory) { createHarfBuzz = factory; return hbLoadScript("harfbuzzjs/hbjs.js", "hbjs"); })
-      .then(function (factory) { hbjsFactory = factory; return createHarfBuzz({ locateFile: function (f) { return "harfbuzzjs/" + f; } }); })
-      .then(function (mod) {
-        var hb = hbjsFactory(mod);
-        return fetch("harfbuzzjs/fraunces.ttf").then(function (r) {
-          if (!r.ok) throw new Error("font " + r.status);
-          return r.arrayBuffer();
-        }).then(function (buf) {
-          var blob = hb.createBlob(new Uint8Array(buf));
-          var face = hb.createFace(blob, 0);
-          var font = hb.createFont(face);
-          try { controllers.hb = makeHbFacade(hb, font); } catch (e) {} // private uharfbuzz-style handle backing loft.typography.hb
-          return { hb: hb, font: font };
-        });
-      });
+      .then(function (factory) {
+        hbjsFactory = factory;
+        var options = { locateFile: function (f) { return "harfbuzzjs/" + f; } };
+        if (window.__harfbuzzScriptResourceLoader && window.__harfbuzzScriptResourceLoader.wasm instanceof Uint8Array) {
+          options.wasmBinary = window.__harfbuzzScriptResourceLoader.wasm;
+        }
+        return createHarfBuzz(options);
+      })
+      .then(function (mod) { return hbjsFactory(mod); });
     __hbReady = p;
     p.catch(function () { if (__hbReady === p) __hbReady = null; }); // a transient load failure shouldn't poison later retries
     return __hbReady;
   }
-  // Low-level handles, mirroring the Python console's `hb`:
-  //   var { hb, font } = await loft.typography.harfbuzz()
-  //   var f = await loft.typography.font(sfntBytes)
-  // hb.Face wants raw sfnt (TTF/OTF) — loft.fonts.google() below returns exactly that.
-  function hbFont(bytes) {
-    return hbReady().then(function (ctx) {
-      var u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-      return ctx.hb.createFont(ctx.hb.createFace(ctx.hb.createBlob(u8), 0));
-    });
-  }
   // loft.fonts.google(family, opts) fetches a Google Fonts
-  // family and return its raw sfnt (TTF) BYTES, ready for hb.Face(). Uses the Google Fonts
+  // family and return its raw sfnt (TTF) BYTES, ready for hb.createFace(). Uses the Google Fonts
   // Developer API (webfonts/v1), which hands back a direct .ttf url per variant — a full,
   // uncompressed font, so no woff2 / no decompression. opts.weight → the '400'/'700'/… variant,
   // opts.italic → its italic. loft.fonts.google.list([query]) enumerates the whole catalogue.
-  //   loft.typography.hb.Face(await loft.fonts.google('Anton'))
+  //   var hb = await loft.fonts.harfbuzz()
+  //   hb.createFace(hb.createBlob(await loft.fonts.google('Anton')), 0)
   var GF_KEY = "AIzaSyCz4rU4eX3j_3bvlno8BQjmM9ty8Xs7JU0"; // Google Fonts API key — referrer-restrict it in the Google Cloud console
   var GF_API = "https://www.googleapis.com/webfonts/v1/webfonts?key=" + GF_KEY;
   function gfTtfUrl(item, opts) {
@@ -133702,7 +133645,7 @@ function spawnDustMote(container) {
       return fetch(url).then(function (r) { if (!r.ok) throw new Error("ttf " + r.status); return r.arrayBuffer(); });
     }).then(function (ab) {
       var bytes = new Uint8Array(ab);
-      console.log("⬡ loft.fonts.google(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of TTF. loft.typography.hb.Face(bytes) shapes it.");
+      console.log("⬡ loft.fonts.google(" + JSON.stringify(family) + ") → " + bytes.length + " bytes of TTF. Use the module returned by loft.fonts.harfbuzz() to shape it.");
       return bytes;
     }).catch(function (e) { return "loft.fonts.google failed — " + ((e && e.message) || e); });
   }
@@ -133715,7 +133658,8 @@ function spawnDustMote(container) {
   };
   // loft.fonts.local([query]) — the visitor's OWN installed fonts, via the Local Font Access API
   // (Chromium desktop; a one-time permission prompt). Each result has .bytes() → raw sfnt bytes.
-  //   loft.typography.hb.Face(await (await loft.fonts.local('Menlo'))[0].bytes())
+  //   var hb = await loft.fonts.harfbuzz()
+  //   hb.createFace(hb.createBlob(await (await loft.fonts.local('Menlo'))[0].bytes()), 0)
   function localFonts(query) {
     if (!window.queryLocalFonts) return Promise.resolve("local fonts need Chromium desktop (queryLocalFonts) — not available in this browser.");
     return window.queryLocalFonts().then(function (fonts) {
@@ -133730,15 +133674,8 @@ function spawnDustMote(container) {
       return out;
     }).catch(function (e) { return "loft.fonts.local failed — " + ((e && e.message) || e); });
   }
-  var typography = window.loft.typography || (window.loft.typography = {});
-  typography.harfbuzz = hbReady;
-  typography.font = hbFont;
-  Object.defineProperty(typography, "hb", {
-    configurable: true,
-    enumerable: true,
-    get: function () { return controllers.hb || null; }
-  });
   var fonts = window.loft.fonts || (window.loft.fonts = {});
+  fonts.harfbuzz = hbReady;
   fonts.google = googleFonts;
   fonts.local = localFonts;
   controllers.blacklight = function (arg) { // toggle the UV/blacklight wash over the whole loft (the caps-lock toggle it used to ride is gone)

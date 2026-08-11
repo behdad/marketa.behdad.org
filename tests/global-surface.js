@@ -126,7 +126,7 @@ var HARNESS = [
   '}',
   'window.addEventListener("load",function(){setTimeout(function(){',
   ' report.lazyBootstrap.attempted=true;',
-  ' var pending;try{pending=window.loft.typography.harfbuzz();}catch(error){pending=Promise.reject(error);}',
+  ' var pending;try{pending=window.loft.fonts.harfbuzz();}catch(error){pending=Promise.reject(error);}',
   ' Promise.resolve(pending).then(function(){},function(error){report.lazyBootstrap.error=String(error&&error.message||error);}).then(exerciseLazyVendors).then(function(){report.lazyBootstrap.settled=true;setTimeout(inventory,100);},function(error){report.lazyBootstrap.error=String(error&&error.message||error);report.lazyBootstrap.settled=true;setTimeout(inventory,100);});',
   '},100);});',
   '})();</script>'

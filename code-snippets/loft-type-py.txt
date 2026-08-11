@@ -5,20 +5,21 @@ from fontTools.pens.svgPathPen import SVGPathPen
 import loft
 
 data = await loft.fonts.google("Fraunces")
-font = TTFont(io.BytesIO(data))
-glyphs = font.getGlyphSet()
-hb_font = hb.Font(hb.Face(data))
+face = hb.Face(data)
+font = hb.Font(face)
+ttfont = TTFont(io.BytesIO(data))
+glyphs = ttfont.getGlyphSet()
 buffer = hb.Buffer()
 buffer.add_str("LoftType")
 buffer.guess_segment_properties()
-hb.shape(hb_font, buffer)
-extents = hb_font.get_font_extents("ltr")
+hb.shape(font, buffer)
+extents = font.get_font_extents("ltr")
 ascent, descent = extents.ascender, extents.descender
 
 x = 0
 paths = []
 for info, position in zip(buffer.glyph_infos, buffer.glyph_positions):
-    name = font.getGlyphName(info.codepoint)
+    name = ttfont.getGlyphName(info.codepoint)
     pen = SVGPathPen(glyphs)
     glyphs[name].draw(pen)
     gx = x + position.x_offset

@@ -367,7 +367,8 @@ Hafez/Rumi readers under `loft.poetry.*`.
 Calendar date/time previews live under `loft.calendar.date.*` and `loft.calendar.time.*`; their
 status queries return the effective values while their reset actions restore automatic timekeeping.
 JavaScript-native helpers that deliberately return raw values rather than transport envelopes stay
-under `loft.util`, `loft.typography`, `loft.fonts`, and `loft.presentation.svg`.
+under `loft.util`, `loft.fonts`, and `loft.presentation.svg`. JavaScript loads the raw HarfBuzz.js
+module with `loft.fonts.harfbuzz()`; Python imports its bundled `uharfbuzz` module normally.
 `capabilities()` remains the complete structured machine discovery surface. Every row carries both
 the compatibility `available` boolean and an `availability` object. An unavailable row or
 `describe(id, args)` result includes the exact current `reason` and only includes a structured

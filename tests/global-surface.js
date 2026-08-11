@@ -28,11 +28,13 @@ var AUTHORED_DOM_PROBE = "weddingAuthoredDomProbe";
 var INHERITED_PROBE = "weddingPrototypeLeak";
 var TRANSIENT_PROBE = "weddingTransientLeak";
 var TRANSIENT_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-transient.js"), "utf8");
+var LEXICAL_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-lexical.js"), "utf8");
+var LOFT_PROTOTYPE_SOURCE = fs.readFileSync(path.join(__dirname, "fixtures", "global-audit", "combined-loft-prototype.js"), "utf8");
 
 var HARNESS = [
   '<pre id="__report">pending</pre>',
   '<script>(function(){',
-  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,transientResolution:null,transientOwn:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
+  'var report={errors:[],baselineCount:0,finalCount:0,allowed:[],privateCount:0,namedCount:0,namedExamples:[],forbidden:[],probe:null,prototypeResolution:null,transientResolution:null,transientOwn:null,combinedResolution:null,lazyBootstrap:{attempted:false,settled:false,error:"",vendors:{}}};',
   'function ownKeys(){return Reflect.ownKeys(window);}',
   'function safeValue(name){try{return {ok:true,value:window[name]};}catch(error){return {ok:false,error:String(error&&error.message||error)};}}',
   'function includesNode(collection,node){try{for(var i=0;i<collection.length;i++)if(collection[i]===node)return true;}catch(error){}return false;}',
@@ -99,6 +101,7 @@ var HARNESS = [
   '  if(currentPrototype)report.forbidden.push({name:"[[Prototype:extra]]",prototypeAddition:true});',
   '  report.prototypeResolution=window.__weddingPrototypeResolution||null;',
   '  report.transientResolution=window.__weddingTransientResolution||null;report.transientOwn=Object.prototype.hasOwnProperty.call(window,' + JSON.stringify(TRANSIENT_PROBE) + ');',
+  '  report.combinedResolution=window.__weddingCombinedResolution||null;',
   '  var names=ownKeys(),namedSeen=Object.create(null);report.finalCount=names.length;',
   '  for(var i=0;i<names.length;i++){',
   '   var key=names[i];if(baselineSet.has(key)){var currentDescriptor=null;try{currentDescriptor=Object.getOwnPropertyDescriptor(window,key);}catch(error){}var baselineDescriptor=baselineDescriptors.get(key);if(!sameDescriptor(baselineDescriptor,currentDescriptor))report.forbidden.push({name:String(key),baselineReplacement:true,shape:descriptorShape(key,safeValue(key).value)});continue;}',
@@ -250,6 +253,8 @@ if (REPORT_ONLY) {
 }
 
 var hostile = lib.runPageSync("loft-day.html", HARNESS + [
+  '<script>', LEXICAL_SOURCE, '</script>',
+  '<script>', LOFT_PROTOTYPE_SOURCE, '</script>',
   '<script>',
   TRANSIENT_SOURCE,
   'window.open=function authoredReplacement(){};',
@@ -271,6 +276,21 @@ var transientStatic = staticAudit.auditSource(TRANSIENT_SOURCE, "combined-transi
 check(transientStatic.some(function (entry) { return entry.name === TRANSIENT_PROBE; }), "static gate rejects a conditional alias that publishes then deletes a public global", transientStatic);
 check(hostile && hostile.transientResolution && hostile.transientResolution.windowValue && hostile.transientResolution.bareValue, "temporary hostile global resolves through window.name and bare name while published", hostile && hostile.transientResolution);
 check(hostile && hostile.transientOwn === false, "temporary hostile global is gone before runtime inventory", hostile && { transientOwn: hostile.transientOwn });
+var lexicalStatic = staticAudit.auditSource(LEXICAL_SOURCE, "combined-lexical.js");
+var loftPrototypeStatic = staticAudit.auditSource(LOFT_PROTOTYPE_SOURCE, "combined-loft-prototype.js");
+check(lexicalStatic.some(function (entry) { return entry.name === "weddingLexicalLeak"; }), "static gate rejects persistent Program lexical surface", lexicalStatic);
+check(loftPrototypeStatic.some(function (entry) { return entry.name === "weddingLoftPrototypeLeak"; }), "static gate rejects a temporary shared-prototype publication below loft", loftPrototypeStatic);
+check(hostile && hostile.combinedResolution && hostile.combinedResolution.lexicalBare && hostile.combinedResolution.lexicalOwn === false && hostile.combinedResolution.prototypeWindow && hostile.combinedResolution.prototypeBare, "two-script browser proof resolves lexical and transient loft-prototype public surface", hostile && hostile.combinedResolution);
+
+var replacedPrototype = lib.runPageSync("loft-day.html", HARNESS + '<script>Object.defineProperty(window.__proto__,"constructor",{configurable:true,writable:true,value:function AuthoredWindowConstructor(){}});</script>', 6500, {
+  captureWindowBaseline: true, patchRaf: true, urlSuffix: "?global-prototype-replace=" + Date.now()
+});
+check(replacedPrototype && replacedPrototype.forbidden.some(function (entry) { return entry.name === "constructor" && entry.inheritedReplacement; }), "runtime gate rejects replacement of an inherited baseline descriptor", replacedPrototype && replacedPrototype.forbidden);
+
+var removedPrototype = lib.runPageSync("loft-day.html", HARNESS + '<script>delete window.__proto__.constructor;</script>', 6500, {
+  captureWindowBaseline: true, patchRaf: true, urlSuffix: "?global-prototype-remove=" + Date.now()
+});
+check(removedPrototype && removedPrototype.forbidden.some(function (entry) { return entry.name === "constructor" && entry.inheritedRemoval; }), "runtime gate rejects removal of an inherited baseline descriptor", removedPrototype && removedPrototype.forbidden);
 
 console.log("");
 if (failures) {

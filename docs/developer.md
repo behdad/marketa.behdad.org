@@ -418,9 +418,12 @@ the DOM-valued disguise, and a public property added to `Window.prototype` all f
 `tests/global-static-audit.js` uses the Acorn parser bundled with Node—no download or install—and a
 conservative finite abstract-value model per lexical binding. It keeps Window, Window prototypes,
 the safe `loft`/private subtrees, Object/Reflect meta callables, finite strings, and unknown values
-distinct while propagating branches, patterns, loops, aliases, defaults, and reassignment. It rejects
-implicit and declaration-created classic-script globals, hazardous prototype aliases, and normalized
-meta writes through direct, destructured, `.call`/`.apply`/`.bind`, and `Reflect.apply` invocation.
+distinct while propagating branches, patterns, loops, aliases, defaults, rest/spread, callbacks, and
+reassignment. Program lexical bindings and sloppy Annex-B block functions count as bare public
+surface even though they are absent from `Reflect.ownKeys(window)`. Window-equivalent `this`/self
+chains and shared `Object.prototype` paths below otherwise-safe objects remain hazardous, while an
+authored child constructor such as `window.loft.Widget.prototype` stays safe. Meta writes normalize
+direct, destructured, `.call`/`.apply`/`.bind`, `Reflect.apply`, and Function-call uncurrying forms.
 Dynamic names must remain a finite set of private or temporary-vendor names through every mutation;
 otherwise they fail closed. Safe descendants such as `window.loft.Widget.prototype` remain allowed.
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before

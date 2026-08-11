@@ -1,0 +1,1 @@
+const weddingLexicalLeak = { public: true };

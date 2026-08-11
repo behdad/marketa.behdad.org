@@ -34,8 +34,10 @@ function mergeValues(values) {
 
 function lexicalModel(ast) {
   var nodeScopes = new WeakMap(), functionBindings = new WeakMap(), globalDeclarations = [], scopes = [];
-  function makeScope(parent, type) { var scope = { parent: parent, type: type, bindings: new Map() }; scopes.push(scope); return scope; }
+  var programStrict = ast.body.some(function (node) { return node.type === "ExpressionStatement" && node.directive === "use strict"; });
+  function makeScope(parent, type, thisWindow) { var scope = { parent: parent, type: type, bindings: new Map(), thisWindow: thisWindow === undefined ? !!(parent && parent.thisWindow) : thisWindow }; scopes.push(scope); return scope; }
   var programScope = makeScope(null, "program");
+  programScope.thisWindow = true;
   function nearestVarScope(scope) { while (scope.parent && scope.type !== "function" && scope.type !== "program") scope = scope.parent; return scope; }
   function ensure(scope, name) {
     if (!scope.bindings.has(name)) scope.bindings.set(name, { name: name, scope: scope, sources: [], functionNode: null, params: null, indirect: false });
@@ -69,13 +71,15 @@ function lexicalModel(ast) {
   }
   function scanFunction(node, outerScope, outerBinding) {
     nodeScopes.set(node, outerScope);
-    var functionScope = makeScope(outerScope, "function"), params = [];
+    var functionScope = makeScope(outerScope, "function", node.type === "ArrowFunctionExpression" ? outerScope.thisWindow : false), params = [];
     if (node.type === "FunctionExpression" && node.id) { nodeScopes.set(node.id, functionScope); ensure(functionScope, node.id.name).functionNode = node; }
     node.params.forEach(function (param, index) {
       markPattern(param, functionScope, functionScope, node, index);
       if (param.type === "Identifier") params[index] = resolve(functionScope, param.name);
     });
-    if (outerBinding) { outerBinding.functionNode = node; outerBinding.params = params; outerBinding.paramPatterns = node.params; functionBindings.set(node, outerBinding); }
+    var functionInfo = outerBinding || { name: "<anonymous>", sources: [], functionNode: node, indirect: false };
+    functionInfo.functionNode = node; functionInfo.params = params; functionInfo.paramPatterns = node.params;
+    functionBindings.set(node, functionInfo);
     scan(node.body, functionScope);
   }
   function scan(node, scope) {
@@ -86,7 +90,9 @@ function lexicalModel(ast) {
     if (node.type === "FunctionDeclaration") {
       var functionBinding = node.id ? ensure(scope, node.id.name) : null;
       if (node.id) nodeScopes.set(node.id, scope);
-      if (scope === programScope && node.id) globalDeclarations.push({ node: node, name: node.id.name, kind: "function declaration" });
+      var reachesProgram = scope, crossesFunction = false;
+      while (reachesProgram && reachesProgram !== programScope) { if (reachesProgram.type === "function") crossesFunction = true; reachesProgram = reachesProgram.parent; }
+      if (node.id && (scope === programScope || (!programStrict && reachesProgram === programScope && !crossesFunction))) globalDeclarations.push({ node: node, name: node.id.name, kind: scope === programScope ? "function declaration" : "Annex-B block function" });
       scanFunction(node, scope, functionBinding);
       return;
     }
@@ -97,7 +103,7 @@ function lexicalModel(ast) {
         nodeScopes.set(declaration, scope);
         markPattern(declaration.id, scope, declarationScope, null, null);
         if (declaration.init) scan(declaration.init, scope);
-        if (declarationScope === programScope && node.kind === "var") collectPatternNames(declaration.id).forEach(function (name) { globalDeclarations.push({ node: declaration, name: name, kind: "var declaration" }); });
+        if (declarationScope === programScope) collectPatternNames(declaration.id).forEach(function (name) { globalDeclarations.push({ node: declaration, name: name, kind: node.kind + " declaration" }); });
       });
       return;
     }
@@ -134,9 +140,12 @@ function lexicalModel(ast) {
       else if (implicit) implicit.push({ node: pattern, name: pattern.name, kind: implicit.kind });
       return;
     }
-    if (pattern.type === "RestElement") { recordPattern(pattern.argument, { rest: source }, implicit); return; }
+    if (pattern.type === "RestElement") { recordPattern(pattern.argument, source && (source.argumentItems || source.slice) ? source : { rest: source }, implicit); return; }
     if (pattern.type === "AssignmentPattern") { recordPattern(pattern.left, source && source.absent ? ref(pattern.right) : alternatives([source, ref(pattern.right)]), implicit); return; }
-    if (pattern.type === "ArrayPattern") { pattern.elements.forEach(function (entry, index) { recordPattern(entry, projected(source, { type: "index", value: index }), implicit); }); return; }
+    if (pattern.type === "ArrayPattern") { pattern.elements.forEach(function (entry, index) {
+      if (entry && entry.type === "RestElement") recordPattern(entry.argument, { slice: source, start: index }, implicit);
+      else recordPattern(entry, projected(source, { type: "index", value: index }), implicit);
+    }); return; }
     if (pattern.type === "ObjectPattern") pattern.properties.forEach(function (property) {
       if (property.type === "RestElement") recordPattern(property.argument, { rest: source }, implicit);
       else {
@@ -162,12 +171,70 @@ function lexicalModel(ast) {
       var marker = implicitWrites; marker.kind = "for-in";
       var target = node.left.type === "VariableDeclaration" ? node.left.declarations[0].id : node.left;
       recordPattern(target, { iterable: ref(node.right), kind: "keys" }, marker);
-    },
+    }
+  });
+  function arrayItems(node, seen) {
+    if (!node) return null;
+    if (node.type === "ArrayExpression") {
+      var items = [];
+      for (var i = 0; i < node.elements.length; i++) {
+        var entry = node.elements[i];
+        if (!entry) { items.push({ unknown: true }); continue; }
+        if (entry.type === "SpreadElement") { var spread = arrayItems(entry.argument, seen); if (!spread) return null; items = items.concat(spread); }
+        else items.push(ref(entry));
+      }
+      return items;
+    }
+    if (node.type === "Identifier") {
+      var found = resolve(nodeScopes.get(node), node.name);
+      if (!found || (seen = seen || new Set()).has(found) || !found.sources.length) return null;
+      seen.add(found);
+      var combined = [], valid = true;
+      found.sources.forEach(function (sourceRef) {
+        if (!sourceRef.node || (sourceRef.path && sourceRef.path.length)) { valid = false; return; }
+        var values = arrayItems(sourceRef.node, seen); if (!values) valid = false; else combined = combined.concat(values);
+      });
+      seen.delete(found);
+      return valid ? combined : null;
+    }
+    return null;
+  }
+  function expandedArguments(args) {
+    var expanded = [];
+    args.forEach(function (argument) {
+      if (argument.type !== "SpreadElement") expanded.push(ref(argument));
+      else { var spread = arrayItems(argument.argument, new Set()); expanded = expanded.concat(spread || [{ hazard: true }]); }
+    });
+    return expanded;
+  }
+  function functionTargets(node, seen) {
+    if (!node) return [];
+    if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") return [functionBindings.get(node)];
+    if (node.type !== "Identifier") return [];
+    var found = resolve(nodeScopes.get(node), node.name);
+    if (!found || (seen = seen || new Set()).has(found)) return [];
+    if (found.functionNode) return [functionBindings.get(found.functionNode)];
+    seen.add(found);
+    var targets = [];
+    found.sources.forEach(function (sourceRef) { if (sourceRef.node) functionTargets(sourceRef.node, seen).forEach(function (target) { if (target && targets.indexOf(target) < 0) targets.push(target); }); });
+    seen.delete(found);
+    return targets;
+  }
+  function iterationName(callee) { return callee && callee.type === "MemberExpression" && !callee.computed ? callee.property.name : null; }
+  var iterationMethods = new Set(["forEach", "map", "filter", "some", "every", "find", "findIndex"]);
+  walk.simple(ast, {
     CallExpression: function (node) {
-      if (node.callee.type !== "Identifier") return;
-      var found = resolve(nodeScopes.get(node.callee), node.callee.name);
-      if (!found || !found.functionNode || !found.paramPatterns) return;
-      found.paramPatterns.forEach(function (pattern, index) { recordPattern(pattern, node.arguments[index] ? ref(node.arguments[index]) : { absent: true }, null); });
+      var args = expandedArguments(node.arguments);
+      functionTargets(node.callee, new Set()).forEach(function (target) {
+        target.paramPatterns.forEach(function (pattern, index) {
+          if (pattern.type === "RestElement") recordPattern(pattern, { argumentItems: args.slice(index) }, null);
+          else recordPattern(pattern, args[index] || { absent: true }, null);
+        });
+      });
+      var method = iterationName(node.callee), items = method && iterationMethods.has(method) ? arrayItems(node.callee.object, new Set()) : null;
+      if (items && node.arguments[0]) functionTargets(node.arguments[0], new Set()).forEach(function (target) {
+        if (target.paramPatterns[0]) recordPattern(target.paramPatterns[0], { alternatives: items }, null);
+      });
     }
   });
   walk.ancestor(ast, {
@@ -178,6 +245,9 @@ function lexicalModel(ast) {
       if ((parent.type === "FunctionDeclaration" || parent.type === "FunctionExpression") && parent.id === node) return;
       if (parent.type === "VariableDeclarator" && parent.id === node) return;
       if (parent.type === "CallExpression" && parent.callee === node) return;
+      if (parent.type === "AssignmentExpression" && parent.right === node) return;
+      if (parent.type === "VariableDeclarator" && parent.init === node) return;
+      if (parent.type === "CallExpression" && parent.arguments.indexOf(node) >= 0 && iterationMethods.has(iterationName(parent.callee))) return;
       found.indirect = true;
     }
   });
@@ -198,6 +268,14 @@ function auditSource(source, file) {
   function globalIdentifier(node, name) { return node && node.type === "Identifier" && node.name === name && !bindingOf(node); }
   function evalReference(reference) {
     if (!reference || reference.unknown) return unknownValue();
+    if (reference.hazard) return originValue("hazard");
+    if (reference.argumentItems) { var argumentArray = emptyValue(); argumentArray.arrays.push({ items: reference.argumentItems }); return argumentArray; }
+    if (reference.slice) {
+      var sliced = emptyValue(), sourceArray = evalReference(reference.slice);
+      sourceArray.arrays.forEach(function (arrayRef) { sliced.arrays.push({ items: itemsOfArrayRef(arrayRef).slice(reference.start) }); });
+      if (!sliced.arrays.length || sourceArray.unknown) sliced.unknown = true;
+      return sliced;
+    }
     if (reference.rest) {
       var restBase = evalReference(reference.rest);
       if (restBase.origins.has("object") || restBase.origins.has("reflect") || restBase.origins.has("meta-hazard")) return originValue("meta-hazard");
@@ -243,6 +321,14 @@ function auditSource(source, file) {
   function projectReference(reference, parts) {
     if (!reference || reference.unknown) return unknownValue();
     if (reference.alternatives) return mergeValues(reference.alternatives.map(function (alternative) { return projectReference(alternative, parts); }));
+    if (reference.argumentItems || reference.slice || reference.rest || reference.iterable) {
+      var projectedValue = evalReference(reference);
+      for (var i = 0; i < parts.length; i++) {
+        var part = parts[i], names = part.type === "key" ? new Set([part.value]) : part.type === "index" ? new Set([String(part.value)]) : finiteStrings(evalExpr(part.node, part.scope));
+        projectedValue = memberValue(projectedValue, names);
+      }
+      return projectedValue;
+    }
     return projectValue(reference.node, reference.scope, (reference.path || []).concat(parts));
   }
   function evalBinding(found) {
@@ -256,7 +342,11 @@ function auditSource(source, file) {
     evaluatingBindings.delete(found);
     return value;
   }
-  function memberNames(node) { return node.computed ? finiteStrings(evalExpr(node.property, nodeScopes.get(node.property))) : new Set([node.property.name]); }
+  function memberNames(node) {
+    if (!node.computed) return new Set([node.property.name]);
+    if (node.property.type === "Literal" && (typeof node.property.value === "string" || typeof node.property.value === "number")) return new Set([String(node.property.value)]);
+    return finiteStrings(evalExpr(node.property, nodeScopes.get(node.property)));
+  }
   function finiteStrings(value) { return value && !value.unknown && !value.origins.size && !value.callables.length && !value.objects.length && !value.arrays.length ? value.strings : null; }
   function callableValue(method, bound) { var value = emptyValue(); value.callables.push({ method: method, bound: bound || [] }); return value; }
   function memberValue(base, names) {
@@ -271,6 +361,7 @@ function auditSource(source, file) {
           else results.push(unknownValue());
         });
       });
+      if (base.arrays.length) results.push(unknownValue());
       if (base.unknown || (!results.length && !base.callables.length && !base.arrays.length)) results.push(unknownValue());
       return mergeValues(results);
     }
@@ -279,14 +370,25 @@ function auditSource(source, file) {
         if (name === "loft") results.push(originValue("loft"));
         else if (name === "__proto__") results.push(originValue("prototype"));
         else if (name === "constructor") results.push(originValue("window-constructor"));
+        else if (name === "window" || name === "self" || name === "globalThis") results.push(originValue("window"));
         else if (name.indexOf("__") === 0) results.push(originValue("private"));
         else results.push(unknownValue());
       }
       if (base.origins.has("window-constructor")) results.push(name === "prototype" ? originValue("prototype") : unknownValue());
+      if (base.origins.has("function-constructor")) results.push(name === "prototype" ? originValue("function-prototype") : unknownValue());
+      if (base.origins.has("function-prototype")) {
+        if (name === "call" || name === "apply") results.push(callableValue("Function." + name));
+        else results.push(unknownValue());
+      }
+      if (base.origins.has("object-constructor")) results.push(name === "prototype" ? originValue("prototype") : unknownValue());
       if (base.origins.has("prototype")) results.push(originValue("prototype"));
-      if (base.origins.has("loft")) results.push(originValue("loft"));
-      if (base.origins.has("private")) results.push(originValue("private"));
-      if (base.origins.has("object") && metaMethods.has("Object." + name)) results.push(callableValue("Object." + name));
+      if (base.origins.has("loft")) results.push(name === "__proto__" ? originValue("prototype") : name === "constructor" ? originValue("object-constructor") : originValue("loft"));
+      if (base.origins.has("private")) results.push(name === "__proto__" ? originValue("prototype") : name === "constructor" ? originValue("object-constructor") : originValue("private"));
+      if (base.origins.has("object")) {
+        if (name === "prototype") results.push(originValue("prototype"));
+        else if (metaMethods.has("Object." + name)) results.push(callableValue("Object." + name));
+      }
+      if (base.origins.has("object-instance")) results.push(name === "__proto__" ? originValue("prototype") : name === "constructor" ? originValue("object-constructor") : unknownValue());
       if (base.origins.has("reflect") && metaMethods.has("Reflect." + name)) results.push(callableValue("Reflect." + name));
       if (base.origins.has("hazard")) results.push(originValue("hazard"));
       if (base.origins.has("meta-hazard")) results.push(originValue("meta-hazard"));
@@ -298,18 +400,49 @@ function auditSource(source, file) {
           if (!keys || keys.has(name)) results.push(evalExpr(property.value, nodeScopes.get(property.value)));
         });
       });
+      if (/^(?:0|[1-9]\d*)$/.test(String(name))) base.arrays.forEach(function (arrayRef) {
+        var item = itemsOfArrayRef(arrayRef)[Number(name)];
+        results.push(item ? evalReference(item) : unknownValue());
+      });
     });
     return results.length ? mergeValues(results) : unknownValue();
   }
   function arrayReferences(node, scope) {
     var value = evalExpr(node, scope), references = [];
-    value.arrays.forEach(function (arrayRef) { arrayRef.node.elements.forEach(function (entry) { references.push(entry ? { node: entry, scope: arrayRef.scope, path: [] } : { unknown: true }); }); });
+    value.arrays.forEach(function (arrayRef) { references = references.concat(itemsOfArrayRef(arrayRef)); });
     return value.arrays.length && !value.unknown ? references : null;
   }
   function arrayReferenceValues(reference) {
     var value = evalReference(reference), references = [];
-    value.arrays.forEach(function (arrayRef) { arrayRef.node.elements.forEach(function (entry) { references.push(entry ? { node: entry, scope: arrayRef.scope, path: [] } : { unknown: true }); }); });
+    value.arrays.forEach(function (arrayRef) { references = references.concat(itemsOfArrayRef(arrayRef)); });
     return value.arrays.length && !value.unknown ? references : null;
+  }
+  function itemsOfArrayRef(arrayRef) {
+    if (arrayRef.items) return arrayRef.items;
+    var items = [];
+    arrayRef.node.elements.forEach(function (entry) {
+      if (!entry) items.push({ unknown: true });
+      else if (entry.type === "SpreadElement") items = items.concat(arrayReferenceValues({ node: entry.argument, scope: nodeScopes.get(entry.argument), path: [] }) || [{ unknown: true }]);
+      else items.push({ node: entry, scope: nodeScopes.get(entry), path: [] });
+    });
+    return items;
+  }
+  function expandedMetaArguments(args) {
+    var refs = [];
+    args.forEach(function (argument) {
+      if (argument.type !== "SpreadElement") refs.push({ node: argument, scope: nodeScopes.get(argument), path: [] });
+      else refs = refs.concat(arrayReferenceValues({ node: argument.argument, scope: nodeScopes.get(argument.argument), path: [] }) || [{ hazard: true }]);
+    });
+    return refs;
+  }
+  function invokeCallable(callable, args) {
+    var combined = callable.bound.concat(args);
+    if (callable.uncurry === "call") return { method: callable.method, args: callable.targetBound.concat(combined.slice(1)) };
+    if (callable.uncurry === "apply") {
+      var applied = combined[1] && arrayReferenceValues(combined[1]);
+      return { method: callable.method, args: applied ? callable.targetBound.concat(applied) : null };
+    }
+    return { method: callable.method, args: combined };
   }
   function invocationList(node) {
     if (!node || node.type !== "CallExpression") return [];
@@ -317,7 +450,7 @@ function auditSource(source, file) {
       var suffixes = memberNames(node.callee);
       if (suffixes && suffixes.size === 1) {
         var suffix = Array.from(suffixes)[0], base = evalExpr(node.callee.object, nodeScopes.get(node.callee.object));
-        if (suffix === "call" && base.callables.length) return base.callables.map(function (callable) { return { method: callable.method, args: callable.bound.concat(node.arguments.slice(1).map(function (arg) { return { node: arg, scope: nodeScopes.get(arg), path: [] }; })) }; });
+        if (suffix === "call" && base.callables.length) { var called = expandedMetaArguments(node.arguments).slice(1); return base.callables.map(function (callable) { return invokeCallable(callable, called); }); }
         if (suffix === "apply") {
           var applied = node.arguments[1] && arrayReferences(node.arguments[1], nodeScopes.get(node.arguments[1]));
           if (base.callables.length) return base.callables.map(function (callable) { return { method: callable.method, args: applied ? callable.bound.concat(applied) : null }; });
@@ -325,14 +458,14 @@ function auditSource(source, file) {
       }
     }
     var callee = evalExpr(node.callee, nodeScopes.get(node.callee));
-    var directArgs = node.arguments.map(function (arg) { return { node: arg, scope: nodeScopes.get(arg), path: [] }; });
+    var directArgs = expandedMetaArguments(node.arguments);
     var calls = [];
     callee.callables.forEach(function (callable) {
       if (callable.method === "Reflect.apply") {
         var reflectArgs = callable.bound.concat(directArgs), target = reflectArgs[0] && evalReference(reflectArgs[0]);
         var reflected = reflectArgs[2] && arrayReferenceValues(reflectArgs[2]);
         target.callables.forEach(function (targetCallable) { calls.push({ method: targetCallable.method, args: reflected ? targetCallable.bound.concat(reflected) : null }); });
-      } else calls.push({ method: callable.method, args: callable.bound.concat(directArgs) });
+      } else calls.push(invokeCallable(callable, directArgs));
     });
     if (callee.origins.has("meta-hazard")) calls.push({ method: "<unknown-meta>", args: directArgs });
     return calls;
@@ -354,10 +487,12 @@ function auditSource(source, file) {
       if (found) return evalBinding(found);
       if (node.name === "window" || node.name === "globalThis" || node.name === "self") return originValue("window");
       if (node.name === "Window") return originValue("window-constructor");
+      if (node.name === "Function") return originValue("function-constructor");
       if (node.name === "Object") return originValue("object");
       if (node.name === "Reflect") return originValue("reflect");
       return unknownValue();
     }
+    if (node.type === "ThisExpression") return scope && scope.thisWindow ? originValue("window") : unknownValue();
     if (node.type === "ConditionalExpression") return mergeValues([evalExpr(node.consequent), evalExpr(node.alternate)]);
     if (node.type === "LogicalExpression") return mergeValues([evalExpr(node.left), evalExpr(node.right)]);
     if (node.type === "SequenceExpression") return evalExpr(node.expressions[node.expressions.length - 1]);
@@ -369,15 +504,20 @@ function auditSource(source, file) {
       else value.unknown = true;
       return value;
     }
-    if (node.type === "ObjectExpression") { var objectValue = emptyValue(); objectValue.objects.push({ node: node, scope: scope }); return objectValue; }
+    if (node.type === "ObjectExpression") { var objectValue = originValue("object-instance"); objectValue.objects.push({ node: node, scope: scope }); return objectValue; }
     if (node.type === "ArrayExpression") { var arrayValue = emptyValue(); arrayValue.arrays.push({ node: node, scope: scope }); return arrayValue; }
     if (node.type === "MemberExpression") return memberValue(evalExpr(node.object), memberNames(node));
     if (node.type === "CallExpression") {
       if (node.callee.type === "MemberExpression") {
         var suffixes = memberNames(node.callee);
         if (suffixes && suffixes.size === 1 && suffixes.has("bind")) {
-          var base = evalExpr(node.callee.object), boundValue = emptyValue(), bound = node.arguments.slice(1).map(function (arg) { return { node: arg, scope: nodeScopes.get(arg), path: [] }; });
-          base.callables.forEach(function (callable) { boundValue.callables.push({ method: callable.method, bound: callable.bound.concat(bound) }); });
+          var base = evalExpr(node.callee.object), boundValue = emptyValue(), bindArgs = expandedMetaArguments(node.arguments), bound = bindArgs.slice(1);
+          base.callables.forEach(function (callable) {
+            if (callable.method === "Function.call" || callable.method === "Function.apply") {
+              var target = bindArgs[0] && evalReference(bindArgs[0]);
+              target.callables.forEach(function (targetCallable) { boundValue.callables.push({ method: targetCallable.method, bound: bound, targetBound: targetCallable.bound, uncurry: callable.method === "Function.call" ? "call" : "apply" }); });
+            } else boundValue.callables.push({ method: callable.method, bound: callable.bound.concat(bound) });
+          });
           if (!boundValue.callables.length) boundValue.unknown = true;
           return boundValue;
         }
@@ -386,7 +526,7 @@ function auditSource(source, file) {
       calls.forEach(function (call) {
         if ((call.method === "Object.getPrototypeOf" || call.method === "Reflect.getPrototypeOf") && call.args && call.args[0]) {
           var target = evalReference(call.args[0]);
-          if (target.origins.has("window") || target.origins.has("prototype") || target.origins.has("hazard")) results.push(originValue("prototype"));
+          if (["window", "prototype", "hazard", "loft", "private", "object-instance"].some(function (origin) { return target.origins.has(origin); })) results.push(originValue("prototype"));
           else results.push(unknownValue());
         } else results.push(unknownValue());
       });
@@ -407,7 +547,10 @@ function auditSource(source, file) {
       var base = evalExpr(node.object), names = memberNames(node);
       if (base.origins.has("prototype")) { if (!names) add(node, kind, null, "dynamic inherited Window surface write", true); else names.forEach(function (name) { add(node, kind, name, "inherited Window surface write", true); }); }
       if (base.origins.has("window")) { if (!names) add(node, kind, null); else names.forEach(function (name) { add(node, kind, name); }); }
-      if (base.origins.has("hazard")) add(node, kind, null, "unresolved value may be Window or its prototype", true);
+      if (base.origins.has("hazard")) {
+        if (!names) add(node, kind, null, "unresolved value may be Window or its prototype", true);
+        else names.forEach(function (name) { add(node, kind, name, "unresolved value may be Window or its prototype", true); });
+      }
       return;
     }
     if (node.type === "Identifier") {
@@ -445,7 +588,9 @@ function auditSource(source, file) {
     var names = call.args[1] && finiteStrings(evalReference(call.args[1]));
     if (!names) report(null); else names.forEach(report);
   }
-  model.globalDeclarations.forEach(function (declaration) { add(declaration.node, declaration.kind, declaration.name); });
+  model.globalDeclarations.forEach(function (declaration) {
+    if (declaration.name.indexOf("__") !== 0) add(declaration.node, declaration.kind, declaration.name, "bare Program-scope binding", true);
+  });
   model.implicitWrites.forEach(function (write) { add(write.node, write.kind, write.name); });
   walk.simple(ast, {
     AssignmentExpression: function (node) { auditTarget(node.left, "assignment"); },

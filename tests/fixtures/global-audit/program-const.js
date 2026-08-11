@@ -1,0 +1,1 @@
+const rogueConst = { public: true };

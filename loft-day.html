@@ -625,6 +625,9 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 #garden-dungeon-door-cast{opacity:0;transition:opacity .32s ease .12s}
 #garden-dungeon-marker.dungeon-door-opening #garden-dungeon-door-cast,
 #garden-dungeon-marker.dungeon-door-open #garden-dungeon-door-cast{opacity:.48}
+#cuddly-cinema-ticket .cinema-ticket-used{display:none}
+#cuddly-cinema-ticket.ticket-used .cinema-ticket-intact{display:none}
+#cuddly-cinema-ticket.ticket-used .cinema-ticket-used{display:inline}
 .lower-room-marker.portal-insisting{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
 #balcony-entrance-marker.portal-insisting{transform-box:view-box;transform-origin:158px 108.5px}
 #cuddly-cinema-ticket.portal-insisting{animation:none}
@@ -21781,11 +21784,25 @@ section{margin:1.9rem 0}
  <g class="cinema-ticket-wobble">
  <rect x="-4" y="-4" width="34" height="21" rx="4" fill="transparent"/>
  <rect width="26" height="13" fill="#8a4a35"/>
+ <g class="cinema-ticket-intact">
  <path d="M.35 .35 H25.65 V4 C23.1 4 23.1 9 25.65 9 V12.65 H.35 V9 C2.9 9 2.9 4 .35 4 Z"
        fill="#eddbad" stroke="#5f4933" stroke-width=".7" stroke-linejoin="round"/>
  <path d="M7.5 1.6 V11.4" fill="none" stroke="#8e7569" stroke-width=".55" stroke-dasharray="1.25 1"/>
  <rect x="10" y="2.2" width="12.5" height="8.6" rx="1" fill="#8a4a35" stroke="#6d3528" stroke-width=".45"/>
  <path d="M12 4 H20.5 M12 6.5 H20.5 M12 9 H20.5" stroke="#eddbad" stroke-width=".75" stroke-linecap="round"/>
+ </g>
+ <g class="cinema-ticket-used">
+  <g class="cinema-ticket-left-stub" transform="translate(-1.1 .35) rotate(-2 3.8 6.5)">
+   <path d="M.35 .35 H7.2 L6 1.6 L7.4 2.75 L5.9 4 L7.3 5.25 L5.8 6.5 L7.3 7.75 L5.9 9 L7.4 10.2 L6 11.35 L7.2 12.65 H.35 V9 C2.9 9 2.9 4 .35 4 Z"
+         fill="#eddbad" stroke="#5f4933" stroke-width=".7" stroke-linejoin="round"/>
+  </g>
+  <g class="cinema-ticket-main">
+   <path d="M9.7 .35 H25.65 V4 C23.1 4 23.1 9 25.65 9 V12.65 H9.7 L8.5 11.35 L9.9 10.2 L8.4 9 L9.8 7.75 L8.3 6.5 L9.8 5.25 L8.4 4 L9.9 2.75 L8.5 1.6 Z"
+         fill="#eddbad" stroke="#5f4933" stroke-width=".7" stroke-linejoin="round"/>
+   <rect x="10" y="2.2" width="12.5" height="8.6" rx="1" fill="#8a4a35" stroke="#6d3528" stroke-width=".45"/>
+   <path d="M12 4 H20.5 M12 6.5 H20.5 M12 9 H20.5" stroke="#eddbad" stroke-width=".75" stroke-linecap="round"/>
+  </g>
+ </g>
  </g>
 </g>
 <rect x="230" y="160" width="26" height="13" fill="#a4543a" class="wall-brick"/>
@@ -38130,6 +38147,14 @@ window.__cinemaVideoLoaded = false;
       !cinemaWindow || !cinemaNeon || !screenOff || !photoboothSurface || !officeMonitor ||
       !officeWebcam || photoboothGroups.some(function (group) { return !group; }) ||
       !projector || !vavaRemote || !sprinkler) return;
+
+  function syncCinemaTicketUsed() {
+    var used = !!(window.__roomSeen && window.__roomSeen("cinema"));
+    ticket.classList.toggle("ticket-used", used);
+    return used;
+  }
+  window.__syncCinemaTicketUsed = syncCinemaTicketUsed;
+  syncCinemaTicketUsed();
 
   vavaRemote.addEventListener("animationend", function (event) {
     if (event.animationName === "cinema-remote") vavaRemote.classList.remove("remote-reacting");
@@ -112935,6 +112960,7 @@ function spawnDustMote(container) {
       if (ROOM_IDS.indexOf(name) !== -1) seenRooms[name] = true;
     });
     syncGardenDungeonDoor(true);
+    if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
     return seenRoomList();
@@ -112971,6 +112997,7 @@ function spawnDustMote(container) {
     if (ROOM_IDS.indexOf(name) === -1 || roomSeen(name) || window.__cinematic) return false;
     seenRooms[name] = true;
     syncGardenDungeonDoor(false);
+    if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__checkpointChanged) window.__checkpointChanged();
     if (!(options && options.silent) && attractOver()) showRoomProgress(name);
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);

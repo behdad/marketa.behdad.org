@@ -654,7 +654,7 @@ port nor another developer's server process.
 
 | Layer | Purpose | Main entry points |
 | --- | --- | --- |
-| Structural/static | Inline-script syntax, translation parity, SVG balance, console roster, source invariants | `node tests/check.js`, `node tests/state.js` |
+| Structural/static | Inline-script syntax, translation parity, SVG balance, typed autocomplete, source invariants | `node tests/check.js`, `node tests/state.js` |
 | Full solve | End-to-end first-run solve and interaction storm | `node tests/play.js` |
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |

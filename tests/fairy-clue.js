@@ -79,7 +79,7 @@ var harness = String.raw`<script>
           rumiCycleAfter.cursor === 1 &&
           rumiCycleAfter.order.join(",") === rumiCycleBefore.order.join(","),
           JSON.stringify(rumiCycleAfter));
-        check("rumi() reports its source and starts the visible exchange",
+        check("the private Rumi owner reports its source and starts the visible exchange",
           /^📖 Rumi — Ghazal (4|162|553|1403|1798)\n/.test(rumiConsole) &&
           document.querySelector(".egg-bubble.rumi-bubble"),
           rumiConsole);
@@ -123,7 +123,7 @@ var harness = String.raw`<script>
           rumi.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal " + rumi._rumiGhazal);
         check("Markéta's recitation wakes Behdad for the exchange",
           document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
-        check("the Rumi exchange has its own public command",
+        check("the Rumi exchange has a private scene owner",
           typeof window.__loftControllers.rumi === "function");
 
         setTimeout(function () {
@@ -177,7 +177,7 @@ var harness = String.raw`<script>
             check("the private Rumi owner waits without consuming its deck outside the recitation scene",
               /^🧚 loft\.poetry\.rumi\.read\(\) waits/.test(window.__loftControllers.rumi()) &&
               window.__rumiCycleState().cursor === offRoomCycle.cursor);
-            check("faal() returns a random Hafez reading without arguments",
+            check("the private Hafez owner returns a random reading without arguments",
               /^📖 /.test(window.__loftControllers.faal()));
           } catch (error) {
             out.errors.push(String(error && error.stack || error));

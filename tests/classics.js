@@ -82,7 +82,7 @@ check(s.killChooser.chooser && !s.killChooser.mine && s.killMines.mine && !s.kil
   s.killSol.sol && !s.killSol.mine && s.killSol.cards === 52,
   "chooser, Mines and Solitaire dispatch their distinct Kill gags", { chooser: s.killChooser, mines: s.killMines, solitaire: s.killSol });
 check(s.commands.mines === "function" && s.commands.solitaire === "function" && /solitaire/.test(s.commands.cards),
-  "console commands and the cards device alias bypass the chooser", s.commands);
+  "private game controllers and the cards device alias bypass the chooser", s.commands);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

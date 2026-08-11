@@ -160,7 +160,7 @@ ok(sandbox.__officeCoupleNow() === null, "reports null when the office is empty"
 
 // 2) forced show reports the right members + marks exactly one couple present
 var who = sandbox.controllers.officefolks("madla");
-ok(!!who && who.indexOf("madla") !== -1 && who.indexOf("robert") !== -1, "officefolks('madla') brings Madla+Robert (member lookup): " + JSON.stringify(who));
+ok(!!who && who.indexOf("madla") !== -1 && who.indexOf("robert") !== -1, "the private office-guest owner brings Madla+Robert by member lookup: " + JSON.stringify(who));
 ok(presentClass() === "of-madlarobert", "exactly the madlarobert couple is .present");
 var presentCount = officeLayer._children.filter(function (e) { return e._classes.indexOf("present") !== -1; }).length;
 ok(presentCount === 1, "only one couple is present at a time (" + presentCount + ")");
@@ -263,10 +263,10 @@ for (var q = 0; q < 300; q++) {
 ok(!violated, "one-room rule holds: office never duplicates anyone from the floor, bar, balcony, or nook");
 ok(sawSomeone, "one-room rule still lets eligible couples in (didn't just go permanently empty)");
 
-// forcing an eligible-only pick honors exclusion (officefolks(true) skips excluded)
+// Forcing an eligible-only private pick honors exclusion.
 sandbox.controllers.officefolks(false);
 for (var t2 = 0; t2 < 40; t2++) { var w2 = sandbox.controllers.officefolks(true); if (w2) for (var wi = 0; wi < w2.length; wi++) ok.silentViolation = ok.silentViolation || !!EXCLUDED[w2[wi]]; }
-ok(!ok.silentViolation, "officefolks(true) only brings eligible couples");
+ok(!ok.silentViolation, "the private eligible-only pick brings only eligible couples");
 
 // 6) teardown strands nothing: reset clears the couple + cancels all timers
 sandbox.controllers.officefolks("madla"); // someone in, a timer armed

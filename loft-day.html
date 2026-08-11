@@ -55229,7 +55229,6 @@ window.addEventListener("hashchange", function () {
     openKbdHelp();
     return true;
   };
-  controllers.keyboard = controllers.shortcuts; // the other word people reach for, same command
   // Escape closes the card WITHOUT also stopping the music. It listens on window
   // (capture), not document: the stop-the-music Escape listener is a capture listener
   // on document, and same-node capture listeners run in registration order — only an
@@ -66178,7 +66177,7 @@ function quickReversalGesture(action) {
       return;
     }
     // By day, and only through an open door: run the outdoor play scene that fits the
-    // live temperature/season. The public script commands can still force one explicitly.
+    // live temperature/season. The public typed actions can still force one explicitly.
     balconyDayPlay();
   });
   // Pick the daytime outdoor kid-play scene. Actual freezing air outranks calendar seasons:
@@ -68644,7 +68643,7 @@ function quickReversalGesture(action) {
     var row = (name == null || name === "") ? featuredRow() : findRow(name);
     if (!row) return "no cocktail by that name — try \"negroni\", \"margarita\", \"mojito\", \"manhattan\"…";
     // no bar up (day, no party) → raise one: the phone's Order button asks for the calm NIGHT bar
-    // (preferNight), the console party command lights the full party. A bar already up just serves.
+    // (preferNight), the typed Party action lights the full party. A bar already up just serves.
     if (!barUpNow()) {
       if (preferNight && window.__setDayNight) window.__setDayNight(true);
       else if (controllers.party) controllers.party.set(true);
@@ -75151,7 +75150,7 @@ setOfficeProgress("pc", false);
         var before = controllers.birthdayStatus(), message = controllers.birthday(args.person), selected = controllers.birthdayStatus();
         return { changed: before.id !== selected.id || (!before.started && selected.started), id: selected.id, name: selected.name, message: message };
       } });
-    register({ id: "calendar.birthday.cake", kind: "action", risk: "scene", description: "Bring a cake to one birthday person represented at the garden party.",
+    register({ id: "calendar.birthday.cake", kind: "action", risk: "scene", description: "Bring the appropriate cake scene to one birthday person.",
       args: { person: { type: "string", minLength: 1, maxLength: 80, required: true } }, available: function () { return typeof controllers.cake === "function"; }, unavailable: staticBlocked("The cake controller is not ready."), run: function (args) {
         var message = controllers.cake(args.person);
         if (/^(?:cake people|no birthday)/i.test(String(message))) throw new Error(String(message));
@@ -121475,7 +121474,7 @@ function spawnDustMote(container) {
     var bahareh = visiblePartyFigure(".g-bahareh");
     if (mode === "family" && !bahareh) mode = "godsons";
     g.setAttribute("data-kid-formation", mode);
-    if (mode === "play") assignPartyKids(true); // compatibility/test command: deliberately seat everybody
+    if (mode === "play") assignPartyKids(true); // deterministic private test mode: deliberately seat everybody
     if (mode === "play") {
       setPartyKidX("irene", 540);
       setPartyKidX("robin", 252);
@@ -124307,9 +124306,9 @@ function spawnDustMote(container) {
     window.__officeCoupleNow = function () {
       return current ? current.members.slice() : null;
     };
-    // console/test hook: officefolks(true) brings an eligible group in NOW (skips the wait);
-    // officefolks("madla"/"madlarobert"/"ayushi") forces that appearance (ignores eligibility — for a
-    // demo/screenshot); officefolks(false) clears + disarms; officefolks() re-evaluates the gate.
+    // Private/test owner: true brings an eligible group in now (skips the wait); a member/couple id
+    // forces that appearance (ignores eligibility for a demo/screenshot); false clears and disarms;
+    // no argument re-evaluates the gate.
     // Returns the member ids now in the office (or null).
     controllers.officefolks = function (arg) {
       if (arg === false) { stop(); return null; }
@@ -127847,9 +127846,6 @@ function spawnDustMote(container) {
       return out.dataURL;
     });
   };
-  // Private share-card controller: opens the same preview and returns a friendly line
-  // (rather than the giant data-URL) so the scrollback stays readable.
-  controllers.sharecard = function () { window.__shareCard(); return "🖼 " + shareT("share_title"); };
   // Rasterize the day's occasion card and resolve JUST the PNG data-URL (no modal) — used by the
   // birthday / occasion invite texts to embed the postcard as a tappable inline image. Resolves
   // null on any failure so a caller can deliver the text regardless.
@@ -131180,7 +131176,6 @@ function spawnDustMote(container) {
     force = true; updateWhistler();
     return out;
   };
-  controllers.whistler = controllers.dog; // his name, same command
   window.__whistlerOut = function () { return out; }; // test hook: is Whistler shown?
   window.__whistlerRoom = function () { return out ? dogRoom : null; }; // which room he's actually standing in — the album asks, so a room shot can include him
 })();
@@ -132909,8 +132904,6 @@ function spawnDustMote(container) {
     window.__goToStage(r);
     return "→ " + r;
   };
-  controllers.goto = controllers.room; // alias
-  controllers.rooms = function () { return ROOM_NAMES.join(" · "); };
 
   controllers.porsche = function (arg) {
     if (arguments.length === 0) {
@@ -133142,7 +133135,6 @@ function spawnDustMote(container) {
     if (!window.__setStarsPieceByName || !window.__setStarsPieceByName(s)) return PIECES;
     return "🎹 " + (window.__starsPieceName ? window.__starsPieceName() : s) + ".";
   };
-  controllers.classic = controllers.piano; // alias — the night-sky piano's old name
 
   // The scene weather is independent, composable levers, each on its own console toggle:
   //   storm — LIGHTNING+THUNDER, dry unless rain is also on; day or night
@@ -133332,7 +133324,6 @@ function spawnDustMote(container) {
       value: { completed: true, drink: name == null ? null : String(name) }
     });
   };
-  controllers.drink = controllers.cocktail; // alias
 
   // mixer — the hands-on version: instead of watching Pouria mix, YOU dose the shaker at the bar.
   // mixer() runs a self-mixing demo of a random named drink; mixer("negroni") mixes that one;
@@ -133633,9 +133624,9 @@ function spawnDustMote(container) {
   };
 
   // Madla — Markéta's sister, a doctor in Germany, calling on her night shift. INCOMING-ONLY:
-  // there's no way to dial HER (she's off the phone dialer + CITY_ORDER on purpose). This console
-  // hook explicitly triggers the incoming ring regardless of phase/party. madla(true) answers
-  // straight away in the current room; the no-argument typed action rings.
+  // there's no way to dial HER (she's off the phone dialer + CITY_ORDER on purpose). This private
+  // owner explicitly triggers the incoming ring regardless of phase/party. Passing true answers
+  // straight away in the current room; the public typed action rings.
   controllers.madla = function (arg) {
     if (arg === true) {
       if (window.__answerMadla && window.__answerMadla(true)) {
@@ -133712,7 +133703,6 @@ function spawnDustMote(container) {
     narrate(wantOn, "🖥 the PC powers up.", "🖥 the PC powers down.");
     return prev;
   };
-  controllers.monitor = controllers.computer; // alias — the office monitor is the computer
   controllers.mines = function () { return window.__openMonitorApp ? window.__openMonitorApp("mines") : false; };
   controllers.solitaire = function () { return window.__openMonitorApp ? window.__openMonitorApp("solitaire") : false; };
   controllers.prince = function () { return window.__openMonitorApp ? window.__openMonitorApp("prince") : false; };
@@ -133761,8 +133751,6 @@ function spawnDustMote(container) {
     return reveal(key, doClick);
   }
   controllers.summon = function (id, doClick) { return summonOrClick(id, !!doClick); }; // show; optionally activate
-  controllers.reveal = function (id) { return summonOrClick(id, false); }; // alias — bring it into view (no poke)
-  controllers.click = function (id) { return summonOrClick(id, true); };  // alias — bring it into view AND activate it
   // The private list helper returns an array of pokeable ids for internal scripting.
   // no arg → every id; an exact room name → that room's ids; anything else → ids starting with that prefix.
   controllers.summon.list = function (filter) {
@@ -133772,11 +133760,6 @@ function spawnDustMote(container) {
     if (SUMMON_ROOMS.indexOf(f) !== -1) return summonHits(f); // a room name → that room's ids
     return all.filter(function (id) { return id.toLowerCase().indexOf(f) === 0; }); // else a prefix filter
   };
-
-  // Private boolean verbs retained only for internal controller composition.
-  function verbTarget(name) { var key = String(name == null ? "" : name).toLowerCase().trim().replace(/[()"']/g, ""); var command = key && controllers[key]; return command && typeof command.set === "function" ? command : null; }
-  controllers.go = function (name) { var command = verbTarget(name); return command ? command.set(true) : "go what? e.g. go(\"party\") · go(\"smoker\") · go(\"laptop\") · go(\"blacklight\")"; };
-  controllers.no = function (name) { var command = verbTarget(name); return command ? command.set(false) : "no what? e.g. no(\"party\") · no(\"smoker\") · no(\"laptop\") · no(\"blacklight\")"; };
 
   // ── audio sources ──────────────────────────────────────────────────────────
   // The four real recordings in the shared monitor/phone player: report the current song or play
@@ -133808,7 +133791,6 @@ function spawnDustMote(container) {
   }
   controllers.guitar = function () { return consoleInstrumentTap("garden-guitar", "guitar — Markéta rotation"); };
   controllers.ukulele = function () { return consoleInstrumentTap("garden-ukulele", "ukulele — Orit / Dan rotation"); };
-  controllers.ukelele = controllers.ukulele; // common misspelling, same command
 
   // sound("<id>") — a dev-console toy: play any one of the loft's curated one-shot sound
   // effects by id (every SFX here maps to an existing play*Sound with safe defaults — no new
@@ -134118,7 +134100,6 @@ function spawnDustMote(container) {
     narrate(true, "🐈 here, kitty — she pads over to say hi.", "");
     return prev;
   };
-  controllers.kitten = controllers.cat; // private identity alias used by the typed cat capability
   controllers.kitty = function () {
     if (window.__goToStage) window.__goToStage("office"); // summon the cat to the office
     var walk = document.getElementById("witchy-chest-cat-walk");
@@ -134308,7 +134289,6 @@ function spawnDustMote(container) {
     narrate(on, "🟣 blacklight on — everything fluoresces.", "blacklight off — the lights come up.");
     return prev;
   };
-  controllers.uv = controllers.blacklight; // private identity alias used by the typed blacklight capability
   // irene.set(true) starts a random visit; irene.pose(name) chooses a held pose.
   // The cat behaviors only read right
   // with the loose cat in the nook, so those first fetch the cat there (releasing it from the
@@ -134464,7 +134444,7 @@ function spawnDustMote(container) {
       return legacy(contact.trim());
     }; } }
   });
-  var computerCommand = promote("computer", {
+  promote("computer", {
     read: function () { return elementClass("office-pc-desk-trio", "on"); },
     methods: { open: function (legacy) { return function (app) {
       if (typeof app !== "string" || !app.trim()) throw new TypeError("computer.open(app) requires an app name.");
@@ -134492,10 +134472,6 @@ function spawnDustMote(container) {
       }; }
     }
   });
-  controllers.uv = controllers.blacklight;
-  controllers.kitten = controllers.cat;
-  controllers.whistler = controllers.dog;
-  controllers.monitor = computerCommand;
 })();
 (function () {
   var gmailBtn = document.getElementById("rsvp-gmail-btn");

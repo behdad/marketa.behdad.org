@@ -44,12 +44,12 @@ check(s.autoPhase1 === false && s.autoParty === false,
   "autonomous Madla calls retain the phase-two and party-off gate",
   { phase1: s.autoPhase1, party: s.autoParty });
 check(s.explicitPhase1 && s.explicitPhase1.promise && s.explicitPhase1.ring,
-  "madla() rings explicitly during phase 1", s.explicitPhase1);
+  "the private Madla owner rings explicitly during phase 1", s.explicitPhase1);
 check(s.answer && s.answer.answered && s.answer.room === "office" && s.answer.phone,
   "an explicit Madla call answers over the current room without panning",
   s.answer);
 check(s.explicitParty && s.explicitParty.promise && s.explicitParty.ring,
-  "madla() rings explicitly while the party is on", s.explicitParty);
+  "the private Madla owner rings explicitly while the party is on", s.explicitParty);
 check(s.forced && !s.forced.result && !s.forced.ring,
   "a third Madla ring attempt is refused until reset", s.forced);
 check(s.aKeyIdle && s.aKeyIdle.room === s.aKeyIdle.beforeRoom &&

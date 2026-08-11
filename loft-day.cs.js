@@ -1,4 +1,4 @@
-T["cs"] = {
+window.__loftMessages["cs"] = {
   "age_forms": [
     "už {n}!",
     "teď už {n}!",

@@ -102,12 +102,12 @@ var harness = String.raw`<script>
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
       switchCoach.classList.contains("show") &&
       switchCoachPopup.querySelector(".hunt-coach-copy").textContent === "When the time comes, end the party here." &&
-      T.cs.hunt.party_switch_coach === "Až přijde čas, ukonči párty tady." &&
+      window.__loftMessages.cs.hunt.party_switch_coach === "Až přijde čas, ukonči párty tady." &&
       getComputedStyle(switchCoachArrow).fill === "rgb(239, 23, 23)" &&
       document.activeElement !== document.getElementById("garden-lightswitch") &&
       !/end the party here/i.test(document.getElementById("hunt-caption").textContent),
     JSON.stringify({ shown: switchCoach.classList.contains("show"), copy: switchCoachPopup.querySelector(".hunt-coach-copy").textContent,
-      cs: T.cs.hunt.party_switch_coach, fill: getComputedStyle(switchCoachArrow).fill,
+      cs: window.__loftMessages.cs.hunt.party_switch_coach, fill: getComputedStyle(switchCoachArrow).fill,
       caption: document.getElementById("hunt-caption").textContent }));
   check("both bridge coaches share one box, dismiss control, and continuous dancing-arrow contract",
     popupStyleSignature(switchCoachPopup) === roomPopupSignature &&
@@ -152,8 +152,8 @@ var harness = String.raw`<script>
   var roadtripOffered = window.__offerPartyRoadtripInvite && window.__offerPartyRoadtripInvite();
   check("the Road Trip exchange stays behind 10/10 and keeps its authored opening line",
     !roadtripOffered && !window.__phoneMessageReceived("downstairs_entrance") &&
-    T.en.msg_downstairs_entrance_body === "Fancy a road trip?" &&
-    T.cs.msg_downstairs_entrance_body === "Nechceš vyrazit na výlet?");
+    window.__loftMessages.en.msg_downstairs_entrance_body === "Fancy a road trip?" &&
+    window.__loftMessages.cs.msg_downstairs_entrance_body === "Nechceš vyrazit na výlet?");
   check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
   // Put Act Two on its first reception beat, then stop the party before its delayed

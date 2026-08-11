@@ -102,7 +102,7 @@ var T_NAMES = {
   cs: { "patricia-son": namePairs[1] && namePairs[1][1], "patricia-daughter": namePairs[1] && namePairs[1][2] }
 };
 function extractRoles(src) {
-  // pull the role_* map values from T.en so tipText resolves the real strings
+  // pull the role_* map values from the English dictionary so tipText resolves the real strings
   var out = {};
   var keys = ["role_godson", "role_mniece", "role_niece", "role_mnephew", "role_nephew"];
   keys.forEach(function (k) {

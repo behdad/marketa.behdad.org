@@ -5,7 +5,6 @@
 
 var fs = require("fs");
 var path = require("path");
-var vm = require("vm");
 var lib = require("./lib");
 
 var root = path.join(__dirname, "..");
@@ -21,28 +20,29 @@ function check(ok, label, detail) {
   }
 }
 
-var start = html.indexOf("var T = {");
-var end = html.indexOf("\n};\nvar LOFT_CREDITS", start);
-var sandbox = {};
-check(start >= 0 && end > start, "T dictionary source is discoverable");
-if (start >= 0 && end > start) {
-  vm.runInNewContext(html.slice(start, end + 3), sandbox);
+function readMessages(lang) {
+  var source = fs.readFileSync(path.join(root, "loft-day." + lang + ".js"), "utf8");
+  var prefix = 'window.__loftMessages["' + lang + '"] = ';
+  if (source.slice(0, prefix.length) !== prefix || source.slice(-2) !== ";\n") return {};
+  return JSON.parse(source.slice(prefix.length, -2));
 }
-var T = sandbox.T || { en: {}, cs: {} };
+var messages = { en: readMessages("en"), cs: readMessages("cs") };
+check(Object.keys(messages.en).length > 0 && Object.keys(messages.cs).length > 0,
+  "external message dictionaries are discoverable");
 var shared = [
   "game_score", "game_best", "game_ready", "game_over", "game_paused", "game_cleared",
   "game_new", "game_play_again"
 ];
 
-check(shared.every(function (key) { return T.en[key] && T.cs[key]; }),
+check(shared.every(function (key) { return messages.en[key] && messages.cs[key]; }),
   "shared game terms exist in English and Czech",
-  shared.filter(function (key) { return !T.en[key] || !T.cs[key]; }).join(", "));
-check(T.en.game_over === "GAME OVER" && T.cs.game_over === "KONEC HRY",
+  shared.filter(function (key) { return !messages.en[key] || !messages.cs[key]; }).join(", "));
+check(messages.en.game_over === "GAME OVER" && messages.cs.game_over === "KONEC HRY",
   "Game over has one canonical bilingual label");
-check(T.en.mines_lose.includes("<br>") && T.cs.mines_lose.includes("<br>") &&
+check(messages.en.mines_lose.includes("<br>") && messages.cs.mines_lose.includes("<br>") &&
       /minesMsgEl\.innerHTML\s*=/.test(html),
   "Mines authors a clean bilingual break before its game-over aside");
-check(T.en.game_new === "NEW GAME" && T.en.game_play_again === "PLAY AGAIN",
+check(messages.en.game_new === "NEW GAME" && messages.en.game_play_again === "PLAY AGAIN",
   "New game and Play again remain distinct round actions");
 check(!/\b(?:pacman_ready|pacman_over|pacman_new|tetris_score|tetris_best|tetris_restart|tetris_touch_restart)\s*:/.test(html),
   "Pac-Man and Tetris do not duplicate shared vocabulary keys");
@@ -59,13 +59,13 @@ check(/window\.__gameText\("game_over"\)/.test(html) &&
       /window\.__gameText\("game_score"\)/.test(html) &&
       !/game over · ×/.test(html),
   "Flair-Catch and Invaders localize terminal Score presentation");
-check(T.en.hunt.flair_hint.indexOf("Move Pouria") >= 0 &&
-      T.en.hunt.arcade_hint.indexOf("Space fires") >= 0 &&
-      T.en.hunt.arcade_hint.indexOf("← →") >= 0 &&
-      T.cs.hunt.flair_hint.indexOf("Pouriou") >= 0 &&
-      T.cs.hunt.arcade_hint.indexOf("← →") >= 0,
+check(messages.en.hunt.flair_hint.indexOf("Move Pouria") >= 0 &&
+      messages.en.hunt.arcade_hint.indexOf("Space fires") >= 0 &&
+      messages.en.hunt.arcade_hint.indexOf("← →") >= 0 &&
+      messages.cs.hunt.flair_hint.indexOf("Pouriou") >= 0 &&
+      messages.cs.hunt.arcade_hint.indexOf("← →") >= 0,
   "scene-game captions keep concise bilingual action guidance");
-check(T.en.quiz_again === "Take quiz again" && T.cs.quiz_again,
+check(messages.en.quiz_again === "Take quiz again" && messages.cs.quiz_again,
   "Quiz keeps its scoped repeat action bilingual");
 var harness = [
   '<pre id="__report">pending</pre>',

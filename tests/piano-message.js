@@ -49,8 +49,8 @@ var HARNESS = String.raw`<script>
       csRow && csRow.text === "daee joon, můžu si zahrát na piano?",
       (enRow && enRow.text) + " / " + (csRow && csRow.text));
     check("Hannah's Persian address remains authored in italics in both dictionaries",
-      /^<em>daee joon<\/em>/.test(T.en.msg_hannah_piano_body_a) &&
-      /^<em>daee joon<\/em>/.test(T.cs.msg_hannah_piano_body_a));
+      /^<em>daee joon<\/em>/.test(window.__loftMessages.en.msg_hannah_piano_body_a) &&
+      /^<em>daee joon<\/em>/.test(window.__loftMessages.cs.msg_hannah_piano_body_a));
     check("Hannah's request is offered in the party message schedule",
       window.__partyTextChoices && window.__partyTextChoices().indexOf("hannah_piano") !== -1);
     check("Hannah's message uses the canonical piano transition", pianoCalls === 1, String(pianoCalls));

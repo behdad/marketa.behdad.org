@@ -163,14 +163,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
       report.steps.copy = {
         en: {
-          drive: T.en.hunt.entrance_roadtrip_drive,
-          paused: T.en.hunt.entrance_roadtrip_pause_line,
-          cruise: T.en.hunt.entrance_drive_cruise_active
+          drive: window.__loftMessages.en.hunt.entrance_roadtrip_drive,
+          paused: window.__loftMessages.en.hunt.entrance_roadtrip_pause_line,
+          cruise: window.__loftMessages.en.hunt.entrance_drive_cruise_active
         },
         cs: {
-          drive: T.cs.hunt.entrance_roadtrip_drive,
-          paused: T.cs.hunt.entrance_roadtrip_pause_line,
-          cruise: T.cs.hunt.entrance_drive_cruise_active
+          drive: window.__loftMessages.cs.hunt.entrance_roadtrip_drive,
+          paused: window.__loftMessages.cs.hunt.entrance_roadtrip_pause_line,
+          cruise: window.__loftMessages.cs.hunt.entrance_drive_cruise_active
         }
       };
     } catch (error) {

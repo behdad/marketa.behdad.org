@@ -14,7 +14,7 @@ var worker = fs.readFileSync(path.join(ROOT, "chat.js"), "utf8");
 var manifestSource = fs.readFileSync(path.join(ROOT, "code-snippets", "manifest.js"), "utf8");
 var manifestContext = { window: {} };
 vm.runInNewContext(manifestSource, manifestContext);
-var snippets = manifestContext.window.LOFT_CODE_SNIPPETS;
+var snippets = manifestContext.window.__loftCodeSnippets;
 function snippetDescriptor(filename) { return snippets.find(function (entry) { return entry.filename === filename; }); }
 function snippet(filename) { return fs.readFileSync(path.join(ROOT, snippetDescriptor(filename).path), "utf8"); }
 var failures = 0;

@@ -41,8 +41,8 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__entranceDriveStep(16);
     report.coach = {
       caption: document.getElementById("hunt-caption").textContent,
-      en: T.en.hunt.entrance_drive_auto_desktop,
-      cs: T.cs.hunt.entrance_drive_auto_desktop
+      en: window.__loftMessages.en.hunt.entrance_drive_auto_desktop,
+      cs: window.__loftMessages.cs.hunt.entrance_drive_auto_desktop
     };
 
     key("keydown", "Control", "ControlLeft", { ctrlKey: true });

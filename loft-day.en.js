@@ -1,4 +1,4 @@
-T["en"] = {
+window.__loftMessages["en"] = {
   "age_forms": [
     "{n} years old now!",
     "{n} years old already!",

@@ -246,9 +246,9 @@ function sortedDictionary(value) {
 function parseLoftDictionary(lang) {
   var name = "loft-day." + lang + ".js";
   var source = fs.readFileSync(path.join(ROOT, name), "utf8");
-  var prefix = 'T["' + lang + '"] = ';
+  var prefix = 'window.__loftMessages["' + lang + '"] = ';
   if (source.slice(0, prefix.length) !== prefix || source.slice(-2) !== ";\n") {
-    throw new Error(name + ' must contain only `T["' + lang + '"] = { ... };`');
+    throw new Error(name + ' must contain only `window.__loftMessages["' + lang + '"] = { ... };`');
   }
   var value = JSON.parse(source.slice(prefix.length, -2));
   var canonical = prefix + JSON.stringify(sortedDictionary(value), null, 2) + ";\n";
@@ -274,7 +274,7 @@ function loftDictionaryCacheToken(filename) {
 }
 
 function checkLoftDictParity(file, html) {
-  var init = html.indexOf("<script>var T = {};</script>");
+  var init = html.indexOf("<script>window.__loftMessages = {};</script>");
   var enToken = loftDictionaryCacheToken("loft-day.en.js");
   var csToken = loftDictionaryCacheToken("loft-day.cs.js");
   var enTag = '<script src="loft-day.en.js?v=' + enToken + '"></script>';
@@ -291,6 +291,11 @@ function checkLoftDictParity(file, html) {
     fail(file + ": external dictionaries initialize and load EN before CS");
   } else {
     pass(file + ": external dictionaries initialize and load EN before CS");
+  }
+  if (/\bwindow\.(?:T|LOFT_CODE_SNIPPETS)\b/.test(html)) {
+    fail(file + ": split-script bootstrap exposes only private integration globals");
+  } else {
+    pass(file + ": split-script bootstrap exposes only private integration globals");
   }
   var en, cs;
   try {
@@ -481,10 +486,13 @@ function checkLiteralLocalAssets() {
 function checkCodeSnippetDelivery() {
   var dir = path.join(ROOT, "code-snippets");
   var manifest = fs.readFileSync(path.join(dir, "manifest.js"), "utf8");
-  var list = /LOFT_CODE_SNIPPETS\s*=\s*Object\.freeze\(\s*(\[[\s\S]*?\])\s*\)/.exec(manifest);
+  var list = /__loftCodeSnippets\s*=\s*Object\.freeze\(\s*(\[[\s\S]*?\])\s*\)/.exec(manifest);
   var entries = [];
   try { entries = list ? JSON.parse(list[1]) : []; } catch (_error) {}
   var issues = [];
+  if (/\bwindow\.LOFT_CODE_SNIPPETS\b/.test(manifest)) {
+    issues.push("manifest exposes the retired public integration global");
+  }
   var token = "transport-" + crypto.createHash("sha256").update(manifest).digest("hex").slice(0, 12);
   var html = fs.readFileSync(path.join(ROOT, "loft-day.html"), "utf8");
   if (html.indexOf('src="code-snippets/manifest.js?v=' + token + '"') === -1) {
@@ -1083,8 +1091,8 @@ function checkSongPipelineKillSwitch(file, script) {
   else pass(file + ": song pipeline has a source-only kill switch");
 }
 
-// Every data-i / data-*-i / data-note-key attribute names a T dictionary key; a
-// typo'd or missing key renders blank text (setLang writes innerHTML from T[key]).
+// Every data-i / data-*-i / data-note-key attribute names a message-dictionary key; a
+// typo'd or missing key renders blank text (setLang writes its authored HTML).
 // Verify each referenced key exists in the en dictionary (cs parity is checked above).
 function checkI18nKeys(file, script, html) {
   if (!script) return;

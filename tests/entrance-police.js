@@ -864,13 +864,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       prepareEncounter();
       meetPolice(180);
       window.__entranceRoadtripPoliceStep(180, 1);
-      report.steps.czech = window.T && window.T.cs && window.T.cs.hunt ? {
-        escape: window.T.cs.hunt.entrance_roadtrip_police_escape,
-        fine: window.T.cs.hunt.entrance_roadtrip_police_ticket,
-        court: window.T.cs.hunt.entrance_roadtrip_police_summons,
-        centerlinePursuit: window.T.cs.hunt.entrance_roadtrip_police_centerline_pursuit,
-        centerlineTicket: window.T.cs.hunt.entrance_roadtrip_police_centerline_ticket,
-        centerlineTitle: window.T.cs.hunt.entrance_roadtrip_arrest_centerline_title
+      report.steps.czech = window.__loftMessages && window.__loftMessages.cs && window.__loftMessages.cs.hunt ? {
+        escape: window.__loftMessages.cs.hunt.entrance_roadtrip_police_escape,
+        fine: window.__loftMessages.cs.hunt.entrance_roadtrip_police_ticket,
+        court: window.__loftMessages.cs.hunt.entrance_roadtrip_police_summons,
+        centerlinePursuit: window.__loftMessages.cs.hunt.entrance_roadtrip_police_centerline_pursuit,
+        centerlineTicket: window.__loftMessages.cs.hunt.entrance_roadtrip_police_centerline_ticket,
+        centerlineTitle: window.__loftMessages.cs.hunt.entrance_roadtrip_arrest_centerline_title
       } : null;
 
       prepareEncounter();

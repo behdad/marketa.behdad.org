@@ -162,12 +162,12 @@ window.addEventListener("load", function () { setTimeout(function () {
     key("keyup", "Enter", "Enter");
     report.restarted = { coach: coach(), state: window.__entranceRoomState() };
     report.copy = {
-      en: T.en.hunt.entrance_drive_coach_cruise_text,
-      cs: T.cs.hunt.entrance_drive_coach_cruise_text,
-      gearEn: T.en.hunt.entrance_drive_coach_auto_gear_desktop,
-      gearCs: T.cs.hunt.entrance_drive_coach_auto_gear_desktop,
-      pedalEn: T.en.hunt.entrance_drive_coach_auto_pedals_desktop,
-      pedalCs: T.cs.hunt.entrance_drive_coach_auto_pedals_desktop
+      en: window.__loftMessages.en.hunt.entrance_drive_coach_cruise_text,
+      cs: window.__loftMessages.cs.hunt.entrance_drive_coach_cruise_text,
+      gearEn: window.__loftMessages.en.hunt.entrance_drive_coach_auto_gear_desktop,
+      gearCs: window.__loftMessages.cs.hunt.entrance_drive_coach_auto_gear_desktop,
+      pedalEn: window.__loftMessages.en.hunt.entrance_drive_coach_auto_pedals_desktop,
+      pedalCs: window.__loftMessages.cs.hunt.entrance_drive_coach_auto_pedals_desktop
     };
     var reentry = document.getElementById("entrance-roadtrip-reenter");
     reentry.classList.add("show");
@@ -279,8 +279,8 @@ window.addEventListener("load", function () { setTimeout(function () {
         })
     };
     report.copy = {
-      en: T.en.hunt.entrance_drive_coach_auto_pedals_touch,
-      cs: T.cs.hunt.entrance_drive_coach_auto_pedals_touch,
+      en: window.__loftMessages.en.hunt.entrance_drive_coach_auto_pedals_touch,
+      cs: window.__loftMessages.cs.hunt.entrance_drive_coach_auto_pedals_touch,
       liveWidth: document.getElementById("entrance-drive-coach-pedals-touch").getComputedTextLength()
     };
     window.setLang("cs");

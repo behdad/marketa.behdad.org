@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  window.LOFT_CODE_SNIPPETS = Object.freeze([
+  window.__loftCodeSnippets = Object.freeze([
     { "filename": "space-filler.py", "path": "code-snippets/space-filler-py.txt" },
     { "filename": "trailer.js", "path": "code-snippets/trailer-js.txt" },
     { "filename": "hello.py", "path": "code-snippets/hello-py.txt" },

@@ -604,8 +604,8 @@ under headless virtual time.
 
 ## Localization and UI contracts
 
-Player-visible English and Czech copy lives in `loft-day.en.js` and `loft-day.cs.js` as `T["en"]`
-and `T["cs"]`. Keys are alphabetically ordered, including nested message objects; arrays retain
+Player-visible English and Czech copy lives in `loft-day.en.js` and `loft-day.cs.js` under the
+private integration global `window.__loftMessages`. Keys are alphabetically ordered, including nested message objects; arrays retain
 their authored order. Add both keys in the same change. `tests/check.js` enforces canonical sorting,
 syntax, and recursive parity. Write printable Unicode directly as UTF-8. `setLang()` assigns authored
 translation HTML, so preserve intentional markup and use the established `brk-sm` / `brk-lg` breaks
@@ -716,7 +716,7 @@ references.
 | Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
 | Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
 | Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |
-| Code files/editor | `LOFT_CODE_SNIPPETS`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker`, `codeSetBuffer`, `codeSyncLineNumbers`, `__resetMonitorCodeFiles` |
+| Code files/editor | `window.__loftCodeSnippets`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker`, `codeSetBuffer`, `codeSyncLineNumbers`, `__resetMonitorCodeFiles` |
 | Typed API | `initLoftApi`, `window.loft.api`, `__loftStateChanged` |
 | Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `PUBLIC_MONITOR_APPS` |
 | Entry/recovery | `urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, `stopCinematic` |

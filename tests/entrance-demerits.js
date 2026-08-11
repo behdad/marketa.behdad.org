@@ -66,9 +66,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.decayedPersisted = JSON.parse(localStorage.getItem(recordKey));
       window.setLang("cs");
       report.steps.czech = {
-        suspended: window.T.cs.hunt.entrance_roadtrip_suspended,
-        warning: window.T.cs.hunt.entrance_roadtrip_demerit_warning,
-        ticket: window.T.cs.hunt.entrance_roadtrip_police_ticket
+        suspended: window.__loftMessages.cs.hunt.entrance_roadtrip_suspended,
+        warning: window.__loftMessages.cs.hunt.entrance_roadtrip_demerit_warning,
+        ticket: window.__loftMessages.cs.hunt.entrance_roadtrip_police_ticket
       };
       document.getElementById("__report").textContent = JSON.stringify(report);
     } catch (error) {

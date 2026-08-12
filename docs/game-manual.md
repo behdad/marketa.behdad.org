@@ -58,9 +58,8 @@ exploration.
 
 Start the Party in the Garden, then visit all ten rooms. Introductions and the map keep count;
 visiting is enough, and lower-room games remain optional. Guests stay active while you explore. Tap
-the DJ for song requests without losing the booth's scratch reaction. Authored Party moments such
-as the dances, toasts, photos, cake ceremonies, sparklers, and bouquet toss temporarily switch off
-the UV lights, then return them to the state they had before the moment.
+the DJ for song requests. Dances, toasts, photos, cake ceremonies, sparklers, and the bouquet toss
+can interrupt the ordinary Party scene without ending it.
 
 A coach eventually points to the Garden wall switch. Use it to end the Party, dismiss it and keep
 dancing, or leave the Party running while you explore. After the Party has started and all ten rooms
@@ -84,17 +83,14 @@ two-step opening coach is modal: the highlighted navigation and Reset controls r
 but the room stays inert until each step is dismissed. The first Party's wall-switch lesson and its
 post-Party room-map and first-unread Messages lessons are modal too. Each highlighted target stays
 live: using the switch, map, or unread message performs its normal action and retires that coach;
-unrelated controls remain blocked. They hold new notifications and calls until they leave. Other
-coach bubbles remain compact and non-modal. Opening a message never performs its suggested activity: use the separate activity arrow.
-Old messages remain readable even when their activity has expired. While the Office monitor or laptop
-is zoomed, message previews and unread bubbles wait until that focused view closes, just as they do
-while the phone is open.
-Irene and Hannah may ask to play the Bedroom's tic-tac-toe, Balcony Block Party, or the Cuddly piano;
-each activity arrow takes you straight to the named game.
+unrelated controls remain blocked. Party lessons hold new notifications and calls until they leave;
+other coach bubbles remain compact and non-modal. Opening a message never performs its suggested
+activity: use the separate activity arrow. Old messages remain readable after their activity expires,
+and previews wait while a device or focused Office screen is open. Irene and Hannah may invite you to
+a game; its activity arrow takes you there.
 On a birthday, Behdad or Markéta's greeting arrives as Party begins with the usual activity arrow.
-Tapping it starts that person's birthday ceremony, then opens their postcard eight seconds later; the
-action remains available if you want an encore. The birthday ribbon is a second explicit shortcut:
-it skips the solve, starts Party and the cake immediately, then opens the same timed postcard.
+Tapping it starts that person's ceremony and postcard, and remains available for an encore. The
+birthday ribbon is a shortcut that starts the Party and the same celebration.
 
 If you are unsure what comes next:
 
@@ -155,53 +151,23 @@ a typing field, `?` opens the complete shortcut card.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 
-An open, idle Office laptop alternates the crossed-caps and sleeping-couple screensavers in a
-shuffled starting order until activity wakes it. Its unmarked top-left bezel corner starts or
-advances the reel, like the matching monitor control.
+An open, idle Office laptop runs its screensaver until activity wakes it. Its unmarked top-left bezel
+corner starts or advances the reel, like the matching monitor control.
 
-The JavaScript console, Code, and Python share the typed `loft` scripting API. JavaScript preloads
-it. In either JavaScript console, use `help loft` for top-level objects and `help loft.weather` to
-drill down; the equivalent JavaScript calls are `loft.help()` and `loft.help(loft.weather)`. List
-the catalogue with `loft.api.capabilities()`, and read its revision with `loft.api.info()`.
-`clear`, `exit`, and `quit` remain console controls. Bare `ls` points visitors to the Linux app;
-other shell commands are ordinary JavaScript errors.
+The JavaScript console, Code, and Python share the typed `loft` scripting API. Use `help loft` or
+`loft.help()` to browse it, and `loft.api.capabilities()` for the complete catalogue. Controls use
+explicit reads and writes such as `loft.party.status()` and `loft.party.set(true)`; `null` restores
+automatic ownership for weather and similar environment controls. Room-bound actions bring their
+surface into view, but active controller and prerequisite gates still apply. Typed help and
+`loft.api.describe(...)` explain why an action is unavailable.
 
-Controls use explicit reads and writes such as `loft.party.status()` and
-`loft.party.set(true)`. Weather controls accept `set(null)` to restore automatic ownership and
-include `mode: "auto"|"on"|"off"` in `status()`. The room API covers all ten rooms (`loft.bar`
-aliases Kitchen; `loft.party` aliases Garden). Use `await loft.room.go("garden")` for navigation;
-an explicitly invoked physical room action brings its required room or interactive surface into
-view before it runs. Scripts may enter any room or start Road Trip outside story progression, but
-conflicting, controller, and prerequisite gates remain real. Use
-`loft.api.describe(...)` or typed help to see the current reason and, when one direct API step can
-honestly enable it, a structured remedy. Use `await loft.caption.show("hello")` for a literal caption.
+Code keeps edits to default files as local overrides. Right-click an edited default to restore that
+file, or use **Reset files…** to clear all Code files and the draft. Code resets do not affect the
+game checkpoint.
 
-Preview another date or clock time with `loft.calendar.date.set("2027-05-01")` and
-`loft.calendar.time.set({hours: 18, minutes: 0})`; the matching `.reset()` actions restore the real
-calendar and clock. `loft.poetry.hafez.read()` draws a Hafez reading; the scene-gated
-`await loft.poetry.rumi.read()` starts and awaits one complete quiet nighttime Cuddly exchange;
-another reading is unavailable until it finishes, and leaving the scene or starting the Party
-cancels it. Block Party is the
-`"block-party"` choice for `loft.minigame.start(...)`. `await loft.sky.eclipse.play()` brings the
-Balcony into view and starts the eclipse appropriate to its current sky.
-`await loft.people.irene.pose("catplay")` waits for the cat's walk-in and the requested pose; sending
-Irene home, leaving Cuddly, resetting, or choosing another pose cancels that pending request.
-
-Code lists the unsaved buffer first, then default and user files by basename. Unsaved and untouched
-defaults are italic; overridden defaults and user files are upright. Tooltips—not icons or colors—
-identify ownership. Editing a default stores a local override; right-click its edited filename to
-reset only that local edit, or use its Reset control to restore the public file. After confirmation,
-the sidebar's **Reset files…** clears all saved files, default overrides, and the draft, then restores
-the default list plus a blank unsaved buffer. This affects Code files, not the game checkpoint.
-Fixed line numbers stay beside the editor; long lines scroll instead of wrap.
-
-The canonical `trailer.js` loads only when played, and Watch Trailer and Code both use its local
-override. Use `await loft.trailer.play()`, `loft.trailer.status()`, and
-`await loft.trailer.stop("restore")` to interrupt and restore the active visit. Normal Trailer
-completion returns to Welcome back when a resumable save exists, or to CLICK ME otherwise; scripts
-can request that same entry surface with `await loft.trailer.stop("entry")`. For apps,
-`loft.app.close(...)` preserves a session while
-`loft.app.kill(...)` resets it.
+Watch Trailer and Code use the same locally editable `trailer.js`. The Trailer preserves your
+captured visit. For apps, `loft.app.close(...)` preserves a session while `loft.app.kill(...)`
+resets it.
 
 ### Fast-forward shortcuts
 
@@ -250,15 +216,15 @@ ten rooms, finish or dismiss the car coach and choose **Road Trip**. A route sta
 shoulder and keeps the selected transmission.
 
 Routes progress west through Calgary, Banff, and Abraham Lake; choose a later segment for a shorter
-drive. The three-part HUD ribbon tracks the legs and hatches skipped ones. On the Abraham Lake leg,
-a missed Camping turnoff returns after 30 seconds of desktop travel or 20 seconds on mobile.
+drive. The three-part HUD ribbon tracks the legs and hatches skipped ones. A missed Camping turnoff
+returns later.
 
 Unfocusing pauses the highway. Reloading while it is visible restores that view paused; leaving
 Entrance instead offers **Continue**, **New**, or, once reached, **Camping**.
 
-At Camping, follow the caption through fire, stew, stargazing, and sleep. Stew burns after 45
-seconds of counted cooking; Markéta’s open notebook pauses that clock. The fire stays lit until the
-sleep prompt. The finale reports time spent in the loft and offers to share it in the RSVP.
+At Camping, follow the caption through fire, stew, stargazing, and sleep. Stew can burn; Markéta’s
+open notebook pauses its cooking clock. The finale reports time spent in the loft and offers to
+share it in the RSVP.
 
 ## Saves and browser notes
 
@@ -270,9 +236,8 @@ The finale clock counts only while the started game is visible, focused, and not
 across Continue. Game **Start over** clears the checkpoint and clock and returns the car to automatic
 in park; it is separate from Code's **Reset files…**.
 
-The roughly 100-second **Trailer** is separate from the checkpoint and clock. Its reversible Office
-beat waits for the real Python prompt before giving that runtime the monitor's full themed Kill.
-Trailer scenes never solve or reward the player's game.
+The **Trailer** is separate from the checkpoint and clock. Its scenes never solve or reward the
+player's game.
 
 - English and Czech are available, and the choice persists when storage is allowed.
 - Reduced-motion preferences simplify animation without removing activities.

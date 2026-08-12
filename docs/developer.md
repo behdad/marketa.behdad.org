@@ -2,9 +2,9 @@
 
 This guide is the architectural map for `loft-day.html`, the interactive Loft game. It explains where
 state lives, which functions own transitions, how the major game modes fit together, and how to
-change the file without reviving recurring bugs. It intentionally does not duplicate the player
+change the file without splitting ownership. It intentionally does not duplicate the player
 instructions in [the game manual](game-manual.md), the signal graph in [the audio guide](audio.md),
-or the full workflow and browser incident log in [`AGENTS.md`](../AGENTS.md).
+or workflow and browser-specific guidance in [`AGENTS.md`](../AGENTS.md).
 
 ## Contents
 
@@ -49,12 +49,11 @@ Supporting boundaries are:
 - `DEBUGGING.md`: practical Chrome DevTools Protocol, WebKit, and visual-test recipes.
 - `pyodide/`, `linux/`, `harfbuzzjs/`, `dos/`, `doom/`, `duke/`, and `q3/`: pinned runtime
   deliverables. Treat each as vendored product data, not generated output or an upgrade target.
-  Pyodide's core and starter wheels are local; user imports outside that trimmed set resolve only
-  from the pinned v314.0.2 official package repository configured by `packageBaseUrl`.
+  Pyodide's core and starter wheels are local; other supported imports use its version-pinned
+  official package repository.
 - `princejs/`: the same kind of pinned runtime, but untracked — `./fetch-princejs.sh` restores it
-  from upstream at a pinned SHA and applies `princejs-shim.patch` (provenance in the script
-  header). `loft-day.html` probes for it and falls back to the upstream GitHub Pages build when the
-  directory is absent.
+  from the source and patch recorded in the script header. The app falls back to the pinned upstream
+  build when the directory is absent.
 
 The web server exposes the git working tree directly. `.htaccess` is therefore a security boundary,
 not just routing configuration: it blocks developer documents, tests, Worker source/configuration,
@@ -175,45 +174,18 @@ settled room or paused drive state, not initialize a second instance. Lower-room
 return to the paired upper room only when the user explicitly asks to go up; Back/Escape first
 dismisses the active game, projector, or overlay owned by that lower room.
 
-Once the entry loader reaches 100%, the dollhouse primes its Cuddly still and ten preview render
-trees one at a time, starting with the first browser-reported idle period and spacing later slices
-so their render-tree costs cannot bunch together. The work continues through the loader fade and
-opening Kitchen. Opening the picker early completes whatever remains, while leaving the Kitchen
-discards a partial raster warm-up.
-Browsers without `requestIdleCallback` retain the on-demand path. Once warm, the hidden panel and
-parked upper-room SVG sources stay alive for later views. Normal stage parking still owns those
-off-screen animations. When frame health is low, the open dollhouse additionally pauses the live
-source animations it finds and resumes only that recorded set on close or frame-rate recovery.
-The first visible view paints the shell and lower floor immediately, then activates the five large
-upper-room `<use>` previews one per frame; later views retain the complete live set.
-The Office preview follows physical monitor power: its real dark screen remains visible while off,
-and a static native-SVG caps thumbnail covers it while powered on. A
-temporary class removes the live monitor screen tree from the nested `<use>`; closing the picker
-also detaches that Office clone from paint, while captured card clicks prevent monitor summons.
+The dollhouse reuses the live room trees, so opening it must not create a second controller or wake
+parked room work. Preview warm-up is optional performance work: the picker must remain correct when
+idle scheduling is unavailable or interrupted. Keep its source animations under the same room and
+frame-health ownership used by the main strip.
 
-The live Office monitor retains every app's DOM and runtime state, but only the foreground HTML app
-group participates in layout; inactive SVG app groups use `display:none`. At room scale, HTML stays
-in its canonical `foreignObject`. Monitor zoom promotes the foreground root itself—not a clone—and
-its SVG control owner into `#monitor-html-overlay`, an ordinary 124×42 CSS-zoomed DOM surface fitted
-to `#monitor-zoom-box`. Zoom-out and room navigation restore both nodes before the SVG moves. The
-policy is overlay-by-default for current and future `foreignObject` HTML; the explicit root-id
-denylist is reserved for a surface with a focused incompatibility proof. Native SVG layers such as
-Credits never enter this path. State/app/resize/fullscreen changes refit once; idle frames perform no
-geometry reads. `tests/monitor-html-overlay.js` covers the inventory, exact screen alignment,
-reparented-node identity/focus/state, fullscreen, room parking, click ownership, and the one-pixel
-Console caret at desktop and 390px landscape widths. The desktop is the one mixed paint stack: its
-native wallpaper/menu bar remain below the promoted icon grid, while its later search/system controls
-move above that grid; this avoids an SVG canvas occluding the HTML icons in Chrome. The same test
-asserts the complete Code layout and the shared terminal rule: sparse output starts at the top, then
-all three scrollbacks pin their newest line once full, including under the WebKit cascade.
-Shoot is the one live-runtime sizing exception inside that same overlay policy: its chooser uses the
-authored CSS zoom, but Doom, Duke, and Quake receive the physical screen box before their iframe is
-created because WebKit will not composite an iframe-owned WASM canvas through ancestor CSS zoom.
-
-Room parking hides monitor paint only when Office becomes `stage-far`, after the strip transition
-settles, so a running app does not blank while the room is still sliding out. App-owned native screen
-fills remain the room-scale fallback for foreignObject rounding edges; the zoom overlay itself must
-meet all four native screen edges without a seam.
+The Office monitor retains app DOM and runtime state across zoom and room changes. At room scale,
+HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,
+into the ordinary-DOM `#monitor-html-overlay`, then restores it before the SVG moves. Native SVG apps
+stay in the SVG path. This identity-preserving promotion is the default for HTML monitor apps and is
+the WebKit-safe boundary for focused interaction; iframe-owned game canvases must be sized from the
+physical screen box rather than through ancestor CSS zoom. Keep room parking, overlay fitting, and
+mixed SVG/HTML stacking covered by `tests/monitor-html-overlay.js`.
 
 ### Morning routine and free exploration
 
@@ -231,27 +203,15 @@ first start. That latch opens free exploration and remains set even after Party 
 cleared only by a real reset. Do not use the music, lighting, guest population, or
 `__gardenPartyOn` alone as a proxy for story progress.
 
-Party ignition must remain layout-free: ambient `partyGroove` updates are idempotent class/style
-writes, and `__syncGardenFlashPace` preserves the already-armed delayed first flash unless the
-freeze state actually changes. Do not reintroduce geometry reads while the full floor is being
-revealed; they synchronously lay out the multi-room SVG.
-
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
 cannot relight or strand the blacklight.
 
-Exact-day birthdays are announced through the phase-two `bd_<who>` Messages row. Its repeatable
-standard arrow action queues the existing birthday router for the cake or authored remote venue; a
-matching postcard opens eight seconds after its reveal begins. Party/cake teardown cancels that
-timer, while the bounded queue is checkpointed and replays a transient in-flight ceremony after
-recovery. The greeting bypasses ordinary autonomous rewrite/drip deferral and lands synchronously at
-the first Party transition: exact-day setup defines the row during the splash and registers it in
-the shared phase-two hold queue. `shareAutoShow` must not auto-open a birthday card when Party starts,
-and birthday delivery must not pre-render an inline postcard. Phone reset/checkpoint restore
-re-register the exact-day row after replacing phone state, preventing a retained visit from erasing
-the held greeting. The birthday ribbon fast-forwards through Party and enqueues the same serialized
-cake/postcard owner as the message arrow; it must not create a parallel ceremony timer.
+Exact-day birthday messages, the birthday ribbon, cake, and postcard all route through the shared
+birthday ceremony owner. Keep delivery serialized and cancel its transient work on Party teardown;
+checkpoint restore may re-enter an interrupted ceremony. A shortcut must enqueue that owner rather
+than create a second cake or postcard lifecycle.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been
@@ -271,45 +231,30 @@ Keep these ownership boundaries intact:
 - `roadtripExplorationComplete()` answers whether the story prerequisites are met;
   `roadtripAuthorized()` additionally requires Party to be stopped.
 - `roadtripState` owns route selection, saved run, accepted trip, pause, Camping availability, and
-  the signed per-leg distances painted by the three-part route ribbon; paused-run snapshots retain
-  those display distances.
+  route-ribbon progress.
 - The Entrance checkpoint records highway presentation intent separately from its paused-run data:
   reload reopens a previously visible highway with transport paused, while a deliberately parked run
   stays behind the **Continue** choice.
-- The transmission preference survives ordinary room changes and Continue, while the Entrance
-  checkpoint adapter's Fresh Game reset clears it and restores AUTO/P with fresh controller latches.
+- Transmission preference survives room changes and Continue; Fresh Game resets it.
 - Driving input belongs to the HUD/controller only while `__entranceDriveKeyboardOwnership` says it
   does. A CSS class or visible dashboard is not sufficient keyboard authority.
 - While the undismissed AUTO coach is active, `porscheDriveCoachAllows` gives only the current
-  semantic action (`engine`, `steer`, `gear`, `cruise`, or `pedal`) mutation authority. Keep every
-  keyboard, pointer, touch, and direct SVG path behind that shared gate; restore normalizes old
-  mid-coach snapshots so a stale range or moving car cannot strand the next instruction.
-- Driving reserves `Space` for setting or retargeting cruise; only braking cancels it. On the
-  highway the same key also releases transport pause, while `Enter` toggles pause/resume. Its
-  Escape/Backspace ladder is active → transport-paused → parked; a key arriving at an editable
-  target or while a foreground device covers the scene never enters that ladder. Camping and
-  terminal police beats retain their own input priority.
+  semantic action mutation authority. Keep every keyboard, pointer, touch, and direct SVG path
+  behind that shared gate.
 - Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases
   that suspension. This parks Party foreground work without pretending the story latch was reset.
-- The five `--roadtrip-rumble-*` properties are registered as non-inherited: they animate the HUD
-  root only. Do not turn them back into inherited variables, which makes every shoulder tick restyle
-  the full dashboard SVG.
-- A fresh highway preserves the prior campsite while it is hidden. `arriveRoadtripCamp()` resets it
-  immediately before switching to `roadtrip-route-camp`; direct Camping re-entry preserves it.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order
 is fire, stew, stargazing, sleep/finale. Restore and replay must project the appropriate scene before
 it becomes visible, so an old finale or unfinished road frame never flashes on entry.
 
-The stew’s elapsed cooking time is checkpointed, but the notebook modal is not. Its animation-frame
-clock advances only while Camping is attended and Markéta’s notebook is closed; opening the notebook
-must pause elapsed time without stopping or resetting the batch, and closing it resumes from the same
-value.
+The stew’s elapsed cooking time is checkpointed, but the notebook modal is not. Its clock advances
+only while Camping is attended and the notebook is closed; closing the notebook resumes the same
+batch.
 
-Do not duplicate route geometry, traffic constants, finale timing, or the Camping audio graph in
-this guide. Work from the controller itself, add a focused regression test for the behavior being
-changed, and use [the audio guide](audio.md) for `__updateRoadtripCampAudio` and cabin exposure.
+Route geometry, traffic tuning, and finale pacing belong in the controller. The Camping audio graph
+belongs in [the audio guide](audio.md).
 
 ## Input and feedback routing
 
@@ -342,28 +287,23 @@ not reliable.
 ### Captions and coaches
 
 `captionArbiter` is the only writer of `#hunt-caption`; `tests/check.js` enforces that boundary. It
-keeps the latest persistent base for the active viewport and one transient slot whose kind is overlay
-or exclusive. Producers declare an owner, room/lower-room scope, priority, duration, attended- or
-wall-time clock, and optional escaped replacements. Across owners a claim must strictly beat the
-visible transient; lower or equal claims are rejected rather than queued, and preempted transients
-are consumed so they cannot resurface. Same-owner chatter coalesces in place. Base state may update
-under a transient, while scope exit cancels scoped transient ownership.
+keeps the persistent instruction for the active viewport separate from transient feedback. Producers
+declare ownership, scope, priority, and whether expiry follows attended or wall time. Higher-priority
+claims consume displaced feedback instead of letting stale copy resurface; scope exit cancels the
+corresponding claim.
 
 Use `__captionBase`, `__captionOverlay`, `__captionExclusive`, and
 `__cancelCaption(tokenOrOwner)`. `setCaption` and `__setLowerRoomCaption` remain stable-base helpers;
 `__captureCaptionPublisher()` is the canonical delayed-base helper because it captures both viewport
 scope and the room-visit generation. Keyed claims rerender on language changes;
-`loft.caption.show()` is literal-only. Intro, recovery, and
-Trailer are exclusive; Road Trip story beats outrank score/collision feedback; police and Camping
-terminal state reject incidental copy. Checkpoint restoration batches caption derivation and paints
-the resulting semantic base once.
+`loft.caption.show()` is literal-only. Intro, recovery, and Trailer are exclusive; terminal story
+state must not yield to incidental feedback. Checkpoint restoration derives and paints one settled
+base.
 
 Caption expiry and producer handoffs use the shared attention scheduler (`__scheduleAttended`, with
 `__cancelAttention` for owner/token cleanup). Attended jobs park completely while hidden or
-unfocused—there is no polling ticker—and resume with their exact remainder. Use that scheduler for
-actionable timed results and story reveals; wall time is reserved for effects whose time must elapse
-off-screen. Focused coverage is in `tests/caption-arbiter.js`, `tests/caption-delayed-producers.js`,
-and `tests/caption-roadtrip-arbitration.js`.
+unfocused and resume with their remainder. Use that scheduler for actionable results and story
+reveals; reserve wall time for effects that must elapse off-screen.
 
 Coaches are persistent instructional overlays, not captions. Their own controller decides when they
 appear, whether navigation may continue behind them, and which action dismisses them. A coach that
@@ -371,14 +311,10 @@ points at a moving room control must be hidden during the pan and placed only af
 settles. Keep coach focus/tab behavior consistent with the global input contract; decorative SVG
 groups should never become accidental tab stops.
 
-`#opening-guide-coach` and the three `.party-onboarding-coach` overlays carry `.modal-coach`: their
-large cards and dimmed hit layers make the scene lock visible. Party's switch, room-map, and lazy
-first-unread Messages overlays use four-piece scrims around one elevated live target. Clicking that
-target performs its normal action and retires the coach once; unrelated pointer and unmodified
-keyboard input remains blocked until target use, ×, Enter, Escape, or Backspace acknowledges it.
-The Party controller orders and holds notification/call attention across these lessons. Later
-Messages action hints, piano, shooting, and Drive coaches remain compact/non-modal; their narrower
-action sequencing stays local to their controller.
+The opening coach and three Party onboarding coaches are modal. Their highlighted target remains live
+and performs its normal action; unrelated input stays blocked until the lesson is acknowledged. The
+Party controller owns onboarding order and the notification/call hold across its lessons. Compact
+coaches keep their narrower sequencing inside their feature controller.
 
 ## Apps, automation, and chat
 
@@ -394,21 +330,18 @@ App focus is constrained on touch devices. Follow `appTouchConstrained` and
 `appAutoFocusTextControl`: opening an app on mobile must not automatically summon the software
 keyboard unless the user explicitly chose a text control.
 
-Phone Mines moves the monitor's shared board node into `.pm-mines-host`. `sizePhoneMines()` derives
-a near-square topology from the live `.mines-body` content box above its fixed toolbar; the
-`ResizeObserver` may refit an untouched deal, but preserves a started deal until the player uses its
-restart control. Unmounting restores the monitor's 16×7 layout. Keep the edge, cell, toolbar, and
-resize-state contract covered in `tests/phone-mines-layout.js`.
+Phone Mines reuses the monitor's board node. Mounting may size an untouched deal for the phone, but
+must not reshape a started game; unmounting restores monitor ownership. Keep this shared-node
+lifecycle covered in `tests/phone-mines-layout.js`.
 
 The Python app lazy-loads the local Pyodide core. Both REPL input and Code's Python runner pass
 source through `loadPackagesFromImports()` before evaluation, so ordinary imports can fetch an
-unbundled official wheel from the pinned v314.0.2 package CDN. Keep `indexURL` local, keep
+unbundled official wheel from the version-pinned package repository. Keep `indexURL` local, keep
 `packageBaseUrl` version-pinned, and do not point automatic import loading at unversioned PyPI;
 explicit `micropip` remains the separate path for compatible pure-Python PyPI packages.
-The typed `loft.app.python.status()` query reports the runtime owner's real stopped/loading/ready/failed state;
-use it when a public script must wait for the visible CPython prompt rather than treating app-open
-as interpreter readiness. A load-generation guard prevents a reset or Kill during initialization
-from letting a stale Pyodide promise resurrect the discarded runtime.
+The typed `loft.app.python.status()` query reports runtime readiness; app-open is not equivalent to
+an initialized interpreter. A load-generation guard prevents reset or Kill during initialization
+from resurrecting a discarded runtime.
 
 App and minigame state follows the same durable/transient rule as rooms. Preserve a meaningful
 selection or score only when a checkpoint adapter says so; close cameras, calls, dialogs, media,
@@ -425,73 +358,36 @@ intervals, and one-shot games during reset or restore.
 - `perform(id, args, options)` for validated actions;
 - `subscribe(listener)` for state notifications.
 
-The registry covers all ten rooms and the Entrance car, Road Trip, and Camping controllers in
-addition to the established party, media, apps, calls, weather, minigames, and album surfaces. Room
-ids stay canonical in results. The same registry mechanically creates discoverable JavaScript namespaces:
-`loft.kitchen`, `loft.cuddly.chest`, `loft.roadtrip`, and so on. `loft.bar === loft.kitchen` and
-`loft.party === loft.garden`; aliases never create duplicate capabilities or noncanonical results.
-`loft.help(loft.kitchen)` and `loft.help(loft.cuddly.chest)` resolve by registry object identity, not
-object stringification. `loft.help()` lists only immediate top-level namespaces;
-namespace help drills down one level at a time, and callable help prints one exact typed signature.
-The transport methods keep their names under `loft.api`; non-conflicting registered API leaves such
-as `loft.api.info()` are installed and documented by the same namespace builder.
-Its groups, namespaces, and capability rows use one fixed code-unit comparator, keeping JavaScript
-and Python help identical across browser locales.
-Calendar birthdays live under `loft.calendar.birthday.*`, authored season previews under
-`loft.environment.season.*`, the occasion-card preview under `loft.share.card.open()`, and the
-Hafez/Rumi readers under `loft.poetry.*`.
-Calendar date/time previews live under `loft.calendar.date.*` and `loft.calendar.time.*`; their
-status queries return the effective values while their reset actions restore automatic timekeeping.
-JavaScript-native helpers that deliberately return raw values rather than transport envelopes stay
-under `loft.util`, `loft.fonts`, and `loft.presentation.svg`. JavaScript loads the raw HarfBuzz.js
-module with `loft.fonts.harfbuzz()`; Python imports its bundled `uharfbuzz` module normally.
-`capabilities()` remains the complete structured machine discovery surface. Every row carries both
-the compatibility `available` boolean and an `availability` object. An unavailable row or
-`describe(id, args)` result includes the exact current `reason` and only includes a structured
-`remedy: {id, args}` when that one typed action genuinely clears the gate. `NOT_AVAILABLE` and
-preview-isolation failure envelopes carry the same object; Python exposes it through
-`LoftError.availability`, `.reason`, and `.remedy`. Typed leaf help renders the current reason and
-remedy locally.
+The capability registry is the single catalogue for rooms, controllers, apps, environment, media,
+and games. It mechanically creates the JavaScript namespaces, typed help, and Python bridge. Keep
+canonical ids in results; aliases such as Bar/Kitchen and Party/Garden must not create duplicate
+capabilities. Use the fixed registry comparator so discovery remains identical across locales and
+runtimes.
 
-Typed availability describes runtime safety, not story permission. Scripts may navigate to any of
-the ten rooms and open the Entrance car or start Road Trip before those surfaces are unlocked by the
-normal clue trail; the ordinary UI progression gates remain unchanged. Discovery is side-effect-free.
-An explicitly performed physical action routes through the canonical room owner, awaits that room's
-settle lifecycle, and then dispatches its existing interaction owner. Active-session, finite-action,
-media-controller, transaction, and mutually exclusive activity gates remain real. Cross a story
-frontier through its canonical room or Road Trip controller rather than forging DOM classes or
-checkpoint fields.
+Every manifest row defines its stable id, kind, arguments, aliases, result envelope, completion
+mode, and current availability. Discovery is side-effect-free. An unavailable result includes a
+reason and may include a one-step typed remedy only when that action genuinely clears the gate.
+Python exposes the same availability object through `LoftError`.
 
-Every manifest row has a stable `id`, `kind`, ordered `args`/`argOrder`, mechanically derived
-`aliases`, result-envelope schema, and `completion: "instant"|"finite"`. Instant setters apply synchronously even though
-`api.perform()` returns a uniform Promise envelope; finite room pans and lifecycles are awaitable.
-Environment owners accept exactly `true`, `false`, or `null`: `null` releases the override to the
-automatic clock/weather/Party owner, `status()` reports the effective boolean, and `mode()` reports
-`"auto"`, `"on"`, or `"off"`. The string `"auto"` is invalid. Ordinary boolean controls accept
-only booleans.
+Typed availability describes runtime safety, not ordinary UI progression. Explicit scripts may
+reach rooms before the clue trail does, but physical actions still route through the canonical room
+or controller owner and respect active-session, finite-action, media, preview, and exclusivity gates.
+Never implement an API action by forging DOM classes or checkpoint fields.
 
-Room-independent state changes leave the view in place. Use `loft.room.go("garden")` for navigation;
-room-bound calls, minigames, props, and Party moments also bring their required visible surface into
-view when explicitly performed. `runInRoom()` serializes only route/settle/owner dispatch, temporarily
-re-enters the initiating action around synchronous owner calls, and never holds global action
-ownership across a wait. It rechecks real gates at queued dispatch, and lower-to-lower actions use
-the canonical lateral navigation owner. This keeps overlapping routed actions ordered without
-merging their state events. A routing refusal becomes an exact `NOT_AVAILABLE` envelope rather than
-a generic failure.
+Instant setters apply synchronously even though `perform()` returns a uniform Promise envelope;
+finite navigation and lifecycles are awaitable. Automatic environment owners accept `null` to
+release an override; ordinary boolean controls accept only booleans. Room-independent changes leave
+the current view in place, while explicit room-bound actions navigate through `runInRoom()` and
+recheck their real gate at dispatch.
 
 Successful owner transitions call `__loftStateChanged`, which increments `stateVersion` and emits
 `loft:statechange`. If an API action changes the game but subscribers do not hear about it, fix the
 owner transition; do not make the API mutate a DOM projection directly.
 
-The in-game consoles evaluate ordinary JavaScript over the same public `loft.*` tree. Their only
-API shorthand is `help loft...`, which resolves a rooted public path and calls `loft.help(...)`;
-`clear`, `exit`, and `quit` are lifecycle controls, while bare `ls` only points to the Linux app.
-Their scrollback contains REPL commands, results, errors, and boot/help messages; controller
-narration logs only to the browser developer console.
-Tab completion walks the live Loft object—including after the `help ` prefix—and Code autocomplete
-shows every immediate child of the object at the caret in its scrollable list. Selecting a namespace
-drills into it instead of flattening or truncating the tree. `window.loft` is the sole app-authored
-public Window root.
+The in-game consoles evaluate ordinary JavaScript over the public `loft.*` tree. Help and completion
+derive from that live object rather than a parallel command table; console lifecycle controls remain
+separate. Controller diagnostics log only to the browser developer console. `window.loft` is the
+sole app-authored public Window root.
 
 ### Window ownership constraints
 
@@ -502,16 +398,11 @@ Treat these as source-authoring rules, not properties to infer from whether a te
   cross-closure integration or diagnostics; it is private, unstable, and must never become a user API.
 - Do not declare application `var`, `let`, `const`, `function`, or `class` bindings at classic-script
   Program scope. `var`/function declarations become Window properties, while top-level lexical
-  declarations create bare globals that a Window-key inventory cannot see. Wrap authored code in an
-  IIFE or place it inside an existing closure. Loop and switch-local bindings are fine.
-- `window`, `globalThis`, top-level/sloppy `this`, `self`, `top`, `parent`, `frames`, and
-  `document.defaultView` all reach the same browser global for this rule. Do not pass one through
-  aliases, object/rest patterns, callbacks, timers, Promises, or meta-call machinery and then mutate it.
-- Do not add, replace, or delete properties on Window, `Window.prototype`, `Object.prototype`, or a
-  shared prototype reachable through `loft.__proto__`. This includes `Object.*`, `Reflect.*`,
-  `.call`/`.apply`/`.bind`, computed keys, destructuring targets, updates, and deletes. Authored child
-  prototypes such as `window.loft.Widget.prototype` are ordinary private implementation objects and
-  may be used normally.
+  declarations create bare globals that a Window-key inventory cannot see. Put authored code inside
+  a closure and do not mutate the browser global through an alias.
+- Do not add, replace, or delete properties on Window, browser/shared prototypes, or a prototype
+  reachable through `loft`. Authored child objects and their own prototypes remain ordinary private
+  implementation state.
 - Never replace or remove a browser baseline property such as `window.open`, even temporarily. Never
   publish a public-looking property and delete it before the final inventory. A transient global is
   still a contract violation.
@@ -523,90 +414,44 @@ Treat these as source-authoring rules, not properties to infer from whether a te
 
 `tests/global-surface.js` compares own and inherited baseline descriptors, verifies named properties,
 and inventories the final Window. `tests/global-static-audit.js` is a conservative zero-network Acorn
-check for transient and lexical violations that runtime inventory cannot observe. It is defense in
-depth, not a soundness proof for arbitrary JavaScript: novel data-flow syntax can require a new
-fixture, and conservative analysis can reject safe code. Review changes against the rules above;
-do not weaken or endlessly generalize the analyzer merely to accommodate avoidable clever syntax.
+check for transient and lexical violations that runtime inventory cannot observe. Review changes
+against the rules above; do not weaken the analyzer merely to accommodate avoidable syntax.
 
 Lazy Pyodide, v86, and Turnstile scripts are armed behind a configurable accessor immediately before
-injection. One generation-owned record retains that capture together with its script node, listeners,
-watchdog, and settlement. Success, error, timeout, cancellation, and reset all release it idempotently,
-remove the script, and delete the temporary Window property; descriptor identity prevents a stale
-generation from releasing its successor. HarfBuzz's pinned factories are instead compiled directly in a
-private function scope because its wrapper uses a non-configurable top-level function declaration.
-Keep every runtime consumer on these captured lexical owners rather than reading vendor globals from
-Window.
+injection. The generation owner must release the temporary global and script resources idempotently
+on every settlement path without disturbing a successor. HarfBuzz's pinned factories instead compile
+inside a private function scope. Runtime consumers use these captured lexical owners rather than
+reading vendor globals from Window.
 
 `__chatApiManifest()` is the compact machine boundary for JavaScript Code assistance: typed
 capability rows plus a short primitives/signatures list. Do not add a parallel human command index
 to that payload. Code's model treats the manifest as authoritative; its examples and generated
 drafts use the `loft.*` namespaces and completion metadata.
 
-Code's canonical virtual-file descriptors live in `code-snippets/manifest.js`; each pairs the
-visitor-facing `.js` / `.py` filename (which determines language) with its one same-origin source
-path. IONOS executes raw `.py` extension components as CGI, so every physical and requested source
-uses a handler-safe `*-js.txt` / `*-py.txt` transport while Code still presents the conventional
-filename. Each descriptor carries the exact content token Code appends to its source fetch.
-`tests/check.js` keeps every descriptor and token exact, unique, present, and free of duplicate or
-raw `.js` / `.py` source files, and locks the content-versioned manifest load.
-The sidebar always puts the unsaved buffer first, then sorts canonical and visitor-created basenames
-only while rendering. Unsaved and untouched canonical filenames are italic; edited canonical and
-visitor-created filenames are upright, with exact ownership tooltips and no path prefixes. A
-canonical file stays fresh until an own property with its filename exists in
-`localStorage["deskCodeBuiltinOverrides"]`; an empty-string property is a valid override. Reset
-removes that property and reveals the current canonical source. Visitor-created files remain
-separately owned by `deskScripts` / `deskPythonScripts`, and an exact canonical filename is an edit
-of that canonical file rather than a second colliding identity. At initialization, a legacy
-same-name visitor property moves to the override map before that redundant property is removed;
-an already-present override, including an empty one, wins. Do not reintroduce sample versions,
-migration keys, or byte-comparison upgrades. `tests/lib.js` supplies exact repository bytes through
-a test-only resource hook because `file://` cannot fetch siblings.
+Code's canonical virtual-file descriptors live in `code-snippets/manifest.js`. They pair the
+visitor-facing filename with one same-origin, content-versioned source. Physical JavaScript and
+Python samples use handler-safe text transport names because the host treats raw `.py` paths as CGI;
+`tests/check.js` enforces this manifest boundary.
 
-Only an edited `.code-item.builtin` row exposes the filename-specific context action. Its
-`data-code-builtin` identity is passed to `__resetMonitorCodeBuiltin`, whose native confirmation
-then removes exactly that own override property. An active row also cancels its pending autosave,
-repaints from the lazily loaded canonical source, and keeps the row selected; inactive resets do
-not disturb the current buffer. The minus control shares the same `codeResetBuiltinOverride` path.
+Canonical files, local overrides, visitor-created files, and the unsaved draft have distinct storage
+ownership. An exact canonical filename edits that canonical file rather than creating a collision.
+Resetting one built-in removes only its override; **Reset files…** clears Code-owned files, drafts,
+pending work, and errors, but must not reset runtimes, packages, Linux, or game/browser state.
 
-The Code sidebar's broader `Reset files…` context action calls `__resetMonitorCodeFiles` after a
-native confirmation. It removes only `deskScripts`, `deskPythonScripts`, `deskCodeBuiltinOverrides`,
-`deskCodeUnsaved`, `deskCodeDraft`, and `deskCodeLanguage`; it also cancels pending Code saves,
-runs/repeats, queued Code-to-Python handoffs, and remembered Code errors. It must not reset either
-runtime, installed Python packages, Linux state, or unrelated game/browser storage.
+The editor's native textarea remains the sole focus, selection, and scroll owner. Its line-number
+gutter is noninteractive and must stay out of positioned or transformed layers beneath the scaled
+monitor `foreignObject`.
 
-The editor is a static `.code-editor` grid: a noninteractive line-number gutter sits beside the
-native, non-wrapping textarea, which remains the sole focus, selection, and scroll owner.
-`codeSyncLineNumbers` mirrors its vertical scroll while `codeSetBuffer` covers programmatic loads,
-resets, drafts, and edits. Keep the gutter out of positioned/transformed layers under the scaled
-monitor `foreignObject` (WebKit bug 23113).
+The Pyodide console installs an embedded `loft.py` module that builds its namespaces from
+`window.loft.api.capabilities()`; there is no second Python capability roster. Queries return
+ordinary Python values, finite actions are awaitable, `None` maps to JavaScript `null`, and failed
+results raise `loft.LoftError`. The bridge calls only discovered typed ids and never exposes private
+hooks or arbitrary JavaScript evaluation. Loft-aware help stays narrow enough that normal Python
+`help()` keeps its native behavior.
 
-The Pyodide console installs an embedded `loft.py` module beside the browser Turtle module. On
-`import loft`, it discovers `window.loft.api.capabilities()` and mechanically constructs Python
-namespaces from the dotted capability ids, their authored `argOrder`, and their manifest aliases;
-there is no second capability roster to synchronize.
-Boot loads only `micropip`, installs the embedded modules, and automatically imports `loft`.
-fontTools, Brotli, uharfbuzz, and other packages remain absent until submitted source imports them;
-uharfbuzz then installs from the pinned self-hosted wheel while lock-file packages use Pyodide's
-version-pinned repository.
-JavaScript, Python, and Linux console chrome and runtime messages are deliberately English-only and
-live beside their implementations rather than in the bilingual game dictionaries.
-Queries return ordinary Python dictionaries, lists, and scalars. Actions start immediately and
-return an awaitable result, so a setter can be issued directly while a finite action can be awaited.
-The bridge recursively converts Python `None` to JavaScript `null`—Pyodide otherwise converts a bare
-`None` argument to `undefined`—and converts returned `null` values back to `None`. Invalid or failed
-API results raise `loft.LoftError` when read or awaited. The module calls only discovered typed ids;
-it does not expose arbitrary JavaScript evaluation or private `window.__…` hooks.
-
-The module wraps Python's `help` dispatcher narrowly: `help(loft)`, `help(loft.weather)`, and typed
-capability objects print the same rooted text as `loft.help(...)` and JavaScript, while `help(str)`
-and every non-Loft target retain Python's native pydoc behavior. Native
-font and graphics helpers also stay under the module root (`loft.fonts.*` and
-`loft.presentation.svg.*`); the REPL receives no bare compatibility commands.
-
-Keep the Python Code-assistant prompt compact. It describes `import loft` and a few representative
-forms while the runtime manifest supplies discovery; do not send the large human console help table
-or hand-maintain a Python command list. `tests/python-loft-api.js` exercises the bridge against the
-repository's pinned Pyodide runtime, including null conversion and Promise/error behavior.
+Keep the Python Code-assistant prompt compact and let the runtime manifest supply discovery. Console
+chrome and runtime messages are deliberately English-only and live beside their implementations,
+not in the bilingual game dictionaries.
 
 ### Chat Worker boundary
 
@@ -649,42 +494,19 @@ inherit stale DOM state or accidentally reset an existing save.
 The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
 `__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
 applies the saved state; starting fresh must reset transient systems before the initial room paints.
-The authored timing and world sequence lives in the `code-snippets/trailer-js.txt` transport and
-calls only public typed `loft.*` capabilities plus ordinary JavaScript timing. It is both the
-executable timeline and the editable canonical file shown in Code; do not mirror its body in HTML or
-another sample. The manifest exposes only its transport path: first activation resolves the local
-built-in override or lazily fetches the canonical bytes, then uses the same async JavaScript source
-runner as Code's Run button. The ordinary script requests `loft.trailer.play()` when run outside
-an active reel and opens its preview transaction itself once activated; the IDE has no Trailer
-filename branch. The inline entry controller keeps overlay DOM, geometry, trusted-click audio
-priming, and takeover/error
-teardown private.
-
-Public `presentation.*` actions expose only translated cards/captions/chapters, two finite cut
-phases, and the fixed semantic `interaction.*` targets while a Trailer preview is active; overlay
-DOM and geometry remain private. `app.kill` delegates to the phone reset owner or the monitor's real
-themed Kill lifecycle instead of pretending Close is a Kill, and its finite monitor result settles
-only after that lifecycle finishes. Do not export arbitrary selectors or duplicate
-game/presentation renderers.
+The executable and Code-editable Trailer timeline has one canonical source in
+`code-snippets/trailer-js.txt`. It calls public typed `loft.*` capabilities and runs through Code's
+ordinary async source runner; do not mirror its sequence in HTML or add filename-specific IDE logic.
+Entry-owned overlay DOM, geometry, audio priming, and teardown stay private. Public presentation
+helpers expose semantic actions, not selectors or duplicate renderers.
 
 `session.preview` is the general reversible boundary for scripted presentations. `begin()` captures
-the semantic checkpoint, raw checkpoint bytes, and the complete browser store; generation-owned
-teardowns stop preview effects. `end("restore")` returns to the captured visit, while
-`end("fresh")` leaves a clean Kitchen runtime and `end("entry")` rebuilds the existing recovery gate
-for a valid resumable save or the normal CLICK ME intro otherwise. Every disposition restores the
-pre-preview browser store and raw recovery checkpoint byte-for-byte; the entry check parses those
-raw bytes without applying, clearing, or rewriting them. Preview mode suppresses checkpoint,
-progression/reward, Album, notification, and external/destructive writes; hide, pagehide, and
-uncaught-error paths restore automatically. A global abort during Trailer first stops the reel, then
-restores through that same owner, so the timeline cannot keep mutating state after its preview
-transaction ends. Public preview helpers activate the real room, minigame, Road Trip, Camping, and
-score owners rather than duplicating renderer geometry or audio.
-
-`tests/cine.js` covers the authored reel, narration lead time, exact Road Trip/Camping and minigame
-owners, score continuity, EN/CS desktop/mobile title layout, and natural/takeover/attention/error
-teardown, including null-detail generic script errors. `tests/api-preview.js` separately covers the
-general transaction, write isolation, restore, clean-fresh disposition, and non-destructive
-recovery/intro entry selection.
+the semantic checkpoint, raw checkpoint, and browser store. Its restore, fresh, and entry
+dispositions all restore the pre-preview store and recovery bytes before projecting the requested
+surface. Preview mode suppresses checkpoint, reward, Album, notification, and external/destructive
+writes; hide, pagehide, error, and abort paths tear down generation-owned work and restore safely.
+Preview helpers activate the real room, game, Road Trip, Camping, and score owners rather than
+duplicating their presentation or audio.
 
 `loftSessionExport` and `loftSessionImport` are deliberately narrower than a full checkpoint: they
 move progress and puzzle state without exporting bulky or personal app data. Do not broaden that
@@ -702,12 +524,6 @@ Use those owners for ambient loops, autonomous sound, timer-spawned effects, and
 `document.hidden` alone is insufficient: a visible but unfocused window can keep timers alive while
 animation frames are throttled. Autonomous one-shot sounds must also require
 `document.hasFocus()`; direct user-triggered sounds may rely on the triggering interaction.
-
-The laptop saver reel follows the same ownership rule: its order is shuffled once at load, its equal
-caps/sleep slots advance only while the Office is attended, and both the cycle timeout and the active
-caps animation frame are paused or cleared by the shared saver lifecycle. Its unmarked top-left bezel
-control starts or advances that reel without passing pointer/click activity to the laptop's ordinary
-wake, lid, or zoom handlers.
 
 Particle systems must have bounded cardinality. Prefer a fixed population that replenishes itself
 from each particle's animation completion, or cap and remove stale nodes before spawning. An
@@ -736,9 +552,9 @@ and native SVG `<image>` fallbacks because room-scale and Dollhouse rendering st
 SVG tree. Mirror state onto stable scope classes through `syncScopeMirrors`; avoid introducing a
 top-anchored `:has()` dependency for a large scene.
 
-The maintained incident patterns and verified workarounds live in [`AGENTS.md`](../AGENTS.md); test
-recipes live in [`DEBUGGING.md`](../DEBUGGING.md). Consult both before "fixing" behavior seen only
-under headless virtual time.
+Maintained cross-browser constraints live in [`AGENTS.md`](../AGENTS.md); test recipes live in
+[`DEBUGGING.md`](../DEBUGGING.md). Consult both before changing behavior seen only under headless
+virtual time.
 
 ## Localization and UI contracts
 
@@ -749,11 +565,9 @@ syntax, and recursive parity. Write printable Unicode directly as UTF-8. `setLan
 translation HTML, so preserve intentional markup and use the established `brk-sm` / `brk-lg` breaks
 when the two viewport classes need different wrapping.
 
-Each dictionary `<script>` URL carries its own `dict-…` cache token: the first 12 hex characters of
-SHA-256 over that dictionary's exact bytes. `tests/check.js` recomputes each token and prints the
-exact expected value on mismatch; update only the matching tag when a dictionary changes. Local
-test readers and `file://` scratch pages strip the query only after that invariant is checked;
-production HTTP keeps the content-versioned URLs.
+Each dictionary `<script>` URL carries a content token derived from that dictionary's bytes.
+`tests/check.js` reports the exact replacement when a token is stale; update only the changed
+dictionary's tag.
 
 After changing copy or layout, inspect both languages at mobile and desktop widths. Czech strings
 are often longer, and a clean English coach or caption can overlap its target in Czech.
@@ -789,7 +603,7 @@ port nor another developer's server process.
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the
 focused tests closest to the ownership boundary you changed; Enter and menu changes have their named
 mandatory runners. Reserve `play.js` for solve-chain/shared-interaction changes and full regression
-rounds. Do not run an enormous suite instead of adding one regression for a newly discovered bug class.
+rounds. Prefer a focused regression for the behavior being changed over an unrelated broad suite.
 
 Most browser runners share helpers in `tests/lib.js`. Read a test's header before changing its
 timing model or browser plumbing. A passing source assertion is not a visual proof, and a screenshot
@@ -832,9 +646,9 @@ the multi-megabyte file and briefly receive truncated HTML. If a post-deploy rep
 page stacked or unstyled, compare local/live hashes and reproduce at the reported viewport before
 attributing it to the latest feature.
 
-Cloudflare edge-caches HTML, `/`, and extensionless aliases for ten minutes. Request cache headers do
-not bypass that rule. Verify a fresh deploy with a new throwaway query string or wait for the TTL;
-avoid repeated pulls, which increase the torn-read window. The chat Worker has a separate deployment
+Cloudflare edge-caches HTML, `/`, and extensionless aliases. Request cache headers do not bypass that
+rule. Verify a fresh deploy with a new throwaway query string or wait for the configured TTL; avoid
+repeated pulls, which increase the torn-read window. The chat Worker has a separate deployment
 path—pulling the static checkout does not publish `chat.js`.
 
 ## Source search map
@@ -845,16 +659,16 @@ references.
 | Concern | Search terms |
 | --- | --- |
 | Upper/lower navigation | `STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
-| First-run solves and replay | `__finishSolveAdvance`, `__kitchenDoNext`, `__gardenDoNext`, `__cuddlyDoNext`, `__officeDoNext` |
-| Party/free exploration | `setGardenParty`, `setPartyMomentState`, `__partyGuestAssignedElsewhere`, `__barCoupleNow`, `__officeCoupleNow`, `__balconyHangoutNow`, `setSecondRound`, `seenRooms` |
+| First-run solves and replay | `__finishSolveAdvance`, room `__…DoNext` walkers |
+| Party/free exploration | `setGardenParty`, `setPartyMomentState`, `setSecondRound`, `seenRooms` |
 | Entrance and Road Trip | `porscheDrive`, `roadtripState`, `roadtripAuthorized`, `__entranceDriveStep` |
 | Camping | `campFireState`, `campStewState`, `campStargazingState`, `campSleepState` |
 | Keyboard routing | `activeControlFocused`, `activateCurrentRoom`, `__entranceDriveKeyboardOwnership` |
-| Captions | `captionArbiter`, `__captureCaptionPublisher`, `__captionOverlay`, `__setLowerRoomCaption`, `refreshHuntCaption` |
+| Captions | `captionArbiter`, `__captureCaptionPublisher`, `__captionOverlay` |
 | Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
 | Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
 | Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |
-| Code files/editor | `window.__loftCodeSnippets`, `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeRefreshPicker`, `codeSetBuffer`, `codeSyncLineNumbers`, `__resetMonitorCodeFiles` |
+| Code files/editor | `CODE_BUILTINS`, `deskCodeBuiltinOverrides`, `codeSetBuffer`, `__resetMonitorCodeFiles` |
 | Typed API | `initLoftApi`, `window.loft.api`, `__loftStateChanged` |
 | Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `PUBLIC_MONITOR_APPS` |
 | Entry/recovery | `urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, `stopCinematic` |

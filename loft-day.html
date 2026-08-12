@@ -97380,11 +97380,17 @@ def colormode(mode=None):
     function queueBirthdayCelebration(who) {
       who = String(who || "").toLowerCase();
       if (!/^[a-z][a-z0-9-]{0,39}$/.test(who)) return false;
+      // One explicit birthday intent owns one in-flight ceremony. The Party transition also
+      // releases the greeting, but that informational delivery must never enqueue a duplicate.
+      for (var i = 0; i < birthdayCelebrations.length; i++) {
+        if (birthdayCelebrations[i].who === who) return true;
+      }
       birthdayCelebrations.push({ who: who, phase: "queued" });
       checkpointBirthdayCelebrations();
       runNextBirthdayCelebration();
       return true;
     }
+    window.__queueBirthdayCelebration = queueBirthdayCelebration;
     window.addEventListener("loft:birthdaycakeend", function (event) {
       var detail = event.detail || {};
       if (detail.completed || !birthdayCelebrations.length) return;
@@ -126509,6 +126515,9 @@ function spawnDustMote(container) {
     if (window.__resetCoveredGrill) window.__resetCoveredGrill();
     if (window.__resetLaptop) window.__resetLaptop();
     if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
+    // calReapplyDateTime ran before the phone reset and latched today's birthday. Re-register the
+    // greeting now that the reset has cleared both the thread and the phase-two hold queue.
+    if (window.__queueExactBirthdayTexts) window.__queueExactBirthdayTexts();
     if (window.__resetBalconyDusk) window.__resetBalconyDusk();
     if (window.__syncGrowlightSchedule) window.__syncGrowlightSchedule(true);
     if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle(); // cancel any in-flight storm + drop its .storming on every stage (real-weather's own .storming re-applies within a tick if it's genuinely raining out)
@@ -126888,6 +126897,22 @@ function spawnDustMote(container) {
     return diff >= -b.before && diff <= b.after;
   }
   var bdActive = {}; // who-id → true while the loft is ON that person's birthday; latched so the day's repeated applies fire the one announcement text once
+  window.__exactBirthdayWhos = function () {
+    var s = seasonDate(), out = [];
+    BIRTHDAYS.forEach(function (b) {
+      if (!b.pending && b.m != null && b.m === s.m && b.d === s.d) out.push(b.who);
+    });
+    return out;
+  };
+  window.__queueExactBirthdayTexts = function () {
+    var s = seasonDate(), queued = 0;
+    BIRTHDAYS.forEach(function (b) {
+      if (b.pending || b.m == null || b.m !== s.m || b.d !== s.d) return;
+      bdActive[b.who] = true;
+      if (window.__deliverBirthdayText) { window.__deliverBirthdayText(b.who, b.name); queued++; }
+    });
+    return queued;
+  };
   function applyBirthdays(s) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
@@ -127893,7 +127918,10 @@ function spawnDustMote(container) {
     if (calendarOccasion) return { key: calendarOccasion.sk };
     var birthdays = CAL_BD_BY_DAY[s.m + "-" + s.d] || [];
     if (birthdays.length) {
-      return { text: calBdLabel(birthdays.map(function (b) { return b.name; }).join(" & ")) };
+      return {
+        text: calBdLabel(birthdays.map(function (b) { return b.name; }).join(" & ")),
+        birthdays: birthdays.map(function (b) { return b.who; })
+      };
     }
     var sk = calSeasonKey(s.m, s.d, s.y);
     var announce = sk === "wedding" ? null : occAnnounceDay(sk, s.y);
@@ -128111,7 +128139,17 @@ function spawnDustMote(container) {
   function calSummonFestivity(mo, d, y) {
     if (y == null) y = curCalYear();
     var bds = CAL_BD_BY_DAY[mo + "-" + d];
-    if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
+    if (bds && bds.length) {
+      // A birthday ribbon/calendar day is explicit intent: skip the solve, enter Party, and run
+      // the same serialized cake → eight-second postcard owner as Messages' Celebrate action.
+      // Queue every honoree on a shared date; closing one postcard advances to the next.
+      var birthdayQueued = false;
+      bds.forEach(function (birthday) {
+        if (window.__queueBirthdayCelebration && window.__queueBirthdayCelebration(birthday.who)) birthdayQueued = true;
+      });
+      if (birthdayQueued) return true;
+      if (window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true;
+    }
     if (mo === 3 && d === 19 && window.__activateBicycleDay) return window.__activateBicycleDay();
     if (mo === 3 && d === 20 && window.__activateMarijuanaDay) return window.__activateMarijuanaDay();
     if (mo === 8 && d === 20 && window.__activateMushroomDay) return window.__activateMushroomDay();
@@ -128920,7 +128958,7 @@ function spawnDustMote(container) {
   function shareAutoShow() {
     if (!/loft-day/.test(location.pathname)) return; // auto-pop only in Loft Day, never the RSVP-named entry
     if (window.__tripActive) return;
-    var s = seasonDate(), id = null, birthdayToday = false;
+    var s = seasonDate(), id = null, birthdayToday = !!(window.__exactBirthdayWhos && window.__exactBirthdayWhos().length);
     for (var i = 0; i < BIRTHDAYS.length; i++) {
       var b = BIRTHDAYS[i];
       if (b.pending || b.m == null) continue;
@@ -129950,6 +129988,10 @@ function spawnDustMote(container) {
     setSecondRound(!!p.phase2, { releaseHeld: false });
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
+    // The retained phone can predate this exact birthday. Re-register today's greeting after its
+    // rows have replaced the load-time phone state; phase one keeps it held, phase two releases it
+    // only after the recovery cover has gone.
+    if (window.__queueExactBirthdayTexts) window.__queueExactBirthdayTexts();
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
     if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "beforeStage");
@@ -129975,6 +130017,7 @@ function spawnDustMote(container) {
     // applied. This makes Continue one atomic reveal instead of exposing fresh-page decor.
     recoveryPreviewLook = null;
     hideRecoveryGate();
+    if (window.__secondRound && window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
     syncLoftAttendedTime();
     saveCheckpoint();
     return true;
@@ -132246,6 +132289,8 @@ function spawnDustMote(container) {
         b = document.createElement("button"); b.type = "button"; b.id = "occasion-banner"; b.className = "occasion-banner";
         b.addEventListener("click", function (e) {
           e.stopPropagation();
+          var current = occasionBannerInfo();
+          if (current && current.birthdays && window.__endAttract) window.__endAttract();
           if (window.__summonCurrentFestivity) window.__summonCurrentFestivity();
         });
         vp.appendChild(b);

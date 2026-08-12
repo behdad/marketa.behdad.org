@@ -89,7 +89,7 @@ each activity arrow takes you straight to the named game.
 On a birthday, Behdad or Markéta's greeting arrives as Party begins with the usual activity arrow.
 Tapping it starts that person's birthday ceremony, then opens their postcard eight seconds later; the action remains
 available for an encore. The birthday ribbon is a separate shortcut that skips the solve and starts
-the same ceremony immediately.
+Party and the cake immediately, then opens the same timed postcard.
 
 If you are unsure what comes next:
 

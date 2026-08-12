@@ -245,7 +245,10 @@ timer, while the bounded queue is checkpointed and replays a transient in-flight
 recovery. The greeting bypasses ordinary autonomous rewrite/drip deferral and lands synchronously at
 the first Party transition: exact-day setup defines the row during the splash and registers it in
 the shared phase-two hold queue. `shareAutoShow` must not auto-open a birthday card when Party starts,
-and birthday delivery must not pre-render an inline postcard.
+and birthday delivery must not pre-render an inline postcard. Phone reset/checkpoint restore
+re-register the exact-day row after replacing phone state, preventing a retained visit from erasing
+the held greeting. The birthday ribbon fast-forwards through Party and enqueues the same serialized
+cake/postcard owner as Celebrate; it must not create a parallel ceremony timer.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been

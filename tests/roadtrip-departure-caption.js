@@ -83,6 +83,17 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     snapshot("after-cinematic");
     saveAndReload("pending");
   }
+  async function entranceLast() {
+    window.__closeEntranceRoom();
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom"]);
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__goToStage("balcony");
+    window.__openEntranceRoom();
+    await sleep(80);
+    snapshot("entrance-last", { seen: window.__seenRooms() });
+    finish();
+  }
   async function resumed(step) {
     await continueCheckpoint();
     if (step === "pending") {
@@ -91,11 +102,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       window.__openEntranceRoom();
       await sleep(80);
       snapshot("reached-car");
-      saveAndReload("reached");
+      await entranceLast();
       return;
     }
-    snapshot("continued-reached");
-    finish();
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
@@ -155,10 +164,11 @@ check(step("reached-car") && step("reached-car").entrance && step("reached-car")
   !step("reached-car").departureClass,
   "direct Entrance navigation hands the caption to the car without requiring Party-off",
   step("reached-car"));
-check(step("continued-reached") && step("continued-reached").entrance &&
-  !step("continued-reached").departure.pending && step("continued-reached").departure.acknowledged &&
-  step("continued-reached").key === "lower_entrance_ready",
-  "Continue does not resurrect the pin after the car has taken over", step("continued-reached"));
+check(step("entrance-last") && step("entrance-last").entrance && step("entrance-last").seen.length === 10 &&
+  step("entrance-last").key === "lower_entrance_ready" &&
+  step("entrance-last").text.indexOf("explore all 10 rooms") === -1,
+  "unlocking Entrance last records 10/10 before the car chooses its first caption",
+  step("entrance-last"));
 
 if (failures) process.exit(1);
 console.log("Road Trip departure caption assertions passed.");

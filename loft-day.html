@@ -118721,20 +118721,22 @@ function spawnDustMote(container) {
     waltzAltRemaining = WALTZ_PERIOD_MS;
     setPartyDanceState("techno"); // reset; the next fresh party overrides this with PARTY_DANCE_ORDER[0]
   }
-  function spawnConfettiPiece() {
+  function spawnConfettiPiece(reuse) {
     var container = document.getElementById("garden-confettifx");
     if (!container) return;
     var SVGNS = "http://www.w3.org/2000/svg";
     var x = 15 + Math.random() * 650;
     var w = 4 + Math.random() * 5, h = 7 + Math.random() * 6;
     var color = CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0];
-    var wrap = document.createElementNS(SVGNS, "g"); // wrapper carries the fall+drift translate
-    var rect = document.createElementNS(SVGNS, "rect"); // rect tumbles about its own centre
+    var wrap = reuse || document.createElementNS(SVGNS, "g"); // wrapper carries the fall+drift translate
+    var rect = wrap.firstElementChild || document.createElementNS(SVGNS, "rect"); // rect tumbles about its own centre
     rect.setAttribute("x", (-w / 2).toFixed(1)); rect.setAttribute("y", (-h / 2).toFixed(1));
     rect.setAttribute("width", w.toFixed(1)); rect.setAttribute("height", h.toFixed(1));
     rect.setAttribute("rx", "1"); rect.setAttribute("fill", color);
     rect.style.transformBox = "fill-box"; rect.style.transformOrigin = "center"; // tumble about its own centre
-    wrap.appendChild(rect); container.appendChild(wrap);
+    if (!rect.parentNode) wrap.appendChild(rect);
+    if (!wrap.parentNode) container.appendChild(wrap);
+    wrap.setAttribute("data-confetti-active", "1");
     if (!wrap.animate) { setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, 3200); return; }
     var drift = (Math.random() - 0.5) * 130;
     var y0 = -20 - Math.random() * 40, y1 = 360;
@@ -118746,23 +118748,31 @@ function spawnDustMote(container) {
       { transform: "translate(" + (x + drift * 0.35).toFixed(1) + "px," + (y0 + (y1 - y0) * 0.18).toFixed(1) + "px)", opacity: 0.95, offset: 0.14 },
       { transform: "translate(" + (x + drift).toFixed(1) + "px," + y1.toFixed(1) + "px)", opacity: 0.85 }
     ], { duration: dur, easing: "cubic-bezier(.35,.1,.6,1)", delay: delay });
-    rect.animate([
+    var tumble = rect.animate([
       { transform: "rotate(0deg)" },
       { transform: "rotate(" + spin.toFixed(0) + "deg)" }
     ], { duration: dur, easing: "linear", delay: delay });
     fall.onfinish = function () {
-      if (wrap.parentNode) wrap.remove();
+      wrap.setAttribute("data-confetti-active", "0");
       var container = document.getElementById("garden-confettifx");
-      if (gardenPartyActive() && container && container.childElementCount < confettiTarget()) spawnConfettiPiece();
+      if (gardenPartyActive() && container && confettiTarget()) spawnConfettiPiece(wrap);
     };
+    wrap.__confettiFall = fall;
+    wrap.__confettiSpin = tumble;
   }
   function confettiTarget() {
     return window.__frameHealthSlow && window.__frameHealthSlow() ? 0 : GARDEN_CONFETTI;
   }
   function topUpConfetti() {
     var container = document.getElementById("garden-confettifx");
-    var have = container ? container.childElementCount : 0;
-    for (var i = have, target = confettiTarget(); i < target; i++) spawnConfettiPiece();
+    if (!container) return;
+    container.removeAttribute("visibility");
+    var pieces = container.children, target = confettiTarget();
+    for (var p = 0; p < pieces.length && p < target; p++) {
+      if (pieces[p].getAttribute("data-confetti-active") !== "1") spawnConfettiPiece(pieces[p]);
+    }
+    var have = container.childElementCount;
+    for (var i = have; i < target; i++) spawnConfettiPiece();
   }
   var confettiSeedTimer = null;
   function partyConfettiTick() {
@@ -118780,7 +118790,16 @@ function spawnDustMote(container) {
   }
   function clearConfetti() {
     var c = document.getElementById("garden-confettifx");
-    if (c) while (c.firstChild) c.removeChild(c.firstChild); // hard-clear — never trust paused onfinish for teardown
+    if (!c) return;
+    c.setAttribute("visibility", "hidden");
+    // Keep the bounded 20-node pool warm across Party runs. Cancel both timelines explicitly;
+    // their onfinish callbacks cannot accumulate while hidden, and restart reuses these nodes.
+    for (var i = 0; i < c.children.length; i++) {
+      var piece = c.children[i];
+      piece.setAttribute("data-confetti-active", "0");
+      try { if (piece.__confettiFall) piece.__confettiFall.cancel(); } catch (_error) {}
+      try { if (piece.__confettiSpin) piece.__confettiSpin.cancel(); } catch (_error) {}
+    }
   }
   function stopPartyConfetti() {
     if (confettiSeedTimer) { clearTimeout(confettiSeedTimer); confettiSeedTimer = null; }

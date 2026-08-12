@@ -55674,12 +55674,35 @@ document.addEventListener("click", function (e) {
 ].forEach(function (entry) {
   hoverTooltip(document.getElementById(entry[0]), function () { return tipText(entry[1]); }, "top");
 });
+// Authored Party moments temporarily need ordinary light, but the UV owner (including the
+// garden breather's current phase) must survive underneath. Keep the physical class suppressed
+// without rewriting that owner's intent; the shared moment-state boundary restores the exact
+// class state it found once the final overlapping moment ends.
+var partyMomentUvSuppressed = false;
+var partyMomentUvRestore = false;
 function setUvMode(on) {
   var strip = document.getElementById("loft-game-strip");
-  if (strip) strip.classList.toggle("uv-mode", !!on);
+  var live = !!on && !partyMomentUvSuppressed;
+  if (strip) strip.classList.toggle("uv-mode", live);
   if (window.__syncScopeMirrors) window.__syncScopeMirrors();
-  if (!on && window.__endBehdadWake) window.__endBehdadWake(); // party over: clear any lingering wake
+  if (!live && window.__endBehdadWake) window.__endBehdadWake(); // party over / ordinary-light moment: clear any lingering wake
   if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // start the on↔off cross-fade at once, not on the next poll
+}
+function setPartyMomentUvSuppressed(on) {
+  on = !!on;
+  if (on === partyMomentUvSuppressed) return;
+  var strip = document.getElementById("loft-game-strip");
+  if (on) {
+    partyMomentUvRestore = !!(strip && strip.classList.contains("uv-mode"));
+    partyMomentUvSuppressed = true;
+    setUvMode(false);
+  } else {
+    partyMomentUvSuppressed = false;
+    // A party-off/reset teardown clears the UV owner before it clears its moments. Never let the
+    // saved pre-ceremony light briefly outlive the party; ordinary moment completion restores it.
+    setUvMode(!!window.__gardenPartyOn && partyMomentUvRestore);
+    partyMomentUvRestore = false;
+  }
 }
 // The blacklight is driven solely by the balcony party switch (persistent,
 // #balcony-partyswitch) — Shift+P can also start that same Party owner.
@@ -119925,11 +119948,19 @@ function spawnDustMote(container) {
     bdCake: "🎂 happy birthday! the candles are lit — everyone gathers behind the cake.",
     bouquet: "💐 Bouquet toss! Aim it — the bouquet tracks your cursor; click or tap to send it sailing."
   };
+  function partyMomentStateActive() {
+    return Object.keys(PARTY_MOMENT_STATE).some(function (key) {
+      return !!window["__" + PARTY_MOMENT_STATE[key]];
+    });
+  }
   function setPartyMomentState(name, on) {
     var prop = PARTY_MOMENT_STATE[name];
     if (!prop) return false;
+    var momentWasActive = partyMomentStateActive();
     var was = !!window["__" + prop];
     window["__" + prop] = !!on;
+    var momentIsActive = partyMomentStateActive();
+    if (momentWasActive !== momentIsActive) setPartyMomentUvSuppressed(momentIsActive);
     if (on && !was && PARTY_MOMENT_ECHO[name] && controllers.echo) controllers.echo(PARTY_MOMENT_ECHO[name]);
     return window["__" + prop];
   }

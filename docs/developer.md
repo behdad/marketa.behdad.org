@@ -203,6 +203,11 @@ first start. That latch opens free exploration and remains set even after Party 
 cleared only by a real reset. Do not use the music, lighting, guest population, or
 `__gardenPartyOn` alone as a proxy for story progress.
 
+Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
+suppresses the physical UV class and snapshots its prior state; only the final overlapping end
+restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
+cannot relight or strand the blacklight.
+
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been
 visited. If the player reaches the Entrance while Party is still active, the canonical handoff winds
@@ -781,7 +786,7 @@ references.
 | --- | --- |
 | Upper/lower navigation | `STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
 | First-run solves and replay | `__finishSolveAdvance`, `__kitchenDoNext`, `__gardenDoNext`, `__cuddlyDoNext`, `__officeDoNext` |
-| Party/free exploration | `setGardenParty`, `__partyGuestAssignedElsewhere`, `__barCoupleNow`, `__officeCoupleNow`, `__balconyHangoutNow`, `setSecondRound`, `seenRooms` |
+| Party/free exploration | `setGardenParty`, `setPartyMomentState`, `__partyGuestAssignedElsewhere`, `__barCoupleNow`, `__officeCoupleNow`, `__balconyHangoutNow`, `setSecondRound`, `seenRooms` |
 | Entrance and Road Trip | `porscheDrive`, `roadtripState`, `roadtripAuthorized`, `__entranceDriveStep` |
 | Camping | `campFireState`, `campStewState`, `campStargazingState`, `campSleepState` |
 | Keyboard routing | `activeControlFocused`, `activateCurrentRoom`, `__entranceDriveKeyboardOwnership` |

@@ -58,7 +58,9 @@ exploration.
 
 Start the Party in the Garden, then visit all ten rooms. Introductions and the map keep count;
 visiting is enough, and lower-room games remain optional. Guests stay active while you explore. Tap
-the DJ for song requests without losing the booth's scratch reaction.
+the DJ for song requests without losing the booth's scratch reaction. Authored Party moments such
+as the dances, toasts, photos, cake ceremonies, sparklers, and bouquet toss temporarily switch off
+the UV lights, then return them to the state they had before the moment.
 
 A coach eventually points to the Garden wall switch. Use it to end the Party, dismiss it and keep
 dancing, or leave the Party running while you explore. After the Party has started and all ten rooms

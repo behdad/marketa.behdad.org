@@ -39,7 +39,7 @@ var harness = String.raw`<script>
   var discoInline = Array.prototype.some.call(document.querySelectorAll("#garden-disco-pools .disco-pool"), function (pool) {
     return !!(pool.style.transform || pool.style.opacity || pool.style.transition);
   });
-  check("direct party teardown clears the blacklight and magic-box glow", !window.__gardenPartyOn && strip && !strip.classList.contains("uv-mode") && !breather.uvPartyIntent && !breather.running && (!partySwitch || !partySwitch.classList.contains("on")));
+  check("direct party teardown clears the blacklight and magic-box glow", !window.__gardenPartyOn && strip && !strip.classList.contains("uv-mode") && !breather.uvPartyIntent && !breather.running);
   check("direct party teardown clears camera flashes and stepped spotlights", (!flashBloom || !flashBloom.classList.contains("flashing")) && (!flashWash || !flashWash.classList.contains("flashing")) && !discoInline);
   var firstHandoff = window.__partyLifecycleState ? window.__partyLifecycleState() : {};
   check("an early deliberate teardown durably records the Road Trip handoff behind its coach",
@@ -50,21 +50,10 @@ var harness = String.raw`<script>
   window.dispatchEvent(new Event("resize"));
   var roomCoachPopup = roomCoach.querySelector(".hunt-coach-card");
   var roomCoachArrow = roomCoach.querySelector(".hunt-coach-arrow");
-  function popupStyleSignature(popup) {
-    var s = getComputedStyle(popup);
-    return [s.backgroundColor, s.borderColor, s.borderWidth, s.borderRadius, s.boxShadow,
-      s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft,
-      s.fontFamily, s.fontSize, s.fontWeight, s.lineHeight].join("|");
-  }
-  function arrowShapeSignature(arrow) {
-    return (arrow.getAttribute("d") || "").replace(/-?[0-9]+(?:\.[0-9]+)?/g, "#");
-  }
-  var roomPopupSignature = popupStyleSignature(roomCoachPopup);
-  var roomArrowSignature = arrowShapeSignature(roomCoachArrow);
   check("an incomplete-loft teardown pairs its dynamic popup with the large room-map arrow",
     firstHandoff.roomMapCoachActive && roomCoach.classList.contains("show") &&
-      /1 of 10 rooms/i.test(roomCoach.querySelector(".party-bridge-room-copy").textContent) &&
-      !/1 of 10 rooms/i.test(document.getElementById("hunt-caption").textContent) &&
+      /All rooms are open.*1 of 10.*explore/i.test(roomCoach.querySelector(".party-bridge-room-copy").textContent) &&
+      !/All rooms are open/i.test(document.getElementById("hunt-caption").textContent) &&
       roomCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
       !roomCoach.querySelector("svg polygon,svg rect") &&
       getComputedStyle(roomCoachArrow).fill === "rgb(239, 23, 23)" &&
@@ -81,56 +70,35 @@ var harness = String.raw`<script>
       !window.__phoneMessageReceived("downstairs_entrance") && document.getElementById("loft-dollhouse").hidden);
   if (window.__hideCallRing) window.__hideCallRing();
 
+  if (window.__resetPartyExitHint) window.__resetPartyExitHint();
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   check("the unnamed regulars leave when the night bar becomes a party", patrons && getComputedStyle(patrons).opacity === "0");
   check("party starts a fresh lifecycle", window.__partyLifecycleState && window.__partyLifecycleState().attended === 0 && window.__partyLifecycleState().running);
   if (window.__goToStage) window.__goToStage("garden");
-  if (window.__showPartySwitchCoach) window.__showPartySwitchCoach();
-  var switchCoach = document.getElementById("party-switch-coach");
-  window.dispatchEvent(new Event("resize"));
-  var switchCoachPopup = switchCoach.querySelector(".hunt-coach-card");
-  var switchCoachArrow = switchCoach.querySelector(".hunt-coach-arrow");
   var switchPlate = document.querySelector("#garden-lightswitch > rect:first-child");
   var switchRocker = document.getElementById("garden-lightswitch-rocker");
   var switchLed = document.getElementById("garden-lightswitch-led");
-  var switchArrowBox = switchCoachArrow.getBBox();
-  var switchAreaRect = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
-  var switchPlateRect = switchPlate.getBoundingClientRect();
-  var expectedSwitchCenter = switchPlateRect.top + switchPlateRect.height / 2 - switchAreaRect.top;
   check("the wall switch and every detail move exactly fifteen SVG units higher",
     switchPlate && Number(switchPlate.getAttribute("y")) === 170 &&
       switchRocker && Number(switchRocker.getAttribute("y")) === 173.5 &&
-      switchLed && Number(switchLed.getAttribute("cy")) === 190.5 &&
-      Math.abs(switchArrowBox.y + switchArrowBox.height / 2 - expectedSwitchCenter) < 1,
+      switchLed && Number(switchLed.getAttribute("cy")) === 190.5,
     JSON.stringify({ switchY: switchPlate && switchPlate.getAttribute("y"),
-      rockerY: switchRocker && switchRocker.getAttribute("y"), ledY: switchLed && switchLed.getAttribute("cy"),
-      arrowCenter: switchArrowBox.y + switchArrowBox.height / 2, expectedCenter: expectedSwitchCenter }));
-  check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
-      switchCoach.classList.contains("show") &&
-      switchCoachPopup.querySelector(".hunt-coach-copy").textContent === "When the time comes, end the party here." &&
-      window.__loftMessages.cs.hunt.party_switch_coach === "Až nastane čas, ukonči párty tady." &&
-      getComputedStyle(switchCoachArrow).fill === "rgb(239, 23, 23)" &&
-      document.activeElement !== document.getElementById("garden-lightswitch") &&
-      !/end the party here/i.test(document.getElementById("hunt-caption").textContent),
-    JSON.stringify({ shown: switchCoach.classList.contains("show"), copy: switchCoachPopup.querySelector(".hunt-coach-copy").textContent,
-      cs: window.__loftMessages.cs.hunt.party_switch_coach, fill: getComputedStyle(switchCoachArrow).fill,
-      caption: document.getElementById("hunt-caption").textContent }));
-  check("both bridge coaches share one box, dismiss control, and continuous dancing-arrow contract",
-    popupStyleSignature(switchCoachPopup) === roomPopupSignature &&
-      !!switchCoachPopup.style.width && !roomCoachPopup.style.width &&
-      switchCoachPopup.querySelectorAll(":scope > .hunt-coach-x").length === 1 &&
+      rockerY: switchRocker && switchRocker.getAttribute("y"), ledY: switchLed && switchLed.getAttribute("cy") }));
+  if (window.__showPartyExplorationCoach) window.__showPartyExplorationCoach();
+  window.dispatchEvent(new Event("resize"));
+  check("Party onboarding starts with the large exploration coach while Party remains live",
+    !document.getElementById("party-switch-coach") && typeof window.__showPartySwitchCoach === "undefined" &&
+      !Object.prototype.hasOwnProperty.call(window.__loftMessages.en.hunt, "party_switch_coach") &&
+      window.__gardenPartyOn && roomCoach.classList.contains("show") &&
+      /All rooms are open.*explore the loft/i.test(roomCoach.querySelector(".party-bridge-room-copy").textContent) &&
       roomCoachPopup.querySelectorAll(":scope > .hunt-coach-x").length === 1 &&
-      switchCoachPopup.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
       roomCoachPopup.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
-      switchCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
-      !switchCoach.querySelector("svg polygon,svg rect") &&
-      switchCoachArrow.getBBox().width > 80 && roomCoachArrow.getBBox().height > 80 &&
-      getComputedStyle(switchCoachArrow).animationName === "kitchen-arrow-bounce",
-    JSON.stringify({ switchPopup: popupStyleSignature(switchCoachPopup), roomPopup: roomPopupSignature,
-      switchArrow: arrowShapeSignature(switchCoachArrow), roomArrow: roomArrowSignature }));
-  switchCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  check("the switch coach’s explicit dismiss control closes it without toggling the wall switch",
-    !switchCoach.classList.contains("show") && window.__gardenPartyOn && window.__partyLifecycleState().switchCoachRetired);
+      roomCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
+      getComputedStyle(roomCoachArrow).animationName === "kitchen-arrow-bounce",
+    roomCoach.querySelector(".party-bridge-room-copy").textContent);
+  roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  check("dismissing exploration leaves Party live and acknowledges that lesson",
+    !roomCoach.classList.contains("show") && window.__gardenPartyOn && window.__partyLifecycleState().roomMapCoachAcknowledged);
 
   focused = false;
   window.__partyLifecycleTick();
@@ -140,8 +108,10 @@ var harness = String.raw`<script>
   check("focused time counts", window.__partyLifecycleState().attended === 1);
 
   window.__advancePartyLifecycle(149);
-  check("attended time offers a gentle close cue without ending the party",
-    window.__gardenPartyOn && window.__partyExitHintActive() && window.__partyLifecycleState().attended === 150);
+  check("attended time may offer an authored closing message without showing a generic stop coach",
+    window.__gardenPartyOn && window.__partyExitHintActive() && window.__partyLifecycleState().attended === 150 &&
+      !document.getElementById("garden-lightswitch").classList.contains("invite-pulse") &&
+      window.__captionKey() !== "party_exit_hint");
   window.__advancePartyLifecycle(30);
   check("party remains live after 180 attended seconds", !!window.__gardenPartyOn && window.__partyLifecycleState().attended === 180);
   if (window.__goToStage) window.__goToStage("kitchen");
@@ -245,9 +215,9 @@ var harness = String.raw`<script>
   if (window.__setGardenParty) window.__setGardenParty(false, true);
   var partyEndCaption = document.getElementById("hunt-caption").textContent;
   var partyEndPopup = document.querySelector("#party-room-map-coach .party-bridge-room-copy").textContent;
-  check("manual party-end progress copy is localized in Czech", !window.__gardenPartyOn &&
-    /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndPopup) && /Zkoumej dál/.test(partyEndPopup) &&
-      !/Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption),
+  check("manual party-end exploration fallback is localized in Czech", !window.__gardenPartyOn &&
+    /Všechny místnosti jsou otevřené/.test(partyEndPopup) && /Prozkoumáno: [0-9]+ z 10/.test(partyEndPopup) && /vydej se po loftu/.test(partyEndPopup) &&
+      !/Všechny místnosti jsou otevřené/.test(partyEndCaption),
     JSON.stringify({ popup: partyEndPopup, caption: partyEndCaption }));
   if (window.__runMsgAction) window.__runMsgAction("downstairs_roadtrip_go");
   check("only the final Road Trip exchange line opens Entrance", window.__currentStageName === "balcony" && window.__entranceRoomOpen);

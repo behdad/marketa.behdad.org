@@ -55,9 +55,8 @@
 //    - phase-one messages: ordinary texts stay out of the solve, while one-shot
 //      occasion texts are held and released when the first party starts phase two.
 //      The first attended unread badge also carries the one-time message coach mark.
-//    - garden wall switch: it keeps its day/night role in phase one, then becomes a
-//      day/party toggle once phase two has unlocked the party. Its delayed exit cue
-//      explains that the loft, phone, and computer remain explorable after the party.
+//    - Party controls: the Garden wall switch stays day/night in both phases; the roof
+//      disco ball is hidden before phase two, then toggles Party without replaying the first cue.
 //    - opening guide: its explicit × walks top navigation → caption before the
 //      normal kitchen instruction and espresso-machine arrow take over; background
 //      clicks stay inert and Enter mirrors the ×.
@@ -832,24 +831,22 @@ var PROBE_HARNESS = [
   "    ok('messages: held occasion text arrives when phase two starts', !!(window.__phoneMessageReceived && window.__phoneMessageReceived('occ_phase_gate_test')));",
   "    ok('messages: stale recurring phase-one attempt is not flushed', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
   "    if (window.__goToStage) window.__goToStage('garden');",
-  "    ok('garden switch cue: deterministic reveal hook exists', typeof window.__showPartyExitHint === 'function' && window.__showPartyExitHint());",
-  "    var partyExitFlash = window.__flashCaptionState && window.__flashCaptionState(); if (partyExitFlash && window.__clearFlashCaption) window.__clearFlashCaption(partyExitFlash.owner);",
-  "    ok('garden switch cue: caption says the party ends but exploration continues', window.__captionKey && window.__captionKey() === 'party_exit_hint' && /not the game/i.test(el('hunt-caption').textContent) && /apps stay open/i.test(el('hunt-caption').textContent));",
-  "    ok('garden switch cue: the wall switch pulses until used', gardenWallSwitch.classList.contains('invite-pulse'));",
+  "    var discoBall = el('garden-disco-ball'), discoSpin = el('garden-disco-ball-spin');",
+  "    ok('party controls: the wall-switch coach is absent and exploration is the first Party lesson', !el('party-switch-coach') && typeof window.__showPartySwitchCoach === 'undefined' && typeof window.__showPartyExplorationCoach === 'function' && window.__showPartyExplorationCoach());",
+  "    ok('party controls: the phase-two disco ball is lit and animated while Party runs', parseFloat(getComputedStyle(discoBall).opacity) > .9 && getComputedStyle(discoSpin).animationName === 'disco-ball-spin');",
   "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    await sleep(40);",
-  "    ok('garden switch: phase two turns the party off, restores day and retires its cue', !window.__gardenPartyOn && !el('stage-garden').classList.contains('dusk') && !gardenWallSwitch.classList.contains('invite-pulse'));",
-  "    ok('garden switch: phase two remains latched after the party ends', !!window.__secondRound);",
+  "    ok('garden switch: phase two still changes only day/night', !!window.__gardenPartyOn && !el('stage-garden').classList.contains('dusk'));",
+  "    ok('party controls: phase two remains latched while Party runs', !!window.__secondRound);",
+  "    if (window.__setPartyMode) window.__setPartyMode(false, true, false);",
+  "    ok('party controls: stopping is optional and the same exploration modal survives an early stop', !window.__gardenPartyOn && window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive());",
   "    if (window.__setPartyMode) window.__setPartyMode(true, true, false);",
   "    ok('checkpoint party restore: Continue resumes the ordinary message cadence without replaying the fast notification chime', window.__cueDripFastOpener && !window.__cueDripFastOpener());",
   "    if (window.__setPartyMode) window.__setPartyMode(false, true, false);",
-  "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    await sleep(40);",
-  "    ok('garden switch: phase two turns the party back on without repeating the cue', !!window.__gardenPartyOn && el('stage-garden').classList.contains('dusk') && !gardenWallSwitch.classList.contains('invite-pulse'));",
-  "    ok('party bridge: the post-teardown room coach holds unrelated phone attention', window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive() && window.__heldPartyCoachCalls && Array.isArray(window.__heldPartyCoachCalls()));",
-  "    // Retire the feature coach through its owner. Below 10/10 this releases ordinary phone",
-  "    // attention without enqueueing any Road Trip exchange message into the timing probe.",
   "    if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();",
+  "    discoBall.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    await sleep(40);",
+  "    ok('party controls: the phase-two disco ball turns Party back on', !!window.__gardenPartyOn && parseFloat(getComputedStyle(discoBall).opacity) > .9);",
   "    var msgCoach = document.querySelector('.msg-badge-coach'), msgBadge = document.querySelector('.msg-badge');",
   "    ok('messages: coach stays out of the live notification popup', !msgCoach || !msgCoach.classList.contains('show'));",
   "    if (window.__hideMessageThumb) window.__hideMessageThumb();",

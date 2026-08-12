@@ -2,7 +2,7 @@
 "use strict";
 
 // The sunset observation starts an authored late-night choice: Athena hands the
-// wall switch to the last person awake, or the magic box keeps things going.
+// disco ball to the last person awake, or the magic box keeps things going.
 var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
@@ -38,7 +38,7 @@ var harness = String.raw`<script>
     window.__deliverPhoneMessage("sunset_magicbox");
     var thread = window.__chatMessagesKnowledge();
     check("sunset fork adds all six late-night replies",
-      thread.some(function (m) { return m.sender === "Athena" && /I'm going to sleep/.test(m.text) && /switch is on the wall/.test(m.text); }) &&
+      thread.some(function (m) { return m.sender === "Athena" && /I'm going to sleep/.test(m.text) && /dim the disco ball/.test(m.text); }) &&
       thread.some(function (m) { return /turtle art in Python/.test(m.text); }) &&
       thread.some(function (m) { return m.sender === "Bahareh" && /why are you still awake/.test(m.text); }) &&
       thread.some(function (m) { return /draw your next tattoo/.test(m.text); }) &&
@@ -69,9 +69,9 @@ var harness = String.raw`<script>
       check("Athena's bedtime reply leaves the last guest in charge",
         window.__currentStageName === "garden" && window.__gardenPartyOn,
         window.__currentStageName + " / party=" + window.__gardenPartyOn);
-      check("Athena's bedtime reply points out the wall switch",
-        document.getElementById("garden-lightswitch").classList.contains("invite-pulse"),
-        document.getElementById("garden-lightswitch").getAttribute("class"));
+      check("Athena's bedtime reply points out the optional disco control",
+        document.getElementById("garden-disco-ball").classList.contains("invite-pulse"),
+        document.getElementById("garden-disco-ball").getAttribute("class"));
       window.__goToStage("office");
       window.__runMsgAction("sunset_magicbox");
     }, 1050);

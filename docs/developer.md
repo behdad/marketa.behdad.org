@@ -203,6 +203,11 @@ first start. That latch opens free exploration and remains set even after Party 
 cleared only by a real reset. Do not use the music, lighting, guest population, or
 `__gardenPartyOn` alone as a proxy for story progress.
 
+The Garden wall switch remains the day/night owner in both phases. Phase two reveals the fixed roof
+disco ball as the optional Party toggle; Party state alone controls whether it is lit and rotating or
+dim and still. The first Party coach points to The Loft while Party remains active, and the first
+Messages coach is serialized behind it. Neither progression nor Road Trip requires a Party-off coach.
+
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown

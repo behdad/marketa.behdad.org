@@ -8,27 +8,18 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 (function () {
   var report = { errors: (window.__errs || []).slice(), steps: {} };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
-  function visible(selector) {
-    var node = document.querySelector(selector);
-    return !!(node && node.classList.contains("show"));
-  }
+  function visible(selector) { var node = document.querySelector(selector); return !!(node && node.classList.contains("show")); }
   function snap(name) {
-    var overlay = document.getElementById("party-switch-coach");
-    var area = document.getElementById("hunt-fullscreen-area");
-    var card = overlay.querySelector(".hunt-coach-card");
-    var scrims = [].slice.call(overlay.querySelectorAll(".modal-coach-scrim"));
-    var cardBox = card.getBoundingClientRect(), areaBox = area.getBoundingClientRect();
+    var overlay = document.getElementById("party-room-map-coach"), area = document.getElementById("hunt-fullscreen-area");
+    var card = overlay.querySelector(".hunt-coach-card"), scrims = [].slice.call(overlay.querySelectorAll(".modal-coach-scrim"));
+    var cardBox = card.getBoundingClientRect(), areaBox = area.getBoundingClientRect(), state = window.__partyLifecycleState();
     report.steps[name] = {
-      room: window.__currentStageName,
-      party: !!window.__gardenPartyOn,
-      coach: !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive()),
-      coachDue: !!(window.__partyLifecycleState && window.__partyLifecycleState().switchCoachSeen),
-      messageCoach: visible(".msg-badge-coach"),
-      thumb: visible(".msg-thumb"),
-      ring: visible(".call-ring"),
+      room: window.__currentStageName, party: !!window.__gardenPartyOn,
+      coach: !!(window.__partyRoomMapCoachModalActive && window.__partyRoomMapCoachModalActive()),
+      coachDue: !!state.roomMapCoachActive, acknowledged: !!state.roomMapCoachAcknowledged,
+      messageCoach: visible(".msg-badge-coach"), thumb: visible(".msg-thumb"), ring: visible(".call-ring"),
       hold: window.__messageNotificationsHeld ? window.__messageNotificationsHeld() : null,
       heldCalls: window.__heldPartyCoachCalls ? window.__heldPartyCoachCalls() : [],
-      dungeon: document.querySelector(".hunt-viewport").classList.contains("prince-basement-open"),
       modal: overlay.classList.contains("modal-coach") && overlay.classList.contains("target-modal-coach") &&
         getComputedStyle(overlay).pointerEvents === "none" && scrims.length === 4 &&
         scrims.every(function (el) { return getComputedStyle(el).pointerEvents === "auto"; }) &&
@@ -40,176 +31,76 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   async function run() {
     Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
     if (window.__endAttract) window.__endAttract();
+    if (window.__removeClickMe) window.__removeClickMe();
+    if (window.__finishOpeningGuide) window.__finishOpeningGuide();
     window.__setSecondRound(true, { releaseHeld: false });
-    window.__setGardenParty(true, false);
-    window.__goToStage("garden");
+    window.__setGardenParty(true, false);window.__goToStage("garden");
+    window.__deliverPhoneMessage("cue_mail");await sleep(40);
+    window.__showPartyExplorationCoach();snap("popupBeforeCoach");
+    window.__hideMessageThumb(true);await sleep(260);snap("popupCleared");
 
-    window.__deliverPhoneMessage("cue_mail");
-    await sleep(40);
-    window.__showPartySwitchCoach();
-    snap("popupBeforeCoach");
-    window.__goToStage("kitchen");
-    window.__goToStage("garden");
-    await sleep(40);
-    snap("popupOnReentry");
-    window.__hideMessageThumb();
-    await sleep(820);
-    snap("popupCleared");
-    var switchBox = document.getElementById("garden-lightswitch").getBoundingClientRect();
-    var switchHit = document.elementFromPoint(switchBox.left + switchBox.width / 2,
-      switchBox.top + switchBox.height / 2);
-    report.steps.popupCleared.switchHole = !!(switchHit && switchHit.closest &&
-      switchHit.closest("#garden-lightswitch"));
-    await sleep(720);
-    document.dispatchEvent(new KeyboardEvent("keydown", {
-      key: "ArrowRight", code: "ArrowRight", bubbles: true, cancelable: true
-    }));
-    await sleep(40);
-    snap("keyboardBlocked");
-    window.__goToStage("cuddly");
-    await sleep(40);
-    snap("navigationAway");
-    await sleep(720);
-    window.__goToStage("garden");
-    await sleep(40);
-    snap("coachDuringReturnPan");
-    await sleep(760);
-    snap("coachOnReturn");
-    window.__openGardenPrince();
-    await sleep(80);
-    snap("coachInDungeon");
-    window.__closeMonitorPrince();
-    await sleep(40);
-    snap("coachDuringDungeonReturn");
-    await sleep(760);
-    snap("coachAfterDungeon");
-    window.__deliverPhoneMessage("cue_calendar");
-    await sleep(30);
+    window.__setPartyMomentState("cake", true);await sleep(80);snap("duringMoment");
+    window.__setPartyMomentState("cake", false);await sleep(260);snap("afterMoment");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", code: "ArrowRight", bubbles: true, cancelable: true }));
+    await sleep(40);snap("keyboardBlocked");
+
+    window.__deliverPhoneMessage("cue_calendar");await sleep(30);
     if (window.__repeatMsgBadgeCoach) window.__repeatMsgBadgeCoach();
-    snap("messageDuringCoach");
-    document.querySelector("#party-switch-coach .hunt-coach-x").dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true }));
-    await sleep(40);
-    snap("messageCoachAfterDismiss");
-    await sleep(540);
-    snap("messageReleased");
-    window.__hideMessageThumb();
-    await sleep(100);
-    snap("messageCoachReleased");
-    if (window.__dismissMsgBadgeCoach) window.__dismissMsgBadgeCoach();
+    window.__madlaRingForced();await sleep(30);snap("attentionDuringCoach");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+    await sleep(720);snap("enterReleasedAttention");
 
-    window.__resetPartyExitHint();
-    window.__goToStage("garden");
-    window.__madlaRingForced();
-    await sleep(30);
-    window.__showPartySwitchCoach();
-    snap("callBeforeCoach");
-    window.__hideCallRing();
-    window.__hideMessageThumb();
-    await sleep(260);
-    snap("callCleared");
-    window.__madlaRingForced();
-    await sleep(30);
-    snap("callDuringCoach");
-    document.dispatchEvent(new KeyboardEvent("keydown", {
-      key: "Enter", code: "Enter", bubbles: true, cancelable: true
-    }));
-    await sleep(680);
-    snap("enterReleasedCall");
-
-    window.__hideCallRing();
-    window.__hideMessageThumb();
-    window.__resetPartyExitHint();
-    window.__goToStage("garden");
-    window.__showPartySwitchCoach();
-    await sleep(40);
-    document.getElementById("garden-lightswitch").dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true }));
-    await sleep(3400);
-    snap("switchEndsParty");
+    window.__hideCallRing();window.__hideMessageThumb(true);if (window.__dismissMsgBadgeCoach) window.__dismissMsgBadgeCoach();
+    window.__setPartyMode(false, true, false);window.__resetPartyExitHint();window.__setPartyMode(true, true, false);
+    window.__setPartyMomentState("bdCake", true);window.__showPartyExplorationCoach();await sleep(60);
+    window.__setPartyMode(false, true, false);await sleep(60);snap("earlyStopDuringMoment");
+    window.__setPartyMomentState("bdCake", false);await sleep(260);snap("earlyStopFallback");
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
       run().catch(function (error) { report.errors.push(String(error && error.stack || error)); })
-        .then(function () {
-          report.errors = (window.__errs || []).concat(report.errors || []);
-          document.getElementById("__report").textContent = JSON.stringify(report);
-        });
+        .then(function () { report.errors = (window.__errs || []).concat(report.errors || []);document.getElementById("__report").textContent = JSON.stringify(report); });
     }, 260);
   });
 })();
 </script>`;
 
-var result = lib.runPageSync("loft-day.html", HARNESS, 14500, {
-  patchRaf: true,
-  seedRandom: true,
-  forceMotion: true,
-  urlSuffix: "?fresh=party-coach-attention"
+var result = lib.runPageSync("loft-day.html", HARNESS, 5000, {
+  patchRaf: true, seedRandom: true, forceMotion: true,
+  urlSuffix: "?fresh=party-coach-attention&date=2026-08-13"
 });
 var failed = false;
 function check(ok, message, detail) {
-  console.log("  " + (ok ? "✓" : "✗") + " " + message +
-    (ok || detail == null ? "" : " — " + JSON.stringify(detail)));
+  console.log("  " + (ok ? "✓" : "✗") + " " + message + (ok || detail == null ? "" : " — " + JSON.stringify(detail)));
   if (!ok) failed = true;
 }
 function step(name) { return result && result.steps && result.steps[name]; }
 
-console.log("loft-day.html party coach attention ownership:");
+console.log("loft-day.html Party exploration attention ownership:");
 check(result && result.errors.length === 0, "attention probe has no page errors", result && result.errors);
-var popupBefore = step("popupBeforeCoach"), popupReentry = step("popupOnReentry"), popupCleared = step("popupCleared");
+var popupBefore = step("popupBeforeCoach"), popupCleared = step("popupCleared");
 check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.coach,
-  "a visible notification keeps the due switch coach off-screen", popupBefore);
-check(popupReentry && popupReentry.room === "garden" && popupReentry.thumb && !popupReentry.coach,
-  "Garden re-entry cannot repaint the coach over that notification", popupReentry);
-check(popupCleared && !popupCleared.thumb && popupCleared.coach && popupCleared.modal &&
-  popupCleared.cardLarge && popupCleared.scrim === "rgba(69, 58, 49, 0.2)",
-  "the quiet channel reveals a large focused modal around the Party switch", popupCleared);
+  "a visible notification keeps the due exploration coach off-screen", popupBefore);
+check(popupCleared && !popupCleared.thumb && popupCleared.coach && popupCleared.modal && popupCleared.cardLarge &&
+  popupCleared.scrim === "rgba(69, 58, 49, 0.2)",
+  "the quiet channel reveals the large Dollhouse modal while Party stays live", popupCleared);
+check(step("duringMoment") && !step("duringMoment").coach && step("duringMoment").coachDue,
+  "an authored Party moment hides exploration without retiring it", step("duringMoment"));
+check(step("afterMoment") && step("afterMoment").coach && step("afterMoment").party,
+  "exploration returns after the authored moment settles", step("afterMoment"));
 check(step("keyboardBlocked") && step("keyboardBlocked").room === "garden" && step("keyboardBlocked").coach,
-  "the modal switch coach swallows room-navigation keys", step("keyboardBlocked"));
-var navigationAway = step("navigationAway"), coachDuringReturnPan = step("coachDuringReturnPan"),
-  coachOnReturn = step("coachOnReturn");
-check(navigationAway && navigationAway.room === "cuddly" && !navigationAway.coach && navigationAway.coachDue,
-  "a controller-owned room transition hides the still-pending Garden coach", navigationAway);
-check(coachDuringReturnPan && coachDuringReturnPan.room === "garden" && !coachDuringReturnPan.coach &&
-  coachDuringReturnPan.coachDue,
-  "the pending coach stays hidden while Garden is still panning into view", coachDuringReturnPan);
-check(coachOnReturn && coachOnReturn.room === "garden" && coachOnReturn.coach && coachOnReturn.coachDue,
-  "the settled Garden repaints the pending switch coach", coachOnReturn);
-var coachInDungeon = step("coachInDungeon"), coachDuringDungeonReturn = step("coachDuringDungeonReturn"),
-  coachAfterDungeon = step("coachAfterDungeon");
-check(coachInDungeon && coachInDungeon.room === "garden" && coachInDungeon.dungeon &&
-  !coachInDungeon.coach && coachInDungeon.coachDue,
-  "opening Dungeon hides the Garden-owned coach without retiring it", coachInDungeon);
-check(coachDuringDungeonReturn && !coachDuringDungeonReturn.dungeon && !coachDuringDungeonReturn.coach,
-  "the coach stays hidden while Dungeon slides away", coachDuringDungeonReturn);
-check(coachAfterDungeon && !coachAfterDungeon.dungeon && coachAfterDungeon.coach && coachAfterDungeon.coachDue,
-  "the settled Garden restores its pending coach after Dungeon", coachAfterDungeon);
-var duringMessage = step("messageDuringCoach"), afterCoachDismiss = step("messageCoachAfterDismiss"),
-  releasedMessage = step("messageReleased");
-check(duringMessage && duringMessage.coach && !duringMessage.thumb && !duringMessage.messageCoach && duringMessage.hold &&
-  duringMessage.hold.messages.join(",") === "cue_calendar",
-  "a new notification and its unread-message coach queue behind the visible Party-switch coach", duringMessage);
-check(afterCoachDismiss && !afterCoachDismiss.coach && !afterCoachDismiss.thumb && afterCoachDismiss.messageCoach,
-  "dismissing the Party-switch coach releases the unread-message lesson immediately", afterCoachDismiss);
-check(releasedMessage && !releasedMessage.coach && releasedMessage.thumb && releasedMessage.messageCoach && releasedMessage.hold &&
-  releasedMessage.hold.messages.length === 0,
-  "the queued preview releases exactly once without hiding the durable lesson", releasedMessage);
-var releasedBadgeCoach = step("messageCoachReleased");
-check(releasedBadgeCoach && !releasedBadgeCoach.coach && !releasedBadgeCoach.thumb && releasedBadgeCoach.messageCoach,
-  "the unread-message coach remains until it is explicitly dismissed", releasedBadgeCoach);
-var callBefore = step("callBeforeCoach"), callCleared = step("callCleared"), callDuring = step("callDuringCoach");
-check(callBefore && callBefore.ring && callBefore.coachDue && !callBefore.coach,
-  "an already-ringing call also keeps the due coach off-screen", callBefore);
-check(callCleared && !callCleared.ring && callCleared.coach,
-  "the coach appears after the call channel clears", callCleared);
-check(callDuring && callDuring.coach && !callDuring.ring && callDuring.heldCalls.length === 1,
-  "a call arriving during the coach is retained instead of overlapping it", callDuring);
-var enterRelease = step("enterReleasedCall");
-check(enterRelease && enterRelease.party && !enterRelease.coach && enterRelease.ring &&
-  enterRelease.heldCalls.length === 0,
-  "global Enter dismisses the coach, keeps the party running, and releases one held call", enterRelease);
-check(step("switchEndsParty") && !step("switchEndsParty").party && !step("switchEndsParty").coach,
-  "the live Garden-switch target ends the party and retires its coach in one action", step("switchEndsParty"));
+  "the exploration modal swallows unrelated room navigation", step("keyboardBlocked"));
+var during = step("attentionDuringCoach"), released = step("enterReleasedAttention");
+check(during && during.coach && !during.thumb && !during.ring && during.heldCalls.length === 1 && during.hold &&
+  during.hold.messages.indexOf("cue_calendar") !== -1,
+  "Messages and an incoming call serialize behind exploration", during);
+check(released && released.party && !released.coach && released.acknowledged && released.heldCalls.length === 0 &&
+  (released.ring || released.thumb || released.messageCoach),
+  "Enter acknowledges exploration and releases queued attention without stopping Party", released);
+check(step("earlyStopDuringMoment") && !step("earlyStopDuringMoment").party && step("earlyStopDuringMoment").coach && step("earlyStopDuringMoment").coachDue,
+  "an early manual stop retires its Party moment and immediately surfaces the fallback", step("earlyStopDuringMoment"));
+check(step("earlyStopFallback") && !step("earlyStopFallback").party && step("earlyStopFallback").coach,
+  "the same Dollhouse modal appears as the early post-Party fallback", step("earlyStopFallback"));
 
 if (failed) process.exit(1);
-console.log("Party coach attention assertions passed.");
+console.log("Party exploration attention assertions passed.");

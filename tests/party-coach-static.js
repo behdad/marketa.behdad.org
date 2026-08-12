@@ -15,6 +15,10 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         document.documentElement.classList.add("loft-entered");
         fullscreenArea.classList.remove("intro-active", "recovery-active");
         if (window.__removeClickMe) window.__removeClickMe();
+        if (window.__finishOpeningGuide) window.__finishOpeningGuide();
+        if (window.__endAttract) window.__endAttract();
+        if (window.__shareCloseModal) window.__shareCloseModal();
+        if (window.__resetPartyExitHint) window.__resetPartyExitHint();
         await sleep(40);
         if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
         if (window.__setGardenParty) window.__setGardenParty(true, false);
@@ -26,7 +30,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         var dots = document.getElementById("hunt-dots");
         var bottomNav = document.getElementById("hunt-bottom-nav");
         if (window.__setGardenParty) window.__setGardenParty(false, true);
-        await sleep(80);
+        if (window.__shareCloseModal) window.__shareCloseModal();
+        if (window.__hideMessageThumb) window.__hideMessageThumb(true);
+        if (window.__hideCallRing) window.__hideCallRing();
+        if (window.__showPartyExplorationCoach) window.__showPartyExplorationCoach();
+        if (window.__refreshPartyBridgeCoaches) window.__refreshPartyBridgeCoaches();
+        await sleep(300);
         report.shown = coach.classList.contains("show") &&
           !!(window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive());
         var vr = viewport.getBoundingClientRect();
@@ -68,7 +77,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 
 var result = lib.runPageSync("loft-day.html", HARNESS, 1800, {
   forceMotion: true, seedRandom: true, patchRaf: true,
-  chromeFlags: "--window-size=1280,900"
+  chromeFlags: "--window-size=1280,900", urlSuffix: "?date=2026-08-13"
 });
 var failures = 0;
 function check(ok, message, detail) {

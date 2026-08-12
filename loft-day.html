@@ -3458,8 +3458,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .hunt-coach-overlay.modal-coach .hunt-coach-x{
   right:.75rem;top:.75rem;width:3rem;height:3rem;font-size:32px;
 }
-#party-switch-coach svg{z-index:1}
-#party-switch-coach .hunt-coach-card{z-index:2}
 .hunt-coach-arrow{
   fill:#ef1717;stroke:#1f1f1f;stroke-width:7;stroke-linejoin:round;
   filter:drop-shadow(0 2px 2px rgba(31,31,31,.5));transform-box:fill-box;transform-origin:center;
@@ -3804,8 +3802,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (prefers-reduced-motion: reduce){#balcony-ashtray.spinning{animation:none}}
 #balcony-minisplit-fan, #balcony-minisplit-blades{transform-box:fill-box; transform-origin:center}
 #balcony-minisplit.on #balcony-minisplit-blades{animation:ac-fan-spin .6s linear infinite}
-/* balcony junction-box "party" switch: rocker up=off / down=on; LED + box halo glow
-   UV-violet when the blacklight party is on. The rocker travel is a CSS transform on a node
+/* Balcony junction-box Act Two latch: rocker up before phase 2 / down afterward; LED + box halo
+   glow UV-violet once the second round is open. The rocker travel is a CSS transform on a node
    with no static transform= attr, so it can't clobber a baked placement (CLAUDE.md trap);
    short transitions all round. */
 #balcony-partyswitch-rocker{transform-box:fill-box; transform-origin:center; transition:transform .25s ease; transform:translateY(-2.5px)} /* off: rocker up */
@@ -3814,6 +3812,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #balcony-partyswitch.on #balcony-partyswitch-led{fill:#e070ff; filter:drop-shadow(0 0 2.5px #e070ff)}
 #balcony-partyswitch-glow{opacity:0; transition:opacity .3s ease; pointer-events:none}
 #balcony-partyswitch.on #balcony-partyswitch-glow{opacity:1}
+#loft-game-strip.second-round #balcony-partyswitch{pointer-events:none;cursor:default!important}
 @media (prefers-reduced-motion: reduce){#balcony-partyswitch-rocker{transition:none}#balcony-partyswitch-glow{transition:none}}
 /* The second act's "head out — kill the lights" beat points here with the kitchen's
    step-arrow pattern: the same .invite-pulse ~ arrow shape, so the beat sequencer toggles
@@ -4151,20 +4150,20 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 }
 @media (prefers-reduced-motion: reduce){.insect-vision-overlay{transition:none}}
 /* ── PARTY MODE (blacklight garden party) ─────────────────────────────────────
-   The balcony party switch (#balcony-partyswitch) turns on the UV/blacklight AND
+   The phase-two Garden disco ball turns the UV/blacklight Party on and off (the
+   Balcony switch still owns the one-time story ignition), and
    whisks the view to the garden, where it throws an atmosphere party: sweeping
    colored disco light pools, a slow-spinning glitter ball, and JS-spawned confetti.
    Everything here is inert until #stage-garden.garden-party, and it is designed to
    be seen THROUGH #loft-game-strip.uv-mode's filter, so the source colors are the
    UV neon palette (they glow rather than muddy under brightness .5 + hue-rotate). */
-/* the partyfx wrapper is always live; its two children fade INDEPENDENTLY so the disco ball
-   can peek out on its own at night (5s after dusk, see .disco-peek) without dragging the color
-   pools in with it — clicking the peeking ball throws the full party. */
+/* The partyfx wrapper is always live. The disco ball stays dimly present once phase two opens,
+   independently of the Party-only colour pools, so it reads as the persistent Party control. */
 #garden-disco-pools{opacity:0; transition:opacity .5s ease}
 #stage-garden.garden-party #garden-disco-pools{opacity:1}
-#garden-disco-ball{opacity:0; transition:opacity .6s ease}
-#stage-garden.garden-party #garden-disco-ball,
-#stage-garden.disco-peek #garden-disco-ball{opacity:1}
+#garden-disco-ball{opacity:0}
+#loft-game-strip.second-round #garden-disco-ball{opacity:.42}
+#stage-garden.garden-party #garden-disco-ball{opacity:1}
 /* roving colored light pools — screen-blended so they wash light over the room. Healthy frame
    delivery keeps the smooth continuous CSS sweep. Low-frame mode instead drives position/opacity
    from a JS STEPPER (see startDiscoStepper) that JUMPS each pool to a fresh spot ~once a second
@@ -4667,14 +4666,13 @@ html.party-foreground-suspended #loft-game-strip.party-on :is(#stage-kitchen,#st
   #kitchen-bar-mixer .shaking{animation:none}
   #kitchen-bar-mixer .mx-glasswrap, #kitchen-bar-mixer .mx-glasswrap.served{transition:none; transform:none}
 }
-/* tapping the glitter ball pops it: a quick scale-bounce on a dedicated wrapper plus a
+/* tapping the glitter ball toggles Party and pops it: a quick scale-bounce on a dedicated wrapper plus a
    white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
    the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
-   compose). Only reachable during the party — the whole partyfx layer is pointer-events:none,
-   re-enabled on the ball only under .garden-party. */
+   compose). It is hidden and inert before phase two, then remains reachable whether Party is
+   running or resting. */
 #garden-disco-ball{pointer-events:none}
-#stage-garden.garden-party #garden-disco-ball,
-#stage-garden.disco-peek #garden-disco-ball{pointer-events:auto}
+#loft-game-strip.second-round #garden-disco-ball{pointer-events:auto;cursor:pointer}
 #garden-disco-ball-pop{transform-box:fill-box; transform-origin:center}
 #garden-disco-ball-pop.popping{animation:disco-ball-pop .5s ease-out}
 @keyframes disco-ball-pop{0%{transform:scale(1)}30%{transform:scale(1.24)}58%{transform:scale(.9)}100%{transform:scale(1)}}
@@ -19206,6 +19204,7 @@ section{margin:1.9rem 0}
 <ellipse class="disco-pool dp4" cx="300" cy="205" rx="160" ry="140" fill="#f7a01f"/>
 </g>
 <g id="garden-disco-ball" class="hunt-hit">
+<circle cx="340" cy="34" r="28" fill="transparent"/>
 <line x1="340" y1="0" x2="340" y2="24" stroke="#8a8f9c" stroke-width="1.2"/>
 <g id="garden-disco-ball-pop">
 <circle id="garden-disco-ball-glow" cx="340" cy="34" r="20" fill="#fff" pointer-events="none"/>
@@ -29639,11 +29638,11 @@ section{margin:1.9rem 0}
 <rect x="152" y="264" width="8" height="8" fill="#c4c0b8"/>
 <rect x="226" y="264" width="8" height="8" fill="#c4c0b8"/>
 </g>
-<!-- A rocker "party" switch on the junction box (drawn as its own group AFTER the minisplit
-     so it sits on top of the box, without restructuring it). Rocker up=off / down=on; the
+<!-- The one-time Act Two rocker on the junction box (drawn as its own group AFTER the minisplit
+     so it sits on top of the box, without restructuring it). Rocker up=phase one / down=phase two; the
      travel is a CSS transform on a node with no static transform= (per CLAUDE.md's clobber
      rule), position baked into x/y. LED + a soft radial halo round the box glow UV-violet
-     when the balcony blacklight party is on. Click-only, no keyboard (game-SVG a11y rule). -->
+     once Act Two is open. Click-only, no keyboard (game-SVG a11y rule). -->
 <g id="balcony-partyswitch" class="hunt-hit" style="cursor:pointer">
 <defs>
 <radialGradient id="balcony-partyswitch-glow-grad">
@@ -37575,14 +37574,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   </div>
   </div>
   <p class="scene-caption" id="hunt-caption">Turn on La Maz → run El Maz → brew.</p>
-  <div id="party-switch-coach" class="hunt-coach-overlay modal-coach target-modal-coach party-onboarding-coach">
-    <span class="modal-coach-scrim modal-coach-scrim-top"></span>
-    <span class="modal-coach-scrim modal-coach-scrim-bottom"></span>
-    <span class="modal-coach-scrim modal-coach-scrim-left"></span>
-    <span class="modal-coach-scrim modal-coach-scrim-right"></span>
-    <svg><path class="hunt-coach-arrow"/></svg>
-    <div class="hunt-coach-card"><span class="hunt-coach-copy" data-i="party_switch_coach">When the time comes, end the party here.</span><span class="hunt-coach-x">×</span></div>
-  </div>
   <div id="party-room-map-coach" class="hunt-coach-overlay modal-coach target-modal-coach party-onboarding-coach">
     <span class="modal-coach-scrim modal-coach-scrim-top"></span>
     <span class="modal-coach-scrim modal-coach-scrim-bottom"></span>
@@ -37735,8 +37726,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-f3684f4cb1d7"></script>
-<script src="loft-day.cs.js?v=dict-8ffb5519de82"></script>
+<script src="loft-day.en.js?v=dict-98806d194f8a"></script>
+<script src="loft-day.cs.js?v=dict-690fb41b3d8b"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -55844,8 +55835,8 @@ function setPartyMomentUvSuppressed(on) {
     partyMomentUvRestore = false;
   }
 }
-// The blacklight is driven solely by the balcony party switch (persistent,
-// #balcony-partyswitch) — Shift+P can also start that same Party owner.
+// The Party owner drives blacklight intent. The Balcony switch performs its one-time story
+// ignition; in phase two, the Garden disco ball and Shift+P call that same owner.
 var uvPartyOn = false;
 // The May-2 cookout is a real party (music, dancers, roster, kids) held in daylight without
 // blacklight. Separately, any party becomes a BBQ session once its smoker is lit.
@@ -66928,11 +66919,11 @@ function quickReversalGesture(action) {
   update();
 })();
 (function () {
-  // Tapping the glitter ball during the garden party pops it: a quick scale-bounce on the
+  // In phase two the glitter ball is the persistent Party toggle. A tap pops it: a quick scale-bounce on the
   // dedicated -pop wrapper (the -spin group's rotate is left untouched) plus a white
   // light-flash halo and a shimmery rising chime. Re-triggerable — the class clears on
-  // animationend and re-adds across a double rAF, so rapid taps restart cleanly. Party-only
-  // (pointer-events is CSS-gated to .garden-party; the guard also blocks a phantom shimmer
+  // animationend and re-adds across a double rAF, so rapid taps restart cleanly. Phase-two-only
+  // (pointer-events is CSS-gated to .second-round; the guard also blocks a phantom shimmer
   // from a dispatched click while the ball is invisible), and stopPropagation keeps the tap
   // from falling through to the room behind. It lives in the non-interactive partyfx group.
   var ball = document.getElementById("garden-disco-ball");
@@ -66941,9 +66932,7 @@ function quickReversalGesture(action) {
   pop.addEventListener("animationend", function () { pop.classList.remove("popping"); });
   ball.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
-    var gs = document.getElementById("stage-garden");
-    var peeking = gs && gs.classList.contains("disco-peek"); // the after-dark 5s invitation
-    if (!window.__gardenPartyOn && !peeking) return; // ball invisible: nothing to tap
+    if (!window.__secondRound) return;
     pop.classList.remove("popping");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { pop.classList.add("popping"); });
@@ -66952,43 +66941,10 @@ function quickReversalGesture(action) {
     if (window.__gardenPartyOn) {
       if (window.__setPartyMode) window.__setPartyMode(false); // party lit -> one last pop, then it ends (night stays)
     } else {
-      // peeking after dark -> the tap throws the garden party (same garden-only start as the
-      // mirror/mask; night stays lit since __setGardenParty forces night, not the switch's UV)
-      if (window.__setGardenParty) window.__setGardenParty(true, true);
+      if (window.__setPartyMode) window.__setPartyMode(true);
+      else if (window.__setGardenParty) window.__setGardenParty(true, true);
     }
   });
-  // Night-peek: each time the player ENTERS the garden after dark with no party lit, the disco
-  // ball fades into view 5s later — a quiet invitation to tap it and start one. Leaving the
-  // garden hides it again and cancels the pending reveal, so it re-arms from scratch on the next
-  // visit (rather than staying up all night). Driven off room + day/night + party state via
-  // __updateGardenDiscoPeek, re-evaluated on every room change (goToStage) and on the dusk/party/
-  // reset transitions. The .disco-peek class on #stage-garden fades the ball in (CSS) and makes
-  // it clickable; leaving the garden, a live party, or daylight all retract it. One-shot
-  // setTimeout, cleared before each re-arm so it never accumulates.
-  var peekTimer = null;
-  window.__updateGardenDiscoPeek = function () {
-    var gs = document.getElementById("stage-garden");
-    if (!gs) return;
-    var wantPeek = !!window.__secondRound                 // the invitation belongs to phase 2
-      && window.__currentStageName === "garden"            // only while standing in the garden
-      && gs.classList.contains("dusk")                   // only after dark
-      && !window.__gardenPartyOn;                        // only when no party is on
-    if (wantPeek) {
-      // arm the 5s reveal; don't restart a pending timer or re-add an already-shown peek
-      if (peekTimer || gs.classList.contains("disco-peek")) return;
-      peekTimer = setTimeout(function () {
-        peekTimer = null;
-        var g = document.getElementById("stage-garden");
-        // re-check at fire time — the player could have left, dusk lifted, or a party started
-        if (g && window.__secondRound && window.__currentStageName === "garden" && g.classList.contains("dusk") && !window.__gardenPartyOn) g.classList.add("disco-peek");
-      }, 5000);
-    } else {
-      // left the garden, day returned, or party lit -> cancel any pending reveal and hide the
-      // ball immediately, so the next garden entry re-arms the delay from scratch
-      if (peekTimer) { clearTimeout(peekTimer); peekTimer = null; }
-      gs.classList.remove("disco-peek");
-    }
-  };
 })();
 (function () {
   // Click the DJ for an emphatic one-shot headbang plus a scratch on the decks. The bang
@@ -97527,11 +97483,11 @@ def colormode(mode=None):
       if (act.indexOf("arcade:") === 0) { if (window.__launchArcadeGame) window.__launchArcadeGame(act.slice(7)); return; }
       if (act === "invaders") { if (window.__goToStage) window.__goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.__goToStage) window.__goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
-      if (act === "party_switch") { // Athena leaves the last awake guest in charge: show the wall control without flipping it for them
+      if (act === "party_switch") { // Athena leaves the last awake guest in charge: show the Party control without flipping it for them
         if (window.__goToStage) window.__goToStage("garden");
         setTimeout(function () {
-          var sw = document.getElementById("garden-lightswitch");
-          if (sw && window.__gardenPartyOn) sw.classList.add("invite-pulse");
+          var ball = document.getElementById("garden-disco-ball");
+          if (ball && window.__gardenPartyOn) ball.classList.add("invite-pulse");
           if (window.__refreshGardenCaption) window.__refreshGardenCaption();
         }, window.__currentStageName === "garden" ? 80 : 700);
         return;
@@ -97770,19 +97726,20 @@ def colormode(mode=None):
     var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachDelayT = null;
     var msgBadgeCoachShown = false, msgBadgeCoachAcknowledged = false;
     function unreadCount() { expireStaleMessageActions(); var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
-    function partySwitchBlocksMsgBadgeCoach() {
-      return !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive());
+    function partyExplorationBlocksMsgBadgeCoach() {
+      return !!(window.__partyRoomMapCoachModalActive && window.__partyRoomMapCoachModalActive());
     }
     function actionGameBlocksMsgBadgeCoach() {
       return Object.keys(notificationActionGames).some(function (game) {
-        // The Party bridge owns notification delivery for several consecutive beats. Only its
-        // visible switch coach blocks this lesson; otherwise the broad hold made the lesson arrive
-        // very late, disappear during the exchange, and repaint afterward.
+        // The Party bridge owns notification delivery for several consecutive beats. Its visible
+        // exploration coach is checked directly; excluding the broad hold keeps the lesson from
+        // disappearing throughout the later Road Trip exchange and repainting afterward.
         return game !== "party-room-map" && notificationActionGames[game];
       });
     }
     function attentionBlocksMsgBadgeCoach() {
-      return partySwitchBlocksMsgBadgeCoach() || actionGameBlocksMsgBadgeCoach();
+      return !!(window.__partyCoachSurfaceAvailable && !window.__partyCoachSurfaceAvailable()) ||
+        partyExplorationBlocksMsgBadgeCoach() || actionGameBlocksMsgBadgeCoach();
     }
     function cancelMsgBadgeCoachDelay() {
       if (msgBadgeCoachDelayT) { clearTimeout(msgBadgeCoachDelayT); msgBadgeCoachDelayT = null; }
@@ -97864,7 +97821,7 @@ def colormode(mode=None):
       cancelMsgBadgeCoachDelay();
       msgBadgeCoachDelayT = setTimeout(function () { msgBadgeCoachDelayT = null; maybeShowMsgBadgeCoach(); }, 3000);
     }
-    window.__releaseMsgBadgeCoachAfterPartySwitch = function () {
+    window.__releaseMsgBadgeCoachAfterPartyExploration = function () {
       cancelMsgBadgeCoachDelay();
       return maybeShowMsgBadgeCoach();
     };
@@ -99670,7 +99627,6 @@ def colormode(mode=None):
         if (window.__stopBalconySky) window.__stopBalconySky(); // daybreak also puts out any fireworks finale / wish-lanterns (night things)
       }
       if (window.__updateMozzies) window.__updateMozzies(); // dusk → mosquitoes swarm; day → they clear
-      if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // dusk arms the 5s disco-ball peek; day retracts it
       // northern lights: re-roll the odds at each nightfall (one toss per night, like the precip
       // roll above — most clear nights show them, esp. with the UV party off); day just re-evaluates off
       if (dusk && window.__rollGardenAurora) window.__rollGardenAurora();
@@ -99723,7 +99679,6 @@ def colormode(mode=None):
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
       if (window.__stopBalconySky) window.__stopBalconySky(); // dusk removed → tear down any fireworks finale / wish-lanterns
       if (window.__updateMozzies) window.__updateMozzies(); // dusk removed → tear the swarm down
-      if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // day forced back → retract any disco-ball peek
       if (window.__updateGardenAurora) window.__updateGardenAurora(); // day forced back → aurora off
     };
     // ── AUTOMATIC day/night: the loft's sky flips at Edmonton's real sunrise/sunset ─────────
@@ -100701,7 +100656,6 @@ def colormode(mode=None):
     function setPartyMode(on, immediate, userInitiated) {
       on = !!on;
       if (userInitiated == null) userInitiated = true;
-      partyswitch.classList.toggle("on", on);
       if (on) {
         // Toggling back ON — cancel any pending graceful teardown and walk the leaving guests back in.
         var wasWindingDown = window.__cancelPartyWindDown ? window.__cancelPartyWindDown(true) : !!partyWindDownTimer;
@@ -100730,7 +100684,7 @@ def colormode(mode=None):
       }
       teardownPartyNow();
     }
-    window.__setPartyMode = setPartyMode; // the garden light switch turns the party off through here
+    window.__setPartyMode = setPartyMode;
     var partyStopThenCallbacks = [], partyStopThenTimer = null, partyStopThenStartedAt = 0;
     function finishPartyStopThen() {
       if (partyStopThenTimer) clearTimeout(partyStopThenTimer);
@@ -100772,7 +100726,9 @@ def colormode(mode=None):
       return !!partyWindDownTimer || partyWindDownRemaining > 0;
     }; // private test hook
     partyswitch.addEventListener("click", function () {
-      setPartyMode(!partyswitch.classList.contains("on"));
+      // The story breaker ignites phase two once. The newly revealed Garden disco ball owns
+      // subsequent Party toggles, leaving this solved hinge latched on.
+      if (!window.__secondRound) setPartyMode(true);
     });
   }
   var doormat = document.getElementById("balcony-doormat");
@@ -114039,6 +113995,7 @@ function spawnDustMote(container) {
     if (window.__syncCinemaTicketUsed) window.__syncCinemaTicketUsed();
     if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
+    if (window.__partyExplorationChanged) window.__partyExplorationChanged(null, seenRoomList().length);
     return seenRoomList();
   }
   var LOWER_ROOM_PROGRESS_KEYS = {
@@ -116463,7 +116420,6 @@ function spawnDustMote(container) {
     if (window.__updateWind) window.__updateWind(0.25); // outdoor wind stops at an indoor room boundary
     if (window.__updateRainSound) window.__updateRainSound(0.25);
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
-    if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.__currentStageName)
     if (window.__updateGardenAurora) window.__updateGardenAurora(); // northern lights: the rAF loop runs only while the garden's on-screen at dusk (reads window.__currentStageName)
     if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic)
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
@@ -117652,7 +117608,6 @@ function spawnDustMote(container) {
   // called on garden entry and whenever the party toggles (setGardenParty)
   window.__refreshGardenCaption = function () {
     if (window.__currentStageName !== "garden" || window.__cinematic) return;
-    if (window.__partyExitHintActive && window.__partyExitHintActive()) { setCaption("party_exit_hint"); return; }
     // a live second-act beat is a more specific thing to say than "party's on" — it wins
     var beat = window.__actBeatHint ? window.__actBeatHint("garden") : null;
     if (beat) { setCaption(beat); return; }
@@ -117966,24 +117921,12 @@ function spawnDustMote(container) {
       }
     });
   })();
-  // Garden wall light switch: during the solve it flips day/night so the night-time
-  // magic is reachable without hunting for the balcony sun/moon. Once the first party
-  // unlocks phase two, it becomes the room's day/party switch instead.
+  // The Garden wall light switch always flips day/night. Party has its own phase-two
+  // control on the roof, so scene lighting never gains a second meaning.
   (function () {
     var sw = document.getElementById("garden-lightswitch");
     if (!sw) return;
     onActivate(sw, function () {
-      if (window.__gardenPartyOn && window.__setPartyMode) { // party lit -> the switch kills it and brings the day back
-        if (window.__consumePartyExitHint) window.__consumePartyExitHint();
-        window.__setPartyMode(false);
-        if (window.__setDayNight) window.__setDayNight(false);
-        return;
-      }
-      if (window.__secondRound) {
-        if (window.__setPartyMode) window.__setPartyMode(true);
-        else if (window.__setGardenParty) window.__setGardenParty(true, true);
-        return;
-      }
       if (window.__autoToggleDusk) window.__autoToggleDusk(); // a temporary manual look — the crossing scheduler stays armed (the next real crossing still flips it)
     });
   })();
@@ -117996,9 +117939,9 @@ function spawnDustMote(container) {
     var attendedSeconds = 0, timer = null, active = false, finishing = false;
     var finaleAt = null, finaleReason = null, finaleTextOffered = false, finaleDeck = [];
     var suppressNextStop = false;
-    var switchCoachTimer = null, switchCoachDeadline = 0, switchCoachRemaining = 0;
-    var switchCoachSeen = false, switchCoachRetired = false;
-    var handoffShown = false, roadtripInviteDelivered = false, roomMapCoachActive = false;
+    var roomMapCoachTimer = null, roomMapCoachDeadline = 0, roomMapCoachRemaining = 0;
+    var roomMapCoachActive = false, roomMapCoachAcknowledged = false;
+    var handoffShown = false, roadtripInviteDelivered = false;
     var coachAttentionRetryTimer = null;
     var roadtripExchangeTimer = null, roadtripExchangeDeadline = 0, roadtripExchangeRemaining = 0;
     var ROADTRIP_EXCHANGE_IDS = ["downstairs_entrance", "downstairs_roadtrip_where",
@@ -118009,17 +117952,9 @@ function spawnDustMote(container) {
       downstairs_roadtrip_where: 2200,
       downstairs_roadtrip_journey: 2600
     };
-    var switchCoachDelay = 4200;
-    var coachViewport = document.querySelector(".hunt-viewport");
+    var roomMapCoachDelay = 4200;
     var coachArea = document.getElementById("hunt-fullscreen-area");
-    var switchCoachOverlay = document.getElementById("party-switch-coach");
     var roomMapCoachOverlay = document.getElementById("party-room-map-coach");
-    function gardenCoachSurfaceVisible() {
-      return !!(coachViewport && window.__currentStageName === "garden" &&
-        !coachViewport.matches(".bathroom-room-open,.prince-basement-open,.cinema-room-open,.bedroom-room-open,.entrance-room-open"));
-    }
-    var switchCoachGardenVisible = gardenCoachSurfaceVisible();
-    var switchCoachRevealTimer = null, switchCoachRevealPending = false;
     function coachPopup(overlay) { return overlay && overlay.querySelector(".hunt-coach-card"); }
     function setCoachArrow(overlay, host, x, lineStart, lineEnd, tip, direction) {
       if (!overlay || !host) return;
@@ -118042,18 +117977,6 @@ function spawnDustMote(container) {
       overlay.querySelector(".hunt-coach-arrow").setAttribute("d", path);
     }
     window.__setHuntCoachArrow = setCoachArrow;
-    function setCoachLeftArrow(overlay, host, lineStart, lineEnd, y, tip) {
-      if (!overlay || !host) return;
-      var width = host.clientWidth, height = host.clientHeight;
-      var svg = overlay.querySelector("svg");
-      if (!width || !height || !svg) return;
-      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-      var shaft = 11, head = 25;
-      overlay.querySelector(".hunt-coach-arrow").setAttribute("d",
-        "M" + lineStart + " " + (y - shaft) + "H" + lineEnd + "V" + (y - head) +
-        "L" + tip + " " + y + "L" + lineEnd + " " + (y + head) + "V" + (y + shaft) +
-        "H" + lineStart + "Z");
-    }
     function positionCoachTargetScrim(overlay, targets) {
       if (!overlay || !coachArea) return;
       var ar = coachArea.getBoundingClientRect();
@@ -118080,29 +118003,6 @@ function spawnDustMote(container) {
       });
     }
     window.__positionCoachTargetScrim = positionCoachTargetScrim;
-    function positionSwitchCoach() {
-      if (!switchCoachOverlay || !switchCoachOverlay.classList.contains("show") || !coachViewport || !coachArea) return;
-      var ar = coachArea.getBoundingClientRect();
-      var popup = coachPopup(switchCoachOverlay);
-      // The settled switch's live rectangle is the target island. Keeping the card to its right
-      // leaves the actual SVG control visible and clickable even in a shallow 390px fullscreen.
-      // Give the shaft real travel before the card begins; otherwise on wide shells the large
-      // card crowded the left edge and visually swallowed the arrow it was meant to clarify.
-      var switchRect = sw.getBoundingClientRect();
-      var targetRight = switchRect.right - ar.left;
-      var targetGap = ar.width <= 520 ? Math.max(44, ar.width * .12) :
-        Math.max(110, Math.min(150, ar.width * .11));
-      var popupLeft = Math.min(ar.width - 232,
-        Math.max(ar.width <= 520 ? ar.width * .23 : ar.width * .26, targetRight + targetGap));
-      popup.style.width = Math.min(820, Math.max(220, ar.width - popupLeft - 12)) + "px";
-      var targetY = switchRect.top + switchRect.height / 2 - ar.top;
-      popup.style.left = popupLeft + "px";
-      popup.style.top = Math.max(12, Math.min(ar.height - popup.offsetHeight - 12,
-        targetY - popup.offsetHeight / 2)) + "px";
-      setCoachLeftArrow(switchCoachOverlay, coachArea, popupLeft - 4, targetRight + 28,
-        targetY, targetRight + 3);
-      positionCoachTargetScrim(switchCoachOverlay, [sw]);
-    }
     function positionRoomMapCoach() {
       if (!roomMapCoachOverlay || !roomMapCoachOverlay.classList.contains("show") || !coachArea) return;
       var target = document.getElementById("hunt-dollhouse-btn");
@@ -118120,15 +118020,12 @@ function spawnDustMote(container) {
       setCoachArrow(roomMapCoachOverlay, coachArea, x, arrowBottom, tip + 38, tip, "up");
       positionCoachTargetScrim(roomMapCoachOverlay, [target]);
     }
-    function positionCoaches() {
-      positionSwitchCoach();
-      positionRoomMapCoach();
-    }
+    function positionCoaches() { positionRoomMapCoach(); }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function clearSwitchCoach(resetRemaining) {
-      if (switchCoachTimer) { clearTimeout(switchCoachTimer); switchCoachTimer = null; }
-      switchCoachDeadline = 0;
-      if (resetRemaining !== false) switchCoachRemaining = 0;
+    function clearRoomMapCoachTimer(resetRemaining) {
+      if (roomMapCoachTimer) { clearTimeout(roomMapCoachTimer); roomMapCoachTimer = null; }
+      roomMapCoachDeadline = 0;
+      if (resetRemaining !== false) roomMapCoachRemaining = 0;
     }
     function clearRoadtripExchange(resetRemaining) {
       if (roadtripExchangeTimer) { clearTimeout(roadtripExchangeTimer); roadtripExchangeTimer = null; }
@@ -118138,6 +118035,17 @@ function spawnDustMote(container) {
     function partyAttentionQuiet() {
       return !window.__partyAttentionChannelQuiet || window.__partyAttentionChannelQuiet();
     }
+    function partyMomentActive() {
+      return !!(window.__firstDanceOn || window.__slowDanceOn || window.__toastsOn ||
+        window.__groupPhotoOn || window.__sparklersOn || window.__cakeOn || window.__bdCakeOn ||
+        window.__bouquetOn || window.__photoFreeze);
+    }
+    function partyCoachSurfaceAvailable() {
+      return !window.__cinematic && !partyMomentActive() &&
+        (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+        !document.querySelector(".sharecard-modal.show");
+    }
+    window.__partyCoachSurfaceAvailable = partyCoachSurfaceAvailable;
     function scheduleCoachAttentionRetry() {
       if (coachAttentionRetryTimer) return;
       coachAttentionRetryTimer = setTimeout(function () {
@@ -118149,14 +118057,12 @@ function spawnDustMote(container) {
       return !!(overlay && overlay.classList.contains("show"));
     }
     function activePartyCoachOverlay() {
-      if (coachOverlayShowing(switchCoachOverlay)) return switchCoachOverlay;
       if (coachOverlayShowing(roomMapCoachOverlay)) return roomMapCoachOverlay;
       return null;
     }
-    function paintRoomMapCoach(switchShowing) {
-      if (switchShowing == null) switchShowing = coachOverlayShowing(switchCoachOverlay);
+    function paintRoomMapCoach() {
       var wasShowing = coachOverlayShowing(roomMapCoachOverlay);
-      var canShow = !!roomMapCoachActive && !switchShowing &&
+      var canShow = !!roomMapCoachActive && partyCoachSurfaceAvailable() &&
         (wasShowing || partyAttentionQuiet());
       if (roomMapCoachOverlay) {
         roomMapCoachOverlay.classList.toggle("show", canShow);
@@ -118174,73 +118080,41 @@ function spawnDustMote(container) {
       var exchangeActive = !roadtripInviteDelivered && roadtripExchangeEligible() &&
         !!roadtripExchangeNextId();
       if (window.__setPartyRoomMapAttentionHold) {
-        window.__setPartyRoomMapAttentionHold(coachOverlayShowing(switchCoachOverlay) ||
-          coachOverlayShowing(roomMapCoachOverlay) || exchangeActive);
+        window.__setPartyRoomMapAttentionHold(coachOverlayShowing(roomMapCoachOverlay) || exchangeActive);
       }
     }
     function paint() {
-      var partyOn = !!window.__gardenPartyOn;
-      var coach = partyOn && !switchCoachRetired && (switchCoachSeen || active);
-      var switchWasShowing = coachOverlayShowing(switchCoachOverlay);
-      var gardenVisible = gardenCoachSurfaceVisible();
-      var enteredGarden = gardenVisible && !switchCoachGardenVisible;
-      switchCoachGardenVisible = gardenVisible;
-      if (!gardenVisible) {
-        if (switchCoachRevealTimer) clearTimeout(switchCoachRevealTimer);
-        switchCoachRevealTimer = null;
-        switchCoachRevealPending = false;
-      } else if (coach && enteredGarden) {
-        if (switchCoachRevealTimer) clearTimeout(switchCoachRevealTimer);
-        switchCoachRevealPending = true;
-        var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        switchCoachRevealTimer = setTimeout(function () {
-          switchCoachRevealTimer = null;
-          switchCoachRevealPending = false;
-          paint();
-        }, reduced ? 1 : 760);
-      }
-      var switchWantsPresentation = !!(coach && gardenVisible);
-      var switchShowing = switchWantsPresentation && !switchCoachRevealPending &&
-        (switchWasShowing || partyAttentionQuiet());
-      sw.classList.toggle("invite-pulse", !!(active && partyOn));
-      if (switchCoachOverlay) {
-        switchCoachOverlay.classList.toggle("show", switchShowing);
-        var switchCopy = switchCoachOverlay.querySelector("[data-i=party_switch_coach]");
-        if (switchCopy) switchCopy.textContent = huntText("party_switch_coach");
-        if (switchShowing) requestAnimationFrame(positionSwitchCoach);
-      }
-      paintRoomMapCoach(switchShowing);
-      if (switchWantsPresentation && !switchShowing) scheduleCoachAttentionRetry();
-      if (!switchWantsPresentation && !roomMapCoachActive && coachAttentionRetryTimer) {
+      paintRoomMapCoach();
+      if (!roomMapCoachActive && coachAttentionRetryTimer) {
         clearTimeout(coachAttentionRetryTimer);
         coachAttentionRetryTimer = null;
       }
     }
-    if (coachViewport && window.MutationObserver) {
-      new MutationObserver(paint).observe(coachViewport, { attributes: true, attributeFilter: ["class"] });
-    }
     function checkpointBridge() {
       if (window.__checkpointChanged) window.__checkpointChanged();
     }
-    function showSwitchCoach() {
-      clearSwitchCoach();
-      if (!window.__gardenPartyOn || switchCoachSeen || switchCoachRetired) return false;
-      switchCoachSeen = true;
+    function activateRoomMapCoach() {
+      clearRoomMapCoachTimer();
+      var count = window.__seenRooms ? window.__seenRooms().length : 0;
+      if (roomMapCoachAcknowledged || count >= 10) return false;
+      roomMapCoachActive = true;
       paint();
       checkpointBridge();
       return true;
     }
-    function scheduleSwitchCoach(delay) {
-      if (!window.__gardenPartyOn || switchCoachSeen || switchCoachRetired || switchCoachTimer) return false;
-      switchCoachRemaining = Math.max(1, Number(delay) || switchCoachDelay);
-      switchCoachDeadline = performance.now() + switchCoachRemaining;
-      switchCoachTimer = setTimeout(showSwitchCoach, switchCoachRemaining);
+    function scheduleRoomMapCoach(delay) {
+      var count = window.__seenRooms ? window.__seenRooms().length : 0;
+      if (!window.__gardenPartyOn || roomMapCoachAcknowledged || roomMapCoachActive ||
+          count >= 10 || roomMapCoachTimer) return false;
+      roomMapCoachRemaining = Math.max(1, Number(delay) || roomMapCoachDelay);
+      roomMapCoachDeadline = performance.now() + roomMapCoachRemaining;
+      roomMapCoachTimer = setTimeout(activateRoomMapCoach, roomMapCoachRemaining);
       return true;
     }
+    window.__showPartyExplorationCoach = activateRoomMapCoach;
     function show(withFinaleText) {
       if (active || !window.__gardenPartyOn) return false;
-      active = true; paint();
-      if (window.__currentStageName === "garden" && window.__refreshGardenCaption) window.__refreshGardenCaption();
+      active = true;
       if (withFinaleText) offerFinaleText();
       return true;
     }
@@ -118286,8 +118160,7 @@ function spawnDustMote(container) {
       advance(1);
     }
     function roadtripExchangeEligible() {
-      return !!(handoffShown && window.__secondRound && !roomMapCoachActive &&
-        !coachOverlayShowing(switchCoachOverlay) && window.__seenRooms &&
+      return !!(handoffShown && window.__secondRound && !roomMapCoachActive && window.__seenRooms &&
         window.__seenRooms().length >= 10);
     }
     function roadtripExchangeNextId() {
@@ -118346,11 +118219,11 @@ function spawnDustMote(container) {
       return deliverRoadtripExchangeBeat();
     }
     function postPartyHandoff() {
-      if (handoffShown) return offerRoadtripInvite(roadtripExchangeRemaining);
-      handoffShown = true;
       var count = window.__seenRooms ? window.__seenRooms().length : 0;
       count = Math.max(0, Math.min(10, count));
-      roomMapCoachActive = count < 10;
+      handoffShown = true;
+      clearRoomMapCoachTimer();
+      roomMapCoachActive = count < 10 && !roomMapCoachAcknowledged;
       paintRoomMapCoach();
       if (count === 10 && window.__captionOverlay) {
         window.__captionOverlay("party_rooms_complete", { owner: "party-roadtrip-handoff",
@@ -118361,15 +118234,15 @@ function spawnDustMote(container) {
       return offerRoadtripInvite(roadtripExchangeRemaining);
     }
     function startFresh() {
-      var pendingCoachDelay = switchCoachRemaining;
+      var pendingCoachDelay = roomMapCoachRemaining;
       if (roadtripExchangeTimer) {
         roadtripExchangeRemaining = Math.max(1, roadtripExchangeDeadline - performance.now());
         clearRoadtripExchange(false);
       }
-      clearSwitchCoach(); stop();
+      clearRoomMapCoachTimer(); stop();
       attendedSeconds = 0; active = false; finishing = false; suppressNextStop = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
-      paint(); scheduleSwitchCoach(pendingCoachDelay || switchCoachDelay);
+      paint(); scheduleRoomMapCoach(pendingCoachDelay || roomMapCoachDelay);
       timer = setInterval(tick, 1000);
     }
     function stopped() {
@@ -118377,7 +118250,7 @@ function spawnDustMote(container) {
       var suppress = suppressNextStop; suppressNextStop = false;
       var ended = finishing; finishing = false;
       finaleAt = null; finaleReason = null;
-      clearSwitchCoach();
+      clearRoomMapCoachTimer();
       if (window.__partyActEnded) window.__partyActEnded();
       if (!suppress && !window.__cinematic) {
         if (window.__setCaption) window.__setCaption("party_ended");
@@ -118393,29 +118266,16 @@ function spawnDustMote(container) {
     };
     window.__partyExitHintActive = function () { return !!(active && window.__gardenPartyOn); };
     window.__showPartyExitHint = function () { return show(false); }; // deterministic state-test hook (does not manufacture a phone cue)
-    window.__showPartySwitchCoach = showSwitchCoach; // focused test hook: skip only the initial non-blocking delay
     window.__offerPartyFinaleText = offerFinaleText; // focused test hook: deal the next closing message without waiting on party pacing
-    function retireSwitchCoach() {
-      var changed = !switchCoachRetired;
-      active = false;
-      switchCoachRetired = true;
-      clearSwitchCoach();
-      if (coachAttentionRetryTimer) { clearTimeout(coachAttentionRetryTimer); coachAttentionRetryTimer = null; }
-      if (window.__clearFlashCaption) window.__clearFlashCaption("party-switch-coach");
-      paint();
-      if (changed && window.__releaseMsgBadgeCoachAfterPartySwitch) {
-        window.__releaseMsgBadgeCoachAfterPartySwitch();
-      }
-      if (changed) checkpointBridge();
-      if (changed) offerRoadtripInvite(roadtripExchangeRemaining);
-      return changed;
-    }
-    window.__consumePartyExitHint = retireSwitchCoach;
+    window.__consumePartyExitHint = function () { return false; };
     function retireRoomMapCoach() {
       if (!roomMapCoachActive) return false;
       roomMapCoachActive = false;
+      roomMapCoachAcknowledged = true;
+      clearRoomMapCoachTimer();
       paintRoomMapCoach();
       checkpointBridge();
+      if (window.__releaseMsgBadgeCoachAfterPartyExploration) window.__releaseMsgBadgeCoachAfterPartyExploration();
       offerRoadtripInvite(roadtripExchangeRemaining);
       return true;
     }
@@ -118428,11 +118288,13 @@ function spawnDustMote(container) {
       }
       if (!handoffShown) handoffShown = true;
       roomMapCoachActive = false;
+      roomMapCoachAcknowledged = true;
+      clearRoomMapCoachTimer();
       paintRoomMapCoach();
       checkpointBridge();
       return offerRoadtripInvite(roadtripExchangeRemaining);
     };
-    [switchCoachOverlay, roomMapCoachOverlay].forEach(function (overlay) {
+    [roomMapCoachOverlay].forEach(function (overlay) {
       var popup = coachPopup(overlay);
       if (!popup) return;
       popup.addEventListener("pointerdown", function (event) {
@@ -118441,7 +118303,7 @@ function spawnDustMote(container) {
       popup.addEventListener("click", function (event) {
         event.preventDefault(); event.stopPropagation();
         if (!event.target.closest || !event.target.closest(".hunt-coach-x")) return;
-        if (overlay === switchCoachOverlay) retireSwitchCoach(); else retireRoomMapCoach();
+        retireRoomMapCoach();
       });
     });
     document.addEventListener("keydown", function (event) {
@@ -118454,20 +118316,17 @@ function spawnDustMote(container) {
     }, true);
     window.addEventListener("resize", positionCoaches);
     window.__refreshPartyBridgeCoaches = paint;
-    window.__partySwitchCoachModalActive = function () {
-      return coachOverlayShowing(switchCoachOverlay);
-    };
+    window.__partyRoomMapCoachModalActive = function () { return coachOverlayShowing(roomMapCoachOverlay); };
     window.__partyCoachModalActive = function () {
       return !!activePartyCoachOverlay() || !!(window.__msgBadgeCoachModalActive && window.__msgBadgeCoachModalActive());
     };
     window.__partyCoachModalKind = function () {
       var overlay = activePartyCoachOverlay();
-      return overlay === switchCoachOverlay ? "switch" : overlay === roomMapCoachOverlay ? "room-map" :
+      return overlay === roomMapCoachOverlay ? "room-map" :
         window.__msgBadgeCoachModalActive && window.__msgBadgeCoachModalActive() ? "messages" : null;
     };
     window.__dismissActivePartyCoach = function () {
       var overlay = activePartyCoachOverlay();
-      if (overlay === switchCoachOverlay) return retireSwitchCoach();
       if (overlay === roomMapCoachOverlay) return retireRoomMapCoach();
       if (window.__msgBadgeCoachModalActive && window.__msgBadgeCoachModalActive() &&
           window.__dismissMsgBadgeCoach) return window.__dismissMsgBadgeCoach();
@@ -118505,14 +118364,15 @@ function spawnDustMote(container) {
     window.__partyLifecycleTick = tick;           // deterministic attendance-gate test hook
     window.__pausePartyLifecycle = function () {
       stop();
-      if (switchCoachTimer) {
-        switchCoachRemaining = Math.max(1, switchCoachDeadline - performance.now());
-        clearSwitchCoach(false);
+      if (roomMapCoachTimer) {
+        roomMapCoachRemaining = Math.max(1, roomMapCoachDeadline - performance.now());
+        clearRoomMapCoachTimer(false);
       }
       if (roadtripExchangeTimer) {
         roadtripExchangeRemaining = Math.max(1, roadtripExchangeDeadline - performance.now());
         clearRoadtripExchange(false);
       }
+      paint();
     };
     window.__resumePartyLifecycle = function () {
       if (window.__gardenPartyOn && !finishing && !timer &&
@@ -118522,16 +118382,18 @@ function spawnDustMote(container) {
       // The four-beat exchange is allowed on either side of teardown. Its checkpointed
       // delay must therefore resume while a qualified party is still running as well.
       if (handoffShown && !roadtripInviteDelivered) offerRoadtripInvite(roadtripExchangeRemaining);
-      if (window.__gardenPartyOn && switchCoachRemaining > 0) {
-        scheduleSwitchCoach(switchCoachRemaining);
+      if (window.__gardenPartyOn && roomMapCoachRemaining > 0) {
+        scheduleRoomMapCoach(roomMapCoachRemaining);
       }
+      paint();
     };
     window.__partyLifecycleState = function () { return {
       attended: attendedSeconds, cue: !!active, finishing: finishing || null,
       finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer,
-      switchCoachSeen: switchCoachSeen, switchCoachRetired: switchCoachRetired,
       handoffShown: handoffShown, roadtripInviteDelivered: roadtripInviteDelivered,
+      roomMapCoachAcknowledged: roomMapCoachAcknowledged,
       roomMapCoachActive: roomMapCoachActive,
+      roomMapCoachPending: !!roomMapCoachTimer || roomMapCoachRemaining > 0,
       roadtripExchangeNext: roadtripExchangeNextId(),
       roadtripExchangePending: !!roadtripExchangeTimer || roadtripExchangeRemaining > 0
     }; };
@@ -118539,44 +118401,44 @@ function spawnDustMote(container) {
     window.__resetPartyExitHint = function () {
       suppressNextStop = true; attendedSeconds = 0; active = false; finishing = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
-      switchCoachSeen = false; switchCoachRetired = false;
-      handoffShown = false; roadtripInviteDelivered = false; roomMapCoachActive = false;
-      stop(); clearSwitchCoach(); clearRoadtripExchange(); paint();
+      roomMapCoachActive = false; roomMapCoachAcknowledged = false;
+      handoffShown = false; roadtripInviteDelivered = false;
+      stop(); clearRoomMapCoachTimer(); clearRoadtripExchange(); paint();
     };
     var partyBridgeAdapter = {
       capture: function () {
-        var coachDelay = switchCoachTimer ? Math.max(1, switchCoachDeadline - performance.now()) :
-          switchCoachRemaining;
+        var coachDelay = roomMapCoachTimer ? Math.max(1, roomMapCoachDeadline - performance.now()) :
+          roomMapCoachRemaining;
         var exchangeDelay = roadtripExchangeTimer ?
           Math.max(1, roadtripExchangeDeadline - performance.now()) : roadtripExchangeRemaining;
         return {
-          switchCoachSeen: switchCoachSeen,
-          switchCoachRetired: switchCoachRetired,
-          switchCoachDelay: Math.max(0, Math.round(coachDelay || 0)),
           handoffShown: handoffShown,
           roadtripInviteDelivered: roadtripInviteDelivered,
+          roomMapCoachAcknowledged: roomMapCoachAcknowledged,
           roomMapCoachActive: roomMapCoachActive,
+          roomMapCoachDelay: Math.max(0, Math.round(coachDelay || 0)),
           roadtripExchangeDelay: Math.max(0, Math.round(exchangeDelay || 0))
         };
       },
       restore: function (row, phase) {
         if (phase === "beforeStage") {
-          clearSwitchCoach();
+          clearRoomMapCoachTimer();
           clearRoadtripExchange();
-          switchCoachSeen = !!(row && row.switchCoachSeen);
-          switchCoachRetired = !!(row && row.switchCoachRetired);
-          switchCoachRemaining = row && Number.isFinite(Number(row.switchCoachDelay)) ?
-            Math.max(0, Number(row.switchCoachDelay)) : 0;
           handoffShown = !!(row && row.handoffShown);
           roadtripInviteDelivered = !!(row && row.roadtripInviteDelivered) ||
             !!(window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_roadtrip_go"));
           roomMapCoachActive = !!(row && row.roomMapCoachActive);
+          roomMapCoachAcknowledged = !!(row && row.roomMapCoachAcknowledged) ||
+            !!(row && row.handoffShown && row.roomMapCoachActive === false &&
+              !Object.prototype.hasOwnProperty.call(row, "roomMapCoachAcknowledged"));
+          roomMapCoachRemaining = row && Number.isFinite(Number(row.roomMapCoachDelay)) ?
+            Math.max(0, Number(row.roomMapCoachDelay)) : 0;
           roadtripExchangeRemaining = row && Number.isFinite(Number(row.roadtripExchangeDelay)) ?
             Math.max(0, Number(row.roadtripExchangeDelay)) : 0;
         } else {
           paint();
-          if (window.__gardenPartyOn && !switchCoachSeen && !switchCoachRetired) {
-            scheduleSwitchCoach(switchCoachRemaining || switchCoachDelay);
+          if (window.__gardenPartyOn && !roomMapCoachAcknowledged && !roomMapCoachActive) {
+            scheduleRoomMapCoach(roomMapCoachRemaining || roomMapCoachDelay);
           }
           if (handoffShown && !roadtripInviteDelivered) {
             offerRoadtripInvite(roadtripExchangeRemaining);
@@ -118584,10 +118446,10 @@ function spawnDustMote(container) {
         }
       },
       reset: function () {
-        clearSwitchCoach();
+        clearRoomMapCoachTimer();
         clearRoadtripExchange();
-        switchCoachSeen = false; switchCoachRetired = false;
-        handoffShown = false; roadtripInviteDelivered = false; roomMapCoachActive = false;
+        roomMapCoachActive = false; roomMapCoachAcknowledged = false;
+        handoffShown = false; roadtripInviteDelivered = false;
         paint();
       }
     };
@@ -119199,7 +119061,7 @@ function spawnDustMote(container) {
     setTimeout(tick, 6000 + Math.random() * 6000);
   })();
   // ── PARTY MODE confetti (garden) — same self-replenishing idiom as the rain above.
-  // The balcony party switch drives window.__gardenPartyOn (see setGardenParty). Each
+  // The shared Party owner drives window.__gardenPartyOn (see setGardenParty). Each
   // piece self-removes on its onfinish and spawns one replacement while the party is
   // active-and-visible-and-in-the-garden, so the count stays constant and spawning
   // naturally pauses with the frames on a hidden tab. Source colors are the UV neon
@@ -119216,6 +119078,8 @@ function spawnDustMote(container) {
     window.__secondRound = !!on;
     var gameStrip = document.getElementById("loft-game-strip");
     if (gameStrip) gameStrip.classList.toggle("second-round", window.__secondRound);
+    var storySwitch = document.getElementById("balcony-partyswitch");
+    if (storySwitch) storySwitch.classList.toggle("on", window.__secondRound);
     if (window.__secondRound) {
       if (window.__unlockAllRooms) window.__unlockAllRooms();
       STAGES.forEach(function (name) { setRoomSolved(name, true); });
@@ -120688,6 +120552,7 @@ function spawnDustMote(container) {
     var momentIsActive = partyMomentStateActive();
     if (momentWasActive !== momentIsActive) setPartyMomentUvSuppressed(momentIsActive);
     if (on && !was && PARTY_MOMENT_ECHO[name] && controllers.echo) controllers.echo(PARTY_MOMENT_ECHO[name]);
+    if (window.__refreshPartyBridgeCoaches) window.__refreshPartyBridgeCoaches();
     return window["__" + prop];
   }
   window.__setPartyMomentState = setPartyMomentState;
@@ -123000,14 +122865,14 @@ function spawnDustMote(container) {
     }
     // Party-off is the teardown boundary even when a cinematic, reset, typed action, or
     // lifecycle fallback calls this setter directly instead of going through setPartyMode.
-    // Clear both the switch's persistent UV intent and its visible state before the breather
-    // evaluates; otherwise its one-second watchdog can restore .uv-mode after the party is gone.
+    // Clear persistent UV intent before the breather evaluates; otherwise its one-second
+    // watchdog can restore .uv-mode after the Party is gone.
     if (!on) {
-      var partySwitch = document.getElementById("balcony-partyswitch");
-      if (partySwitch) partySwitch.classList.remove("on");
       if (window.__setUvParty) window.__setUvParty(false);
       else if (window.__setUvMode) window.__setUvMode(false);
     }
+    var discoBall = document.getElementById("garden-disco-ball");
+    if (discoBall) discoBall.classList.remove("invite-pulse");
     if (on && !wasOn) window.__partyStartedAt = Date.now();
     else if (!on) window.__partyStartedAt = null;
     // First party of the session = we're officially in the "second round": reveal the who's-here
@@ -123118,7 +122983,6 @@ function spawnDustMote(container) {
     if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // party toggling re-evaluates the eased blacklight (garden stays full)
     if (window.__updateUvBreather) window.__updateUvBreather(); // party on → start the blacklight breather; party off → stop it + hand UV back to the switch
     if (window.__syncDanceFreeze) window.__syncDanceFreeze(); // party off → drop any dance-freeze (only meaningful during the party)
-    if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // party on retracts the night-peek; party off at night re-arms it
     if (window.__rollGardenAurora) window.__rollGardenAurora(); // the UV changes the odds — re-roll the aurora (much likelier with the party off)
     if (window.__homeCat && window.__currentStageName) window.__homeCat(window.__currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     if (window.__updateWhistler) window.__updateWhistler(); // party on + Farhang/Lauren arrived → let Whistler out; party off → send him home
@@ -130171,9 +130035,9 @@ function spawnDustMote(container) {
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
     if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "beforeStage");
-    // Restore through the complete party-mode owner, not only its scene half. The balcony
-    // switch and persistent UV intent are also toggle state: if they remain at their fresh-page
-    // defaults, the first `p` after Continue only reconciles the switch and cannot stop the party.
+    // Restore through the complete party-mode owner, not only its scene half. setSecondRound
+    // already restores the one-time balcony phase latch; this owner restores the disco control,
+    // UV intent and Garden scene together so the first `p` after Continue really toggles Party.
     if (window.__setPartyMode) window.__setPartyMode(!!p.party, true, false);
     else if (p.party && window.__setGardenParty) window.__setGardenParty(true, false);
     // Restore through the smoker owner, not a public command, so recovery never moves the view.
@@ -132379,8 +132243,8 @@ function spawnDustMote(container) {
     var prev = !!window.__gardenPartyOn;
     if (arguments.length === 0) return prev; // no arg → is the party on?
     var on = !!arg; // internal controller; loft.party.status()/set(boolean) is public
-    // run the EXACT party-start sequence the balcony switch does: UV blacklight + garden party
-    // + switch state — not just __setGardenParty (which lit the party but left the blacklight off)
+    // Run the same complete Party owner as the phase-two disco, Enter and Shift+P: UV blacklight
+    // plus the Garden scene, not only __setGardenParty (which leaves the blacklight untouched).
     if (window.__setPartyMode) window.__setPartyMode(on, true, false);
     else if (window.__setGardenParty) window.__setGardenParty(on, false);
     narrate(on, "🎉 party on — blacklight, confetti, a beat. dance.", "party over — the garden settles.");

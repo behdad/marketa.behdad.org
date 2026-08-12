@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// Drive the real visible garden-switch goodbye and inspect the dedicated party output node.
+// Drive the real visible disco-ball goodbye and inspect the dedicated party output node.
 // This deliberately waits through the Web Audio clock: a target flag alone cannot prove that
 // the connected output remains live or that its effective gain changes across the guest walk.
 var lib = require("./lib");
@@ -27,7 +27,7 @@ var harness = String.raw`<script>
     var before = window.__partyAudioOutputState ? window.__partyAudioOutputState() : [];
     check("setup has one live party output at unity", before.length === 1 && before[0].connected && before[0].gain > 0.98 && before[0].target === 1, before);
 
-    document.getElementById("garden-lightswitch").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.getElementById("garden-disco-ball").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     var start = window.__partyAudioOutputState ? window.__partyAudioOutputState() : [];
     check("the visible party-off path keeps the output connected at the start of its ramp",
       window.__partyWindingDown && window.__partyWindingDown() && window.__gardenPartyOn && start.length === 1 &&

@@ -61,10 +61,11 @@ visiting is enough, and lower-room games remain optional. Guests stay active whi
 the DJ for song requests. Dances, toasts, photos, cake ceremonies, sparklers, and the bouquet toss
 can interrupt the ordinary Party scene without ending it.
 
-A coach eventually points to the Garden wall switch. Use it to end the Party, dismiss it and keep
-dancing, or leave the Party running while you explore. After the Party has started and all ten rooms
-are visited, Behdad and Markéta’s message exchange offers **Let’s go!**, which winds down the Party
-and takes you to Entrance. Selecting the Entrance road after the same milestone is the fallback.
+After the Party reveal settles, a large coach points to **The Loft** and invites you to explore while
+the Party keeps running. The Garden wall switch remains a day/night control. In phase two, the roof
+disco ball is the optional Party toggle: lit and spinning while Party is on, dim and still while it is
+off. After all ten rooms are visited, Behdad and Markéta’s message exchange offers **Let’s go!**, which
+takes you to Entrance. Selecting the Entrance road after the same milestone is the fallback.
 
 ### Road Trip
 
@@ -80,9 +81,9 @@ than replaying an old line.
 
 Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The large
 two-step opening coach is modal: the highlighted navigation and Reset controls remain available,
-but the room stays inert until each step is dismissed. The first Party's wall-switch lesson and its
-post-Party room-map and first-unread Messages lessons are modal too. Each highlighted target stays
-live: using the switch, map, or unread message performs its normal action and retires that coach;
+but the room stays inert until each step is dismissed. The first Party's exploration and first-unread
+Messages lessons are modal too. Each highlighted target stays live: using the map or unread message
+performs its normal action and retires that coach;
 unrelated controls remain blocked. Party lessons hold new notifications and calls until they leave;
 other coach bubbles remain compact and non-modal. Opening a message never performs its suggested
 activity: use the separate activity arrow. Old messages remain readable after their activity expires,
@@ -139,7 +140,7 @@ a typing field, `?` opens the complete shortcut card.
 
 - `Enter`: perform the next guided action. After the Morning routine it uses the room's main
   activity: the daytime Kitchen repeats the espresso steps, the visible Bar starts Flair Catch,
-  and the Garden / Party toggles the party.
+  and the Garden / Party toggles the roof disco ball's Party state.
 - `Space`: play, pause, or act in the current game or media surface. While driving, it sets cruise
   control to the current speed; pressing it again resets the held speed rather than cancelling it.
 - `C`: open or close the phone.

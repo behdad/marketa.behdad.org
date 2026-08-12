@@ -77456,6 +77456,15 @@ setOfficeProgress("pc", false);
     return entry;
   }
   var CODE_LANG_KEY = "deskCodeLanguage";
+  var CODE_WELCOME = {
+    js: "// Welcome to Loft Code -- Loft API ready as `loft` global",
+    python: "# Welcome to Loft Code -- `import loft` for the Loft API"
+  };
+  function codeIsUntouchedWelcome(value) {
+    return value === "" || value === CODE_WELCOME.js || value === CODE_WELCOME.python ||
+      value === "// e.g. loft.party.set(true); await loft.room.go(\"garden\")" ||
+      value === "# Python — try: import turtle";
+  }
   function readCodeLanguage() { try { return localStorage.getItem(CODE_LANG_KEY) === "python" ? "python" : "js"; } catch (e) { return "js"; } }
   var codeLanguage = readCodeLanguage();
   function codeExplicitLanguage(name) {
@@ -77524,7 +77533,7 @@ setOfficeProgress("pc", false);
   function codePaintLanguage() {
     if (codeLangJsBtn) codeLangJsBtn.classList.toggle("active", codeLanguage === "js");
     if (codeLangPyBtn) codeLangPyBtn.classList.toggle("active", codeLanguage === "python");
-    if (codeCode) codeCode.placeholder = codeLanguage === "python" ? "# Python — try: import turtle" : "// e.g. loft.party.set(true); await loft.room.go(\"garden\")";
+    if (codeCode) codeCode.placeholder = CODE_WELCOME[codeLanguage];
     if (codeFileInput) codeFileInput.accept = codeLanguage === "python" ? ".py,.txt,text/x-python" : ".js,.txt,text/javascript";
   }
   function codeRememberLanguage() { try { localStorage.setItem(CODE_LANG_KEY, codeLanguage); } catch (e) {} codePaintLanguage(); }
@@ -77620,10 +77629,18 @@ setOfficeProgress("pc", false);
     if (codeActiveBuiltin) return;
     var next = language === "python" ? "python" : "js";
     if (next === codeLanguage) { codePaintLanguage(); codeSyncLineNumbers(); return; }
+    var replaceWelcome = codeCode && codeName && !codeName.value.trim() && codeIsUntouchedWelcome(codeCode.value);
     codeFlushAutoSave();
     // These pills select only the execution language. They never navigate to a sibling,
     // clear or rewrite the filename, or migrate the file between storage maps.
     codeLanguage = next; codeRememberLanguage();
+    if (replaceWelcome) {
+      codeSetBuffer(CODE_WELCOME[codeLanguage]);
+      writeCodeUnsaved(codeCode.value, codeLanguage);
+      codeLastSavedName = null;
+      codeLastSavedLanguage = codeLanguage;
+      try { codeCode.setSelectionRange(codeCode.value.length, codeCode.value.length); } catch (e) {}
+    }
     codeRefreshPicker(codeLastSavedName);
     codeSyncLineNumbers();
     codeScheduleDraft();
@@ -78016,9 +78033,7 @@ setOfficeProgress("pc", false);
     if (codeWelcomeShown[codeLanguage] || !codeCode || !codeName) return;
     if (codeCode.value !== "" || (codeName.value || "").trim() !== "") return; // buffer already has content or a name
     codeWelcomeShown[codeLanguage] = true;
-    codeSetBuffer(codeLanguage === "python" ?
-      "# Welcome to Loft Code — typed Loft API ready as the imported `loft` module." :
-      "// Welcome to Loft Code — typed Loft API ready as the preloaded `loft` global.");
+    codeSetBuffer(CODE_WELCOME[codeLanguage]);
     writeCodeUnsaved(codeCode.value, codeLanguage);
     codeLastSavedName = null;
     codeLastSavedLanguage = codeLanguage;

@@ -170,8 +170,8 @@ check(/var CONSOLE_WELCOME = "loft console/.test(html) && /var PY_COPY = \{/.tes
 check(/window\.__pyRuntimeState\s*=\s*function \(\) \{ return pyLoadState \|\| "stopped"; \}/.test(html) &&
       /id: "app\.python\.status"[\s\S]*?run: pythonAppState/.test(html),
   "the public Python status query derives readiness from the runtime owner's real boot state");
-check(/typed Loft API ready as the imported `loft` module/.test(html) &&
-      /typed Loft API ready as the preloaded `loft` global/.test(html),
+check(/# Welcome to Loft Code -- `import loft` for the Loft API/.test(html) &&
+      /\/\/ Welcome to Loft Code -- Loft API ready as `loft` global/.test(html),
   "empty Python and JavaScript Code buffers explain their respective Loft API boot modes");
 
 if (turtleMatch) {
@@ -274,11 +274,11 @@ var harness = [
   '<script>',
   '(async function(){',
   '  var out={};',
-  '  localStorage.removeItem("deskScripts"); localStorage.removeItem("deskPythonScripts"); localStorage.removeItem("deskCodeDraft"); localStorage.removeItem("deskCodeLanguage"); localStorage.removeItem("deskCodeBuiltinOverrides");',
+  '  localStorage.removeItem("deskScripts"); localStorage.removeItem("deskPythonScripts"); localStorage.removeItem("deskCodeDraft"); localStorage.removeItem("deskCodeUnsaved"); localStorage.removeItem("deskCodeLanguage"); localStorage.removeItem("deskCodeBuiltinOverrides");',
   '  var resourceCalls=[],resourceLoader=window.__codeSnippetResourceLoader;window.__codeSnippetResourceLoader=function(path){resourceCalls.push(path);return resourceLoader(path);};',
   '  var mon=document.getElementById("office-monitor"); mon.classList.add("screen-on","show-caps","show-code");',
   '  var name=document.getElementById("monitor-code-name"), code=document.getElementById("monitor-code-code"), py=document.getElementById("monitor-code-lang-py");',
-  '  await new Promise(function(r){setTimeout(r,30)});out.noEagerTrailer=resourceCalls.indexOf("code-snippets/trailer-js.txt")<0;',
+  '  await new Promise(function(r){setTimeout(r,30)});out.noEagerTrailer=resourceCalls.indexOf("code-snippets/trailer-js.txt")<0;py.click();out.pythonWelcome=code.value==="# Welcome to Loft Code -- `import loft` for the Loft API";document.getElementById("monitor-code-lang-js").click();out.jsWelcome=code.value==="// Welcome to Loft Code -- Loft API ready as `loft` global";',
   '  function codeItem(label,kind){return Array.from(document.querySelectorAll("#monitor-code-list .code-item")).find(function(item){return item.textContent===label&&(!kind||item.classList.contains(kind));});}',
   '  var helloItem=codeItem("hello.js","builtin");helloItem.click();await new Promise(function(r){setTimeout(r,20)});out.builtinHello=code.value;out.builtinIdentity=name.value;code.value="";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});var emptyOverrides=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}");out.emptyOverride=Object.prototype.hasOwnProperty.call(emptyOverrides,"hello.js")&&emptyOverrides["hello.js"]==="";out.builtinSelectedAfterEdit=codeItem("hello.js","builtin").classList.contains("active")&&codeItem("hello.js","builtin").classList.contains("edited");document.getElementById("monitor-code-del").click();out.builtinReset=/loft\\.party\\.set\\(true\\)/.test(code.value)&&!Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}"),"hello.js");',
   '  codeItem("trailer.js","builtin").click();await new Promise(function(r){setTimeout(r,20)});out.trailerLoadedOnSelection=resourceCalls.filter(function(path){return path==="code-snippets/trailer-js.txt";}).length===1;out.trailer={code:code.value,name:name.value,editable:!code.readOnly&&name.readOnly,runEnabled:!document.getElementById("monitor-code-run").disabled,resetInitiallyDisabled:document.getElementById("monitor-code-del").disabled};code.value="window.__ordinaryTrailerBuffer=(window.__ordinaryTrailerBuffer||0)+1;";code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});out.trailerOverride=JSON.parse(localStorage.getItem("deskCodeBuiltinOverrides")||"{}")["trailer.js"];document.getElementById("monitor-code-run").click();await new Promise(function(r){setTimeout(r,80)});out.trailerOrdinaryRun=window.__ordinaryTrailerBuffer===1&&!window.__cinematic&&mon.classList.contains("show-console");window.__closeMonitorConsole();window.__openMonitorCode();await new Promise(function(r){setTimeout(r,20)});document.getElementById("monitor-code-del").click();out.trailerReset=code.value===resourceLoader("code-snippets/trailer-js.txt");',
@@ -339,6 +339,8 @@ var harness = [
 var state = lib.runPageSync("rsvp.html", harness, 5400, { patchRaf: true, forceHybridPointer: true });
 check(state && !state.error, "headless Code interaction completed", state && state.error);
 if (state && !state.error) {
+  check(state.pythonWelcome && state.jsWelcome,
+    "an untouched welcome follows the selected JS/PY language", state);
   check(state.builtinHello === helloJs && state.builtinIdentity === "hello.js" && state.emptyOverride && state.builtinSelectedAfterEdit && state.builtinReset,
     "editable built-ins load exact canonical text, preserve empty overrides, stay selected, and reset by deleting the override", state);
   check(state.noEagerTrailer && state.trailerLoadedOnSelection && state.trailer && state.trailer.code === snippet("trailer.js") && state.trailer.name === "trailer.js" && state.trailer.editable && state.trailer.runEnabled && state.trailer.resetInitiallyDisabled && /ordinaryTrailerBuffer/.test(state.trailerOverride) && state.trailerOrdinaryRun && state.trailerReset,

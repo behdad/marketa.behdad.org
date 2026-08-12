@@ -136,6 +136,14 @@ try {
       var first={kind:window.__partyCoachModalKind(),card:switchCard.getBoundingClientRect().toJSON(),
         area:area.getBoundingClientRect().toJSON(),viewport:viewport.getBoundingClientRect().toJSON(),
         bg:getComputedStyle(switchCoach).backgroundColor,pointer:getComputedStyle(switchCoach).pointerEvents};
+      if(innerWidth<=390&&window.__rebuildTapHalos){
+        window.__rebuildTapHalos();
+        var switchHalo=(window.__haloRegions().garden||[]).find(function(box){return box.el.id==="garden-lightswitch";});
+        if(switchHalo){
+          first.hitPx=[(switchHalo.x1-switchHalo.x0)*viewport.getBoundingClientRect().width/680,
+            (switchHalo.y1-switchHalo.y0)*viewport.getBoundingClientRect().width/680];
+        }
+      }
       fire(document.getElementById("garden-lightswitch"));
       fire(document.getElementById("hunt-next"));
       document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",code:"ArrowRight",bubbles:true,cancelable:true}));
@@ -184,6 +192,10 @@ try {
       check(step.blocked, prefix + name + " coach blocks background controls", step);
       check(step.dismissed, prefix + name + " coach acknowledges without triggering its target", step);
     });
+    if (spec.width <= 390) {
+      check(result.first.hitPx && result.first.hitPx[0] >= 27.5 && result.first.hitPx[1] >= 27.5,
+        prefix + "keeps a fingertip-sized wall-switch target", result.first.hitPx);
+    }
     check(!result.second.party && result.roomAfterRelease === "cuddly",
       prefix + "the ordered switch → room-map handoff releases ordinary navigation", result);
   }

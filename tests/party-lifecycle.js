@@ -91,13 +91,18 @@ var harness = String.raw`<script>
   var switchCoachPopup = switchCoach.querySelector(".hunt-coach-card");
   var switchCoachArrow = switchCoach.querySelector(".hunt-coach-arrow");
   var switchPlate = document.querySelector("#garden-lightswitch > rect:first-child");
+  var switchRocker = document.getElementById("garden-lightswitch-rocker");
+  var switchLed = document.getElementById("garden-lightswitch-led");
   var switchArrowBox = switchCoachArrow.getBBox();
   var switchAreaRect = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
   var expectedSwitchTip = switchPlate.getBoundingClientRect().top - switchAreaRect.top - 3;
-  check("the wall-switch coach targets the switch at its current SVG top",
-    switchPlate && Number(switchPlate.getAttribute("y")) === 185 &&
+  check("the wall switch and every detail move exactly ten SVG units higher",
+    switchPlate && Number(switchPlate.getAttribute("y")) === 175 &&
+      switchRocker && Number(switchRocker.getAttribute("y")) === 178.5 &&
+      switchLed && Number(switchLed.getAttribute("cy")) === 195.5 &&
       Math.abs(switchArrowBox.y + switchArrowBox.height - expectedSwitchTip) < 1,
     JSON.stringify({ switchY: switchPlate && switchPlate.getAttribute("y"),
+      rockerY: switchRocker && switchRocker.getAttribute("y"), ledY: switchLed && switchLed.getAttribute("cy"),
       arrowTip: switchArrowBox.y + switchArrowBox.height, expectedTip: expectedSwitchTip }));
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
       switchCoach.classList.contains("show") &&

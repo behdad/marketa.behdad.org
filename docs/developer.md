@@ -201,7 +201,11 @@ denylist is reserved for a surface with a focused incompatibility proof. Native 
 Credits never enter this path. State/app/resize/fullscreen changes refit once; idle frames perform no
 geometry reads. `tests/monitor-html-overlay.js` covers the inventory, exact screen alignment,
 reparented-node identity/focus/state, fullscreen, room parking, click ownership, and the one-pixel
-Console caret at desktop and 390px landscape widths.
+Console caret at desktop and 390px landscape widths. The desktop is the one mixed paint stack: its
+native wallpaper/menu bar remain below the promoted icon grid, while its later search/system controls
+move above that grid; this avoids an SVG canvas occluding the HTML icons in Chrome. The same test
+asserts the complete Code layout and the shared terminal rule: sparse output starts at the top, then
+all three scrollbacks pin their newest line once full, including under the WebKit cascade.
 
 Room parking hides monitor paint only when Office becomes `stage-far`, after the strip transition
 settles, so a running app does not blank while the room is still sliding out. App-owned native screen

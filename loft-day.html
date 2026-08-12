@@ -6955,6 +6955,9 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-ta{grid-column:2; min-width:0; min-height:0; width:100%; height:100%; box-sizing:border-box; resize:none; background:#0d130e; border:0; border-radius:0; outline:none; color:#cfe3cf; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; padding:0.6px 1px; white-space:pre; overflow:auto; overflow-wrap:normal; word-break:normal; scrollbar-width:none; caret-color:#8fd070}
 .code-ai-tools{grid-row:3; grid-column:1; display:flex; align-items:center; gap:.5px; min-height:4px; padding:0 1px}
 .code-ai-ask{min-width:0; flex:1; height:3.2px; padding:0 .8px .3px 1.2px; border:.3px solid #2b3a3a; border-radius:.7px; background:#111b17; color:#d8eed5; font:1.7px/3px ui-monospace,Menlo,monospace}
+.code-name:focus,.code-ai-ask:focus{border-color:#54745b}
+.code-editor:focus-within{border-color:#54745b}
+#monitor-html-overlay .code-wrap :is(input,textarea):focus-visible{outline:none;outline-offset:0}
 .code-ai-ask::placeholder{color:#789478}
 .code-ai-label{flex:none; color:#789478; font:1.7px/3px ui-monospace,Menlo,monospace}
 .code-ai-btn{flex:none; height:3.5px; padding:0 .8px; border:.3px solid #2b3a3a; border-radius:.7px; background:#1d2622; color:#a7e08a; font:1.8px/3px ui-monospace,Menlo,monospace; cursor:pointer}
@@ -7126,11 +7129,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    em-based, so the correction scales with the monitor's zoom on every device. Also carries
    the emoji+text pair (💌 Share) so both ride the same centre line. */
 .btn-vc{display:inline-flex; align-items:center; gap:0.8px; line-height:1; margin-top:0.14em} /* asymmetric margin (net +0.07em under a center-aligned flex parent) instead of a translateY transform — a transform is a RenderLayer that vanishes under the monitor's scaled foreignObject (WebKit bug 23113) */
-/* mail-pill labels are pure cap-height words in a tight line-height:1 box, so the ascenders
-   overflow upward and the small shared .btn-vc nudge leaves them riding high (glaring at the
-   monitor's desktop zoom, invisible at mobile scale) — center the ink box for these two */
-.mail-compose-btn .btn-vc{margin-top:0.1em} /* small optical nudge for Fraunces inside the compact pill */
-.mail-reply-btn .btn-vc{margin-top:0.38em}
+/* The zoom overlay gives these tiny pills ordinary HTML metrics. Fill the fixed-height
+   parent and center its line box explicitly so Reply/Send/Cancel agree across engines. */
+.mail-compose-btn .btn-vc,.mail-reply-btn .btn-vc,
+.mail-send-btn .btn-vc,.mail-cancel-btn .btn-vc{
+  height:100%;margin-top:0;align-items:center;line-height:1
+}
 .mail-list{flex:1; overflow-y:auto; scrollbar-width:none}
 .mail-list::-webkit-scrollbar{display:none}
 .mail-row{display:flex; align-items:center; gap:1.8px; padding:1.7px 3px; border-bottom:0.4px solid #e8dfcc; cursor:pointer}
@@ -7166,12 +7170,11 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .mail-ta::-webkit-scrollbar{display:none}
 .mail-input:focus, .mail-ta:focus{border-color:#7b5aa6}
 .mail-form-actions{flex:none; display:flex; gap:2px; justify-content:flex-end; padding:0.6px 3px 1.5px}
-.mail-send-btn, .mail-cancel-btn{box-sizing:border-box; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:2.5px; padding:0 4px; height:5px; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)}
+.mail-send-btn, .mail-cancel-btn{box-sizing:border-box; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:2.5px; padding:0 4px; height:5px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.28), inset 0 0 0 0.3px rgba(0,0,0,0.25)}
 .mail-send-btn{background:#604681; color:#f8f5ec}
 .mail-send-btn:hover{background:#4a3664}
 .mail-cancel-btn{background:#e3dae4; color:#453a31}
 .mail-cancel-btn:hover{background:#d3c8d5}
-.mail-send-btn .btn-vc, .mail-cancel-btn .btn-vc{margin-top:0.6em} /* net +0.3em, see .btn-vc */
 /* Classics holds the retained Mines board, the Klondike table and a two-game chooser.
    The three HTML views stay de-layered under the scaled monitor foreignObject for WebKit. */
 #monitor-mines{opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--loft-os-surface-time) ease}
@@ -90255,7 +90258,14 @@ def colormode(mode=None):
       if (entry.layer.parentNode) entry.layer.remove();
     });
     previous.owners.forEach(function (record) {
-      if (record.placeholder.parentNode) record.placeholder.parentNode.replaceChild(record.owner, record.placeholder);
+      if (record.stationary) {
+        record.lifted.forEach(function (node) {
+          if (record.anchor.parentNode) record.anchor.parentNode.insertBefore(node, record.anchor);
+        });
+        if (record.anchor.parentNode) record.anchor.remove();
+      } else if (record.placeholder.parentNode) {
+        record.placeholder.parentNode.replaceChild(record.owner, record.placeholder);
+      }
     });
     active = null;
     mirrorMonitorState();
@@ -90280,10 +90290,26 @@ def colormode(mode=None):
       scaleRoot.insertBefore(entry.layer, controls);
       if (seenOwners.indexOf(entry.owner) === -1) {
         seenOwners.push(entry.owner);
-        var placeholder = document.createComment("monitor-svg-home:" + (entry.owner.id || "surface"));
-        entry.owner.parentNode.replaceChild(placeholder, entry.owner);
-        controls.appendChild(entry.owner);
-        owners.push({ owner: entry.owner, placeholder: placeholder });
+        if (entry.owner.id === "monitor-desktop-dock") {
+          // The desktop is the one mixed surface: its native wallpaper/menu bar precede
+          // the HTML icon grid, while search and system-menu controls follow it. Keep
+          // the backing in the canonical SVG below the DOM layer, and lift only the
+          // later controls above it. A single controls SVG cannot straddle HTML paint;
+          // in Chrome its transparent canvas otherwise occludes the icons visually.
+          var anchor = document.createComment("monitor-svg-controls-home:monitor-desktop-dock");
+          entry.fo.parentNode.insertBefore(anchor, entry.fo.nextSibling);
+          var lifted = [];
+          while (anchor.nextSibling) {
+            lifted.push(anchor.nextSibling);
+            controls.appendChild(anchor.nextSibling);
+          }
+          owners.push({ owner: entry.owner, anchor: anchor, lifted: lifted, stationary: true });
+        } else {
+          var placeholder = document.createComment("monitor-svg-home:" + (entry.owner.id || "surface"));
+          entry.owner.parentNode.replaceChild(placeholder, entry.owner);
+          controls.appendChild(entry.owner);
+          owners.push({ owner: entry.owner, placeholder: placeholder, stationary: false });
+        }
       }
     });
     active = { entries: entries, owners: owners, geometry: null };
@@ -90326,6 +90352,14 @@ def colormode(mode=None):
   window.__monitorHtmlOverlayOpen = sync;
   window.__monitorHtmlOverlayClose = restore;
   window.__monitorHtmlOverlayFit = fit;
+  // This surface is a sibling of the SVG strip, not a descendant of #office-monitor.
+  // Own its ordinary HTML interaction stream so app input cannot escape into room-pan
+  // or device-toggle handlers that were authored for clicks outside the monitor.
+  // Context-menu and text-input events retain their document-delegated app owners; as
+  // siblings of the SVG they cannot enter its handlers. Pointing/scrolling stops here.
+  ["pointerdown", "mousedown", "click", "dblclick", "wheel", "touchmove"].forEach(function (type) {
+    host.addEventListener(type, function (event) { event.stopPropagation(); });
+  });
   window.__monitorHtmlOverlayState = function () {
     var supported = [];
     monitor.querySelectorAll("foreignObject > *").forEach(function (root) {
@@ -90635,6 +90669,7 @@ def colormode(mode=None):
   // own stopPropagation can't strand the zoom)
   vp.addEventListener("pointerdown", function (e) {
     if (monitorContentFullscreen) return; // let the fullscreen host consume its black surround without dropping the underlying zoom
+    if (e.target && e.target.closest && e.target.closest("#monitor-html-overlay")) return;
     if (!zoomEl || (e.target && zoomEl.contains(e.target))) return;
     if (e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // viewport chrome, not the room
     var other = zoomEl === monitor ? laptop : monitor;

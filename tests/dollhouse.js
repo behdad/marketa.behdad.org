@@ -93,15 +93,18 @@ var harness = String.raw`<script>
     key("Tab");
     check("closing The Loft restores the Road Trip pause overlay",
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");
-    check("closing The Loft restores upper-room raster parking",
-      parkedUpperSources.every(function (stage) { return getComputedStyle(stage).visibility === "hidden"; }),
+    check("closing The Loft keeps upper-room raster sources warm for the next view",
+      parkedUpperSources.every(function (stage) { return getComputedStyle(stage).visibility === "visible"; }),
       parkedUpperSources.map(function (stage) { return stage.id + ":" + getComputedStyle(stage).visibility; }).join(","));
     document.getElementById("entrance-drive-hud-svg").setAttribute("viewBox", "0 -120 680 340");
     window.__entranceRoadtripTransportState = function () {
       return { active: true, paused: false, route: "camp" };
     };
     document.getElementById("entrance-room").classList.add("roadtrip-active", "roadtrip-route-camp");
+    window.__frameHealthFeed(0); window.__frameHealthFeed(0);
     key("Tab");
+    check("low-FPS Dollhouse pauses its live source animations", state().pausedAnimations > 0,
+      JSON.stringify(state()));
     check("the Entrance card fills with the live Camping view",
       roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") ===
         "#entrance-roadtrip-world" &&
@@ -110,6 +113,9 @@ var harness = String.raw`<script>
       roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("y") === "0" &&
       document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "none");
     key("Tab");
+    check("closing Dollhouse resumes only the animations it paused", state().pausedAnimations === 0,
+      JSON.stringify(state()));
+    window.__frameHealthFeed(60); window.__frameHealthFeed(60); window.__frameHealthFeed(60);
     check("closing the Camping preview restores its live SVG styles",
       document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "" &&
       document.getElementById("entrance-roadtrip-world-clip").style.clipPath === "" &&

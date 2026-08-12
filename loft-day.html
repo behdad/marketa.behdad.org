@@ -3455,7 +3455,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   padding:clamp(.35rem,1vw,1rem); background:rgba(38,28,23,.76);
 }
 #loft-dollhouse[hidden]{display:none}
-#hunt-fullscreen-area.dollhouse-open #loft-game-strip .stage-far{visibility:visible}
+/* Keep the already-built picker and its parked upper-room sources warm after the first view.
+   The live <use> previews then reopen without rebuilding five large SVG render trees. */
+#loft-dollhouse.dollhouse-warm[hidden]{display:grid;visibility:hidden;pointer-events:none}
+#hunt-fullscreen-area.dollhouse-warm #loft-game-strip .stage-far{visibility:visible}
 .loft-dollhouse-panel{
   position:relative; width:min(calc(100vw - clamp(.7rem,2vw,2rem)),calc((100vh - clamp(.7rem,2vw,2rem))*4));
   max-height:calc(100vh - clamp(.7rem,2vw,2rem)); box-sizing:border-box; padding:.72rem .78rem .82rem;
@@ -14705,10 +14708,10 @@ section{margin:1.9rem 0}
    only after transform transitionend does the destination become the sole visible stage.
    visibility (not display) keeps the five-room geometry stable. */
 /* Upper dollhouse cards <use> these stage groups directly. WebKit refuses to paint a
-   reference while its source tree is visibility:hidden, so suspend only the raster gate
-   while the overlay is open; the stage-far class still keeps its animations parked. */
-#hunt-fullscreen-area:not(.dollhouse-open) #loft-game-strip .stage-far,
-#hunt-fullscreen-area:not(.dollhouse-open) #loft-game-strip .stage-far *{visibility:hidden !important}
+   reference while its source tree is visibility:hidden, so keep the raster gate suspended
+   after the first view; the stage-far class still keeps its animations parked. */
+#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far,
+#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far *{visibility:hidden !important}
 /* ── the dance floor keeps two moving parts per figure, not five ──────────────
    Every dancer stacks .guest-orbit (the do-si-do travel) + .guest-move (their
    own signature step) + .guest-sway (body rock) + .guest-arm-l + .guest-arm-r.
@@ -113652,6 +113655,29 @@ function spawnDustMote(container) {
   var dollhouseRoadtripPauseStyle = null;
   var dollhouseRoadtripWorldStyle = null;
   var dollhouseRoadtripCampStyles = null;
+  var dollhousePausedAnimations = [];
+  function resumeDollhouseAnimations() {
+    dollhousePausedAnimations.forEach(function (animation) {
+      if (animation.playState === "paused") animation.play();
+    });
+    dollhousePausedAnimations = [];
+  }
+  function syncDollhouseAnimationHealth() {
+    var slow = !!(window.__frameHealthSlow && window.__frameHealthSlow());
+    if (!slow || !dollhouse || dollhouse.hidden) {
+      resumeDollhouseAnimations();
+      return;
+    }
+    if (dollhousePausedAnimations.length || !document.getAnimations) return;
+    var area = document.getElementById("hunt-fullscreen-area");
+    document.getAnimations().forEach(function (animation) {
+      var target = animation.effect && animation.effect.target;
+      if (target && target.element) target = target.element;
+      if (!area || !target || !area.contains(target) || animation.playState !== "running") return;
+      animation.pause();
+      dollhousePausedAnimations.push(animation);
+    });
+  }
   function dollhouseRoadtripLive(transport) {
     var entrance = document.getElementById("entrance-room");
     return !!((transport && transport.active) ||
@@ -113779,11 +113805,10 @@ function spawnDustMote(container) {
   function closeDollhouse() {
     if (!dollhouse) return false;
     var wasOpen = !dollhouse.hidden;
+    resumeDollhouseAnimations();
     dollhouse.hidden = true;
     dollhouseLockedEnterRoom = "";
     dollhouseLockedEnterAt = 0;
-    var area = document.getElementById("hunt-fullscreen-area");
-    if (area) area.classList.remove("dollhouse-open");
     restoreDollhousePreviewState();
     return wasOpen;
   }
@@ -114037,9 +114062,11 @@ function spawnDustMote(container) {
     pauseRoadtripForDollhouse();
     prepareDollhousePreviewState();
     renderDollhouse();
+    dollhouse.classList.add("dollhouse-warm");
     dollhouse.hidden = false;
     var area = document.getElementById("hunt-fullscreen-area");
-    if (area) area.classList.add("dollhouse-open");
+    if (area) area.classList.add("dollhouse-warm");
+    syncDollhouseAnimationHealth();
     var selected = dollhouseRooms.findIndex(function (spec) {
       return spec.floor === (activeLowerRoom() ? "lower" : "main") &&
         (spec.floor === "lower" ? activeLowerRoom().id === spec.room : window.__currentStageName === spec.room);
@@ -114154,9 +114181,11 @@ function spawnDustMote(container) {
   window.__openDollhouse = openDollhouse;
   window.__closeDollhouse = closeDollhouse;
   window.__toggleDollhouse = toggleDollhouse;
+  window.addEventListener("framehealthchange", syncDollhouseAnimationHealth);
   window.__dollhouseState = function () {
     return {
       eligible: dollhouseEligible(), open: !!(dollhouse && !dollhouse.hidden),
+      pausedAnimations: dollhousePausedAnimations.length,
       controlsUnlocked: dollhouseControlsUnlocked(),
       button: !!(dollhouseBtn && !dollhouseBtn.hidden),
       floorDisabled: !!(floorBtn && floorBtn.disabled),
@@ -122743,8 +122772,8 @@ function spawnDustMote(container) {
   function autonomousThunderScene() {
     if (document.visibilityState === "hidden" || document.hidden || !document.hasFocus() ||
         document.getElementById("loft-recovery-gate")) return null;
-    var area = document.getElementById("hunt-fullscreen-area");
-    if (area && area.classList.contains("dollhouse-open")) return null;
+    var picker = document.getElementById("loft-dollhouse");
+    if (picker && !picker.hidden) return null;
     var entranceOwner = window.__entranceThunderSceneOwner && window.__entranceThunderSceneOwner();
     if (entranceOwner) return entranceOwner;
     if (window.__roomAutonomyAllowed ? window.__roomAutonomyAllowed("balcony") :
@@ -122793,8 +122822,8 @@ function spawnDustMote(container) {
     if (!sb) return;                                      // the balcony scene owns the storm's flashes/thunder
     if (document.visibilityState === "hidden") return;    // don't rumble a hidden tab
     if (campFinaleOwnsQuiet()) return;                     // ~ fin ~ owns a quiet lake-and-wind soundscape
-    var area = document.getElementById("hunt-fullscreen-area");
-    if (area && area.classList.contains("dollhouse-open")) return; // room portraits do not replay transient lightning
+    var picker = document.getElementById("loft-dollhouse");
+    if (picker && !picker.hidden) return; // room portraits do not replay transient lightning
     ["balcony-thunder-flash", "kitchen-window-flash", "office-window-flash", "garden-window-flash"].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;

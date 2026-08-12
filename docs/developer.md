@@ -175,6 +175,11 @@ settled room or paused drive state, not initialize a second instance. Lower-room
 return to the paired upper room only when the user explicitly asks to go up; Back/Escape first
 dismisses the active game, projector, or overlay owned by that lower room.
 
+After its first opening, the dollhouse keeps its hidden panel layout and parked upper-room SVG
+sources warm so repeat views can reuse their render trees. Normal stage parking still owns those
+off-screen animations. When frame health is low, the open dollhouse additionally pauses the live
+source animations it finds and resumes only that recorded set on close or frame-rate recovery.
+
 ### Morning routine and free exploration
 
 The first run follows the upper rooms in `STAGES` order. Each room-specific `__…DoNext` walker owns

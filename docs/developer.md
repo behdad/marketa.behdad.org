@@ -254,8 +254,8 @@ Keep these ownership boundaries intact:
 - The five `--roadtrip-rumble-*` properties are registered as non-inherited: they animate the HUD
   root only. Do not turn them back into inherited variables, which makes every shoulder tick restyle
   the full dashboard SVG.
-- A fresh highway resets Camping before reveal only after `campVisited`; the never-visited campsite
-  is already canonical, and its first arrival owns the same transition-suppression reset fence.
+- A fresh highway preserves the prior campsite while it is hidden. `arriveRoadtripCamp()` resets it
+  immediately before switching to `roadtrip-route-camp`; direct Camping re-entry preserves it.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order

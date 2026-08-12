@@ -61,10 +61,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform
       };
       window.__entranceRoadtripDevStart();
-      report.freshCamp = {
+      report.highwayCamp = {
         phase: window.__entranceRoadtripCampSleepState().phase,
         visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),
         transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform,
+        campRoute: document.getElementById("entrance-room").classList.contains("roadtrip-route-camp"),
         finOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-fin")).opacity,
         nightOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity,
         darknessOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity
@@ -115,6 +116,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         }
       }
       report.camp = { frames: campFrames, final: state() };
+      report.arrivedCamp = {
+        phase: window.__entranceRoadtripCampSleepState().phase,
+        visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),
+        transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform,
+        finOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-fin")).opacity,
+        nightOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity,
+        darknessOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity
+      };
 
       function campPresentation() {
         return {
@@ -164,8 +173,14 @@ check(/function transitionRoadtripTraffic\(previousRoute\)/.test(source) &&
 check(/function roadtripGeometryProfile\(\)/.test(source) &&
   /var geometry = roadtripGeometryProfile\(\);/.test(source),
   "one route profile owns the visible road-width interpolation");
-check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*if \(!preserveCamp\) resetRoadtripCampSessionBeforeReveal\(\);/.test(source),
-  "fresh Road Trips settle the previous campsite before any transition frame");
+var startRoadtripSource = source.slice(source.indexOf("function startRoadtrip("),
+  source.indexOf("function restoreRoadtripRun(", source.indexOf("function startRoadtrip(")));
+var arriveRoadtripCampSource = source.slice(source.indexOf("function arriveRoadtripCamp("),
+  source.indexOf("function backFromRoadtrip(", source.indexOf("function arriveRoadtripCamp(")));
+check(!/resetRoadtripCampSessionBeforeReveal/.test(startRoadtripSource) &&
+  arriveRoadtripCampSource.indexOf("resetRoadtripCampSessionBeforeReveal();") <
+    arriveRoadtripCampSource.indexOf('roadtripState.route = "camp";'),
+  "fresh Road Trips preserve hidden Camping until arrival resets it before reveal");
 
 var result = lib.runPageSync("loft-day.html", HARNESS, 5200, {
   patchRaf: true,
@@ -178,11 +193,16 @@ check(result && result.errors.length === 0, "the transition sweep has no uncaugh
   result && result.errors);
 check(result && result.previousFinale && result.previousFinale.phase === "congrats" &&
   result.previousFinale.visible === true && result.previousFinale.transform !== "none" &&
-  result.freshCamp && result.freshCamp.phase === "idle" && result.freshCamp.visible === false &&
-  result.freshCamp.transform === "none" && Number(result.freshCamp.finOpacity) === 0 &&
-  Number(result.freshCamp.nightOpacity) === 0 && Number(result.freshCamp.darknessOpacity) === 0,
-  "a fresh run removes the prior ~fin~ pan before Camping can dissolve in",
-  result && { previousFinale: result.previousFinale, freshCamp: result.freshCamp });
+  result.highwayCamp && result.highwayCamp.phase === "congrats" && result.highwayCamp.visible === true &&
+  result.highwayCamp.transform !== "none" && result.highwayCamp.campRoute === false &&
+  Number(result.highwayCamp.finOpacity) > 0 && Number(result.highwayCamp.nightOpacity) > 0 &&
+  Number(result.highwayCamp.darknessOpacity) > 0 &&
+  result.arrivedCamp && result.arrivedCamp.phase === "idle" && result.arrivedCamp.visible === false &&
+  result.arrivedCamp.transform === "none" && Number(result.arrivedCamp.finOpacity) === 0 &&
+  Number(result.arrivedCamp.nightOpacity) === 0 && Number(result.arrivedCamp.darknessOpacity) === 0,
+  "the previous ~fin~ pan stays hidden through the drive and clears at Camping arrival",
+  result && { previousFinale: result.previousFinale, highwayCamp: result.highwayCamp,
+    arrivedCamp: result.arrivedCamp });
 
 var cb = result && result.calgaryBanff || [];
 check(cb.length === 3 && cb[0].blend.calgary > cb[1].blend.calgary &&

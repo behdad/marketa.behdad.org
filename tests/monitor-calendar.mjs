@@ -175,10 +175,17 @@ try {
       var body=document.getElementById("monitor-cal-body"),screen=document.getElementById("monitor-zoom-box"),
         owner=document.getElementById("monitor-calendar"),close=document.getElementById("monitor-cal-close"),
         city=body.querySelector(".calx-card-city"),fo=owner.querySelector("foreignObject"),
+        cards=Array.from(body.querySelectorAll(".calx-card")),calendar=body.querySelector(".calx-cal"),
+        panels=cards.concat(calendar?[calendar]:[]),cardsBox=body.querySelector(".calx-cards").getBoundingClientRect(),
+        calendarBox=calendar.getBoundingClientRect(),panelStyles=panels.map(function(panel){return getComputedStyle(panel);}),
         br=body.getBoundingClientRect(),sr=screen.getBoundingClientRect(),cr=city&&city.getBoundingClientRect(),
         top=cr&&document.elementFromPoint(cr.left+cr.width/2,cr.top+cr.height/2),state=window.__monitorHtmlOverlayState();
       return{open:document.getElementById("office-monitor").classList.contains("show-calendar"),zoomed:window.__monitorZoomed(),
         roots:state.roots,ownerHome:owner.parentNode&&owner.parentNode.id,closeHome:close.parentNode&&close.parentNode.id,
+        nativeBackings:owner.querySelectorAll(":scope > rect").length,bodyBackground:getComputedStyle(body).backgroundColor,
+        panels:panels.length,rounded:panelStyles.every(function(style){return parseFloat(style.borderTopLeftRadius)>0;}),
+        panelBackgrounds:panelStyles.map(function(style){return style.backgroundColor;}),
+        columnGap:calendarBox.left-cardsBox.right,rightPadding:parseFloat(getComputedStyle(calendar).paddingRight),
         parked:getComputedStyle(fo).visibility,cardCount:body.querySelectorAll(".calx-card").length,
         dayCount:body.querySelectorAll(".calx-day").length,text:body.innerText.length,
         topPaint:!!(top&&top.closest&&top.closest("#monitor-cal-body")),title:(body.querySelector(".calx-title")||{}).textContent||"",
@@ -197,7 +204,11 @@ try {
   check(toolbar.open && toolbar.zoomed && toolbar.roots.join(",") === "monitor-cal-body",
     "a trusted top-toolbar click opens Calendar without dropping monitor zoom", toolbar);
   check(toolbar.ownerHome === "office-monitor-screen-content" && toolbar.closeHome === "monitor-html-overlay-controls" && toolbar.parked === "hidden",
-    "Calendar keeps its opaque backing canonical and promotes only its close control", toolbar);
+    "Calendar keeps its canonical owner parked and promotes only its close control", toolbar);
+  check(toolbar.nativeBackings === 0 && toolbar.bodyBackground === "rgba(0, 0, 0, 0)" &&
+      toolbar.panels === 3 && toolbar.rounded && toolbar.panelBackgrounds.every(function(color){return color === "rgb(255, 253, 248)";}) &&
+      toolbar.columnGap > 1 && toolbar.rightPadding >= 0.7,
+    "Calendar paints exactly three separated rounded cards with no outer cream sheet", toolbar);
   check(toolbar.cardCount === 2 && toolbar.dayCount >= 28 && toolbar.text > 80 && toolbar.topPaint,
     "Calendar content is populated and owns the top-painted point", toolbar);
   check(toolbar.body[2] > toolbar.screen[2] * 0.9 && toolbar.body[3] > toolbar.screen[3] * 0.9 &&

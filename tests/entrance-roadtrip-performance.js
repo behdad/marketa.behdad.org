@@ -74,6 +74,17 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     var coveredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
     var stripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
+    var rumbleScope = null;
+    if (!low) {
+      var rumbleRoot = document.getElementById("entrance-drive-hud-svg");
+      var rumbleChild = document.getElementById("entrance-roadtrip-world");
+      rumbleRoot.style.setProperty("--roadtrip-rumble-x", "9px");
+      rumbleScope = [
+        getComputedStyle(rumbleRoot).getPropertyValue("--roadtrip-rumble-x").trim(),
+        getComputedStyle(rumbleChild).getPropertyValue("--roadtrip-rumble-x").trim()
+      ];
+      rumbleRoot.style.removeProperty("--roadtrip-rumble-x");
+    }
     coveredAnimation = document.querySelector("#bathroom-room .bathroom-bubble");
     counters = {
       attributes: 0,
@@ -105,6 +116,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       containment: getComputedStyle(document.getElementById("entrance-room")).contain,
       coveredVisibility: coveredVisibility,
       stripVisibility: stripVisibility,
+      rumbleScope: rumbleScope,
       coveredAnimationState: coveredAnimation && getComputedStyle(coveredAnimation).animationPlayState,
       overlayContainment: overlayContainment,
       roomSize: [roomRect.width, roomRect.height],
@@ -224,6 +236,10 @@ check(healthy && healthy.stripVisibility === "hidden",
   "Road Trip hides the covered loft strip without applying size containment", healthy);
 check(healthy && healthy.coveredAnimationState === "paused",
   "Road Trip pauses covered CSS animations instead of advancing invisible frames", healthy);
+check(healthy && healthy.rumbleScope && healthy.rumbleScope[0] === "9px" &&
+  healthy.rumbleScope[1] !== "9px",
+  "shoulder-rumble tuning stays on the SVG root instead of invalidating its descendants",
+  healthy && healthy.rumbleScope);
 check(result && result.restoredVisibility.every(function (row) { return row[1] === "visible"; }),
   "exiting Road Trip immediately restores every covered room surface", result && result.restoredVisibility);
 check(result && result.restoredStripVisibility === "visible",

@@ -251,6 +251,9 @@ Keep these ownership boundaries intact:
   terminal police beats retain their own input priority.
 - Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases
   that suspension. This parks Party foreground work without pretending the story latch was reset.
+- The five `--roadtrip-rumble-*` properties are registered as non-inherited: they animate the HUD
+  root only. Do not turn them back into inherited variables, which makes every shoulder tick restyle
+  the full dashboard SVG.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order

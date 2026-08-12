@@ -19,7 +19,8 @@ var HARNESS = [
   ' if(intro)intro.click();await waitFor(function(){return !document.getElementById("click-me-overlay");},2000);',
   ' key("P",{shiftKey:true,code:"KeyP"});',
   ' await sleep(1700);',
-  ' report.quietParty={message:!!window.__phoneMessageReceived("bd_marketa"),card:!!document.getElementById("sharecard-modal"),cake:!!window.__bdCakeOn};',
+  ' var earlyGate=window.__partyMessageRevealGateState();report.quietParty={message:window.__phoneMessageThread().indexOf("bd_marketa")!==-1,queued:earlyGate.queued.indexOf("bd_marketa")!==-1,active:earlyGate.active,notice:!!document.querySelector(".msg-thumb.show,.msg-badge.show"),card:!!document.getElementById("sharecard-modal"),cake:!!window.__bdCakeOn};',
+  ' await sleep(2600);if(window.__showPartyExplorationCoach)window.__showPartyExplorationCoach();if(window.__retirePartyRoomMapCoach)window.__retirePartyRoomMapCoach();await waitFor(function(){return window.__phoneMessageThread().indexOf("bd_marketa")!==-1;},1200);',
   ' key("/",{code:"Slash"});',
   ' var row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]"),action=row&&row.querySelector(".pm-msg-act");',
   ' report.partyStart={party:document.getElementById("loft-game-strip").classList.contains("party-on"),row:!!row,sender:row&&row.querySelector(".pm-msg-from").textContent,body:row&&row.querySelector(".pm-msg-text").textContent,arrow:!!(action&&action.querySelector("svg")),label:action&&action.textContent.trim(),standard:!!(action&&action.className==="pm-msg-act")};',
@@ -75,8 +76,9 @@ var r = lib.runPageSync("loft-day.html", HARNESS, 30000, {
 
 check(r && r.splash.visible && !r.splash.party && !r.splash.notice,
   "the untouched splash has no birthday interruption", r && r.splash);
-check(r && r.quietParty.message && !r.quietParty.card && !r.quietParty.cake,
-  "ordinary Party shows only the greeting, with no automatic cake or postcard", r && r.quietParty);
+check(r && !r.quietParty.message && r.quietParty.queued && r.quietParty.active && !r.quietParty.notice &&
+    !r.quietParty.card && !r.quietParty.cake,
+  "ordinary Party holds its birthday greeting behind the four-second reveal", r && r.quietParty);
 check(r && r.partyStart.party && r.partyStart.row && r.partyStart.sender === "behdad" &&
     /birthday.*Markéta/i.test(r.partyStart.body) && r.partyStart.arrow && r.partyStart.standard && r.partyStart.label === "",
   "actual Shift+P releases the greeting with the standard arrow-only action", r && r.partyStart);

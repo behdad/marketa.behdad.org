@@ -210,10 +210,16 @@ first start. That latch opens free exploration and remains set even after Party 
 cleared only by a real reset. Do not use the music, lighting, guest population, or
 `__gardenPartyOn` alone as a proxy for story progress.
 
-The Garden wall switch remains the day/night owner in both phases. Phase two reveals the fixed roof
-disco ball as the optional Party toggle; Party state alone controls whether it is lit and rotating or
-dim and still. The first Party coach points to The Loft while Party remains active, and the first
+The Garden wall switch remains the day/night owner in both phases. Phase two reveals the roof disco
+ball at the window/wall ceiling junction, clear of message and roster chrome, as the optional Party
+toggle; Party state alone controls whether its native-SVG mirror facets are lit and rotating or dim
+and still. The first Party coach points to The Loft while Party remains active, and the first
 Messages coach is serialized behind it. Neither progression nor Road Trip requires a Party-off coach.
+
+The first Party transition starts the checkpointed `party-message-reveal` gate. For 4 seconds, every
+message request—including birthday greetings—stays outside the thread, preview, and badge in request
+order. Release waits behind authored Party moments and the exploration coach, then replays through
+the ordinary Messages owner. Party toggles do not re-arm the gate; reset does.
 
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end

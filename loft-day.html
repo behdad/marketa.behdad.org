@@ -6518,6 +6518,9 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
    WebKit honours for foreignObject painting) hides them whenever the office isn't viewed;
    in the office they fall back to their normal per-channel opacity gating. */
 #loft-game-strip:not(.viewing-office) #office-monitor foreignObject{visibility:hidden}
+/* The Dollhouse supplies its own native-SVG caps thumbnail over this screen. Keeping the
+   live screen tree out of the nested <use> also prevents its desktop from escaping the card. */
+#office-monitor.dollhouse-preview #office-monitor-screen-content{display:none}
 #office-monitor .boot-logo{opacity:0; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.show-fedora #monitor-logo-fedora{opacity:1}
 #office-monitor.show-chrome #monitor-logo-chrome{opacity:1}
@@ -113829,6 +113832,8 @@ function spawnDustMote(container) {
       });
     }
     dollhouseCuddlyFireStyles = null;
+    var officeMonitor = document.getElementById("office-monitor");
+    if (officeMonitor) officeMonitor.classList.remove("dollhouse-preview");
     var bedroom = document.getElementById("bedroom-room");
     if (bedroom) bedroom.classList.remove("dollhouse-preview");
     if (dollhouseKitchenStyles) {
@@ -113875,6 +113880,8 @@ function spawnDustMote(container) {
           return entry;
         });
     }
+    var officeMonitor = document.getElementById("office-monitor");
+    if (officeMonitor) officeMonitor.classList.add("dollhouse-preview");
     var bedroom = document.getElementById("bedroom-room");
     if (bedroom) bedroom.classList.add("dollhouse-preview");
     var kitchen = document.getElementById("stage-kitchen");
@@ -113930,6 +113937,9 @@ function spawnDustMote(container) {
     cancelDollhouseFirstReveal();
     resumeDollhouseAnimations();
     dollhouse.hidden = true;
+    dollhouseRooms.forEach(function (spec) {
+      if (spec.room === "office" && spec.use) spec.use.style.display = "none";
+    });
     dollhouseLockedEnterRoom = "";
     dollhouseLockedEnterAt = 0;
     restoreDollhousePreviewState();
@@ -114045,6 +114055,18 @@ function spawnDustMote(container) {
       if (offset) use.setAttribute("transform", "translate(" + (-offset) + " 0)");
       if (spec.floor !== "main") { use.setAttribute("width", "680"); use.setAttribute("height", "340"); }
       svg.appendChild(use);
+      if (spec.room === "office") {
+        var monitorPreview = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        monitorPreview.setAttribute("class", "loft-dollhouse-office-monitor-preview");
+        monitorPreview.setAttribute("transform", "translate(3,0) translate(-32.4,-21.3) scale(1.1025)");
+        monitorPreview.innerHTML = '<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#efe6cf"/>' +
+          '<ellipse cx="286" cy="172" rx="40" ry="22" fill="#d9a6a6" opacity=".12"/>' +
+          '<ellipse cx="350" cy="181" rx="42" ry="24" fill="#7f9ec0" opacity=".12"/>' +
+          '<g opacity=".2" transform="translate(292,156.5) scale(.28)"><use href="#cap-pink"/>' +
+          '<use href="#cap-blue"/></g><rect x="254" y="154" width="124" height="5.5" fill="#8e3a4a"/>';
+        svg.appendChild(monitorPreview);
+        spec.officeMonitorPreview = monitorPreview;
+      }
       if (spec.room === "cinema") {
         var cinemaLake = document.createElementNS("http://www.w3.org/2000/svg", "use");
         cinemaLake.setAttribute("class", "loft-dollhouse-cinema-lake");
@@ -114072,7 +114094,7 @@ function spawnDustMote(container) {
       event.stopPropagation();
       if (window.__secondRound && !roomSeen(spec.room)) unlockDollhouseRoom(spec);
       else chooseDollhouseRoom(spec);
-    });
+    }, true);
     button.addEventListener("dblclick", function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -114267,6 +114289,9 @@ function spawnDustMote(container) {
     if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     pauseRoadtripForDollhouse();
     if (!dollhouseRooms.length) buildDollhouse();
+    dollhouseRooms.forEach(function (spec) {
+      if (spec.room === "office" && spec.use) spec.use.style.display = "";
+    });
     finishDollhouseBackgroundWarm();
     prepareDollhousePreviewState();
     renderDollhouse();

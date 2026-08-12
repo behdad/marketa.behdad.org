@@ -101,9 +101,19 @@ var harness = String.raw`<script>
         return stage.id + ":" + getComputedStyle(stage).visibility + "/" +
           getComputedStyle(stage.firstElementChild).visibility;
       }).join(","));
+    var officeMonitor = document.getElementById("office-monitor");
+    var monitorScreen = document.getElementById("office-monitor-screen-content");
+    check("the Office preview replaces the whole live monitor screen with native caps art",
+      officeMonitor.classList.contains("dollhouse-preview") &&
+        getComputedStyle(monitorScreen).display === "none" &&
+        !!document.querySelector('[data-dollhouse-room="office"] .loft-dollhouse-office-monitor-preview'));
     key("Tab");
     check("closing The Loft restores the Road Trip pause overlay",
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");
+    check("closing The Loft restores the real Office monitor surface",
+      !officeMonitor.classList.contains("dollhouse-preview"));
+    check("closing The Loft removes the cached Office clone from paint",
+      getComputedStyle(document.querySelector('[data-dollhouse-room="office"] use')).display === "none");
     check("closing The Loft keeps upper-room raster sources warm for the next view",
       parkedUpperSources.every(function (stage) { return getComputedStyle(stage).visibility === "visible"; }),
       parkedUpperSources.map(function (stage) { return stage.id + ":" + getComputedStyle(stage).visibility; }).join(","));

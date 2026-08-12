@@ -64,8 +64,9 @@ can interrupt the ordinary Party scene without ending it.
 After the Party reveal settles, a large coach points to **The Loft** and invites you to explore while
 the Party keeps running. The Garden wall switch remains a day/night control. In phase two, the roof
 disco ball is the optional Party toggle: lit and spinning while Party is on, dim and still while it is
-off. After all ten rooms are visited, Behdad and Markéta’s message exchange offers **Let’s go!**, which
-takes you to Entrance. Selecting the Entrance road after the same milestone is the fallback.
+off. After all ten rooms are visited, the caption stays on **“Who wants to go on a Road Trip? Head
+out to the car.”** until you reach Entrance; Party may keep running while you walk there. The message
+action also takes you to Entrance.
 
 ### Road Trip
 

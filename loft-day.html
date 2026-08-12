@@ -3581,6 +3581,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
     padding:.14rem .58rem; margin-top:.22rem; font-size:clamp(.76rem,3.7vh,.92rem); line-height:1.12;
     display:block;
   }
+  #hunt-caption.roadtrip-departure-caption{
+    max-width:calc(100% - 1.25rem); white-space:normal; text-overflow:clip; text-wrap:balance;
+  }
 }
 /* First-play handoff: a shared coach card establishes the top controls, then the subtitle.
    Its transparent full-shell layer swallows scene input, while the highlighted navigation row
@@ -37726,8 +37729,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-98806d194f8a"></script>
-<script src="loft-day.cs.js?v=dict-690fb41b3d8b"></script>
+<script src="loft-day.en.js?v=dict-146e3b21fd26"></script>
+<script src="loft-day.cs.js?v=dict-2d7b332ad33e"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -51284,6 +51287,7 @@ window.__entranceRoomOpen = false;
     });
   }
   function openPorscheDriveHudNow() {
+    if (window.__completeRoadtripDepartureCaption) window.__completeRoadtripDepartureCaption();
     var wasOpen = driveState.hudOpen;
     driveState.hudOpen = true;
     if (!wasOpen && roadtripState.unlocked) resetRoadtripInvitationSession();
@@ -51731,6 +51735,7 @@ window.__entranceRoomOpen = false;
     recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     window.__entranceRoomOpen = true;
+    if (window.__completeRoadtripDepartureCaption) window.__completeRoadtripDepartureCaption();
     if (window.__hideCallRing) window.__hideCallRing();
     paintPorscheDriveHud();
     restoreRoadtripCampPresentationWhenReady();
@@ -113978,6 +113983,8 @@ function spawnDustMote(container) {
   window.__setSolvedRooms = setSolvedRooms;
   var ROOM_IDS = STAGES.concat(["bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
   var seenRooms = Object.create(null);
+  var roadtripDepartureCaptionPending = false;
+  var roadtripDepartureCaptionAcknowledged = false;
   function roomSeen(name) {
     return ROOM_IDS.indexOf(name) !== -1 && !!seenRooms[name];
   }
@@ -113996,6 +114003,7 @@ function spawnDustMote(container) {
     if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(null, seenRoomList().length);
+    if (window.__syncRoadtripDepartureCaption) window.__syncRoadtripDepartureCaption();
     return seenRoomList();
   }
   var LOWER_ROOM_PROGRESS_KEYS = {
@@ -114037,6 +114045,7 @@ function spawnDustMote(container) {
     if (!(options && options.silent) && attractOver()) showRoomProgress(name);
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(name, seenRoomList().length);
+    if (window.__syncRoadtripDepartureCaption) window.__syncRoadtripDepartureCaption();
     return true;
   }
   var bathroomSignTimer = null;
@@ -115613,8 +115622,10 @@ function spawnDustMote(container) {
       var claim = visible();
       var host = element.closest("#hunt-fullscreen-area");
       if (host) host.classList.toggle("caption-reserved-fit", !!(claim &&
-        (claim.kind === "exclusive" || claim.format === "rsvp" || claim.priority >= CAPTION_PRIORITY.terminal)));
+        (claim.kind === "exclusive" || claim.format === "rsvp" || claim.owner === "roadtrip-departure" ||
+          claim.priority >= CAPTION_PRIORITY.terminal)));
       element.classList.toggle("temporary-caption-live", !!(claim && claim.kind === "overlay"));
+      element.classList.toggle("roadtrip-departure-caption", !!(claim && claim.owner === "roadtrip-departure"));
       element.classList.toggle("rsvp-nudge", !!(claim && claim.format === "rsvp"));
       element.classList.toggle("hint-blink", !!(claim && claim.blink));
       captionKey = claim && claim.key != null ? claim.key : null;
@@ -115826,10 +115837,84 @@ function spawnDustMote(container) {
   window.__cancelCaption = window.__captionArbiter.cancel;
   window.__blinkCaptionClaim = captionArbiter.blink;
   var captionDerivationDepth = 0, pendingCaptionBase = null;
+  function roadtripDepartureCaptionSpec(spec) {
+    if (!roadtripDepartureCaptionPending || window.__entranceRoomOpen || window.__cinematic ||
+        spec.owner === "roadtrip-departure" || Number(spec.priority) > CAPTION_PRIORITY.story) return spec;
+    return { key: "roadtrip_departure_caption", owner: "roadtrip-departure",
+      scope: captionViewportScope(), priority: CAPTION_PRIORITY.story };
+  }
   function publishCaptionBase(spec) {
+    spec = roadtripDepartureCaptionSpec(spec);
     if (captionDerivationDepth) { pendingCaptionBase = spec; return "caption-pending"; }
     return captionArbiter.base(spec);
   }
+  function clearRoadtripDepartureCaptionBase() {
+    var state = captionArbiter.state().base;
+    return state && state.owner === "roadtrip-departure" ?
+      captionArbiter.cancel("roadtrip-departure", { base: true }) : false;
+  }
+  function clearSupersededRoadtripDepartureProgress() {
+    captionArbiter.cancel("room-progress");
+    captionArbiter.cancel("party-roadtrip-handoff");
+  }
+  function publishRoadtripDepartureCaption() {
+    if (!roadtripDepartureCaptionPending || window.__entranceRoomOpen || window.__cinematic) return false;
+    var base = captionArbiter.state().base;
+    if (base && base.owner !== "roadtrip-departure" && base.priority > CAPTION_PRIORITY.story) return true;
+    return publishCaptionBase({ key: "roadtrip_departure_caption", owner: "roadtrip-departure",
+      scope: captionViewportScope(), priority: CAPTION_PRIORITY.story });
+  }
+  window.__syncRoadtripDepartureCaption = function () {
+    var complete = !!(window.__secondRound && seenRoomList().length >= ROOM_IDS.length);
+    var changed = false;
+    if (!complete) {
+      changed = roadtripDepartureCaptionPending || roadtripDepartureCaptionAcknowledged;
+      roadtripDepartureCaptionPending = false;
+      roadtripDepartureCaptionAcknowledged = false;
+      clearRoadtripDepartureCaptionBase();
+    } else if (window.__entranceRoomOpen) {
+      changed = roadtripDepartureCaptionPending || !roadtripDepartureCaptionAcknowledged;
+      roadtripDepartureCaptionPending = false;
+      roadtripDepartureCaptionAcknowledged = true;
+      clearSupersededRoadtripDepartureProgress();
+      clearRoadtripDepartureCaptionBase();
+    } else if (!roadtripDepartureCaptionAcknowledged) {
+      changed = !roadtripDepartureCaptionPending;
+      roadtripDepartureCaptionPending = true;
+      publishRoadtripDepartureCaption();
+    } else {
+      clearRoadtripDepartureCaptionBase();
+    }
+    if (changed && window.__checkpointChanged) window.__checkpointChanged();
+    return roadtripDepartureCaptionPending;
+  };
+  window.__completeRoadtripDepartureCaption = function () {
+    if (!window.__secondRound || seenRoomList().length < ROOM_IDS.length) return false;
+    var changed = roadtripDepartureCaptionPending || !roadtripDepartureCaptionAcknowledged;
+    roadtripDepartureCaptionPending = false;
+    roadtripDepartureCaptionAcknowledged = true;
+    clearSupersededRoadtripDepartureProgress();
+    clearRoadtripDepartureCaptionBase();
+    if (changed && window.__checkpointChanged) window.__checkpointChanged();
+    return changed;
+  };
+  window.__restoreRoadtripDepartureCaption = function (progress) {
+    progress = progress || {};
+    var complete = !!(window.__secondRound && seenRoomList().length >= ROOM_IDS.length);
+    var hasPending = Object.prototype.hasOwnProperty.call(progress, "roadtripDepartureCaptionPending");
+    var hasAcknowledged = Object.prototype.hasOwnProperty.call(progress, "roadtripDepartureCaptionAcknowledged");
+    roadtripDepartureCaptionAcknowledged = complete && (hasAcknowledged ?
+      !!progress.roadtripDepartureCaptionAcknowledged : progress.lowerRoom === "entrance");
+    roadtripDepartureCaptionPending = complete && !roadtripDepartureCaptionAcknowledged &&
+      (hasPending ? !!progress.roadtripDepartureCaptionPending : progress.lowerRoom !== "entrance");
+    if (roadtripDepartureCaptionPending) publishRoadtripDepartureCaption();
+    else clearRoadtripDepartureCaptionBase();
+    return roadtripDepartureCaptionPending;
+  };
+  window.__roadtripDepartureCaptionState = function () {
+    return { pending: roadtripDepartureCaptionPending,
+      acknowledged: roadtripDepartureCaptionAcknowledged };
+  };
   function setCaption(key, force, originScope, originGeneration) {
     if (typeof key !== "string" || !key) return false;
     var scope = originScope || captionViewportScope();
@@ -119095,6 +119180,9 @@ function spawnDustMote(container) {
     syncFloorNavigation();
     if (previous !== window.__secondRound && window.__roadtripExplorationChanged) {
       window.__roadtripExplorationChanged();
+    }
+    if (previous !== window.__secondRound && window.__syncRoadtripDepartureCaption) {
+      window.__syncRoadtripDepartureCaption();
     }
     if (previous !== window.__secondRound && window.__refreshKitchenBar) window.__refreshKitchenBar();
     return previous;
@@ -129728,6 +129816,8 @@ function spawnDustMote(container) {
         room: window.__currentStageName || "kitchen", maxUnlocked: maxUnlocked,
         solvedRooms: solvedRoomList(),
         seenRooms: seenRoomList(),
+        roadtripDepartureCaptionPending: roadtripDepartureCaptionPending,
+        roadtripDepartureCaptionAcknowledged: roadtripDepartureCaptionAcknowledged,
         lowerRoom: (activeLowerRoom() || {}).id,
         phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
         daylight: !(balcony && balcony.classList.contains("dusk")),
@@ -130026,6 +130116,7 @@ function spawnDustMote(container) {
     setSolvedRooms(p.solvedRooms);
     setSeenRooms(Array.isArray(p.seenRooms) ? p.seenRooms : ["kitchen", p.room, p.lowerRoom]);
     setSecondRound(!!p.phase2, { releaseHeld: false });
+    if (window.__restoreRoadtripDepartureCaption) window.__restoreRoadtripDepartureCaption(p);
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     // The retained phone can predate this exact birthday. Re-register today's greeting after its

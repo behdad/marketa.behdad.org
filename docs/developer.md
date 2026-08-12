@@ -222,7 +222,9 @@ The progression bridge uses `seenRooms`, not message-reading or solved-state gue
 exploration is complete only after Party/free exploration has begun and all ten rooms have been
 visited. If the player reaches the Entrance while Party is still active, the canonical handoff winds
 it down before authorizing the trip. Keep that lenient path: eligibility should not depend on noticing
-or obeying one phone message.
+or obeying one phone message. The tenth visit also derives a checkpointed `roadtrip-departure`
+caption base. Its story priority rejects ordinary room/feedback rotation while allowing stronger
+modal and cinematic claims; opening Entrance acknowledges it and restores the car’s caption.
 
 ### Road Trip and Camping
 

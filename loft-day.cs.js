@@ -672,6 +672,7 @@ window.__loftMessages["cs"] = {
     "recovery_minutes": "před {n} min",
     "recovery_restart": "↻ Začít znovu",
     "recovery_title": "Vítej zpátky",
+    "roadtrip_departure_caption": "Kdo chce vyrazit na výlet? Vydej se ven k autu.",
     "room_progress": "Navštíveno: {n}/10 · zkoumej dál.",
     "room_visit_bathroom_few": "Tady je koupelna. Zbývají ještě {n} místnosti.",
     "room_visit_bathroom_many": "Tady je koupelna. Zbývá ještě {n} místností.",

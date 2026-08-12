@@ -102,7 +102,7 @@ var result = run({ forceMotion: true });
 var s = (result && result.steps) || {};
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(s.bedroom && s.bedroom.live && s.bedroom.motion.name === "lower-room-party-bass" &&
-  s.bedroom.motion.duration === "0.533s" && s.bedroom.placement === "translate(0 -18)",
+  s.bedroom.motion.duration === "0.533s" && s.bedroom.placement === "translate(-3 -18)",
   "the open Bedroom window vibrates on the techno beat without replacing its SVG placement", s.bedroom);
 check(s.game && s.game.board[0] === "X" && s.game.phase === "computer",
   "the moving stained-glass panes remain playable", s.game);

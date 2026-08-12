@@ -243,6 +243,11 @@ Keep these ownership boundaries intact:
   behind that shared gate.
 - Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases
   that suspension. This parks Party foreground work without pretending the story latch was reset.
+- While Road Trip owns the viewport, `mir-roadtrip-active` removes the covered five-room SVG from
+  layout and pins the viewport to its established 2:1 ratio. Keep those rules paired: `display:none`
+  avoids laying out the hidden loft on every highway frame, while the explicit ratio prevents the
+  overlay-only viewport from collapsing. The Dollhouse's `dollhouse-open` class temporarily
+  restores the strip because its live room cards reference those source groups.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order

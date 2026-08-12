@@ -73,7 +73,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contain]; });
     var coveredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
-    var stripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
+    var stripDisplay = getComputedStyle(document.getElementById("loft-game-strip")).display;
     var rumbleScope = null;
     if (!low) {
       var rumbleRoot = document.getElementById("entrance-drive-hud-svg");
@@ -115,7 +115,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       entityCount: after.roadtrip.entityCount,
       containment: getComputedStyle(document.getElementById("entrance-room")).contain,
       coveredVisibility: coveredVisibility,
-      stripVisibility: stripVisibility,
+      stripDisplay: stripDisplay,
       rumbleScope: rumbleScope,
       coveredAnimationState: coveredAnimation && getComputedStyle(coveredAnimation).animationPlayState,
       overlayContainment: overlayContainment,
@@ -146,11 +146,16 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     });
     pristineCampObserver.disconnect();
     report.low = run(true);
+    if (window.__openDollhouse && window.__openDollhouse()) {
+      report.dollhouseStripDisplay = getComputedStyle(document.getElementById("loft-game-strip")).display;
+      window.__closeDollhouse();
+    }
+    report.closedDollhouseStripDisplay = getComputedStyle(document.getElementById("loft-game-strip")).display;
     window.__exitEntranceRoadtrip();
     window.__syncScopeMirrors();
     report.restoredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
-    report.restoredStripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
+    report.restoredStripDisplay = getComputedStyle(document.getElementById("loft-game-strip")).display;
     report.restoredAnimationState = coveredAnimation && getComputedStyle(coveredAnimation).animationPlayState;
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
@@ -241,8 +246,13 @@ check(healthy && healthy.overlayContainment.every(function (row) { return row[1]
   "all fixed-size overlay rooms establish independent layout/paint scopes", healthy && healthy.overlayContainment);
 check(healthy && healthy.coveredVisibility.every(function (row) { return row[1] === "hidden"; }),
   "Road Trip skips rendering every fully covered room surface", healthy && healthy.coveredVisibility);
-check(healthy && healthy.stripVisibility === "hidden",
-  "Road Trip hides the covered loft strip without applying size containment", healthy);
+check(healthy && healthy.stripDisplay === "none" &&
+  healthy.roomSize[0] === healthy.viewportSize[0] && healthy.roomSize[1] === healthy.viewportSize[1],
+  "Road Trip removes the covered loft strip from layout without collapsing the highway", healthy);
+check(result && result.dollhouseStripDisplay === "block",
+  "opening The Loft temporarily restores its live room-card sources", result);
+check(result && result.closedDollhouseStripDisplay === "none",
+  "closing The Loft parks the covered source strip again", result);
 check(healthy && healthy.coveredAnimationState === "paused",
   "Road Trip pauses covered CSS animations instead of advancing invisible frames", healthy);
 check(healthy && healthy.rumbleScope && healthy.rumbleScope[0] === "9px" &&
@@ -254,8 +264,8 @@ check(result && result.pristineCampMutations && result.pristineCampMutations.len
   result && result.pristineCampMutations);
 check(result && result.restoredVisibility.every(function (row) { return row[1] === "visible"; }),
   "exiting Road Trip immediately restores every covered room surface", result && result.restoredVisibility);
-check(result && result.restoredStripVisibility === "visible",
-  "exiting Road Trip immediately restores the loft strip", result && result.restoredStripVisibility);
+check(result && result.restoredStripDisplay === "block",
+  "exiting Road Trip immediately restores the loft strip", result && result.restoredStripDisplay);
 check(result && result.restoredAnimationState === "running",
   "exiting Road Trip resumes covered CSS animations", result && result.restoredAnimationState);
 check(healthy && low && healthy.counters.roadPaints === 20 &&

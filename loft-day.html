@@ -1031,7 +1031,12 @@ html.mir-autumn #entrance-room :is(.entrance-tree-autumn,.entrance-autumn-foregr
 #entrance-room.roadtrip-active #entrance-roadtrip-world{
   opacity:1;visibility:visible;
 }
-html.mir-roadtrip-active #loft-game-strip{visibility:hidden}
+/* Road Trip owns a fixed 2:1 overlay, so the five-room SVG behind it contributes no
+   pixels or sizing. Remove those ~17k covered layout objects as well as their paint;
+   keep the viewport ratio explicit so dropping its normal SVG sizing child cannot
+   collapse the highway. */
+html.mir-roadtrip-active .hunt-viewport{aspect-ratio:2/1}
+html.mir-roadtrip-active #hunt-fullscreen-area:not(.dollhouse-open) #loft-game-strip{display:none}
 html.mir-roadtrip-active :is(#bathroom-room,#prince-basement,#cinema-room,#bedroom-room){
   content-visibility:hidden;
 }
@@ -114507,6 +114512,8 @@ function spawnDustMote(container) {
     cancelDollhouseFirstReveal();
     resumeDollhouseAnimations();
     dollhouse.hidden = true;
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (area) area.classList.remove("dollhouse-open");
     dollhouseRooms.forEach(function (spec) {
       if (spec.room === "office" && spec.use) spec.use.style.display = "none";
     });
@@ -114873,7 +114880,7 @@ function spawnDustMote(container) {
     dollhouse.classList.add("dollhouse-warm");
     dollhouse.hidden = false;
     var area = document.getElementById("hunt-fullscreen-area");
-    if (area) area.classList.add("dollhouse-warm");
+    if (area) area.classList.add("dollhouse-warm", "dollhouse-open");
     syncDollhouseAnimationHealth();
     var selected = dollhouseRooms.findIndex(function (spec) {
       return spec.floor === (activeLowerRoom() ? "lower" : "main") &&

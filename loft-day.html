@@ -113687,6 +113687,35 @@ function spawnDustMote(container) {
   var dollhouseRoadtripWorldStyle = null;
   var dollhouseRoadtripCampStyles = null;
   var dollhousePausedAnimations = [];
+  var dollhouseFirstRevealRaf = 0;
+  var dollhouseFirstRevealQueue = [];
+  var dollhouseFirstRevealComplete = false;
+  function cancelDollhouseFirstReveal() {
+    if (dollhouseFirstRevealRaf) cancelAnimationFrame(dollhouseFirstRevealRaf);
+    dollhouseFirstRevealRaf = 0;
+  }
+  function revealNextDollhousePreview() {
+    dollhouseFirstRevealRaf = 0;
+    if (!dollhouse || dollhouse.hidden) return;
+    var spec = dollhouseFirstRevealQueue.shift();
+    if (spec && spec.use) spec.use.style.display = "";
+    if (dollhouseFirstRevealQueue.length) {
+      dollhouseFirstRevealRaf = requestAnimationFrame(revealNextDollhousePreview);
+    } else {
+      dollhouseFirstRevealComplete = true;
+    }
+  }
+  function stageDollhouseFirstReveal() {
+    if (dollhouseFirstRevealComplete) return;
+    cancelDollhouseFirstReveal();
+    var priority = [window.__currentStageName, "kitchen", "garden", "balcony", "cuddly", "office"];
+    dollhouseFirstRevealQueue = dollhouseRooms.filter(function (spec) {
+      return spec.floor === "main" && spec.use;
+    }).sort(function (a, b) {
+      return priority.indexOf(a.stage) - priority.indexOf(b.stage);
+    });
+    dollhouseFirstRevealQueue.forEach(function (spec) { spec.use.style.display = "none"; });
+  }
   function resumeDollhouseAnimations() {
     dollhousePausedAnimations.forEach(function (animation) {
       if (animation.playState === "paused") animation.play();
@@ -113836,6 +113865,7 @@ function spawnDustMote(container) {
   function closeDollhouse() {
     if (!dollhouse) return false;
     var wasOpen = !dollhouse.hidden;
+    cancelDollhouseFirstReveal();
     resumeDollhouseAnimations();
     dollhouse.hidden = true;
     dollhouseLockedEnterRoom = "";
@@ -114048,6 +114078,10 @@ function spawnDustMote(container) {
   }
   function finishDollhouseBackgroundWarm() {
     if (!dollhouseRooms.length) return;
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (dollhouseWarmIndex >= dollhouseRooms.length &&
+        dollhouse.classList.contains("dollhouse-warm") &&
+        area && area.classList.contains("dollhouse-warm")) return;
     if (dollhouseWarmIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseWarmIdle);
     if (dollhouseWarmDelay) clearTimeout(dollhouseWarmDelay);
     dollhouseWarmIdle = 0;
@@ -114059,7 +114093,6 @@ function spawnDustMote(container) {
     });
     dollhouseWarmIndex = dollhouseRooms.length;
     dollhouse.classList.add("dollhouse-warm");
-    var area = document.getElementById("hunt-fullscreen-area");
     if (area) area.classList.add("dollhouse-warm");
   }
   function scheduleDollhouseBackgroundWarm() {
@@ -114175,6 +114208,7 @@ function spawnDustMote(container) {
     finishDollhouseBackgroundWarm();
     prepareDollhousePreviewState();
     renderDollhouse();
+    stageDollhouseFirstReveal();
     dollhouse.classList.add("dollhouse-warm");
     dollhouse.hidden = false;
     var area = document.getElementById("hunt-fullscreen-area");
@@ -114185,6 +114219,9 @@ function spawnDustMote(container) {
         (spec.floor === "lower" ? activeLowerRoom().id === spec.room : window.__currentStageName === spec.room);
     });
     setDollhouseCursor(selected >= 0 ? selected : 0);
+    if (!dollhouseFirstRevealComplete && dollhouseFirstRevealQueue.length) {
+      dollhouseFirstRevealRaf = requestAnimationFrame(revealNextDollhousePreview);
+    }
     if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     return true;
   }

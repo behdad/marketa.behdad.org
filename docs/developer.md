@@ -184,6 +184,8 @@ Browsers without `requestIdleCallback` retain the on-demand path. Once warm, the
 parked upper-room SVG sources stay alive for later views. Normal stage parking still owns those
 off-screen animations. When frame health is low, the open dollhouse additionally pauses the live
 source animations it finds and resumes only that recorded set on close or frame-rate recovery.
+The first visible view paints the shell and lower floor immediately, then activates the five large
+upper-room `<use>` previews one per frame; later views retain the complete live set.
 
 ### Morning routine and free exploration
 

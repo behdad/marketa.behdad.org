@@ -75,6 +75,8 @@ var harness = String.raw`<script>
       getComputedStyle(arrow).animationName ===
         (matchMedia("(prefers-reduced-motion: reduce)").matches ? "none" : "kitchen-arrow-bounce"),
     getComputedStyle(arrow).animationName);
+  check("the opening coach clips animated arrow paint to the embedded game shell",
+    getComputedStyle(overlay).overflow === "hidden", getComputedStyle(overlay).overflow);
 
   var cabinet = document.getElementById("kitchen-cabinet-2");
   var machine = document.getElementById("kitchen-lamarzocco"), cr = machine.getBoundingClientRect();

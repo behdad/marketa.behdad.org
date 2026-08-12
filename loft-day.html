@@ -115430,16 +115430,11 @@ function spawnDustMote(container) {
   // opacity/display gate makes them persistently invisible. Pause only their infinite CSS
   // timelines after the fade reaches zero, preserving their current phase for the next reveal.
   // This is separate from room parking because the garden itself is still the active room.
-  // In particular, do not classify #garden-guests merely from its transient zero-opacity frame
-  // during a room-return fade: those dancers are about to paint and must keep moving.
-  function gardenNodePaintHidden(node) {
-    if (!node) return false;
-    var c = getComputedStyle(node);
-    return c.display === "none" || c.visibility === "hidden" || Number(c.opacity) <= 0.001;
-  }
+  // In particular, classify roots from the state classes that own their visibility, never a
+  // computed-style read during a room-return fade: those dancers are about to paint and must move.
   function hiddenGardenRoots() {
     var garden = document.getElementById("stage-garden"), guests = document.getElementById("garden-guests"), melt = document.getElementById("trip-melt-dancers"), roots = [];
-    function add(node, force) { if (node && (force || gardenNodePaintHidden(node)) && roots.indexOf(node) < 0) roots.push(node); }
+    function add(node) { if (node && roots.indexOf(node) < 0) roots.push(node); }
     if (melt) {
       if (melt.classList.contains("crowd-clear")) add(melt);
       add(melt.querySelector(".md-d2")); // permanently display:none, but its dance selectors still match
@@ -115449,12 +115444,12 @@ function spawnDustMote(container) {
         add(guests.querySelector(".g-elisabeth")); add(guests.querySelector(".g-felix"));
       }
       var away = guests.querySelectorAll(".guest.off-with-kids,.guest.off-at-games,.guest.off-asleep,.guest.off-at-bbq");
-      for (var i = 0; i < away.length; i++) add(away[i], true);
+      for (var i = 0; i < away.length; i++) add(away[i]);
     }
     if (garden && garden.classList.contains("garden-party")) {
       add(document.getElementById("garden-mirror")); add(document.getElementById("garden-lamp"));
     }
-    add(document.getElementById("garden-stars"));
+    if (!garden || !garden.classList.contains("dusk") || strip.classList.contains("climate-overcast")) add(document.getElementById("garden-stars"));
     if (garden && (garden.classList.contains("dusk") || garden.classList.contains("storming"))) add(document.getElementById("garden-birds"));
     return roots;
   }

@@ -120,10 +120,36 @@ var harness = String.raw`<script>
     check("closing The Loft restores the real Office monitor surface",
       !officeMonitor.classList.contains("dollhouse-preview"));
     check("closing The Loft removes the cached Office clone from paint",
-      getComputedStyle(document.querySelector('[data-dollhouse-room="office"] use')).display === "none");
-    check("closing The Loft keeps upper-room raster sources warm for the next view",
-      parkedUpperSources.every(function (stage) { return getComputedStyle(stage).visibility === "visible"; }),
-      parkedUpperSources.map(function (stage) { return stage.id + ":" + getComputedStyle(stage).visibility; }).join(","));
+      getComputedStyle(document.querySelector('[data-dollhouse-room="office"] use')).visibility === "hidden");
+    check("closing The Loft paint-hides every cached room card",
+      [].slice.call(document.querySelectorAll(".loft-dollhouse-room")).every(function (room) {
+        return getComputedStyle(room).visibility === "hidden";
+      }));
+    check("closing The Loft bounds every warm upper-room source to its own stage",
+      parkedUpperSources.every(function (stage) {
+        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&
+          getComputedStyle(stage).clipPath.indexOf("loft-stage-room-clip") >= 0;
+      }),
+      parkedUpperSources.map(function (stage) {
+        return stage.id + ":" + getComputedStyle(stage).visibility + "/" + getComputedStyle(stage).clipPath;
+      }).join(","));
+    window.__openDollhouse();
+    check("reopening restores every cached room card without rebuilding it",
+      [].slice.call(document.querySelectorAll(".loft-dollhouse-room")).every(function (room) {
+        return getComputedStyle(room).visibility === "visible";
+      }), [].slice.call(document.querySelectorAll(".loft-dollhouse-room")).map(function (room) {
+        return room.getAttribute("data-dollhouse-room") + ":" + getComputedStyle(room).visibility;
+      }).join(","));
+    check("reopening the cached Dollhouse reveals all live upper sources again",
+      parkedUpperSources.every(function (stage) {
+        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&
+          getComputedStyle(stage.firstElementChild).visibility === "visible" &&
+          getComputedStyle(stage).clipPath === "none";
+      }), parkedUpperSources.map(function (stage) {
+        return stage.id + ":" + getComputedStyle(stage).visibility + "/" +
+          getComputedStyle(stage.firstElementChild).visibility;
+      }).join(","));
+    window.__closeDollhouse();
     document.getElementById("entrance-drive-hud-svg").setAttribute("viewBox", "0 -120 680 340");
     window.__entranceRoadtripTransportState = function () {
       return { active: true, paused: false, route: "camp" };
@@ -366,6 +392,30 @@ var harness = String.raw`<script>
       phaseTwoEnter && !state().open && window.__currentStageName === "kitchen" &&
       window.__bathroomRoomOpen && window.__roomSeen("bathroom"),
       JSON.stringify({ room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
+    if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony"]);
+    window.__goToStage("cuddly");
+    window.__setPartyMode(true, true, false);
+    if (window.__setPartyKidFormation) window.__setPartyKidFormation("play");
+    var kidGames = document.getElementById("cuddly-kidgames");
+    check("the Party's Cuddly kids are live in their open Dollhouse card",
+      kidGames.classList.contains("playing") && window.__openDollhouse() &&
+      getComputedStyle(roomButton("cuddly")).visibility === "visible" &&
+      getComputedStyle(document.getElementById("stage-cuddly")).clipPath === "none");
+    window.__closeDollhouse();
+    window.__goToStage("office");
+    check("Cuddly kids remain rendered at the start of the pan away",
+      kidGames.classList.contains("playing") &&
+      !document.getElementById("stage-cuddly").classList.contains("stage-far"));
+    var strip = document.getElementById("loft-game-strip");
+    var panEnd = new Event("transitionend", { bubbles: true });
+    Object.defineProperty(panEnd, "propertyName", { value: "transform" });
+    strip.dispatchEvent(panEnd);
+    check("Cuddly kids clear only after their room is fully out of view",
+      !kidGames.classList.contains("playing") &&
+      document.getElementById("stage-cuddly").classList.contains("stage-far") &&
+      getComputedStyle(document.getElementById("stage-cuddly")).clipPath.indexOf("loft-stage-room-clip") >= 0);
+    window.__setPartyMode(false, true, false);
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
@@ -375,7 +425,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 7000, { patchRaf: true, seedRandom: true });
+var result = lib.runPageSync("rsvp.html", harness, 10000, { patchRaf: true, seedRandom: true, forceMotion: true });
 if (!result) { console.error("dollhouse: no report"); process.exit(1); }
 var failed = false;
 result.checks.forEach(function (item) {

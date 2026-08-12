@@ -177,7 +177,11 @@ dismisses the active game, projector, or overlay owned by that lower room.
 The dollhouse reuses the live room trees, so opening it must not create a second controller or wake
 parked room work. Preview warm-up is optional performance work: the picker must remain correct when
 idle scheduling is unavailable or interrupted. Keep its source animations under the same room and
-frame-health ownership used by the main strip.
+frame-health ownership used by the main strip. Its built panel stays cached between views; closed
+room cards are paint-gated and parked sources are clipped to their own stage only while the panel
+is closed, because several live source trees deliberately draw into the adjacent real viewport.
+The cached room-card nodes themselves are paint-hidden directly while closed; inherited visibility
+is not a reliable boundary for every engine's SVG `<use>` shadow tree.
 
 The Office monitor retains app DOM and runtime state across zoom and room changes. At room scale,
 HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,

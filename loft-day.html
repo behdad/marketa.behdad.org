@@ -3510,8 +3510,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 /* Keep the already-built picker and its parked upper-room sources warm after the first view.
    The live <use> previews then reopen without rebuilding five large SVG render trees. */
 #loft-dollhouse.dollhouse-warm[hidden]{display:grid;visibility:hidden;pointer-events:none}
+#loft-dollhouse.dollhouse-warm[hidden] .loft-dollhouse-room,
+#loft-dollhouse.dollhouse-warm[hidden] .loft-dollhouse-room *{visibility:hidden !important}
 #hunt-fullscreen-area.dollhouse-warm #loft-game-strip .stage-far{visibility:visible}
 #hunt-fullscreen-area #loft-game-strip .stage-far.dollhouse-source-warm{visibility:visible}
+/* A closed warm picker retains each parked source's render tree, but it must not paint into
+   the real viewport. Bound it only while closed: the open <use> thumbnail and a departing room
+   still get all of their authored overflow. WebKit foreignObjects still use visibility below. */
+#hunt-fullscreen-area:not(.dollhouse-open) #loft-game-strip .stage-far.dollhouse-source-warm,
+#hunt-fullscreen-area.dollhouse-warm:not(.dollhouse-open) #loft-game-strip .stage-far{clip-path:url(#loft-stage-room-clip)}
 .loft-dollhouse-panel{
   position:relative; width:min(calc(100vw - clamp(.7rem,2vw,2rem)),calc((100vh - clamp(.7rem,2vw,2rem))*4));
   max-height:calc(100vh - clamp(.7rem,2vw,2rem)); box-sizing:border-box; padding:.72rem .78rem .82rem;
@@ -14842,7 +14849,8 @@ section{margin:1.9rem 0}
    visibility (not display) keeps the five-room geometry stable. */
 /* Upper dollhouse cards <use> these stage groups directly. WebKit refuses to paint a
    reference while its source tree is visibility:hidden, so keep the raster gate suspended
-   after the first view; the stage-far class still keeps its animations parked. */
+   after the first view; the closed-picker clip gate above keeps those warm sources out
+   of the real viewport without changing what their live <use> thumbnails contain. */
 #hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far:not(.dollhouse-source-warm),
 #hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far:not(.dollhouse-source-warm) *{visibility:hidden !important}
 /* ── the dance floor keeps two moving parts per figure, not five ──────────────
@@ -15099,6 +15107,7 @@ section{margin:1.9rem 0}
   <div class="hunt-viewport">
     <svg id="loft-game-strip" viewBox="0 0 3400 340" xmlns="http://www.w3.org/2000/svg">
 <defs>
+<clipPath id="loft-stage-room-clip" clipPathUnits="userSpaceOnUse"><rect width="680" height="340"/></clipPath>
 <pattern id="bathroom-waffle" width="8" height="8" patternUnits="userSpaceOnUse">
 <rect width="8" height="8" fill="#a8a39e"/>
 <path d="M0 1H8M0 5H8M1 0V8M5 0V8" fill="none" stroke="#807b77" stroke-width=".7" opacity=".72"/>
@@ -116384,6 +116393,7 @@ function spawnDustMote(container) {
   // geometry, so keeping only origin+destination produces blank intermediate frames.
   var STRIP_SLIDE_MS = 720; // #loft-game-strip's .7s room slide
   var parkTimer = null, parkEndHandler = null, parkGeneration = 0;
+  var postSlideActions = [];
   var pausedStageAnimations = {};
   var queuedAnimationPauses = new Set(), animationPauseRaf = null;
   var hiddenGardenAnimations = new Map(), hiddenGardenRaf = null;
@@ -116573,6 +116583,8 @@ function spawnDustMote(container) {
       if (parkEndHandler) strip.removeEventListener("transitionend", parkEndHandler);
       parkEndHandler = null;
       markFarRooms(idx);
+      var settledActions = postSlideActions.splice(0);
+      settledActions.forEach(function (action) { action(); });
     }
     if (idx === from || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) { finishPark(); return; }
     parkEndHandler = finishPark;
@@ -116591,6 +116603,12 @@ function spawnDustMote(container) {
       var stage = document.getElementById("stage-" + STAGES[i]);
       if (stage && stage.classList.contains("stage-far")) queueStageAnimationPause(stage);
     }
+  };
+  window.__afterRoomPan = function (action) {
+    if (typeof action !== "function") return false;
+    if (!parkTimer && !parkEndHandler) { action(); return false; }
+    postSlideActions.push(action);
+    return true;
   };
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name, opts) {
@@ -116674,16 +116692,29 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown(); // entering the nook on a milestone day pops the sign + throws confetti
     if (name === "cuddly" && window.__updateCuddlyGrooving) window.__updateCuddlyGrooving();
     if (name === "cuddly" && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // re-arm the door-nudge hint if the door's the next step
-    if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // resolve the couple's presence for the new room's day/night/party truth
+    if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(name !== "cuddly"); // preserve the departing kids until the room pan settles
     if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy();
     if (name === "cuddly" && window.__startCuddlyFlame) window.__startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.__resetFishu) window.__resetFishu();
-    if (name !== "cuddly" && window.__resetIrene) window.__resetIrene(); // Irene's cameo doesn't ride along out of the nook
-    if (name !== "cuddly" && window.__resetRobin) window.__resetRobin(); // ...nor does Robin's
-    if (name !== "cuddly" && window.__resetNavid) window.__resetNavid(); // ...nor Navid's
-    if (name !== "cuddly" && window.__resetCuddlyVisitors) window.__resetCuddlyVisitors(); // ...nor the adult friend-duo drop-ins
+    if (name !== "cuddly") {
+      var clearDepartedCuddly = function () {
+        if (window.__currentStageName === "cuddly") {
+          if (window.__updateKidGames) window.__updateKidGames();
+          return;
+        }
+        if (window.__resetIrene) window.__resetIrene();
+        if (window.__resetRobin) window.__resetRobin();
+        if (window.__resetNavid) window.__resetNavid();
+        if (window.__resetCuddlyVisitors) window.__resetCuddlyVisitors();
+        if (window.__updateKidGames) window.__updateKidGames();
+      };
+      // These figures are still in the viewport while the strip pans away. Preserve their
+      // authored exit frame, then clear the room only once transition parking takes ownership.
+      if (window.__afterRoomPan) window.__afterRoomPan(clearDepartedCuddly);
+      else clearDepartedCuddly();
+    }
     if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // sync the party/off-party Totoro audience
-    if (window.__updateKidGames) window.__updateKidGames(); // party + empty nook → the kids play games on the floor (and clear when you leave)
+    if (name === "cuddly" && window.__updateKidGames) window.__updateKidGames(); // party + empty nook → the kids play games on the floor
     if (name !== "balcony" && window.__resetBalconyIrene) window.__resetBalconyIrene(); // ...nor does her fire-festival self leave the balcony
     if (name !== "balcony" && window.__resetBalconyCouple) window.__resetBalconyCouple(); // ...nor do the two of them
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party crowd + smokers step onto the deck on entry (self-gates on balcony + party); clear on leaving
@@ -126089,7 +126120,7 @@ function spawnDustMote(container) {
   //                             restored the moment the party's off.
   // Re-evaluated on room change, day/night toggle, and party toggle (see the callers). No timers,
   // pure class toggles → teardown-safe, and state.js stays green (a reset lands day+no-party → clean).
-  function updateCuddlyPresence() {
+  function updateCuddlyPresence(deferKidGames) {
     var behdad = document.getElementById("cuddly-behdad");
     var marketa = document.getElementById("cuddly-marketa");
     if (!behdad || !marketa) return;
@@ -126102,7 +126133,7 @@ function spawnDustMote(container) {
     couple.classList.toggle("at-party", party);
     // snooze only at night AND when they're actually here (not off at the party)
     behdad.classList.toggle("snoozing", night && !party);
-    if (window.__updateKidGames) window.__updateKidGames(); // presence drives the empty-nook condition the game-kids depend on
+    if (!deferKidGames && window.__updateKidGames) window.__updateKidGames(); // presence drives the empty-nook condition the game-kids depend on
   }
   window.__updateCuddlyPresence = updateCuddlyPresence;
   updateCuddlyPresence();

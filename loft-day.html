@@ -118502,18 +118502,15 @@ function spawnDustMote(container) {
         var stagger = stored == null ? (parseFloat(getComputedStyle(el).animationDelay) || 0) : (parseFloat(stored) || 0);
         rows.push({ el: el, stagger: stagger, cache: stored == null });
     }
-    // Batch the restart into one style/layout barrier. The old per-wrapper barrier more than
-    // doubled this retune's warm-path cost across the 93 sway/arm wrappers.
+    // Batch duration and negative-delay timing in one style update. Changing either timing
+    // property retimes the live CSS animation; no synchronous layout restart is required.
     for (var j = 0; j < rows.length; j++) {
       if (rows[j].cache) rows[j].el.setAttribute("data-basedelay", rows[j].stagger);
       rows[j].el.style.animationDuration = dur.toFixed(3) + "s";
-    }
-    void g.getBoundingClientRect();
-    for (var k = 0; k < rows.length; k++) {
-        el = rows[k].el;
-        stagger = rows[k].stagger;
-        // total lead = phase (epoch lock) − stagger (the authored CSS lead), wrapped into [0,dur)
-        el.style.animationDelay = (-(((phase - stagger) % dur + dur) % dur)).toFixed(3) + "s";
+      el = rows[j].el;
+      stagger = rows[j].stagger;
+      // total lead = phase (epoch lock) − stagger (the authored CSS lead), wrapped into [0,dur)
+      el.style.animationDelay = (-(((phase - stagger) % dur + dur) % dur)).toFixed(3) + "s";
     }
     if (window.__refreshHiddenGardenAnimationParking) window.__refreshHiddenGardenAnimationParking();
   }

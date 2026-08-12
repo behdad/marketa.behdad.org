@@ -82,9 +82,10 @@ than replaying an old line.
 Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The large
 two-step opening coach is modal: the highlighted navigation and Reset controls remain available,
 but the room stays inert until each step is dismissed. The first Party's wall-switch lesson and its
-post-Party room-map handoff are modal too: finish either large card before using its target or
-navigating elsewhere. They hold new notifications and calls until they leave. Other coach bubbles
-remain compact and non-modal. Opening a message never performs its suggested activity: use the separate activity arrow.
+post-Party room-map and first-unread Messages lessons are modal too. Each highlighted target stays
+live: using the switch, map, or unread message performs its normal action and retires that coach;
+unrelated controls remain blocked. They hold new notifications and calls until they leave. Other
+coach bubbles remain compact and non-modal. Opening a message never performs its suggested activity: use the separate activity arrow.
 Old messages remain readable even when their activity has expired. While the Office monitor or laptop
 is zoomed, message previews and unread bubbles wait until that focused view closes, just as they do
 while the phone is open.

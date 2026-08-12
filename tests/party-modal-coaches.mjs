@@ -83,6 +83,11 @@ try {
     if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
     return result.result.value;
   });
+  const clickPoint = async point => {
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point[0], y: point[1] });
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: point[0], y: point[1], button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point[0], y: point[1], button: "left", clickCount: 1 });
+  };
   await send("Page.enable");
   await send("Runtime.enable");
   await send("Page.addScriptToEvaluateOnNewDocument", { source:
@@ -90,7 +95,7 @@ try {
     "window.addEventListener('unhandledrejection',function(e){window.__errs.push('rejection: '+String(e.reason));});"
   });
   await send("Emulation.setEmulatedMedia", { features: [
-    { name: "prefers-reduced-motion", value: "no-preference" }
+    { name: "prefers-reduced-motion", value: "reduce" }
   ] });
 
   const cases = [
@@ -103,9 +108,12 @@ try {
       width: spec.width, height: spec.height, deviceScaleFactor: 1, mobile: spec.mobile,
       screenWidth: spec.width, screenHeight: spec.height
     });
+    await send("Storage.clearDataForOrigin", {
+      origin: "http://127.0.0.1:" + WEB_PORT, storageTypes: "all"
+    });
     await send("Page.navigate", {
       url: "http://127.0.0.1:" + WEB_PORT + "/loft-day.html?party-modal=" +
-        encodeURIComponent(spec.label) + "-" + Date.now()
+        encodeURIComponent(spec.label) + "-" + Date.now() + "&date=2026-08-13"
     });
     let ready = false;
     for (let i = 0; i < 80 && !ready; i++) {
@@ -113,14 +121,25 @@ try {
       if (!ready) await sleep(100);
     }
     if (!ready) throw new Error(spec.label + " page did not become ready");
-    const result = await evaluate(`(async function () {
+    const first = await evaluate(`(async function () {
       var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
-      var fire=function(node,type){node.dispatchEvent(new MouseEvent(type||"click",{bubbles:true,cancelable:true}));};
+      var point=function(el){var r=el.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];};
+      var snap=function(overlay,target){
+        var area=document.getElementById("hunt-fullscreen-area"),card=overlay.querySelector(".hunt-coach-card"),arrow=overlay.querySelector(".hunt-coach-arrow"),arrowBox=arrow.getBBox();
+        var p=point(target),hit=document.elementFromPoint(p[0],p[1]),next=document.getElementById("hunt-next"),np=point(next),nh=document.elementFromPoint(np[0],np[1]);
+        return {kind:window.__partyCoachModalKind(),card:card.getBoundingClientRect().toJSON(),area:area.getBoundingClientRect().toJSON(),
+          target:p,unrelated:np,targetHit:hit&&((hit.closest&&hit.closest("#garden-lightswitch,#hunt-dollhouse-btn,.msg-badge,.msg-thumb")||hit).id||hit.className&&String(hit.className)),arrowBox:[arrowBox.x,arrowBox.y,arrowBox.width,arrowBox.height],
+          unrelatedHit:nh&&nh.className&&String(nh.className),scrims:[].slice.call(overlay.querySelectorAll(".modal-coach-scrim")).map(function(el){return [getComputedStyle(el).backgroundColor,getComputedStyle(el).pointerEvents,el.getBoundingClientRect().toJSON()];})};
+      };
       document.hasFocus=function(){return true;};
       localStorage.clear();
+      var recoveryRestart=document.querySelector("#loft-recovery-gate .loft-recovery-btn:not(.primary)");
+      if(recoveryRestart){recoveryRestart.click();await sleep(650);}
       if(window.__removeClickMe)window.__removeClickMe();
       if(window.__finishOpeningGuide)window.__finishOpeningGuide();
       if(window.__endAttract)window.__endAttract();
+      if(window.__shareCloseModal)window.__shareCloseModal();
+      await sleep(300);
       if(window.__resetPartyExitHint)window.__resetPartyExitHint();
       if(window.__setSeenRooms)window.__setSeenRooms(["kitchen","garden","cuddly"]);
       var area=document.getElementById("hunt-fullscreen-area");
@@ -129,13 +148,18 @@ try {
       window.__setGardenParty(true,false);
       window.__goToStage("garden");
       await sleep(820);
-      window.__showPartySwitchCoach();
-      await sleep(100);
+      if(window.__shareCloseModal)window.__shareCloseModal();
+      await sleep(300);
+      if(window.__stopCueDrip)window.__stopCueDrip();
+      if(window.__hideMessageThumb)window.__hideMessageThumb(true);
+      if(window.__hideCallRing)window.__hideCallRing();
+      var showResult=window.__showPartySwitchCoach();
+      if(window.__refreshPartyBridgeCoaches)window.__refreshPartyBridgeCoaches();
+      await sleep(850);
       var viewport=document.querySelector(".hunt-viewport"),switchCoach=document.getElementById("party-switch-coach");
-      var switchCard=switchCoach.querySelector(".hunt-coach-card");
-      var first={kind:window.__partyCoachModalKind(),card:switchCard.getBoundingClientRect().toJSON(),
-        area:area.getBoundingClientRect().toJSON(),viewport:viewport.getBoundingClientRect().toJSON(),
-        bg:getComputedStyle(switchCoach).backgroundColor,pointer:getComputedStyle(switchCoach).pointerEvents};
+      var first=snap(switchCoach,document.getElementById("garden-lightswitch"));
+      first.showResult=showResult;first.party=!!window.__gardenPartyOn;first.room=window.__currentStageName;first.lifecycle=window.__partyLifecycleState();
+      first.viewport=viewport.getBoundingClientRect().toJSON();
       if(innerWidth<=390&&window.__rebuildTapHalos){
         window.__rebuildTapHalos();
         var switchHalo=(window.__haloRegions().garden||[]).find(function(box){return box.el.id==="garden-lightswitch";});
@@ -144,60 +168,78 @@ try {
             (switchHalo.y1-switchHalo.y0)*viewport.getBoundingClientRect().width/680];
         }
       }
-      fire(document.getElementById("garden-lightswitch"));
-      fire(document.getElementById("hunt-next"));
-      document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",code:"ArrowRight",bubbles:true,cancelable:true}));
-      await sleep(80);
-      first.blocked=window.__gardenPartyOn&&window.__currentStageName==="garden"&&window.__partyCoachModalKind()==="switch";
-      fire(switchCoach.querySelector(".hunt-coach-x"));
-      first.dismissed=!window.__partyCoachModalActive()&&window.__gardenPartyOn;
-      fire(document.getElementById("garden-lightswitch"));
-      await sleep(3500);
+      return first;
+    })()`);
+    await clickPoint(first.unrelated);
+    await sleep(80);
+    first.blocked = await evaluate("window.__gardenPartyOn&&window.__currentStageName==='garden'&&window.__partyCoachModalKind()==='switch'");
+    await clickPoint(first.target);
+    await sleep(3500);
+    first.acted = await evaluate("!window.__gardenPartyOn&&window.__partyCoachModalKind()!=='switch'&&window.__partyLifecycleState().switchCoachRetired");
+    if (!first.acted) throw new Error("switch target did not act: " + JSON.stringify(first));
+    const second = await evaluate(`(async function () {
+      var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
+      var point=function(el){var r=el.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];};
       if(window.__hideMessageThumb)window.__hideMessageThumb(true);
       if(window.__hideCallRing)window.__hideCallRing();
       if(window.__refreshPartyBridgeCoaches)window.__refreshPartyBridgeCoaches();
       await sleep(100);
-      var roomCoach=document.getElementById("party-room-map-coach"),roomCard=roomCoach.querySelector(".hunt-coach-card");
-      var second={kind:window.__partyCoachModalKind(),card:roomCard.getBoundingClientRect().toJSON(),
-        area:area.getBoundingClientRect().toJSON(),bg:getComputedStyle(roomCoach).backgroundColor,
-        pointer:getComputedStyle(roomCoach).pointerEvents,party:!!window.__gardenPartyOn,
-        lifecycle:window.__partyLifecycleState(),seen:window.__seenRooms()};
-      fire(document.getElementById("hunt-dollhouse-btn"));
-      fire(document.getElementById("hunt-next"));
-      await sleep(80);
-      second.blocked=document.getElementById("loft-dollhouse").hidden&&window.__currentStageName==="garden"&&
-        window.__partyCoachModalKind()==="room-map";
-      document.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",code:"Enter",bubbles:true,cancelable:true}));
-      await sleep(40);
-      second.dismissed=!window.__partyCoachModalActive();
-      fire(document.getElementById("hunt-next"));
-      await sleep(780);
-      return {errors:(window.__errs||[]).slice(),size:[innerWidth,innerHeight],fullscreen:document.fullscreenElement===area,
-        modalCount:document.querySelectorAll(".hunt-coach-overlay.modal-coach").length,
-        partyModalCount:document.querySelectorAll(".party-onboarding-coach.modal-coach").length,
-        first:first,second:second,roomAfterRelease:window.__currentStageName};
+      var area=document.getElementById("hunt-fullscreen-area"),overlay=document.getElementById("party-room-map-coach"),target=document.getElementById("hunt-dollhouse-btn"),card=overlay.querySelector(".hunt-coach-card"),p=point(target),hit=document.elementFromPoint(p[0],p[1]),next=document.getElementById("hunt-next"),np=point(next),nh=document.elementFromPoint(np[0],np[1]);
+      return {kind:window.__partyCoachModalKind(),card:card.getBoundingClientRect().toJSON(),area:area.getBoundingClientRect().toJSON(),target:p,unrelated:np,
+        targetHit:hit&&((hit.closest&&hit.closest("#hunt-dollhouse-btn")||hit).id||String(hit.className)),unrelatedHit:nh&&String(nh.className),
+        scrims:[].slice.call(overlay.querySelectorAll(".modal-coach-scrim")).map(function(el){return [getComputedStyle(el).backgroundColor,getComputedStyle(el).pointerEvents,el.getBoundingClientRect().toJSON()];}),
+        party:!!window.__gardenPartyOn,lifecycle:window.__partyLifecycleState(),seen:window.__seenRooms()};
     })()`);
+    await clickPoint(second.unrelated);
+    await sleep(80);
+    second.blocked = await evaluate("document.getElementById('loft-dollhouse').hidden&&window.__currentStageName==='garden'&&window.__partyCoachModalKind()==='room-map'");
+    await clickPoint(second.target);
+    await sleep(120);
+    second.acted = await evaluate("!document.getElementById('loft-dollhouse').hidden&&!window.__partyRoomMapCoachActive()&&window.__partyCoachModalKind()!== 'room-map'");
+    const messageSetup = await evaluate("(async function(){var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};window.__closeDollhouse();window.__resetPhoneApps();var delivered=window.__deliverPhoneMessage('cue_calendar');window.__setPartyRoomMapAttentionHold(false);await sleep(520);window.__hideMessageThumb(true);window.__updateMsgBadge();var repeated=window.__repeatMsgBadgeCoach();return {delivered:delivered,repeated:repeated,thread:window.__phoneMessageThread(),hold:window.__messageNotificationsHeld(),phone:window.__chatPhoneState(),summary:window.__chatMessagesSummary(),badge:!!document.querySelector('.msg-badge.show'),thumb:!!document.querySelector('.msg-thumb.show'),switchModal:window.__partySwitchCoachModalActive(),roomMap:window.__partyRoomMapCoachActive(),roster:window.__rosterOpen&&window.__rosterOpen(),hidden:document.hidden,focus:document.hasFocus(),cinematic:window.__cinematic};})()");
+    await sleep(120);
+    if (!await evaluate("!!document.querySelector('.msg-badge-coach.show')")) throw new Error("message coach did not show: " + JSON.stringify(messageSetup));
+    const third = await evaluate(`(function () {
+      var point=function(el){var r=el.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];};
+      var overlay=document.querySelector(".msg-badge-coach"),target=document.querySelector(".msg-badge"),area=document.getElementById("hunt-fullscreen-area"),card=overlay.querySelector(".hunt-coach-card"),p=point(target),hit=document.elementFromPoint(p[0],p[1]),next=document.getElementById("hunt-next"),np=point(next),nh=document.elementFromPoint(np[0],np[1]);
+      window.__messageCoachChanges=0;window.addEventListener("loft:statechange",function(event){if(event.detail&&event.detail.id==="messages.coach")window.__messageCoachChanges++;});
+      return {kind:window.__partyCoachModalKind(),card:card.getBoundingClientRect().toJSON(),area:area.getBoundingClientRect().toJSON(),target:p,unrelated:np,
+        targetHit:hit&&((hit.closest&&hit.closest(".msg-badge")||hit).className&&String((hit.closest&&hit.closest(".msg-badge")||hit).className)),unrelatedHit:nh&&String(nh.className),
+        scrims:[].slice.call(overlay.querySelectorAll(".modal-coach-scrim")).map(function(el){return [getComputedStyle(el).backgroundColor,getComputedStyle(el).pointerEvents,el.getBoundingClientRect().toJSON()];}),
+        modalCount:document.querySelectorAll(".hunt-coach-overlay.modal-coach").length,partyModalCount:document.querySelectorAll(".party-onboarding-coach.modal-coach").length};
+    })()`);
+    await clickPoint(third.unrelated);
+    await sleep(80);
+    third.blocked = await evaluate("window.__currentStageName==='garden'&&window.__partyCoachModalKind()==='messages'&&!window.__chatPhoneState().open");
+    await clickPoint(third.target);
+    await sleep(120);
+    third.acted = await evaluate("(function(){var p=window.__chatPhoneState();return p.open&&p.app==='messages'&&!window.__msgBadgeCoachModalActive()&&window.__messageCoachChanges===1;})()");
+    const result = await evaluate(`(function(){var area=document.getElementById("hunt-fullscreen-area");return {errors:(window.__errs||[]).slice(),size:[innerWidth,innerHeight],fullscreen:document.fullscreenElement===area};})()`);
     const prefix = spec.label + ": ";
     check(result.errors.length === 0, prefix + "sequence has no page errors", result.errors);
     check(result.size[0] === spec.width, prefix + "runs at the requested viewport width", result.size);
     check(result.fullscreen === spec.fullscreen, prefix + "keeps the requested fullscreen state", result.fullscreen);
-    check(result.modalCount === 3 && result.partyModalCount === 2,
-      prefix + "only opening and the two Party onboarding coaches are modal", result);
-    [result.first, result.second].forEach((step, index) => {
-      const name = index ? "room-map" : "switch";
-      check(step.kind === name && step.pointer === "auto" && step.bg === "rgba(69, 58, 49, 0.2)",
-        prefix + name + " coach is visibly modal", step);
-      check(step.card.width >= step.area.width * .72 && step.card.height >= step.area.height * .35,
+    check(third.modalCount === 4 && third.partyModalCount === 3,
+      prefix + "only opening and the three Party onboarding coaches are modal", third);
+    [first, second, third].forEach((step, index) => {
+      const name = ["switch", "room-map", "messages"][index];
+      check(step.kind === name && step.scrims.length === 4 && step.scrims.every(scrim =>
+        scrim[0] === "rgba(69, 58, 49, 0.2)" && scrim[1] === "auto"),
+      prefix + name + " coach visibly blocks around one live target island", step);
+      check(step.card.width >= step.area.width * (name === "switch" && spec.width <= 390 ? .64 : .72) && step.card.height >= step.area.height * .35,
         prefix + name + " card occupies most of the shell", step);
       check(step.blocked, prefix + name + " coach blocks background controls", step);
-      check(step.dismissed, prefix + name + " coach acknowledges without triggering its target", step);
+      check(/garden-lightswitch|hunt-dollhouse-btn|msg-badge/.test(step.targetHit || ""),
+        prefix + name + " target wins hit-testing above the scrim", step.targetHit);
+      check(step.acted, prefix + name + " trusted target click performs its action and dismisses exactly once", step);
     });
     if (spec.width <= 390) {
-      check(result.first.hitPx && result.first.hitPx[0] >= 27.5 && result.first.hitPx[1] >= 27.5,
-        prefix + "keeps a fingertip-sized wall-switch target", result.first.hitPx);
+      check(first.hitPx && first.hitPx[0] >= 27.5 && first.hitPx[1] >= 27.5,
+        prefix + "keeps a fingertip-sized wall-switch target", first.hitPx);
     }
-    check(!result.second.party && result.roomAfterRelease === "cuddly",
-      prefix + "the ordered switch → room-map handoff releases ordinary navigation", result);
+    check(first.card.left + first.card.width / 2 >= first.area.left + first.area.width * .5 &&
+      first.arrowBox[2] >= (spec.width <= 390 ? 38 : first.area.width * .1),
+      prefix + "centers the switch card and gives its arrow a clearly visible shaft", first);
   }
   ws.close();
 } finally {

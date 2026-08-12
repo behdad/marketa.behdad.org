@@ -371,13 +371,14 @@ points at a moving room control must be hidden during the pan and placed only af
 settles. Keep coach focus/tab behavior consistent with the global input contract; decorative SVG
 groups should never become accidental tab stops.
 
-`#opening-guide-coach` and the two `.party-onboarding-coach` overlays carry `.modal-coach`: their
-large cards and dimmed hit layers make the scene lock visible. The opening guide leaves its
-deliberately raised navigation and Reset controls live; Party onboarding instead captures pointer
-and unmodified keyboard input outside its current overlay until ×, Enter, Escape, or Backspace
-acknowledges it. The Party controller orders the switch lesson before the post-Party room-map
-handoff and holds notification/call attention across both. Compact Messages, piano, shooting, and
-Drive coaches are not modal overlays; narrower action sequencing stays local to their controller.
+`#opening-guide-coach` and the three `.party-onboarding-coach` overlays carry `.modal-coach`: their
+large cards and dimmed hit layers make the scene lock visible. Party's switch, room-map, and lazy
+first-unread Messages overlays use four-piece scrims around one elevated live target. Clicking that
+target performs its normal action and retires the coach once; unrelated pointer and unmodified
+keyboard input remains blocked until target use, ×, Enter, Escape, or Backspace acknowledges it.
+The Party controller orders and holds notification/call attention across these lessons. Later
+Messages action hints, piano, shooting, and Drive coaches remain compact/non-modal; their narrower
+action sequencing stays local to their controller.
 
 ## Apps, automation, and chat
 

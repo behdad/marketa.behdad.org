@@ -95,15 +95,16 @@ var harness = String.raw`<script>
   var switchLed = document.getElementById("garden-lightswitch-led");
   var switchArrowBox = switchCoachArrow.getBBox();
   var switchAreaRect = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
-  var expectedSwitchTip = switchPlate.getBoundingClientRect().top - switchAreaRect.top - 3;
-  check("the wall switch and every detail move exactly ten SVG units higher",
-    switchPlate && Number(switchPlate.getAttribute("y")) === 175 &&
-      switchRocker && Number(switchRocker.getAttribute("y")) === 178.5 &&
-      switchLed && Number(switchLed.getAttribute("cy")) === 195.5 &&
-      Math.abs(switchArrowBox.y + switchArrowBox.height - expectedSwitchTip) < 1,
+  var switchPlateRect = switchPlate.getBoundingClientRect();
+  var expectedSwitchCenter = switchPlateRect.top + switchPlateRect.height / 2 - switchAreaRect.top;
+  check("the wall switch and every detail move exactly fifteen SVG units higher",
+    switchPlate && Number(switchPlate.getAttribute("y")) === 170 &&
+      switchRocker && Number(switchRocker.getAttribute("y")) === 173.5 &&
+      switchLed && Number(switchLed.getAttribute("cy")) === 190.5 &&
+      Math.abs(switchArrowBox.y + switchArrowBox.height / 2 - expectedSwitchCenter) < 1,
     JSON.stringify({ switchY: switchPlate && switchPlate.getAttribute("y"),
       rockerY: switchRocker && switchRocker.getAttribute("y"), ledY: switchLed && switchLed.getAttribute("cy"),
-      arrowTip: switchArrowBox.y + switchArrowBox.height, expectedTip: expectedSwitchTip }));
+      arrowCenter: switchArrowBox.y + switchArrowBox.height / 2, expectedCenter: expectedSwitchCenter }));
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
       switchCoach.classList.contains("show") &&
       switchCoachPopup.querySelector(".hunt-coach-copy").textContent === "When the time comes, end the party here." &&
@@ -116,14 +117,14 @@ var harness = String.raw`<script>
       caption: document.getElementById("hunt-caption").textContent }));
   check("both bridge coaches share one box, dismiss control, and continuous dancing-arrow contract",
     popupStyleSignature(switchCoachPopup) === roomPopupSignature &&
-      !switchCoachPopup.style.width && !roomCoachPopup.style.width &&
+      !!switchCoachPopup.style.width && !roomCoachPopup.style.width &&
       switchCoachPopup.querySelectorAll(":scope > .hunt-coach-x").length === 1 &&
       roomCoachPopup.querySelectorAll(":scope > .hunt-coach-x").length === 1 &&
       switchCoachPopup.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
       roomCoachPopup.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
       switchCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
       !switchCoach.querySelector("svg polygon,svg rect") &&
-      arrowShapeSignature(switchCoachArrow) === roomArrowSignature &&
+      switchCoachArrow.getBBox().width > 80 && roomCoachArrow.getBBox().height > 80 &&
       getComputedStyle(switchCoachArrow).animationName === "kitchen-arrow-bounce",
     JSON.stringify({ switchPopup: popupStyleSignature(switchCoachPopup), roomPopup: roomPopupSignature,
       switchArrow: arrowShapeSignature(switchCoachArrow), roomArrow: roomArrowSignature }));

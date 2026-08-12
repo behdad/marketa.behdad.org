@@ -118464,6 +118464,14 @@ function spawnDustMote(container) {
     if (period < 0.42) period *= 2; // half-time the frantic beds
     return period;
   }
+  function setPartyWindowBeat(period) {
+    ["cinema-window", "bedroom-stained-glass"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (period) el.style.setProperty("--party-window-beat", period.toFixed(3) + "s");
+      else el.style.removeProperty("--party-window-beat");
+    });
+  }
   // Per-dance MOOD (explicit, NOT auto-bucketed from bpm — waltz reads elegant despite its
   // high bpm). Drives an amplitude-only keyframe swap on the shared guest wrappers via
   // #garden-guests[data-mood]. hype = bigger sway/reach, chill = gentler, elegant = smoother.
@@ -118542,8 +118550,7 @@ function spawnDustMote(container) {
     var id = on ? window.__partyDance : "";
     var dance = danceById(id), formation = dance ? dance.formation : "";
     var period = on ? dancePeriod(id) : 0;
-    if (period) document.documentElement.style.setProperty("--party-window-beat", period.toFixed(3) + "s");
-    else document.documentElement.style.removeProperty("--party-window-beat");
+    setPartyWindowBeat(period);
     pd.setAttribute("data-dance", id); // "" when the party's off — clears every per-dance CSS gate
     var sg = document.getElementById("stage-garden"); if (sg) sg.setAttribute("data-partydance", id); // mirror onto the garden stage so scene-wide fx (e.g. the disco UV pulse) can gate on the active song
     pd.classList.toggle("couple-mode", formation === "couple");

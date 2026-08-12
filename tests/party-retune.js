@@ -7,7 +7,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <script>(function(){
 function mod(n,d){return((n%d)+d)%d;}
 window.addEventListener("load",function(){setTimeout(function(){
-  var report={errors:window.__errs,wrappers:0,geometryReads:0,durationSpread:null,phaseSpread:null,cached:false,beatScope:null};
+  var report={errors:window.__errs,wrappers:0,geometryReads:0,styleReads:0,durationSpread:null,phaseSpread:null,cached:false,baseDelays:null,beatScope:null};
   try{
     var guests=document.getElementById("garden-guests");
     guests.classList.add("guests-in");
@@ -25,16 +25,24 @@ window.addEventListener("load",function(){setTimeout(function(){
     var els=[].slice.call(guests.querySelectorAll(".guest-sway,.guest-arm-l,.guest-arm-r"));
     els.forEach(function(el){el.removeAttribute("data-basedelay");el.style.animationDuration="";el.style.animationDelay="";});
     var nativeRect=Element.prototype.getBoundingClientRect;
+    var nativeStyle=window.getComputedStyle;
     Element.prototype.getBoundingClientRect=function(){if(this===guests||guests.contains(this))report.geometryReads++;return nativeRect.apply(this,arguments);};
+    window.getComputedStyle=function(){report.styleReads++;return nativeStyle.apply(this,arguments);};
     window.__partyBeatEpoch=performance.now()-180;
     window.__retuneDancers("techno");
     Element.prototype.getBoundingClientRect=nativeRect;
+    window.getComputedStyle=nativeStyle;
     var durations=els.map(function(el){return parseFloat(el.style.animationDuration)||0;});
     var phases=els.map(function(el){var dur=parseFloat(el.style.animationDuration)||1,lead=-(parseFloat(el.style.animationDelay)||0),stagger=parseFloat(el.getAttribute("data-basedelay"))||0;return mod(lead+stagger,dur);});
     report.wrappers=els.length;
     report.durationSpread=Math.max.apply(Math,durations)-Math.min.apply(Math,durations);
     report.phaseSpread=Math.max.apply(Math,phases)-Math.min.apply(Math,phases);
     report.cached=els.every(function(el){return el.hasAttribute("data-basedelay");});
+    report.baseDelays={
+      ali:guests.querySelector(".g-ali .guest-sway").getAttribute("data-basedelay"),
+      goli:guests.querySelector(".g-goli .guest-sway").getAttribute("data-basedelay"),
+      spencer:guests.querySelector(".g-spencer .guest-sway").getAttribute("data-basedelay")
+    };
   }catch(e){window.__errs.push("party retune harness: "+String(e&&e.stack||e));}
   report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);
 },250);});
@@ -47,7 +55,10 @@ console.log("rsvp.html Party dancer retuning:");
 check(r&&r.errors.length===0,"no uncaught page errors",r&&r.errors);
 check(r&&r.wrappers===93,"all named-guest sway and arm wrappers are retuned",r);
 check(r&&r.geometryReads===0,"tempo retuning performs no synchronous geometry reads",r);
+check(r&&r.styleReads===0,"tempo retuning performs no synchronous computed-style reads",r);
 check(r&&r.cached&&r.durationSpread<0.001,"every wrapper caches its authored stagger and shares one duration",r);
+check(r&&r.baseDelays&&r.baseDelays.ali==="0"&&r.baseDelays.goli==="-0.41"&&r.baseDelays.spencer==="-0.2",
+  "the two authored guest staggers survive the layout-free cache",r&&r.baseDelays);
 check(r&&r.phaseSpread<0.003,"authored staggers resolve onto one shared beat phase",r);
 check(r&&r.beatScope&&r.beatScope.root===""&&r.beatScope.cinema==="0.533s"&&r.beatScope.bedroom==="0.533s"&&
   r.beatScope.entrance.length===5&&r.beatScope.entrance.every(function(v){return v==="0.533s";})&&

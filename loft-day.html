@@ -4762,12 +4762,12 @@ html.party-foreground-suspended #loft-game-strip.party-on :is(#stage-kitchen,#st
 #garden-guests.guests-in .g-goli .guest-move{animation:guest-goli-vogue 3s ease-in-out infinite}
 #garden-guests.guests-in .g-spencer .guest-move{animation:guest-spencer-party 1.9s ease-in-out infinite} /* the giant's exuberant clap-up bounce */
 #garden-guests.guests-in .g-ayushi .guest-move{animation:guest-ayushi-diva 2.6s ease-in-out infinite}
-#garden-guests.guests-in .g-goli .guest-sway{animation-delay:-.41s}
+#garden-guests.guests-in .g-goli .guest-sway{animation-delay:var(--guest-beat-stagger)}
 #garden-guests.guests-in .g-goli .guest-arm-l,
-#garden-guests.guests-in .g-goli .guest-arm-r{animation-delay:-.41s}
-#garden-guests.guests-in .g-spencer .guest-sway{animation-delay:-.2s}
+#garden-guests.guests-in .g-goli .guest-arm-r{animation-delay:var(--guest-beat-stagger)}
+#garden-guests.guests-in .g-spencer .guest-sway{animation-delay:var(--guest-beat-stagger)}
 #garden-guests.guests-in .g-spencer .guest-arm-l,
-#garden-guests.guests-in .g-spencer .guest-arm-r{animation-delay:-.2s}
+#garden-guests.guests-in .g-spencer .guest-arm-r{animation-delay:var(--guest-beat-stagger)}
 @keyframes guest-sway{0%{--guest-arm-phase:-1;transform:rotate(-3.5deg) translateX(-1px)} 50%{--guest-arm-phase:1;transform:rotate(3.5deg) translateX(1px)} 100%{--guest-arm-phase:-1;transform:rotate(-3.5deg) translateX(-1px)}}
 @keyframes guest-arm-l{0%{transform:rotate(10deg)} 50%{transform:rotate(-26deg)} 100%{transform:rotate(10deg)}}
 @keyframes guest-arm-r{0%{transform:rotate(-10deg)} 50%{transform:rotate(28deg)} 100%{transform:rotate(-10deg)}}
@@ -19485,7 +19485,7 @@ section{margin:1.9rem 0}
      brown/dark short-sleeve polo, khaki/tan chinos, dark socks. Feet ~y332. Broad shoulders
      give him bulk. Colours read warm/glowy under the uv-mode blacklight like the others.
      Centred between Ali (left) and Goli (right); his exuberant dance rides the inner wrappers. -->
-<g class="guest g-spencer" transform="translate(320,0)">
+<g class="guest g-spencer" style="--guest-beat-stagger:-.2s" transform="translate(320,0)">
 <g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Jay (couple's do-si-do); no static transform -->
@@ -19631,7 +19631,7 @@ section{margin:1.9rem 0}
      sunglasses pushed up on her head, an avant-garde structured white top with a bold pointed
      shoulder + a statement pink stud choker, red athletic shorts, red-striped tube socks,
      silver sneakers. Shorter than Ali (head cy~206). Feet ~y332. -->
-<g class="guest g-goli" transform="translate(434,0)">
+<g class="guest g-goli" style="--guest-beat-stagger:-.41s" transform="translate(434,0)">
 <g class="guest-walk"><!-- gate walk-in wrapper: no static transform, composes with the arrival/dance -->
 <g class="guest-arrival">
 <g class="guest-orbit"><!-- circles Ali (couple's do-si-do); no static transform -->
@@ -118489,8 +118489,9 @@ function spawnDustMote(container) {
   window.__DANCE_MOOD = DANCE_MOOD;
   // Retune the SHARED guest wrappers (.guest-sway ≈ 2 beats, .guest-arm-* ≈ 2 beats) to the
   // active dance's tempo, phase-locked to ONE shared epoch so every dancer hits together.
-  // Read every authored delay first, then batch animationDuration + negative animationDelay
-  // to retime in phase without forcing layout. Per-guest .guest-move moves are left
+  // Derive the two authored guest staggers from their owning groups, then batch
+  // animationDuration + negative animationDelay to retime in phase without forcing layout.
+  // Per-guest .guest-move moves are left
   // on their authored durations (heterogeneous beat counts — retuning them cleanly would need
   // per-guest bookkeeping; the shared sway/arms carry the tempo read). GUARDS: a strict no-op
   // under reduced motion, transport pause, or a space-freeze — a reflow/duration re-set would
@@ -118510,14 +118511,16 @@ function spawnDustMote(container) {
     var els = g.querySelectorAll(".guest-sway,.guest-arm-l,.guest-arm-r"), rows = [];
     for (var i = 0; i < els.length; i++) {
         var el = els[i];
-        // preserve the per-guest CSS stagger (Goli -.41s / Spencer -.2s keep their two
-        // out-of-phase wrappers) by ADDING it to the phase-lock offset. Read + cache the
-        // BASE delay from the stylesheet the first time we touch this el (before we set any
-        // inline delay, which would otherwise mask the CSS value). Cached in a data attr so
-        // later retunes re-add the same authored stagger. A plain wrapper's base is 0 → all
-        // locked to the one epoch. `stagger` is negative (a CSS lead), so subtract it back in.
+        // Preserve the per-guest CSS stagger (Goli -.41s / Spencer -.2s keep their two
+        // out-of-phase wrappers) by ADDING it to the phase-lock offset. These are the only
+        // authored delays on the retuned wrappers; deriving them from the owning group avoids
+        // a first-run computed-style read immediately after .guests-in invalidates the scene.
+        // Cache the value in a data attr so later retunes re-add the same authored stagger.
+        // A plain wrapper's base is 0 → all locked to the one epoch. `stagger` is negative
+        // (a CSS lead), so subtract it back in.
         var stored = el.getAttribute("data-basedelay");
-        var stagger = stored == null ? (parseFloat(getComputedStyle(el).animationDelay) || 0) : (parseFloat(stored) || 0);
+        var owner = stored == null ? el.closest("[style*='--guest-beat-stagger']") : null;
+        var stagger = stored == null ? (parseFloat(owner && owner.style.getPropertyValue("--guest-beat-stagger")) || 0) : (parseFloat(stored) || 0);
         rows.push({ el: el, stagger: stagger, cache: stored == null });
     }
     // Batch duration and negative-delay timing in one style update. Changing either timing

@@ -38,6 +38,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     if (counters) {
       counters.attributes++;
       if (this === counters.road && name === "d") counters.roadPaints++;
+      if (this === counters.streetCar || counters.streetCar.contains(this)) counters.hiddenStreetCarPaints++;
+      if (this === counters.arrest || counters.arrest.contains(this)) counters.idleArrestPaints++;
+      if ((name === "tabindex" || name === "focusable") &&
+          (this.hasAttribute("data-drive-mode") || this.hasAttribute("data-drive-range"))) {
+        counters.transmissionFocusPaints++;
+      }
     }
     return originalSet.call(this, name, value);
   };
@@ -65,7 +71,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       removes: 0,
       appends: 0,
       roadPaints: 0,
-      road: document.querySelector("#entrance-roadtrip-road .entrance-roadtrip-asphalt")
+      hiddenStreetCarPaints: 0,
+      idleArrestPaints: 0,
+      transmissionFocusPaints: 0,
+      road: document.querySelector("#entrance-roadtrip-road .entrance-roadtrip-asphalt"),
+      streetCar: document.getElementById("entrance-porsche"),
+      arrest: document.getElementById("entrance-roadtrip-arrest")
     };
     for (var i = 0; i < 20; i++) window.__entranceDriveStep(16);
     var after = copy(drive());
@@ -74,7 +85,10 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         attributes: counters.attributes,
         removes: counters.removes,
         appends: counters.appends,
-        roadPaints: counters.roadPaints
+        roadPaints: counters.roadPaints,
+        hiddenStreetCarPaints: counters.hiddenStreetCarPaints,
+        idleArrestPaints: counters.idleArrestPaints,
+        transmissionFocusPaints: counters.transmissionFocusPaints
       },
       elapsed: after.roadtrip.elapsedSeconds - before.roadtrip.elapsedSeconds,
       distance: after.roadtrip.distance - before.roadtrip.distance,
@@ -106,7 +120,55 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 })();
 </script>`;
 
+var PAN_HARNESS = String.raw`<pre id="__report">pending</pre>
+<script>
+(function () {
+  var report = { errors: [] };
+  try {
+    Object.defineProperty(document, "hasFocus", {
+      value: function () { return true; }, configurable: true
+    });
+    window.__unlockAllRooms();
+    window.__goToStage("balcony");
+    window.__openEntranceRoom();
+    window.__openEntrancePorscheDriveHud();
+    if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+    window.__entranceRoadtripDevStart();
+    var hud = document.getElementById("entrance-drive-hud");
+    var viewport = document.querySelector(".hunt-viewport");
+    var hudReads = 0, viewportReads = 0;
+    var hudRect = hud.getBoundingClientRect.bind(hud);
+    var viewportRect = viewport.getBoundingClientRect.bind(viewport);
+    hud.getBoundingClientRect = function () { hudReads++; return hudRect(); };
+    viewport.getBoundingClientRect = function () { viewportReads++; return viewportRect(); };
+    window.__porscheDrivePanFlush();
+    window.__entranceDriveSpatialAudio("music");
+    setTimeout(function () {
+      try {
+        window.__entranceDriveSpatialAudio("music");
+        report.hudReads = hudReads;
+        report.viewportReads = viewportReads;
+      } catch (error) {
+        report.errors.push(String(error && error.stack || error));
+      }
+      report.errors = (window.__errs || []).concat(report.errors);
+      document.getElementById("__report").textContent = JSON.stringify(report);
+    }, 320);
+  } catch (error) {
+    report.errors.push(String(error && error.stack || error));
+    report.errors = (window.__errs || []).concat(report.errors);
+    document.getElementById("__report").textContent = JSON.stringify(report);
+  }
+})();
+</script>`;
+
 var result = lib.runPageSync("loft-day.html", HARNESS, 4500, {
+  forceMotion: true,
+  seedRandom: true,
+  urlSuffix: "?date=2026-09-22&time=14:00",
+  chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
+});
+var panResult = lib.runPageSync("loft-day.html", PAN_HARNESS, 2500, {
   forceMotion: true,
   seedRandom: true,
   urlSuffix: "?date=2026-09-22&time=14:00",
@@ -122,6 +184,8 @@ check(result && result.errors.length === 0, "focused performance probe has no pa
   result && result.errors);
 var healthy = result && result.healthy;
 var low = result && result.low;
+if (healthy && low) console.log("  metrics: " + healthy.counters.attributes +
+  " healthy / " + low.counters.attributes + " low-frame SVG attribute writes per 20 physics steps");
 check(healthy && low && !healthy.health.slow && low.health.slow,
   "frame-health hysteresis selects the adaptive highway painter", { healthy: healthy, low: low });
 check(healthy && low && healthy.counters.roadPaints === 20 &&
@@ -133,12 +197,22 @@ check(healthy && low && low.counters.attributes < healthy.counters.attributes * 
   { healthy: healthy && healthy.counters, low: low && low.counters });
 check(healthy && low && low.counters.removes === 0 && low.counters.appends === 0,
   "steady traffic and idle police cause no no-op removals or DOM layer reorders", low && low.counters);
+check(healthy && low && healthy.counters.hiddenStreetCarPaints === 0 &&
+  healthy.counters.idleArrestPaints === 0 && healthy.counters.transmissionFocusPaints === 0 &&
+  low.counters.hiddenStreetCarPaints === 0 && low.counters.idleArrestPaints === 0 &&
+  low.counters.transmissionFocusPaints === 0,
+  "highway frames skip the hidden street car and unchanged control overlays",
+  { healthy: healthy && healthy.counters, low: low && low.counters });
 check(healthy && low && Math.abs(healthy.elapsed - .32) < .0001 &&
   Math.abs(low.elapsed - healthy.elapsed) < .0001 && Math.abs(low.distance - healthy.distance) < .05,
   "physics and route progress remain full-rate under the lower paint budget",
   { healthy: healthy, low: low });
 check(healthy && low && healthy.entityCount === 1 && low.entityCount === 1,
   "traffic simulation ownership is unchanged by paint cadence", { healthy: healthy, low: low });
+check(panResult && panResult.errors.length === 0,
+  "static spatial-audio cache probe has no page errors", panResult && panResult.errors);
+check(panResult && panResult.hudReads === 1 && panResult.viewportReads === 1,
+  "Road Trip reuses static cabin pan geometry beyond the exterior 250 ms cache window", panResult);
 
 if (failures) {
   console.error(failures + " adaptive Road Trip performance assertion(s) failed.");

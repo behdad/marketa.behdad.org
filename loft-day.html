@@ -40475,23 +40475,27 @@ window.__entranceRoomOpen = false;
     }
     resetPorscheAutomaticRuntime();
   }
+  var porscheTransmissionPaintSignature = "";
   function paintPorscheTransmission() {
     if (!driveHud) return;
     var automatic = porscheTransmission.mode === "auto";
     var interactive = !!(window.__entranceRoomOpen && driveState.hudOpen);
+    var signature = porscheTransmission.mode + ":" + porscheTransmission.range + ":" + (interactive ? "1" : "0");
+    if (signature === porscheTransmissionPaintSignature) return;
+    porscheTransmissionPaintSignature = signature;
     driveHud.classList.toggle("transmission-auto", automatic);
     driveModeControls.forEach(function (control) {
       var selected = control.getAttribute("data-drive-mode") === porscheTransmission.mode;
       control.classList.toggle("selected", selected);
-      control.setAttribute("tabindex", interactive ? "0" : "-1");
-      control.setAttribute("focusable", interactive ? "true" : "false");
+      roadtripSetAttribute(control, "tabindex", interactive ? "0" : "-1");
+      roadtripSetAttribute(control, "focusable", interactive ? "true" : "false");
     });
     driveRangeControls.forEach(function (control) {
       var selected = automatic && control.getAttribute("data-drive-range") === porscheTransmission.range;
       var rangeInteractive = automatic && interactive;
       control.classList.toggle("selected", selected);
-      control.setAttribute("tabindex", rangeInteractive ? "0" : "-1");
-      control.setAttribute("focusable", rangeInteractive ? "true" : "false");
+      roadtripSetAttribute(control, "tabindex", rangeInteractive ? "0" : "-1");
+      roadtripSetAttribute(control, "focusable", rangeInteractive ? "true" : "false");
     });
     setPorscheTransmissionCopy("entrance-drive-coach-gear-title", automatic ?
       "entrance_drive_coach_auto_gear_title" : "entrance_drive_coach_gear_title");
@@ -41467,13 +41471,13 @@ window.__entranceRoomOpen = false;
   };
   function hideRoadtripArrest() {
     if (roadtripArrestNode) {
-      roadtripArrestNode.setAttribute("visibility", "hidden");
-      roadtripArrestNode.setAttribute("opacity", "0");
+      roadtripSetAttribute(roadtripArrestNode, "visibility", "hidden");
+      roadtripSetAttribute(roadtripArrestNode, "opacity", "0");
     }
-    if (roadtripArrestBlueNode) roadtripArrestBlueNode.setAttribute("opacity", "0");
-    if (roadtripArrestRedNode) roadtripArrestRedNode.setAttribute("opacity", "0");
-    if (roadtripArrestShoutNode) roadtripArrestShoutNode.setAttribute("opacity", "0");
-    if (roadtripArrestCardNode) roadtripArrestCardNode.setAttribute("opacity", "0");
+    roadtripSetAttribute(roadtripArrestBlueNode, "opacity", "0");
+    roadtripSetAttribute(roadtripArrestRedNode, "opacity", "0");
+    roadtripSetAttribute(roadtripArrestShoutNode, "opacity", "0");
+    roadtripSetAttribute(roadtripArrestCardNode, "opacity", "0");
     stopRoadtripArrestSounds();
   }
   function paintRoadtripArrest() {
@@ -47466,6 +47470,7 @@ window.__entranceRoomOpen = false;
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
     room.classList.remove("roadtrip-active", "roadtrip-resume-pending");
+    paintPorscheDrivePosition();
     if (roadtripHeadlightGroup) roadtripHeadlightGroup.setAttribute("visibility", "hidden");
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
     if (driveHudSvg) {
@@ -48062,13 +48067,13 @@ window.__entranceRoomOpen = false;
     var offset = porscheShifterOffset(gear);
     var x = offset[0] - 5;
     var y = offset[1] + 15;
-    driveShifterLever.setAttribute("transform", "translate(" + x + " " + y + ")");
-    if (driveShifterShaft) driveShifterShaft.setAttribute("d", "M475 155L" + (476 + x) + " " + (108 + y));
+    roadtripSetAttribute(driveShifterLever, "transform", "translate(" + x + " " + y + ")");
+    roadtripSetAttribute(driveShifterShaft, "d", "M475 155L" + (476 + x) + " " + (108 + y));
     if (driveShifterHints) {
-      driveShifterHints.setAttribute("transform", "translate(" + (-47 + x) + " " + y + ")");
+      roadtripSetAttribute(driveShifterHints, "transform", "translate(" + (-47 + x) + " " + y + ")");
       var hintLabels = driveShifterHints.querySelectorAll("text");
-      if (hintLabels[0]) hintLabels[0].setAttribute("y", porscheTransmission.mode === "auto" ? "68" : "78");
-      if (hintLabels[1]) hintLabels[1].setAttribute("y", porscheTransmission.mode === "auto" ? "145" : "131");
+      roadtripSetAttribute(hintLabels[0], "y", porscheTransmission.mode === "auto" ? "68" : "78");
+      roadtripSetAttribute(hintLabels[1], "y", porscheTransmission.mode === "auto" ? "145" : "131");
     }
   }
   function previewPorscheShifterAttempt(gear) {
@@ -48082,27 +48087,29 @@ window.__entranceRoomOpen = false;
   function paintPorscheDrivePosition() {
     var transform = "translate(" + (PORSCHE_BASE_X + driveState.position).toFixed(2).replace(/\.00$/, "") + " " +
       (PORSCHE_BASE_Y + driveState.laneOffset).toFixed(2).replace(/\.00$/, "") + ")";
-    if (porsche) porsche.setAttribute("transform", transform);
-    var controlTransform = transform + (driveState.facing < 0 ? " translate(376 0) scale(-1 1)" : "");
-    carControls.forEach(function (control) { control.setAttribute("transform", controlTransform); });
-    var wheelTransform = "rotate(" + driveState.wheelAngle.toFixed(2) + ")";
-    if (porscheFrontWheelSpin) porscheFrontWheelSpin.setAttribute("transform", wheelTransform);
-    if (porscheRearWheelSpin) porscheRearWheelSpin.setAttribute("transform", wheelTransform);
-    if (porschePitch) {
-      var bodyPitch = driveState.noseLift - driveState.noseDive;
-      if (Math.abs(bodyPitch) < .005) bodyPitch = 0;
-      porschePitch.setAttribute("transform", "rotate(" + bodyPitch.toFixed(2) + " 296 316)");
-    }
-    if (porscheFrontWheelSteer) {
-      var roadWheelTurn = driveState.steeringAngle * .22;
-      var roadWheelNarrowing = 1 - Math.abs(driveState.steeringAngle) * .004;
-      porscheFrontWheelSteer.setAttribute("transform", "rotate(" + roadWheelTurn.toFixed(2) + ") scale(" + roadWheelNarrowing.toFixed(3) + " 1)");
+    if (!roadtripState.active) {
+      roadtripSetAttribute(porsche, "transform", transform);
+      var controlTransform = transform + (driveState.facing < 0 ? " translate(376 0) scale(-1 1)" : "");
+      carControls.forEach(function (control) { roadtripSetAttribute(control, "transform", controlTransform); });
+      var wheelTransform = "rotate(" + driveState.wheelAngle.toFixed(2) + ")";
+      roadtripSetAttribute(porscheFrontWheelSpin, "transform", wheelTransform);
+      roadtripSetAttribute(porscheRearWheelSpin, "transform", wheelTransform);
+      if (porschePitch) {
+        var bodyPitch = driveState.noseLift - driveState.noseDive;
+        if (Math.abs(bodyPitch) < .005) bodyPitch = 0;
+        roadtripSetAttribute(porschePitch, "transform", "rotate(" + bodyPitch.toFixed(2) + " 296 316)");
+      }
+      if (porscheFrontWheelSteer) {
+        var roadWheelTurn = driveState.steeringAngle * .22;
+        var roadWheelNarrowing = 1 - Math.abs(driveState.steeringAngle) * .004;
+        roadtripSetAttribute(porscheFrontWheelSteer, "transform", "rotate(" + roadWheelTurn.toFixed(2) + ") scale(" + roadWheelNarrowing.toFixed(3) + " 1)");
+      }
     }
     if (driveSteering) {
-      driveSteering.setAttribute("transform", "translate(277 95.9) scale(1.1 1.1845) translate(-277 -107) rotate(" +
+      roadtripSetAttribute(driveSteering, "transform", "translate(277 95.9) scale(1.1 1.1845) translate(-277 -107) rotate(" +
         driveState.steeringAngle.toFixed(2) + " 277 107)");
     }
-    paintEntranceDriveScenery();
+    if (!roadtripState.active) paintEntranceDriveScenery();
   }
   function playPorschePropSound(action, opening) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
@@ -48246,20 +48253,20 @@ window.__entranceRoomOpen = false;
     }
     var speed = Math.abs(driveState.speed);
     if (porsche) porsche.classList.toggle("engine-idling", entranceDriveAudible() && speed < .75);
-    if (driveTachNeedle) driveTachNeedle.setAttribute("transform", "rotate(" + (-132 + rpm / 8000 * 264).toFixed(1) + ")");
-    if (driveSpeedNeedle) driveSpeedNeedle.setAttribute("transform", "rotate(" + (Math.min(263, speed) / 263 * 242).toFixed(1) + ")");
-    if (driveTempNeedle) driveTempNeedle.setAttribute("transform", "rotate(" + (-55 + 55 * driveState.temperature).toFixed(1) + " -4 -8)");
-    if (driveFuelNeedle) driveFuelNeedle.setAttribute("transform", "rotate(" + (55 - 110 * driveBatteryLevel).toFixed(1) + " 12 3)");
+    roadtripSetAttribute(driveTachNeedle, "transform", "rotate(" + (-132 + rpm / 8000 * 264).toFixed(1) + ")");
+    roadtripSetAttribute(driveSpeedNeedle, "transform", "rotate(" + (Math.min(263, speed) / 263 * 242).toFixed(1) + ")");
+    roadtripSetAttribute(driveTempNeedle, "transform", "rotate(" + (-55 + 55 * driveState.temperature).toFixed(1) + " -4 -8)");
+    roadtripSetAttribute(driveFuelNeedle, "transform", "rotate(" + (55 - 110 * driveBatteryLevel).toFixed(1) + " 12 3)");
     if (driveClockReadout) {
       var gameNow = window.__now ? window.__now() : new Date();
       var gameHour = gameNow.getHours() % 12 || 12;
-      driveClockReadout.textContent = gameHour + ":" + String(gameNow.getMinutes()).padStart(2, "0");
+      roadtripSetText(driveClockReadout, gameHour + ":" + String(gameNow.getMinutes()).padStart(2, "0"));
     }
-    if (driveTachReadout) driveTachReadout.textContent = driveState.stalled ? "STALL" : driveGearLabel();
-    if (driveAutoReadout) driveAutoReadout.textContent = driveGearLabel();
-    if (driveCruiseIndicator) driveCruiseIndicator.setAttribute("opacity", driveState.cruiseActive ? "1" : "0");
-    if (driveCruiseSpeed) driveCruiseSpeed.textContent = String(Math.round(driveState.cruiseTarget));
-    if (driveOdometer) driveOdometer.textContent = porscheDriveOdometerLabel();
+    roadtripSetText(driveTachReadout, driveState.stalled ? "STALL" : driveGearLabel());
+    roadtripSetText(driveAutoReadout, driveGearLabel());
+    roadtripSetAttribute(driveCruiseIndicator, "opacity", driveState.cruiseActive ? "1" : "0");
+    roadtripSetText(driveCruiseSpeed, String(Math.round(driveState.cruiseTarget)));
+    roadtripSetText(driveOdometer, porscheDriveOdometerLabel());
     if (driveShifterTouchPreviewGear !== null) paintPorscheShifter(driveShifterTouchPreviewGear);
     else if (!driveShifterAttemptTimer) paintPorscheShifter(
       porscheTransmission.mode === "auto" ? porscheTransmission.range : driveState.gear);
@@ -48270,10 +48277,10 @@ window.__entranceRoomOpen = false;
           "3": [480, 93], "4": [480, 113], "5": [488, 93], "6": [488, 113] };
       var gearPosition = gearPositions[porscheTransmission.mode === "auto" ?
         porscheTransmission.range : String(driveState.gear)];
-      driveGearIndicator.setAttribute("opacity", gearPosition ? "1" : "0");
+      roadtripSetAttribute(driveGearIndicator, "opacity", gearPosition ? "1" : "0");
       if (gearPosition) {
-        driveGearIndicator.setAttribute("cx", gearPosition[0]);
-        driveGearIndicator.setAttribute("cy", gearPosition[1]);
+        roadtripSetAttribute(driveGearIndicator, "cx", gearPosition[0]);
+        roadtripSetAttribute(driveGearIndicator, "cy", gearPosition[1]);
       }
     }
     syncPorscheDriveInstruction(false);
@@ -48288,9 +48295,9 @@ window.__entranceRoomOpen = false;
       control.classList.toggle("pressed", pressed);
     });
     if (driveStatus) {
-      driveStatus.textContent = driveState.stalled ?
+      roadtripSetText(driveStatus, driveState.stalled ?
         (document.documentElement.lang === "cs" ? "Motor zhasl" : "Engine stalled") :
-        driveGearLabel() + ", " + Math.round(speed) + " km/h";
+        driveGearLabel() + ", " + Math.round(speed) + " km/h");
     }
     paintRoadtripInvite();
     paintPorscheDriveCoach();
@@ -48314,15 +48321,19 @@ window.__entranceRoomOpen = false;
     return porscheState.roofOpen ? 1 : porscheState.windowOpen ? .78 : .52;
   }
   // panForElId forces a synchronous layout, and the per-tick spatial repaints made every
-  // drive step pay that reflow mid-tick. The anchors drift slowly (HUD chrome is static,
-  // the street car wraps over seconds), so a 250ms-stale pan is inaudible — the params'
+  // drive step pay that reflow mid-tick. Road Trip's HUD and brake stay fixed; exterior
+  // anchors retain a 250ms refresh, whose staleness is inaudible because the params'
   // setTargetAtTime smoothing glides over the refresh steps.
   var porscheDrivePanCache = {};
+  var PORSCHE_ROADTRIP_STATIC_PAN = {
+    "entrance-drive-hud": true,
+    "entrance-drive-brake": true
+  };
   window.__porscheDrivePanFlush = function () { porscheDrivePanCache = {}; }; // deterministic test seam: re-read anchors NOW
   function porscheDrivePanFor(anchor) {
     var now = performance.now();
     var hit = porscheDrivePanCache[anchor];
-    if (hit && now - hit.at < 250) return hit.pan;
+    if (hit && ((roadtripState.active && PORSCHE_ROADTRIP_STATIC_PAN[anchor]) || now - hit.at < 250)) return hit.pan;
     var pan = panForElId(anchor);
     porscheDrivePanCache[anchor] = { at: now, pan: pan };
     return pan;

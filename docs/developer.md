@@ -206,6 +206,9 @@ native wallpaper/menu bar remain below the promoted icon grid, while its later s
 move above that grid; this avoids an SVG canvas occluding the HTML icons in Chrome. The same test
 asserts the complete Code layout and the shared terminal rule: sparse output starts at the top, then
 all three scrollbacks pin their newest line once full, including under the WebKit cascade.
+Shoot is the one live-runtime sizing exception inside that same overlay policy: its chooser uses the
+authored CSS zoom, but Doom, Duke, and Quake receive the physical screen box before their iframe is
+created because WebKit will not composite an iframe-owned WASM canvas through ancestor CSS zoom.
 
 Room parking hides monitor paint only when Office becomes `stage-far`, after the strip transition
 settles, so a running app does not blank while the room is still sliding out. App-owned native screen

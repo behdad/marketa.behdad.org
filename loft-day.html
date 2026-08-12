@@ -86583,6 +86583,9 @@ def colormode(mode=None):
     if (shootRoot) shootRoot.setAttribute("data-shoot-view", shootView);
     if (doomWrap) doomWrap.setAttribute("data-shoot-view", shootView);
     if (doomCloseBtn) doomCloseBtn.setAttribute("data-shoot-view", shootView);
+    // Switch the zoom overlay to the shooter's physical iframe box before creating its
+    // browsing context; WebKit decides the nested canvas compositor at that first paint.
+    if (window.__monitorHtmlOverlayFit) window.__monitorHtmlOverlayFit();
     doomSetMsg("", false);
     if (shootView === "chooser") {
       if (shootFocusActive) setShootFocus(false);
@@ -90234,16 +90237,34 @@ def colormode(mode=None):
     metrics.geometryReads += 2;
     if (!r.width || !r.height || !vr.width) return false;
     var scale = r.width / 124;
+    // A live shooter is an iframe whose document paints a WASM canvas. WebKit does not
+    // composite that nested replaced surface through an ancestor CSS zoom: the runtime
+    // reaches ready but its screen stays black. Give the iframe the physical screen box
+    // before it is created; the chooser and every ordinary HTML app keep authored units.
+    var physicalRuntime = active.entries.some(function (entry) {
+      return entry.root.id === "monitor-doom-wrap" && entry.root.getAttribute("data-shoot-view") !== "chooser";
+    });
     host.style.left = (r.left - vr.left) + "px";
     host.style.top = (r.top - vr.top) + "px";
     host.style.width = r.width + "px";
     host.style.height = r.height + "px";
-    scaleRoot.style.zoom = scale;
+    scaleRoot.style.zoom = physicalRuntime ? 1 : scale;
+    scaleRoot.style.width = (physicalRuntime ? r.width : 124) + "px";
+    scaleRoot.style.height = (physicalRuntime ? r.height : 42) + "px";
+    controls.style.width = (physicalRuntime ? r.width : 124) + "px";
+    controls.style.height = (physicalRuntime ? r.height : 42) + "px";
+    active.entries.forEach(function (entry) {
+      var unit = physicalRuntime ? scale : 1;
+      entry.layer.style.left = entry.box.left * unit + "px";
+      entry.layer.style.top = entry.box.top * unit + "px";
+      entry.layer.style.width = entry.box.width * unit + "px";
+      entry.layer.style.height = entry.box.height * unit + "px";
+    });
     host.style.setProperty("--monitor-overlay-inv-scale", String(1 / scale));
     metrics.fits++;
     active.geometry = {
       left: r.left - vr.left, top: r.top - vr.top, width: r.width, height: r.height,
-      scale: scale, aspectError: Math.abs(r.height - 42 * scale)
+      scale: scale, aspectError: Math.abs(r.height - 42 * scale), physicalRuntime: physicalRuntime
     };
     return true;
   }
@@ -90282,10 +90303,12 @@ def colormode(mode=None):
       entry.layer = document.createElement("div");
       entry.layer.className = "monitor-html-layer";
       entry.layer.setAttribute("data-monitor-root", rootName(root));
-      entry.layer.style.left = ((parseFloat(fo.getAttribute("x")) || 254) - 254) + "px";
-      entry.layer.style.top = ((parseFloat(fo.getAttribute("y")) || 154) - 154) + "px";
-      entry.layer.style.width = (parseFloat(fo.getAttribute("width")) || 124) + "px";
-      entry.layer.style.height = (parseFloat(fo.getAttribute("height")) || 42) + "px";
+      entry.box = {
+        left: (parseFloat(fo.getAttribute("x")) || 254) - 254,
+        top: (parseFloat(fo.getAttribute("y")) || 154) - 154,
+        width: parseFloat(fo.getAttribute("width")) || 124,
+        height: parseFloat(fo.getAttribute("height")) || 42
+      };
       entry.layer.appendChild(root);
       scaleRoot.insertBefore(entry.layer, controls);
       if (seenOwners.indexOf(entry.owner) === -1) {

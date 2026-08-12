@@ -162,7 +162,7 @@ check(!/setTimeout\(\(\) => pick/.test(players[2]) &&
     /canvas\.addEventListener\("pointerdown"/.test(players[2]) &&
     !/document\.addEventListener\("pointerdown", \(\) =>/.test(players[2]),
   "Quake III waits for a choice and only the game canvas takes pointer focus");
-check(/width:min\(84vw,470px\)/.test(players[2]) &&
+check(/width:min\(84vw,760px\)/.test(players[2]) &&
     /touch-action:manipulation/.test(players[2]),
   "Quake III arena cards keep touch-sized explicit pointer targets");
 check(result && result.steps.q3Gutters.length === 2 &&

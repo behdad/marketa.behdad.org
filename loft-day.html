@@ -2891,7 +2891,7 @@ html.mir-party .hunt-viewport.bedroom-room-open #bedroom-party-coats{pointer-eve
   box-shadow:none;
   background:#000;
 }
-#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-viewport > :not(#loft-game-strip){display:none}
+#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-viewport > :not(#loft-game-strip):not(#monitor-html-overlay){display:none}
 #loft-game-strip{
   display:block; width:500%; height:auto; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
@@ -2899,6 +2899,37 @@ html.mir-party .hunt-viewport.bedroom-room-open #bedroom-party-coats{pointer-eve
   transition:transform .72s cubic-bezier(.4,0,.2,1);
 }
 #loft-game-strip.recovery-preview{transition:none}
+/* A zoomed monitor promotes its live foreignObject HTML node into this ordinary DOM
+   surface. The authored app remains a 124×42 logical desktop; CSS zoom performs layout
+   at the final monitor scale, so Safari rasterises text sharply and Chrome keeps native
+   carets at device-pixel thickness. Geometry is refreshed only when zoom/app/viewport
+   state changes — there is no per-frame screen chase. */
+#monitor-html-overlay{
+  position:absolute; z-index:11; display:none; overflow:hidden; pointer-events:none;
+  box-sizing:border-box; contain:layout paint; isolation:isolate;
+  border-radius:1.21% / 3.57%;
+}
+#monitor-html-overlay.active{display:block;pointer-events:auto}
+#monitor-html-overlay > *{visibility:visible!important}
+#monitor-html-overlay-scale{position:relative;width:124px;height:42px;overflow:visible;transform-origin:0 0}
+.monitor-html-layer{position:absolute;box-sizing:border-box;overflow:hidden}
+.monitor-html-layer > *{display:block}
+#monitor-html-overlay .console-caret{width:calc(1px * var(--monitor-overlay-inv-scale))}
+#monitor-html-overlay-controls{position:absolute;inset:0;width:124px;height:42px;overflow:visible;pointer-events:none}
+#monitor-html-overlay-controls > g{pointer-events:auto}
+#monitor-html-overlay-controls foreignObject{pointer-events:none!important}
+/* These owner/HTML relationships normally cross a foreignObject boundary. While the
+   owner SVG group and its live HTML child are sibling overlay layers, bridge the two
+   view switches explicitly. */
+#monitor-html-overlay:has(#monitor-console.svg-view) #monitor-console-wrap,
+#monitor-html-overlay:has(#monitor-python.turtle-view) #monitor-py-wrap{visibility:hidden}
+/* The foreignObject-only WebKit fallbacks are unnecessary in ordinary DOM and would
+   otherwise keep the now-safe scroll panes clipped. */
+html.is-webkit #monitor-html-overlay [class~="console-out"]{overflow:auto;display:block;justify-content:normal}
+html.is-webkit #monitor-html-overlay :is(.tattoo-grid,.mail-body,.mail-list,.code-list,.mail-form,.mail-ta){overflow:auto}
+html.is-webkit #monitor-html-overlay .chat-log{overflow-y:auto}
+html.is-webkit #monitor-html-overlay .dock-app:hover .dock-tile{transform:scale(1.09)}
+html.is-webkit #monitor-html-overlay .dock-app:active .dock-tile{transform:scale(.98)}
 #lower-room-track{
   position:absolute; inset:0; z-index:12; width:500%; height:100%;
   display:flex; pointer-events:none; transform:translateX(0);
@@ -32656,6 +32687,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
 </g>
     </svg>
+    <div id="monitor-html-overlay">
+      <div id="monitor-html-overlay-scale">
+        <svg id="monitor-html-overlay-controls" viewBox="254 154 124 42" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
     <div id="bathroom-room" hidden>
       <svg id="bathroom-room-art" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
         <defs>
@@ -90063,6 +90099,255 @@ def colormode(mode=None):
   window.addEventListener("framehealthchange", sync);
   window.__constellationStepState = function () { return { running: !!timer, step: step }; };
 })();
+// ── MONITOR HTML PROMOTION ── foreignObject remains the compact room-scale home for every
+// monitor app. While the monitor is zoomed, the live HTML node (never a clone) and its
+// owning SVG controls are promoted into an ordinary DOM surface aligned to the screen.
+// New foreignObject HTML apps opt in automatically; only entries in the explicit denylist
+// stay embedded after proving that reparenting is incompatible.
+(function () {
+  var monitor = document.getElementById("office-monitor");
+  var screenContent = document.getElementById("office-monitor-screen-content");
+  var screenBox = document.getElementById("monitor-zoom-box");
+  var viewport = document.querySelector(".hunt-viewport");
+  var host = document.getElementById("monitor-html-overlay");
+  var scaleRoot = document.getElementById("monitor-html-overlay-scale");
+  var controls = document.getElementById("monitor-html-overlay-controls");
+  if (!monitor || !screenContent || !screenBox || !viewport || !host || !scaleRoot || !controls) return;
+
+  // Empty by design at launch: canvas, video and iframe roots are safer in ordinary DOM
+  // too, and retain their live runtime when their actual node is moved. Add only a root id
+  // that has a focused regression proving why it cannot follow the default policy.
+  var DENY_ROOT_IDS = Object.freeze([]);
+  var active = null, ownerObserver = null, syncQueued = false, parkedFocus = null;
+  var metrics = { mounts: 0, restores: 0, fits: 0, geometryReads: 0, lastMountMs: 0, maxMountMs: 0 };
+
+  // The promoted SVG owner is no longer below #office-monitor, so reproduce only the
+  // authored rules that use that state owner with #monitor-html-overlay instead. Walking
+  // CSSOM keeps media/supports wrappers and makes the default policy cover future apps
+  // without maintaining a second selector list.
+  (function installStateCssMirror() {
+    var chunks = [];
+    function collect(rules) {
+      var out = [];
+      Array.prototype.forEach.call(rules || [], function (rule) {
+        if (rule.type === 1 && /#office-monitor(?![\w-])/.test(rule.selectorText || "")) {
+          out.push(rule.cssText.replace(/#office-monitor(?![\w-])/g, "#monitor-html-overlay"));
+        } else if (rule.cssRules) {
+          var inner = collect(rule.cssRules);
+          if (inner) out.push(rule.cssText.slice(0, rule.cssText.indexOf("{")) + "{" + inner + "}");
+        }
+      });
+      return out.join("\n");
+    }
+    Array.prototype.forEach.call(document.styleSheets, function (sheet) {
+      try { var css = collect(sheet.cssRules); if (css) chunks.push(css); } catch (_error) {}
+    });
+    if (chunks.length) {
+      var style = document.createElement("style");
+      style.id = "monitor-html-overlay-state-css";
+      style.textContent = chunks.join("\n");
+      document.head.appendChild(style);
+    }
+  })();
+
+  function rootName(root) {
+    if (root.id) return root.id;
+    var cls = typeof root.className === "string" ? root.className : "";
+    return cls.trim().split(/\s+/)[0] || root.localName;
+  }
+  function denied(root) { return !!(root.id && DENY_ROOT_IDS.indexOf(root.id) !== -1); }
+  function topOwner(fo) {
+    var node = fo;
+    while (node && node.parentNode !== screenContent) node = node.parentNode;
+    return node && node.parentNode === screenContent ? node : null;
+  }
+  function visible(el, includeOpacity) {
+    if (!el) return false;
+    var style = getComputedStyle(el);
+    return style.display !== "none" && style.visibility !== "hidden" &&
+      (!includeOpacity || parseFloat(style.opacity || "1") > 0.001);
+  }
+  function visiblePath(fo, owner) {
+    // App owners fade in from zero, so their transition-time opacity must not delay the
+    // promotion. Nested channel/death layers do use zero opacity as their real gate.
+    if (!visible(owner, false) || !visible(fo, true)) return false;
+    for (var node = fo.parentNode; node && node !== owner; node = node.parentNode) {
+      if (!visible(node, true)) return false;
+    }
+    return true;
+  }
+  function candidates() {
+    var out = [];
+    screenContent.querySelectorAll("foreignObject").forEach(function (fo) {
+      var root = fo.firstElementChild, owner = topOwner(fo);
+      if (!root || !owner || denied(root) || !visiblePath(fo, owner)) return;
+      out.push({ fo: fo, root: root, owner: owner });
+    });
+    return out;
+  }
+  function focusSnapshot() {
+    var node = document.activeElement;
+    if (!node || node === document.body) return null;
+    var snapshot = { node: node };
+    if (typeof node.selectionStart === "number") {
+      snapshot.start = node.selectionStart;
+      snapshot.end = node.selectionEnd;
+      snapshot.direction = node.selectionDirection;
+    }
+    return snapshot;
+  }
+  function restoreFocus(snapshot, entries) {
+    if (!snapshot || !snapshot.node || !snapshot.node.isConnected) return;
+    var owns = entries.some(function (entry) { return entry.root === snapshot.node || entry.root.contains(snapshot.node); });
+    if (!owns) return;
+    try { snapshot.node.focus({ preventScroll: true }); } catch (_error) { try { snapshot.node.focus(); } catch (_error2) {} }
+    if (snapshot.start != null && snapshot.node.setSelectionRange) {
+      try { snapshot.node.setSelectionRange(snapshot.start, snapshot.end, snapshot.direction); } catch (_error3) {}
+    }
+    if (snapshot.node.tagName === "IFRAME" && snapshot.node.contentWindow) {
+      try { snapshot.node.contentWindow.focus(); } catch (_error4) {}
+    }
+  }
+  function focusOwned(snapshot, entries) {
+    return !!(snapshot && snapshot.node && entries.some(function (entry) {
+      return entry.root === snapshot.node || entry.root.contains(snapshot.node);
+    }));
+  }
+  function settleFocus(snapshot, entries) {
+    restoreFocus(snapshot, entries);
+    setTimeout(function () {
+      if (!active || active.entries !== entries || !snapshot || !snapshot.node || !snapshot.node.isConnected) return;
+      restoreFocus(snapshot, entries);
+    }, 0);
+  }
+  function mirrorMonitorState() {
+    host.className = monitor.getAttribute("class") || "";
+    host.classList.add("monitor-html-overlay-state");
+    if (active) host.classList.add("active");
+  }
+  function fit() {
+    if (!active) return false;
+    var r = screenBox.getBoundingClientRect(), vr = viewport.getBoundingClientRect();
+    metrics.geometryReads += 2;
+    if (!r.width || !r.height || !vr.width) return false;
+    var scale = r.width / 124;
+    host.style.left = (r.left - vr.left) + "px";
+    host.style.top = (r.top - vr.top) + "px";
+    host.style.width = r.width + "px";
+    host.style.height = r.height + "px";
+    scaleRoot.style.zoom = scale;
+    host.style.setProperty("--monitor-overlay-inv-scale", String(1 / scale));
+    metrics.fits++;
+    active.geometry = {
+      left: r.left - vr.left, top: r.top - vr.top, width: r.width, height: r.height,
+      scale: scale, aspectError: Math.abs(r.height - 42 * scale)
+    };
+    return true;
+  }
+  function restore() {
+    if (!active) return;
+    var snapshot = focusSnapshot(), previous = active;
+    if (focusOwned(snapshot, previous.entries)) parkedFocus = snapshot;
+    host.classList.remove("active");
+    if (ownerObserver) { ownerObserver.disconnect(); ownerObserver = null; }
+    previous.entries.forEach(function (entry) {
+      if (entry.rootPlaceholder.parentNode) entry.rootPlaceholder.parentNode.replaceChild(entry.root, entry.rootPlaceholder);
+      if (entry.layer.parentNode) entry.layer.remove();
+    });
+    previous.owners.forEach(function (record) {
+      if (record.placeholder.parentNode) record.placeholder.parentNode.replaceChild(record.owner, record.placeholder);
+    });
+    active = null;
+    mirrorMonitorState();
+    metrics.restores++;
+    restoreFocus(snapshot, previous.entries);
+  }
+  function mount(entries, snapshot) {
+    if (!entries.length) return false;
+    var started = performance.now(), owners = [], seenOwners = [];
+    entries.forEach(function (entry) {
+      var fo = entry.fo, root = entry.root;
+      entry.rootPlaceholder = document.createComment("monitor-html-home:" + rootName(root));
+      fo.replaceChild(entry.rootPlaceholder, root);
+      entry.layer = document.createElement("div");
+      entry.layer.className = "monitor-html-layer";
+      entry.layer.setAttribute("data-monitor-root", rootName(root));
+      entry.layer.style.left = ((parseFloat(fo.getAttribute("x")) || 254) - 254) + "px";
+      entry.layer.style.top = ((parseFloat(fo.getAttribute("y")) || 154) - 154) + "px";
+      entry.layer.style.width = (parseFloat(fo.getAttribute("width")) || 124) + "px";
+      entry.layer.style.height = (parseFloat(fo.getAttribute("height")) || 42) + "px";
+      entry.layer.appendChild(root);
+      scaleRoot.insertBefore(entry.layer, controls);
+      if (seenOwners.indexOf(entry.owner) === -1) {
+        seenOwners.push(entry.owner);
+        var placeholder = document.createComment("monitor-svg-home:" + (entry.owner.id || "surface"));
+        entry.owner.parentNode.replaceChild(placeholder, entry.owner);
+        controls.appendChild(entry.owner);
+        owners.push({ owner: entry.owner, placeholder: placeholder });
+      }
+    });
+    active = { entries: entries, owners: owners, geometry: null };
+    mirrorMonitorState();
+    fit();
+    metrics.mounts++;
+    metrics.lastMountMs = performance.now() - started;
+    metrics.maxMountMs = Math.max(metrics.maxMountMs, metrics.lastMountMs);
+    if (window.MutationObserver) {
+      ownerObserver = new MutationObserver(scheduleSync);
+      owners.forEach(function (record) {
+        ownerObserver.observe(record.owner, { attributes: true, attributeFilter: ["class", "data-view"] });
+      });
+    }
+    var focus = focusOwned(snapshot, entries) ? snapshot : (focusOwned(parkedFocus, entries) ? parkedFocus : null);
+    if (focus) parkedFocus = null;
+    settleFocus(focus, entries);
+    return true;
+  }
+  function sync() {
+    syncQueued = false;
+    var snapshot = focusSnapshot();
+    restore();
+    mirrorMonitorState();
+    if (!(window.__monitorZoomed && window.__monitorZoomed())) return false;
+    var entries = candidates();
+    return mount(entries, snapshot);
+  }
+  function scheduleSync() {
+    if (syncQueued) return;
+    syncQueued = true;
+    Promise.resolve().then(sync);
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function () {
+      mirrorMonitorState();
+      if (window.__monitorZoomed && window.__monitorZoomed()) scheduleSync();
+    }).observe(monitor, { attributes: true, attributeFilter: ["class"] });
+  }
+  window.__monitorHtmlOverlayOpen = sync;
+  window.__monitorHtmlOverlayClose = restore;
+  window.__monitorHtmlOverlayFit = fit;
+  window.__monitorHtmlOverlayState = function () {
+    var supported = [];
+    monitor.querySelectorAll("foreignObject > *").forEach(function (root) {
+      if (!denied(root)) supported.push(rootName(root));
+    });
+    if (active) active.entries.forEach(function (entry) {
+      var name = rootName(entry.root);
+      if (supported.indexOf(name) === -1) supported.push(name);
+    });
+    return {
+      active: !!active,
+      roots: active ? active.entries.map(function (entry) { return rootName(entry.root); }) : [],
+      owners: active ? active.owners.map(function (entry) { return entry.owner.id || ""; }) : [],
+      geometry: active && active.geometry ? Object.assign({}, active.geometry) : null,
+      policy: "overlay-by-default",
+      supported: supported.sort(),
+      denied: DENY_ROOT_IDS.slice(),
+      metrics: Object.assign({}, metrics)
+    };
+  };
+  mirrorMonitorState();
+})();
 // ── DESK ZOOM ── while an office device holds attention, the room view glides up to
 // it: the MONITOR (engaged by the PC booting or tapping the lit screen) and the LAPTOP
 // (engaged by tapping it — the Prague call happens zoomed). Released by tapping anywhere
@@ -90127,12 +90412,14 @@ def colormode(mode=None):
     var t = targetFor(el);
     if (!t || !t.el || !t.when()) return;
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
+    if (zoomEl === monitor && el !== monitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     zoomEl = el;
     if (el === monitor) monitorIntentUntil = 0;
     lastZoomPose = "";
     vp.classList.add("device-zoomed");
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
+    if (el === monitor && window.__monitorHtmlOverlayOpen) window.__monitorHtmlOverlayOpen();
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // screen focus settles musically: ~2.5s rather than the projector's ~1s
     if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(true);
@@ -90140,6 +90427,7 @@ def colormode(mode=None):
   }
   function zoomOut() {
     if (!zoomEl) return;
+    if (zoomEl === monitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
     if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
@@ -90170,6 +90458,7 @@ def colormode(mode=None):
   function prepareRoomPan() {
     var hadZoom = !!zoomEl || !!zoomOutTimer || vp.classList.contains("device-zoomed") || !!strip.style.transformOrigin;
     if (!hadZoom) return false;
+    if (window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
     if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
@@ -90214,6 +90503,7 @@ def colormode(mode=None):
     var changed = apply();
     if (changed) void strip.offsetWidth; // commit the un-transitioned pose before the glide is restored
     strip.style.transition = prevT;
+    if (zoomEl === monitor && window.__monitorHtmlOverlayFit) window.__monitorHtmlOverlayFit();
     if (zoomEl === monitor && window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   function scheduleRefitZoom(withRetry) {

@@ -192,10 +192,21 @@ temporary class removes the live monitor screen tree from the nested `<use>`; cl
 also detaches that Office clone from paint, while captured card clicks prevent monitor summons.
 
 The live Office monitor retains every app's DOM and runtime state, but only the foreground HTML app
-group participates in layout; inactive SVG app groups use `display:none`. Room parking hides
-their paint only when Office becomes `stage-far`, after the strip transition settles, so a running app
-does not blank while the room is still sliding out. App-owned native screen fills match each HTML
-surface's outer color to conceal Chrome's occasional one-device-pixel foreignObject rounding edge.
+group participates in layout; inactive SVG app groups use `display:none`. At room scale, HTML stays
+in its canonical `foreignObject`. Monitor zoom promotes the foreground root itself—not a clone—and
+its SVG control owner into `#monitor-html-overlay`, an ordinary 124×42 CSS-zoomed DOM surface fitted
+to `#monitor-zoom-box`. Zoom-out and room navigation restore both nodes before the SVG moves. The
+policy is overlay-by-default for current and future `foreignObject` HTML; the explicit root-id
+denylist is reserved for a surface with a focused incompatibility proof. Native SVG layers such as
+Credits never enter this path. State/app/resize/fullscreen changes refit once; idle frames perform no
+geometry reads. `tests/monitor-html-overlay.js` covers the inventory, exact screen alignment,
+reparented-node identity/focus/state, fullscreen, room parking, click ownership, and the one-pixel
+Console caret at desktop and 390px landscape widths.
+
+Room parking hides monitor paint only when Office becomes `stage-far`, after the strip transition
+settles, so a running app does not blank while the room is still sliding out. App-owned native screen
+fills remain the room-scale fallback for foreignObject rounding edges; the zoom overlay itself must
+meet all four native screen edges without a seam.
 
 ### Morning routine and free exploration
 
@@ -692,8 +703,9 @@ regressions:
 
 WebKit has additional `foreignObject` limitations: layered descendants under a scaled SVG ancestor
 can paint off-position, and replaced content such as canvas/video/iframe may not composite at all.
-Prefer de-layered grid stacking and native SVG `<image>` blits where the existing subsystem already
-uses them. Mirror state onto stable scope classes through `syncScopeMirrors`; avoid introducing a
+The zoomed Office monitor avoids that path through its ordinary-DOM promotion; keep the de-layered
+and native SVG `<image>` fallbacks because room-scale and Dollhouse rendering still use the canonical
+SVG tree. Mirror state onto stable scope classes through `syncScopeMirrors`; avoid introducing a
 top-anchored `:has()` dependency for a large scene.
 
 The maintained incident patterns and verified workarounds live in [`AGENTS.md`](../AGENTS.md); test
@@ -744,7 +756,7 @@ port nor another developer's server process.
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
 | Typed API | Catalogue shape, public Window ownership, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/global-surface.js`, `tests/api-gating.js` |
-| Rendering | Album signatures and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, screenshots or real CDP Chrome |
+| Rendering | Album signatures, monitor HTML/SVG alignment, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/monitor-html-overlay.js`, screenshots or real CDP Chrome |
 
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the
 focused tests closest to the ownership boundary you changed; Enter and menu changes have their named

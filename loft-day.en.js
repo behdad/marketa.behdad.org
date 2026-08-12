@@ -622,7 +622,6 @@ window.__loftMessages["en"] = {
     "garden_party": "Party's on — dance like nobody's watering. 💃🌱",
     "intro": "Practice the art of aimless wandering.",
     "intro_guide": "Clues and instructions appear here.",
-    "intro_guide_nav": "Navigation lives here.",
     "kitchen": "Turn on La Maz → run El Maz → brew.",
     "kitchen_again": "Go ahead—make another espresso. ☕",
     "kitchen_bar": "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",

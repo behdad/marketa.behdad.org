@@ -622,7 +622,6 @@ window.__loftMessages["cs"] = {
     "garden_party": "Párty jede — správna věc, tanec volá.",
     "intro": "Cvičte se v umění toulání bez cíle.",
     "intro_guide": "Nápovědy a pokyny se objevují tady.",
-    "intro_guide_nav": "Navigace je tady.",
     "kitchen": "Zapni La Maz → spusť El Maz → uvař kafe.",
     "kitchen_again": "Jen do toho — udělej si další espresso. ☕",
     "kitchen_bar": "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",

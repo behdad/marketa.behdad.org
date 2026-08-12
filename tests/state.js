@@ -57,9 +57,9 @@
 //      The first attended unread badge also carries the one-time message coach mark.
 //    - Party controls: the Garden wall switch stays day/night in both phases; the roof
 //      disco ball is hidden before phase two, then toggles Party without replaying the first cue.
-//    - opening guide: its explicit × walks top navigation → caption before the
-//      normal kitchen instruction and espresso-machine arrow take over; background
-//      clicks stay inert and Enter mirrors the ×.
+//    - opening guide: its explicit × dismisses the caption lesson before the normal
+//      kitchen instruction and espresso-machine arrow take over; background clicks
+//      stay inert and Enter mirrors the ×.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -511,53 +511,39 @@ var PROBE_HARNESS = [
   "    snap.set(strip, strip.getAttribute('class') || '');",
   "    strip.querySelectorAll('*').forEach(function (e) { snap.set(e, e.getAttribute('class') || ''); });",
   "",
-  "    // The opening coach teaches the top navigation, then the bottom caption, before any object cue.",
+  "    // The opening coach teaches the bottom caption before any object cue.",
   "    // the load snapshot: resetHunt intentionally restores the untouched intro state captured above.",
   "    var introOverlay = el('click-me-overlay'), introMachine = el('kitchen-lamarzocco'), introCabinet = el('kitchen-cabinet-2');",
   "    if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: first scene click is consumed before La Maz', !el('click-me-overlay') && introMachine && !introMachine.classList.contains('powered-on'));",
-  "    ok('opening guide: first scene click points to the top navigation', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideStep() === 'nav' && has('hunt-bottom-nav', 'intro-guide-nav') && !has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: first scene click points to the bottom caption', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
   "    ok('opening guide: espresso-machine cue waits', !has('kitchen-lamarzocco', 'invite-pulse'));",
   "    await sleep(30);",
-  "    var navBlockedTarget = clickAtElementPoint('kitchen-lamarzocco');",
-  "    ok('opening guide: a background prop click neither advances nor operates the room', navBlockedTarget && navBlockedTarget.closest('#opening-guide-coach') && window.__openingGuideShowing() && window.__openingGuideStep() === 'nav' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
+  "    var captionBlockedTarget = clickAtElementPoint('kitchen-lamarzocco');",
+  "    ok('opening guide: a background prop click neither dismisses nor operates the room', captionBlockedTarget && captionBlockedTarget.closest('#opening-guide-coach') && window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
   "    clickOpeningGuideX();",
-  "    ok('opening guide: the visible dismiss control points next to the bottom caption', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !has('hunt-bottom-nav', 'intro-guide-nav') && has('hunt-caption', 'intro-guide'));",
-  "    await sleep(30); var captionBlockedTarget = clickAtElementPoint('kitchen-lamarzocco');",
-  "    ok('opening guide: caption-step background remains inert', captionBlockedTarget && captionBlockedTarget.closest('#opening-guide-coach') && window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
-  "    clickOpeningGuideX();",
-  "    ok('opening guide: the second visible dismiss control finishes without waiting', !window.__openingGuideShowing() && has('kitchen-lamarzocco', 'invite-pulse'));",
+  "    ok('opening guide: the visible dismiss control finishes without waiting', !window.__openingGuideShowing() && has('kitchen-lamarzocco', 'invite-pulse'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
-  "    ok('opening guide: first Enter advances to the caption without operating Kitchen', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !introMachine.classList.contains('powered-on'));",
-  "    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
-  "    ok('opening guide: second Enter dismisses without operating Kitchen', !window.__openingGuideShowing() && !introMachine.classList.contains('powered-on') && has('kitchen-lamarzocco', 'invite-pulse'));",
+  "    ok('opening guide: Enter dismisses without operating Kitchen', !window.__openingGuideShowing() && !introMachine.classList.contains('powered-on') && has('kitchen-lamarzocco', 'invite-pulse'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: ordinary entry has no auto-dismiss timeout', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideDuration && window.__openingGuideDuration() === 0);",
   "    await sleep(4200);",
-  "    ok('opening guide: nav step remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav' && has('hunt-bottom-nav', 'intro-guide-nav'));",
-  "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    ok('opening guide: scene-wide clicks do not acknowledge the nav card', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav');",
-  "    clickOpeningGuideX();",
-  "    await sleep(30); await sleep(4200);",
-  "    ok('opening guide: caption step also remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: caption step remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
   "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: scene-wide clicks do not acknowledge the caption card', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption');",
   "    clickOpeningGuideX();",
-  "    ok('opening guide: ordinary entry clears after both acknowledgements', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: ordinary entry clears after acknowledgement', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
   "    if (window.__toggleFullscreen) window.__toggleFullscreen();",
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: fullscreen entry also has no auto-dismiss timeout', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideDuration && window.__openingGuideDuration() === 0);",
   "    await sleep(5200);",
-  "    ok('opening guide: nav remains after fullscreen browser chrome clears', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav' && has('hunt-bottom-nav', 'intro-guide-nav'));",
+  "    ok('opening guide: caption remains after fullscreen browser chrome clears', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
   "    await sleep(3000);",
-  "    ok('opening guide: fullscreen nav still waits for acknowledgement', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav');",
-  "    clickOpeningGuideX();",
-  "    await sleep(30);",
-  "    ok('opening guide: fullscreen advances to its bottom caption', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: fullscreen caption still waits for acknowledgement', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption');",
   "    clickOpeningGuideX();",
   "    ok('opening guide: fullscreen caption ends on acknowledgement', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
   "    ok('opening guide: normal kitchen instruction returns', window.__captionKey && window.__captionKey() === 'kitchen', 'caption=' + (window.__captionKey && window.__captionKey()));",
@@ -1294,7 +1280,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 52000, PROBE_CHROME_OPTS); // includes the persistent two-step opening guide + latest-popup-aware message-coach delay
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 52000, PROBE_CHROME_OPTS); // includes the persistent opening guide + latest-popup-aware message-coach delay
   if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("loft-day.html", LOFT_FULLSCREEN_HARNESS, 7000, CHROME_OPTS);
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);

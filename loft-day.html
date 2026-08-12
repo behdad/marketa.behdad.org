@@ -3602,11 +3602,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
     max-width:calc(100% - 1.25rem); white-space:normal; text-overflow:clip; text-wrap:balance;
   }
 }
-/* First-play handoff: a shared coach card establishes the top controls, then the subtitle.
-   Its transparent full-shell layer swallows scene input, while the highlighted navigation row
-   and explicit whole-loft Reset stay live without acknowledging the coach. Only the visible ×
-   or an owned keyboard acknowledgement advances the lesson itself. */
-#hunt-bottom-nav.intro-guide-nav{z-index:65}
+/* First-play handoff: a shared coach card establishes the subtitle. Its transparent full-shell
+   layer swallows scene input while the explicit whole-loft Reset stays live. */
 #hunt-bottom-nav.party-room-map-target{z-index:auto;pointer-events:none}
 #hunt-bottom-nav.party-room-map-target .hunt-dollhouse-slot{z-index:65;pointer-events:auto}
 #hunt-fullscreen-area.opening-guide-active #hunt-restart-btn{z-index:65}
@@ -37784,8 +37781,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-146e3b21fd26"></script>
-<script src="loft-day.cs.js?v=dict-2d7b332ad33e"></script>
+<script src="loft-day.en.js?v=dict-73a84a367719"></script>
+<script src="loft-day.cs.js?v=dict-ea37344ea8ff"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -114751,27 +114748,19 @@ function spawnDustMote(container) {
   function chooseDollhouseRoom(spec) {
     if (!spec || !dollhouseEligible() || !roomSeen(spec.room)) return false;
     closeDollhouse();
-    if (spec.floor === "main") return !!goToStage(spec.stage, {
-      rosterNavigation: true, openingGuideNavigation: true
-    });
+    if (spec.floor === "main") return !!goToStage(spec.stage, { rosterNavigation: true });
     if (lowerRoomOwnsViewport()) return !!navigateLowerRoom(spec.stage);
     if (window.__currentStageName !== spec.stage &&
-        !goToStage(spec.stage, {
-          rosterNavigation: true, recordVisit: false, openingGuideNavigation: true
-        })) return false;
+        !goToStage(spec.stage, { rosterNavigation: true, recordVisit: false })) return false;
     var target = lowerRoomForStage(spec.stage);
     return !!(target && target.open());
   }
   function unlockDollhouseRoom(spec) {
     if (!spec || !dollhouseEligible() || roomSeen(spec.room)) return false;
     closeDollhouse();
-    if (spec.floor === "main") return !!goToStage(spec.stage, {
-      rosterNavigation: true, openingGuideNavigation: true
-    });
+    if (spec.floor === "main") return !!goToStage(spec.stage, { rosterNavigation: true });
     markLowerRoomDiscovered();
-    if (!goToStage(spec.stage, {
-      rosterNavigation: true, recordVisit: false, openingGuideNavigation: true
-    })) return false;
+    if (!goToStage(spec.stage, { rosterNavigation: true, recordVisit: false })) return false;
     var target = lowerRoomForStage(spec.stage);
     return !!(target && target.open());
   }
@@ -115693,12 +115682,12 @@ function spawnDustMote(container) {
       d.addEventListener("click", function () {
         var fromLowerRoom = lowerRoomOwnsViewport();
         if (fromLowerRoom) navigateLowerRoom(STAGES[i], d);
-        else if (i <= maxUnlocked) navigateWithRoster(STAGES[i], { openingGuideNavigation: true });
+        else if (i <= maxUnlocked) navigateWithRoster(STAGES[i]);
       });
       // cheat: double-click a locked dot to unlock up to that room and jump there
       d.addEventListener("dblclick", function () {
         if (lowerRoomOwnsViewport()) navigateLowerRoom(STAGES[i], d, { unlockLocked: true });
-        else navigateWithRoster(STAGES[i], { openingGuideNavigation: true });
+        else navigateWithRoster(STAGES[i]);
       });
       dotsWrap.appendChild(d);
       dots.push(d);
@@ -116698,10 +116687,7 @@ function spawnDustMote(container) {
     if (window.__syncTripBloomLoop) window.__syncTripBloomLoop(); // garden-only fractal blooms pause without losing their trip state
     if (window.__rearmSkyMeteors) window.__rearmSkyMeteors(); // stepping out under a shower: the sky is going by the time you've arrived (no-op on an ordinary night)
     endHuntIntro(); // a room change ends the opening prompt, so the new room's caption shows (and the held notification channels wake)
-    // The first lesson points at real navigation: using that row (including a locked-dot
-    // double-click or the dollhouse) must demonstrate it without dismissing the lesson.
-    if (!openingGuideShowing || openingGuideStep !== "nav" ||
-        !(opts && opts.openingGuideNavigation)) clearOpeningGuide();
+    clearOpeningGuide();
     if (window.__removeClickMe) window.__removeClickMe(); // ...and takes the melting invitation with it
     setCaption(name);
     if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
@@ -130700,30 +130686,22 @@ function spawnDustMote(container) {
   };
 
   var hintBlinkTimer = null;
-  function openingGuideNav() { return document.getElementById("hunt-bottom-nav"); }
   function openingGuideOverlay() { return document.getElementById("opening-guide-coach"); }
   function positionOpeningGuide() {
     if (!openingGuideShowing) return;
     var overlay = openingGuideOverlay(), area = document.getElementById("hunt-fullscreen-area");
     var card = overlay && overlay.querySelector(".hunt-coach-card");
-    var target = openingGuideStep === "nav" ? openingGuideNav() : caption;
+    var target = caption;
     if (!overlay || !area || !card || !target || !window.__setHuntCoachArrow) return;
     var ar = area.getBoundingClientRect(), tr = target.getBoundingClientRect();
     var x = Math.max(42, Math.min(ar.width - 42, tr.left + tr.width / 2 - ar.left));
     var cardLeft = Math.max(12, Math.min(ar.width - card.offsetWidth - 12, x - card.offsetWidth / 2));
     card.style.left = cardLeft + "px";
-    if (openingGuideStep === "nav") {
-      var upTip = Math.max(3, tr.bottom - ar.top + 3);
-      var arrowBottom = Math.min(ar.height - card.offsetHeight - 24, upTip + Math.max(72, ar.height * .14));
-      card.style.top = (arrowBottom + 12) + "px";
-      window.__setHuntCoachArrow(overlay, area, x, arrowBottom, upTip + 38, upTip, "up");
-    } else {
-      var downTip = Math.min(ar.height - 14, tr.top - ar.top - 14);
-      var cardTop = Math.max(12, downTip - card.offsetHeight - Math.max(72, ar.height * .16));
-      card.style.top = cardTop + "px";
-      var arrowStart = cardTop + card.offsetHeight + 10;
-      window.__setHuntCoachArrow(overlay, area, x, arrowStart, downTip - 38, downTip, "down");
-    }
+    var downTip = Math.min(ar.height - 14, tr.top - ar.top - 14);
+    var cardTop = Math.max(12, downTip - card.offsetHeight - Math.max(72, ar.height * .16));
+    card.style.top = cardTop + "px";
+    var arrowStart = cardTop + card.offsetHeight + 10;
+    window.__setHuntCoachArrow(overlay, area, x, arrowStart, downTip - 38, downTip, "down");
   }
   function paintOpeningGuide() {
     var overlay = openingGuideOverlay(), area = document.getElementById("hunt-fullscreen-area");
@@ -130731,7 +130709,7 @@ function spawnDustMote(container) {
     if (area) area.classList.toggle("opening-guide-active", !!openingGuideShowing);
     overlay.classList.toggle("show", !!openingGuideShowing);
     var copy = overlay.querySelector(".hunt-coach-copy");
-    if (copy && openingGuideShowing) copy.textContent = huntText(openingGuideStep === "nav" ? "intro_guide_nav" : "intro_guide");
+    if (copy && openingGuideShowing) copy.textContent = huntText("intro_guide");
     if (openingGuideShowing) requestAnimationFrame(positionOpeningGuide);
   }
   function armOpeningGuide() {
@@ -130747,8 +130725,6 @@ function spawnDustMote(container) {
     openingGuideStep = "";
     captionArbiter.cancel("opening");
     caption.classList.remove("intro-guide");
-    var nav = openingGuideNav();
-    if (nav) nav.classList.remove("intro-guide-nav");
     paintOpeningGuide();
   }
   function finishOpeningGuide() {
@@ -130764,32 +130740,21 @@ function spawnDustMote(container) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
-    if (openingGuideStep !== "nav") { finishOpeningGuide(); return; }
-    var nav = openingGuideNav();
-    if (nav) nav.classList.remove("intro-guide-nav");
-    openingGuideStep = "caption";
-    captionArbiter.exclusive({ key: "intro_guide", owner: "opening", scope: "global",
-      priority: CAPTION_PRIORITY.exclusive });
-    caption.classList.add("intro-guide");
-    armOpeningGuide();
+    finishOpeningGuide();
   }
   function showOpeningGuide() {
     clearOpeningGuide();
     if (window.__cinematic || window.__currentStageName !== "kitchen") return;
     openingGuideShowing = true;
-    openingGuideStep = "nav";
-    var openingBaseKey = kitchenPowered ? kitchenCurrentCaption() : "kitchen";
-    setCaption(openingBaseKey, true);
-    captionArbiter.exclusive({ key: openingBaseKey, owner: "opening", scope: "global",
+    openingGuideStep = "caption";
+    setCaption(kitchenPowered ? kitchenCurrentCaption() : "kitchen", true);
+    captionArbiter.exclusive({ key: "intro_guide", owner: "opening", scope: "global",
       priority: CAPTION_PRIORITY.exclusive });
-    var nav = openingGuideNav();
-    if (nav) {
-      nav.classList.add("intro-guide-nav");
-    }
+    caption.classList.add("intro-guide");
     updateKitchenInvite();
     openingGuideDuration = 0; // acknowledged by a click; the first clue never auto-dismisses
     // Arm after the initiating click has fully returned. The click that entered the game must
-    // reveal the guide, not instantly consume it; the next two scene clicks walk nav → caption → room.
+    // reveal the guide, not instantly consume it.
     armOpeningGuide();
   }
   window.__openingGuideShowing = function () { return openingGuideShowing; }; // regression/test hook

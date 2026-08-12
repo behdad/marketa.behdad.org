@@ -165,9 +165,7 @@ current upper room to its pair, and `__navigateLowerRoom` owns entering and leav
 dollhouse, number keys, arrows, and direct scene controls must converge on these owners rather than
 inventing parallel navigation.
 
-During the opening navigation coach, `#hunt-bottom-nav.intro-guide-nav` is the sole interactive layer
-above the otherwise blocking coach overlay. Navigating through it preserves the coach's `nav` step;
-all scene controls remain inert until the player explicitly advances the coach.
+The opening caption coach blocks scene input while leaving the explicit whole-loft Reset available.
 
 Opening the dollhouse can pause or cover a live subsystem. Returning to a room must restore the same
 settled room or paused drive state, not initialize a second instance. Lower-room navigation should

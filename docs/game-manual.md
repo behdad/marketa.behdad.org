@@ -40,8 +40,7 @@ current room's lower neighbour.
 
 The window-grid button opens **The Loft**, a ten-room map: clear cards are visited and blurred cards
 are waiting. Before the Party, a locked card needs a deliberate double-click or double-tap; after the
-Party begins, one selection unlocks and opens it. The first navigation coach leaves these controls
-live while waiting to be dismissed.
+Party begins, one selection unlocks and opens it.
 
 During a Road Trip or Camping, Entrance represents the live scene. Opening the map during a drive
 pauses it; choosing Entrance returns to the paused dashboard, which you resume yourself.
@@ -83,8 +82,8 @@ feedback yields to important story or outcome text, then returns to the latest i
 than replaying an old line.
 
 Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The large
-two-step opening coach is modal: the highlighted navigation and Reset controls remain available,
-but the room stays inert until each step is dismissed. The first Party's exploration and first-unread
+opening coach is modal: Reset remains available, but the room stays inert until it is dismissed.
+The first Party's exploration and first-unread
 Messages lessons are modal too. Each highlighted target stays live: using the map or unread message
 performs its normal action and retires that coach;
 unrelated controls remain blocked. Party lessons hold new notifications and calls until they leave;

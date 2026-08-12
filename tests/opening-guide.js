@@ -48,10 +48,9 @@ var harness = String.raw`<script>
   var copy = overlay.querySelector(".hunt-coach-copy");
   var x = overlay.querySelector(".hunt-coach-x");
   var arrow = overlay.querySelector(".hunt-coach-arrow");
-  var nav = document.getElementById("hunt-bottom-nav");
-  check("English nav coach uses the shared readable card and explicit dismiss control",
-    overlay.classList.contains("show") && window.__openingGuideStep() === "nav" &&
-      copy.textContent === "Navigation lives here." && x.textContent === "×" &&
+  check("English caption coach uses the shared readable card and explicit dismiss control",
+    overlay.classList.contains("show") && window.__openingGuideStep() === "caption" &&
+      copy.textContent === "Clues and instructions appear here." && x.textContent === "×" &&
       card.querySelectorAll(":scope > .hunt-coach-x").length === 1);
   var cardRect = card.getBoundingClientRect(), xRect = x.getBoundingClientRect();
   var areaRect = area.getBoundingClientRect();
@@ -64,9 +63,9 @@ var harness = String.raw`<script>
   check("the coach dismiss control stays in the true upper-right corner",
     xRect.top - cardRect.top < 16 && cardRect.right - xRect.right < 16,
     JSON.stringify({ card: cardRect.toJSON(), dismiss: xRect.toJSON() }));
-  check("nav coach stays inside the game shell below its target",
+  check("caption coach stays inside the game shell above its target",
     inside(card.getBoundingClientRect(), area.getBoundingClientRect()) &&
-      card.getBoundingClientRect().top > nav.getBoundingClientRect().bottom,
+      card.getBoundingClientRect().bottom < document.getElementById("hunt-caption").getBoundingClientRect().top,
     JSON.stringify({ card: card.getBoundingClientRect().toJSON(), area: area.getBoundingClientRect().toJSON() }));
   check("opening coach has one canonical arrow with the requested motion policy",
     overlay.querySelectorAll("svg > path.hunt-coach-arrow").length === 1 &&
@@ -93,7 +92,7 @@ var harness = String.raw`<script>
   }
   click(hit);
   check("background input is swallowed without advancing or operating Kitchen",
-    hit && hit.closest("#opening-guide-coach") && window.__openingGuideStep() === "nav" &&
+    hit && hit.closest("#opening-guide-coach") && window.__openingGuideStep() === "caption" &&
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
@@ -105,37 +104,8 @@ var harness = String.raw`<script>
           getComputedStyle(item).pointerEvents === "none";
       }));
 
-  var dollhouseButton = document.getElementById("hunt-dollhouse-btn");
-  var dollhouseRect = dollhouseButton.getBoundingClientRect();
-  var dollhouseHit = document.elementFromPoint(dollhouseRect.left + dollhouseRect.width / 2,
-    dollhouseRect.top + dollhouseRect.height / 2);
-  click(dollhouseHit);
-  check("the highlighted navigation row stays live and opens the dollhouse without acknowledging the coach",
-    dollhouseHit && dollhouseHit.closest("#hunt-dollhouse-btn") &&
-      !document.getElementById("loft-dollhouse").hidden &&
-      window.__openingGuideShowing() && window.__openingGuideStep() === "nav",
-    JSON.stringify({ hit: dollhouseHit && (dollhouseHit.id || String(dollhouseHit.className)),
-      hidden: document.getElementById("loft-dollhouse").hidden, step: window.__openingGuideStep() }));
-  click(document.getElementById("loft-dollhouse-close"));
-  var gardenDot = document.querySelectorAll("#hunt-dots .hunt-dot")[1];
-  var gardenRect = gardenDot.getBoundingClientRect();
-  var gardenHit = document.elementFromPoint(gardenRect.left + gardenRect.width / 2,
-    gardenRect.top + gardenRect.height / 2);
-  if (gardenHit) gardenHit.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
-  await sleep(40);
-  check("double-clicking a locked room dot unlocks and navigates while the coach remains",
-    gardenHit && gardenHit.closest(".hunt-dot") && window.__currentStageName === "garden" &&
-      !gardenDot.classList.contains("locked") && window.__openingGuideShowing() &&
-      window.__openingGuideStep() === "nav",
-    JSON.stringify({ room: window.__currentStageName, locked: gardenDot.classList.contains("locked"),
-      showing: window.__openingGuideShowing(), step: window.__openingGuideStep() }));
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
-  await sleep(50); window.dispatchEvent(new Event("resize")); await sleep(30);
-  check("Escape advances to the English caption coach above its target",
-    window.__openingGuideStep() === "caption" && copy.textContent === "Clues and instructions appear here." &&
-      card.getBoundingClientRect().bottom < document.getElementById("hunt-caption").getBoundingClientRect().top);
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
-  check("Backspace mirrors × and finishes the second step", !window.__openingGuideShowing() && !overlay.classList.contains("show"));
+  check("Escape dismisses the only opening coach", !window.__openingGuideShowing() && !overlay.classList.contains("show"));
   var solveCalls = 0, realKitchenDoNext = window.__kitchenDoNext;
   window.__kitchenDoNext = function () { solveCalls++; return true; };
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
@@ -145,8 +115,6 @@ var harness = String.raw`<script>
 
   window.__goToStage("kitchen");
   await showGuide("cs");
-  check("Czech nav coach is concise and localized", copy.textContent === "Navigace je tady." && !/pokračuj/i.test(copy.textContent));
-  click(x); await sleep(50);
   check("Czech caption coach is concise and localized", copy.textContent === "Nápovědy a pokyny se objevují tady." && !/pokračuj/i.test(copy.textContent));
   var cards = Array.prototype.slice.call(document.querySelectorAll(".hunt-coach-card"));
   var partyCards = Array.prototype.slice.call(document.querySelectorAll("#party-room-map-coach .hunt-coach-card"));
@@ -181,12 +149,12 @@ var harness = String.raw`<script>
       watchHit && watchHit.closest("#watch-loft-btn"),
     JSON.stringify({ room: window.__currentStageName, phase2: !!window.__secondRound,
       max: window.__maxUnlocked(), started: window.__gameStarted(), watchHit: watchHit && (watchHit.id || String(watchHit.className)) }));
-  check("explicit Reset replaces the discarded checkpoint with clean phase-one state and preserves unrelated browser data",
+  check("explicit Reset discards the stale checkpoint and preserves unrelated browser data",
     (function () {
       var saved = localStorage.getItem("loftCheckpoint:v1"), parsed = null;
       try { parsed = saved && JSON.parse(saved); } catch (_error) {}
-      return saved !== "discarded-by-explicit-reset" && parsed && parsed.progress &&
-        parsed.progress.room === "kitchen" && parsed.progress.phase2 === false &&
+      return saved !== "discarded-by-explicit-reset" && (!saved || (parsed && parsed.progress &&
+        parsed.progress.room === "kitchen" && parsed.progress.phase2 === false)) &&
         localStorage.getItem("opening-guide-reset-unrelated") === "keep";
     })(),
     JSON.stringify({ checkpoint: localStorage.getItem("loftCheckpoint:v1"),

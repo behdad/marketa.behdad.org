@@ -66,6 +66,10 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       window.__frameHealthFeed(60);
     }
     var before = copy(drive());
+    var roomRect = document.getElementById("entrance-room").getBoundingClientRect();
+    var viewportRect = document.querySelector(".hunt-viewport").getBoundingClientRect();
+    var overlayContainment = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room", "entrance-room"]
+      .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contain]; });
     counters = {
       attributes: 0,
       removes: 0,
@@ -93,6 +97,10 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       elapsed: after.roadtrip.elapsedSeconds - before.roadtrip.elapsedSeconds,
       distance: after.roadtrip.distance - before.roadtrip.distance,
       entityCount: after.roadtrip.entityCount,
+      containment: getComputedStyle(document.getElementById("entrance-room")).contain,
+      overlayContainment: overlayContainment,
+      roomSize: [roomRect.width, roomRect.height],
+      viewportSize: [viewportRect.width, viewportRect.height],
       health: window.__frameHealthState()
     };
     counters = null;
@@ -188,6 +196,11 @@ if (healthy && low) console.log("  metrics: " + healthy.counters.attributes +
   " healthy / " + low.counters.attributes + " low-frame SVG attribute writes per 20 physics steps");
 check(healthy && low && !healthy.health.slow && low.health.slow,
   "frame-health hysteresis selects the adaptive highway painter", { healthy: healthy, low: low });
+check(healthy && healthy.containment === "layout paint" &&
+  healthy.roomSize[0] === healthy.viewportSize[0] && healthy.roomSize[1] === healthy.viewportSize[1],
+  "the active highway is layout/paint-contained without changing its viewport size", healthy);
+check(healthy && healthy.overlayContainment.every(function (row) { return row[1] === "layout paint"; }),
+  "all fixed-size overlay rooms establish independent layout/paint scopes", healthy && healthy.overlayContainment);
 check(healthy && low && healthy.counters.roadPaints === 20 &&
   low.counters.roadPaints >= 9 && low.counters.roadPaints <= 11,
   "healthy driving paints every step while low-frame driving caps the world near 30 Hz",

@@ -184,8 +184,13 @@ HTML stays in its canonical `foreignObject`; zoom promotes the foreground root i
 into the ordinary-DOM `#monitor-html-overlay`, then restores it before the SVG moves. Native SVG apps
 stay in the SVG path. This identity-preserving promotion is the default for HTML monitor apps and is
 the WebKit-safe boundary for focused interaction; iframe-owned game canvases must be sized from the
-physical screen box rather than through ancestor CSS zoom. Keep room parking, overlay fitting, and
-mixed SVG/HTML stacking covered by `tests/monitor-html-overlay.js`.
+physical screen box rather than through ancestor CSS zoom. Establish that host before creating a
+runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
+place and must never reparent a live browsing context. While the ordinary-DOM surface owns paint,
+park every canonical `foreignObject` with `visibility:hidden`, promote the desktop toolbar above its
+HTML dock, and mirror the strip's SVG focus boundary. Keep room parking, overlay fitting, mixed
+SVG/HTML stacking, and runtime identity covered by `tests/monitor-html-overlay.js` and
+`tests/monitor-overlay-compat.js`.
 
 ### Morning routine and free exploration
 
@@ -610,7 +615,7 @@ port nor another developer's server process.
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
 | Typed API | Catalogue shape, public Window ownership, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/global-surface.js`, `tests/api-gating.js` |
-| Rendering | Album signatures, monitor HTML/SVG alignment, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/monitor-html-overlay.js`, screenshots or real CDP Chrome |
+| Rendering | Album signatures, monitor HTML/SVG alignment, overlay ownership, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, screenshots or real CDP Chrome |
 
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the
 focused tests closest to the ownership boundary you changed; Enter and menu changes have their named

@@ -2922,7 +2922,12 @@ html.mir-party .hunt-viewport.bedroom-room-open #bedroom-party-coats{pointer-eve
 #monitor-html-overlay .console-caret{width:calc(1px * var(--monitor-overlay-inv-scale))}
 #monitor-html-overlay-controls{position:absolute;inset:0;width:124px;height:42px;overflow:visible;pointer-events:none}
 #monitor-html-overlay-controls > g{pointer-events:auto}
-#monitor-html-overlay-controls foreignObject{pointer-events:none!important}
+#monitor-html-overlay-controls foreignObject.monitor-overlay-parked{pointer-events:none!important}
+/* Promoted SVG controls leave #loft-game-strip, whose focus reset normally prevents the
+   page-wide HTML outline from becoming a many-pixel border after monitor scaling. Keep
+   that boundary invariant here; ordinary HTML app controls retain their authored focus. */
+#monitor-html-overlay-controls :focus,
+#monitor-html-overlay-controls :focus-visible{outline:none}
 /* These owner/HTML relationships normally cross a foreignObject boundary. While the
    owner SVG group and its live HTML child are sibling overlay layers, bridge the two
    view switches explicitly. */
@@ -3059,6 +3064,9 @@ html.is-webkit #monitor-html-overlay .dock-app:active .dock-tile{transform:scale
 }
 /* the media controls (volume/play/next) sit at the BOTTOM of the right rail now */
 #hunt-side{top:auto; bottom:0}
+/* The focused monitor player is the attended transport. Hide the page-level duplicate
+   rail without changing its retained playback state or the rail's reserved geometry. */
+#hunt-fullscreen-area.monitor-music-focused #hunt-side{visibility:hidden;pointer-events:none}
 .hunt-fullscreen-btn{
   flex:0 0 auto; font:inherit; font-size:1rem; line-height:1;
   width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid var(--wine);
@@ -6594,6 +6602,12 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
    WebKit honours for foreignObject painting) hides them whenever the office isn't viewed;
    in the office they fall back to their normal per-channel opacity gating. */
 #stage-office.stage-far #office-monitor foreignObject{visibility:hidden}
+/* A promoted surface owns monitor paint exclusively. Park every canonical foreignObject
+   with visibility (opacity alone is unsafe in WebKit), and keep native idle logos from
+   ghosting through translucent ordinary-DOM apps. The live root/controls sit outside the
+   monitor while this class is present, so their state and browsing contexts stay intact. */
+foreignObject.monitor-overlay-parked,
+#office-monitor.monitor-overlay-active .boot-logo{visibility:hidden!important}
 /* Keep inactive HTML monitor apps alive without keeping their layout trees alive. Hide
    each owning SVG group so the foreground foreignObject retains its exact native geometry. */
 #office-monitor :is(#monitor-desktop-dock,#monitor-console,#monitor-code,#monitor-mail,
@@ -6604,7 +6618,7 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 #office-monitor.show-caps:not(:is(.show-nowplaying,.show-saver,.show-console,.show-mail,
   .show-mines,.show-pacman,.show-prince,.show-video,.show-family,.show-calendar,
   .show-clock,.show-weather,.show-chat,.show-python,.show-linux,.show-snake,.show-doom,
-  .show-code,.show-tattoo,.show-life,.show-browser,.photobooth)) #monitor-desktop-dock,
+  .show-code,.show-tattoo,.show-life,.show-browser,.photobooth,.pb-confirm,.pb-error)) #monitor-desktop-dock,
 #office-monitor.show-console #monitor-console,
 #office-monitor.show-code #monitor-code,
 #office-monitor.show-mail #monitor-mail,
@@ -6650,7 +6664,7 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
    No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-console #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-pacman #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-family #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-clock #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-snake #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-chat #monitor-desktop-dock, #office-monitor.show-code #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock, #office-monitor.show-doom #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-console #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-pacman #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-family #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-clock #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-snake #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-chat #monitor-desktop-dock, #office-monitor.show-code #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock, #office-monitor.show-doom #monitor-desktop-dock, #office-monitor.pb-confirm #monitor-desktop-dock, #office-monitor.pb-error #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 #office-monitor.show-prince #monitor-desktop-dock{opacity:0;visibility:hidden;pointer-events:none}
 /* the dock is an HTML app grid in a foreignObject below the menu bar: 8 columns, and a
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
@@ -7823,6 +7837,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-doom-back:hover .seg-hover{opacity:.55;fill:#4b2d20}
 #monitor-doom-fullscreen{opacity:0;pointer-events:none}
 #office-monitor.show-doom #monitor-doom:not([data-shoot-view="chooser"]) #monitor-doom-fullscreen{opacity:1;pointer-events:auto}
+#monitor-doom[data-shoot-view="chooser"] .monitor-runtime-side-hit{pointer-events:none}
 .doom-wrap{width:100%; height:100%; overflow:hidden; background:#000; display:grid; grid-template-rows:100%; place-items:center} /* grid avoids layered position:absolute descendants under the scaled foreignObject (WebKit bug 23113). Replaced canvases/iframes still cannot composite there on WebKit. */
 #monitor-shoot-picker{grid-area:1/1; align-self:stretch; justify-self:stretch; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:5px 6px; box-sizing:border-box; background:radial-gradient(circle at 50% 35%,#30251b,#100d0a 72%)}
 .shoot-choice{min-width:0; border:.5px solid rgba(232,192,96,.55); border-radius:2px; background:rgba(68,43,29,.72); color:#f5e3a5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:1px; font:2.3px/1.05 "Source Serif 4",Georgia,serif; cursor:pointer}
@@ -10060,10 +10075,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
   .phone-boot .pb-lock.shake{animation:none}
 }
 .eq-bar{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0.28)}
-#monitor-np-marquee{transform:translateX(72px)}
+#monitor-np-marquee{transform:translateX(4px)}
 #office-monitor.show-nowplaying #monitor-np-marquee{animation:np-scroll 13s linear infinite}
 #office-monitor.show-nowplaying.song-paused #monitor-np-marquee{animation-play-state:paused} /* freeze the scroll while paused */
-@keyframes np-scroll{from{transform:translateX(72px)} to{transform:translateX(-185px)}}
+@keyframes np-scroll{from{transform:translateX(4px)} to{transform:translateX(-185px)}}
 @media (prefers-reduced-motion: reduce){#office-monitor.show-nowplaying .eq-bar{animation:none} #monitor-np-marquee{transform:translateX(4px)} #office-monitor.show-nowplaying #monitor-np-marquee{animation:none}}
 .desk-leg-pole{transform-box:fill-box; transform-origin:bottom; transition:transform .6s ease}
 .desk-led{transition:fill .15s ease}
@@ -73154,7 +73169,7 @@ setOfficeProgress("pc", false);
     // menu bar: brand at left, a live clock at right
     mkEl("rect", { x: 254, y: 154, width: 124, height: 5.5, fill: "#8e3a4a" }, dock);
     // the compact m∞b brand opens the Loft's native system menu
-    var brandG = mkEl("g", { id: "monitor-system-brand", "class": "desk-brand", tabindex: "0" }, dock);
+    var brandG = mkEl("g", { id: "monitor-system-brand", "class": "desk-brand monitor-overlay-control", tabindex: "0" }, dock);
     var deskBrand = mkEl("text", { x: 259.5, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, brandG);
     var brandM = mkEl("tspan", {}, deskBrand); brandM.textContent = "m";
     var brandInf = mkEl("tspan", { "class": "desk-brand-inf" }, deskBrand); brandInf.textContent = "∞";
@@ -73183,7 +73198,7 @@ setOfficeProgress("pc", false);
     // A quiet discoverability affordance for touch users. Keyboard users can still
     // type anywhere on the bare desktop; this button opens the same finder and focuses
     // a tiny input bridge so the phone's software keyboard appears.
-    var searchButton = mkEl("g", { id: "monitor-desk-search-button", "class": "desk-search-button",
+    var searchButton = mkEl("g", { id: "monitor-desk-search-button", "class": "desk-search-button monitor-overlay-control",
       tabindex: "0" }, dock);
     mkEl("path", { d: "M267.75 156.45 A.7 .7 0 1 1 266.35 156.45 A.7 .7 0 1 1 267.75 156.45 M267.55 156.95 L268.15 157.55",
       "class": "desk-search-icon" }, searchButton);
@@ -73205,7 +73220,7 @@ setOfficeProgress("pc", false);
     searchButton.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") activateDockSearch(e);
     });
-    var clockG = mkEl("g", { id: "monitor-desk-clock", "class": "desk-brand", tabindex: "0" }, dock);
+    var clockG = mkEl("g", { id: "monitor-desk-clock", "class": "desk-brand monitor-overlay-control", tabindex: "0" }, dock);
     var deskClock = mkEl("text", { x: 316, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, clockG);
     mkEl("rect", { x: 311, y: 154.5, width: 10, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, clockG);
     clockG.addEventListener("click", function (e) { e.stopPropagation(); openClockApp(); });
@@ -73214,7 +73229,7 @@ setOfficeProgress("pc", false);
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault(); e.stopPropagation(); openClockApp();
     });
-    var languageG = mkEl("g", { id: "monitor-desk-language", "class": "desk-brand", transform: "translate(-10.5 0)",
+    var languageG = mkEl("g", { id: "monitor-desk-language", "class": "desk-brand monitor-overlay-control", transform: "translate(-10.5 0)",
       tabindex: "0" }, dock);
     var canadaFlag = mkEl("g", { "class": "desk-lang-flag",
       transform: "translate(-20.004 -7.642) scale(1.05)" }, languageG);
@@ -73231,7 +73246,7 @@ setOfficeProgress("pc", false);
     var deskLanguage = mkEl("text", { x: 374.5, y: 157.75, "text-anchor": "middle",
       "class": "desk-bar-text desk-lang-code" }, languageG);
     mkEl("rect", { x: 367.5, y: 154.5, width: 10, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, languageG);
-    var volumeG = mkEl("g", { id: "monitor-desk-volume", "class": "desk-volume-button",
+    var volumeG = mkEl("g", { id: "monitor-desk-volume", "class": "desk-volume-button monitor-overlay-control",
       tabindex: "0" }, dock);
     mkEl("rect", { x: 367.5, y: 154.5, width: 4.5, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, volumeG);
     var volumeIconG = mkEl("g", { transform: "translate(103.062 43.89) scale(.72)" }, volumeG);
@@ -73242,7 +73257,7 @@ setOfficeProgress("pc", false);
     mkEl("path", { d: "M371 155.35 Q372.35 156.75 371 158.15", "class": "vol-wave" }, volumeIconG);
     mkEl("path", { d: "M370.2 155.85 L371.45 157.65 M371.45 155.85 L370.2 157.65",
       "class": "vol-mute", style: "display:none" }, volumeIconG);
-    var fullscreenG = mkEl("g", { id: "monitor-desk-fullscreen", "class": "desk-fullscreen-button",
+    var fullscreenG = mkEl("g", { id: "monitor-desk-fullscreen", "class": "desk-fullscreen-button monitor-overlay-control",
       tabindex: "0" }, dock);
     mkEl("rect", { x: 372.5, y: 154.5, width: 4.5, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, fullscreenG);
     var fullscreenIconG = mkEl("g", { transform: "translate(74.95 31.35) scale(.8)" }, fullscreenG);
@@ -73268,12 +73283,12 @@ setOfficeProgress("pc", false);
     });
     // Edmonton weather remains glanceable after its desktop tile gives the slot to Chat;
     // clicking this readout is now the forecast's one deliberately tucked-away monitor route.
-    var weatherG = mkEl("g", { id: "monitor-desk-weather", "class": "desk-brand" }, dock);
+    var weatherG = mkEl("g", { id: "monitor-desk-weather", "class": "desk-brand monitor-overlay-control" }, dock);
     var deskWeather = mkEl("text", { x: 339, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text desk-bar-wide" }, weatherG);
     mkEl("rect", { x: 321.5, y: 154.5, width: 35, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, weatherG);
     weatherG.addEventListener("click", function (e) { e.stopPropagation(); openWeather(); });
     weatherG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-    var countG = mkEl("g", { id: "monitor-desk-calendar", "class": "desk-brand", tabindex: "0" }, dock);
+    var countG = mkEl("g", { id: "monitor-desk-calendar", "class": "desk-brand monitor-overlay-control", tabindex: "0" }, dock);
     var deskCount = mkEl("text", { x: 290.25, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text desk-bar-wide" }, countG);
     mkEl("rect", { x: 270, y: 154.5, width: 40.5, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, countG);
     countG.addEventListener("click", function (e) { e.stopPropagation(); openCalendar(); });
@@ -86298,6 +86313,10 @@ def colormode(mode=None):
     monitor.classList.add("show-snake");
     monitor.classList.toggle("snake-nibbles", mode === "nibbles");
     monitor.classList.toggle("snake-runtime-ready", snakeState === "ready");
+    // Promote the empty host synchronously. If the iframe is created first, moving its
+    // ancestor out of foreignObject performs a second navigation before DOSBox can boot.
+    if (window.__monitorZoomed && window.__monitorZoomed() && window.__monitorHtmlOverlayOpen)
+      window.__monitorHtmlOverlayOpen();
     ensureSnakeFrame(mode, setup);
     if (snakeFrame) snakeFrame.inert = false;
     snakeControl("resume");
@@ -86586,6 +86605,10 @@ def colormode(mode=None):
     if (window.__markMonitorAppRunning) window.__markMonitorAppRunning("shoot");
     shootEverOpened = true;
     shootFrozen = false;
+    // As with DOSBox, establish the ordinary-DOM host before a direct game route
+    // creates its iframe. The chooser route benefits too and remains iframe-free.
+    if (window.__monitorZoomed && window.__monitorZoomed() && window.__monitorHtmlOverlayOpen)
+      window.__monitorHtmlOverlayOpen();
     setShootView(targetView);
     var ae = document.activeElement; if (ae && ae.blur && ae !== document.body) { try { ae.blur(); } catch (e) {} } // a focused console input would eat keys before SDL's window listener
     playLaptopClickSound("office-monitor");
@@ -88849,6 +88872,10 @@ def colormode(mode=None):
     if (!monitor.classList.contains("show-caps")) { monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
     if (window.__monitorZoomIn) window.__monitorZoomIn();
     app.open(q);
+    // Reconcile before this API returns so callers can focus the newly visible app even
+    // though its canonical foreignObject is paint-parked during monitor zoom.
+    if (window.__monitorZoomed && window.__monitorZoomed() && window.__monitorHtmlOverlayOpen)
+      window.__monitorHtmlOverlayOpen();
     return "🖥 " + app.id + " — up on the monitor.";
   };
   function swap(toMonitor, suppressPoof) {
@@ -89133,6 +89160,7 @@ def colormode(mode=None):
       stopSaver(); // the fractal loop yields to the live feed
       applyPbEffect(); // resume the retained look — pbFxIndex is session-scoped (survives a normal close/reopen; a kill/reset zeroes it)
       pbActive = true;
+      hidePbConfirm(); // consent panel doubles as the attended loading surface until a stream wins
       monitor.classList.add("photobooth"); // shows the booth + lights the red LED
       if (pbBaseFrame) showPicker(); // a captured photo survived a normal close/reopen — bring its look picker back up over the live feed
     }).catch(function () {
@@ -89674,7 +89702,7 @@ def colormode(mode=None):
     // the second click of a habitual double-click on the dock icon lands exactly here —
     // consenting to the camera must always be its own deliberate click
     if (Date.now() - appOpenTs < 450) return;
-    hidePbConfirm(); openPhotobooth();
+    openPhotobooth();
   }); // the ONE getUserMedia entry point (a real user gesture)
   pbCtrl("monitor-pb-confirm-no", hidePbConfirm);
   pbCtrl("monitor-pb-confirm-bg", hidePbConfirm);           // tapping past the buttons = cancel
@@ -90155,21 +90183,48 @@ def colormode(mode=None):
   }
   function visiblePath(fo, owner) {
     // App owners fade in from zero, so their transition-time opacity must not delay the
-    // promotion. Nested channel/death layers do use zero opacity as their real gate.
-    if (!visible(owner, false) || !visible(fo, true)) return false;
+    // promotion. A nested interactive channel can likewise become active at opacity zero
+    // on the first transition frame; pointer ownership makes that state unambiguous.
+    if (!visible(owner, false) || !visible(fo, false)) return false;
+    var foStyle = getComputedStyle(fo);
+    if (parseFloat(foStyle.opacity || "1") <= 0.001 && foStyle.pointerEvents === "none") return false;
     for (var node = fo.parentNode; node && node !== owner; node = node.parentNode) {
       if (!visible(node, true)) return false;
     }
     return true;
   }
   function candidates() {
-    var out = [];
-    screenContent.querySelectorAll("foreignObject").forEach(function (fo) {
-      var root = fo.firstElementChild, owner = topOwner(fo);
-      if (!root || !owner || denied(root) || !visiblePath(fo, owner)) return;
-      out.push({ fo: fo, root: root, owner: owner });
+    var out = [], fos = Array.prototype.slice.call(screenContent.querySelectorAll("foreignObject"));
+    controls.querySelectorAll("foreignObject").forEach(function (fo) {
+      if (fos.indexOf(fo) === -1) fos.push(fo);
+    });
+    var activeByFo = [];
+    if (active) active.entries.forEach(function (entry) {
+      activeByFo.push(entry);
+      if (fos.indexOf(entry.fo) === -1) fos.push(entry.fo);
+    });
+    fos.forEach(function (fo) {
+      var parked = fo.classList.contains("monitor-overlay-parked");
+      if (parked) fo.classList.remove("monitor-overlay-parked");
+      var prior = null;
+      for (var ai = 0; ai < activeByFo.length; ai++) if (activeByFo[ai].fo === fo) { prior = activeByFo[ai]; break; }
+      var root = prior ? prior.root : fo.firstElementChild, owner = prior ? prior.owner : topOwner(fo);
+      if (!owner && active) active.owners.some(function (record) {
+        if (!record.owner.contains(fo)) return false;
+        owner = record.owner;
+        return true;
+      });
+      var wanted = root && owner && !denied(root) && visiblePath(fo, owner);
+      if (parked) fo.classList.add("monitor-overlay-parked");
+      if (wanted) out.push({ fo: fo, root: root, owner: owner });
     });
     return out;
+  }
+  function sameEntries(entries) {
+    return !!(active && active.entries.length === entries.length && entries.every(function (entry, index) {
+      var current = active.entries[index];
+      return current.fo === entry.fo && current.root === entry.root && current.owner === entry.owner;
+    }));
   }
   function focusSnapshot() {
     var node = document.activeElement;
@@ -90260,14 +90315,17 @@ def colormode(mode=None):
     });
     previous.owners.forEach(function (record) {
       if (record.stationary) {
-        record.lifted.forEach(function (node) {
-          if (record.anchor.parentNode) record.anchor.parentNode.insertBefore(node, record.anchor);
+        record.homes.forEach(function (home) {
+          if (home.placeholder.parentNode) home.placeholder.parentNode.replaceChild(home.node, home.placeholder);
         });
-        if (record.anchor.parentNode) record.anchor.remove();
       } else if (record.placeholder.parentNode) {
         record.placeholder.parentNode.replaceChild(record.owner, record.placeholder);
       }
     });
+    document.querySelectorAll("#office-monitor-screen-content foreignObject.monitor-overlay-parked,#monitor-html-overlay-controls foreignObject.monitor-overlay-parked").forEach(function (fo) {
+      fo.classList.remove("monitor-overlay-parked");
+    });
+    monitor.classList.remove("monitor-overlay-active");
     active = null;
     mirrorMonitorState();
     metrics.restores++;
@@ -90294,19 +90352,20 @@ def colormode(mode=None):
       if (seenOwners.indexOf(entry.owner) === -1) {
         seenOwners.push(entry.owner);
         if (entry.owner.id === "monitor-desktop-dock") {
-          // The desktop is the one mixed surface: its native wallpaper/menu bar precede
-          // the HTML icon grid, while search and system-menu controls follow it. Keep
-          // the backing in the canonical SVG below the DOM layer, and lift only the
-          // later controls above it. A single controls SVG cannot straddle HTML paint;
-          // in Chrome its transparent canvas otherwise occludes the icons visually.
-          var anchor = document.createComment("monitor-svg-controls-home:monitor-desktop-dock");
-          entry.fo.parentNode.insertBefore(anchor, entry.fo.nextSibling);
-          var lifted = [];
-          while (anchor.nextSibling) {
-            lifted.push(anchor.nextSibling);
-            controls.appendChild(anchor.nextSibling);
-          }
-          owners.push({ owner: entry.owner, anchor: anchor, lifted: lifted, stationary: true });
+          // The desktop is one mixed surface. Keep only its wallpaper/menu-bar backing
+          // canonical; lift every authored toolbar control plus the search/system layers
+          // above the ordinary-DOM icon grid so transparent overlay paint cannot steal
+          // their trusted clicks. Per-node homes preserve exact SVG order on restore.
+          var homes = [], afterFo = false;
+          Array.prototype.slice.call(entry.owner.childNodes).forEach(function (node) {
+            if (node === entry.fo) { afterFo = true; return; }
+            if (!afterFo && !(node.nodeType === 1 && node.classList.contains("monitor-overlay-control"))) return;
+            var home = document.createComment("monitor-svg-control-home");
+            node.parentNode.insertBefore(home, node);
+            homes.push({ node: node, placeholder: home });
+            controls.appendChild(node);
+          });
+          owners.push({ owner: entry.owner, homes: homes, stationary: true });
         } else {
           var placeholder = document.createComment("monitor-svg-home:" + (entry.owner.id || "surface"));
           entry.owner.parentNode.replaceChild(placeholder, entry.owner);
@@ -90316,6 +90375,10 @@ def colormode(mode=None):
       }
     });
     active = { entries: entries, owners: owners, geometry: null };
+    document.querySelectorAll("#office-monitor-screen-content foreignObject,#monitor-html-overlay-controls foreignObject").forEach(function (fo) {
+      fo.classList.add("monitor-overlay-parked");
+    });
+    monitor.classList.add("monitor-overlay-active");
     mirrorMonitorState();
     fit();
     metrics.mounts++;
@@ -90335,10 +90398,20 @@ def colormode(mode=None):
   function sync() {
     syncQueued = false;
     var snapshot = focusSnapshot();
+    mirrorMonitorState();
+    if (!(window.__monitorZoomed && window.__monitorZoomed())) { restore(); return false; }
+    var entries = candidates();
+    // Attribute changes within a live runtime (ready/focus/refit state) must not move an
+    // unchanged iframe through its foreignObject home: DOM reparenting reloads browsing
+    // contexts. Refit/mirror in place and reconcile only when surface identity changes.
+    if (sameEntries(entries)) {
+      mirrorMonitorState();
+      fit();
+      return true;
+    }
     restore();
     mirrorMonitorState();
-    if (!(window.__monitorZoomed && window.__monitorZoomed())) return false;
-    var entries = candidates();
+    entries = candidates();
     return mount(entries, snapshot);
   }
   function scheduleSync() {
@@ -90408,6 +90481,13 @@ def colormode(mode=None):
   var monitorContentFullscreen = false;
   var monitorIntentUntil = 0; // a dark-screen tap declares attention before boot makes zoom eligible
   var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
+  function syncMonitorMusicFocus() {
+    if (fullscreenArea) fullscreenArea.classList.toggle("monitor-music-focused",
+      zoomEl === monitor && monitor.classList.contains("show-nowplaying"));
+  }
+  if (window.MutationObserver) new MutationObserver(syncMonitorMusicFocus).observe(monitor, {
+    attributes: true, attributeFilter: ["class"]
+  });
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -90451,6 +90531,7 @@ def colormode(mode=None):
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
     if (zoomEl === monitor && el !== monitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     zoomEl = el;
+    syncMonitorMusicFocus();
     if (el === monitor) monitorIntentUntil = 0;
     lastZoomPose = "";
     vp.classList.add("device-zoomed");
@@ -90471,6 +90552,7 @@ def colormode(mode=None):
     if (zoomEl === monitor) monitorIntentUntil = 0;
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
+    syncMonitorMusicFocus();
     monitorContentFullscreen = false;
     monitor.classList.remove("monitor-content-fullscreen");
     if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");
@@ -90505,6 +90587,7 @@ def colormode(mode=None):
     if (monitor) monitor.classList.remove("dev-zoomed");
     if (laptop) laptop.classList.remove("dev-zoomed");
     zoomEl = null; lastZoomPose = "";
+    syncMonitorMusicFocus();
     monitorContentFullscreen = false;
     monitor.classList.remove("monitor-content-fullscreen");
     if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");

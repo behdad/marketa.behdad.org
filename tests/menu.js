@@ -294,7 +294,7 @@ var HARNESS = [
   "    window.__lxRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('linux')); S('desk_linux_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
   "    window.__pyRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('python')); S('desk_python_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
   // right-clicking a NON-icon desktop surface (the menu-bar brand) → no custom menu, native kept
-  "    showApp('show-caps'); var brand=document.querySelector('#monitor-desktop-dock .desk-brand'); S('desk_nontile_prevented', brand?ctxAt(brand):'no-brand'); S('desk_nontile_no_menu', !monMenu());",
+  "    showApp('show-caps'); var brand=document.getElementById('monitor-system-brand'); S('desk_nontile_prevented', brand?ctxAt(brand):'no-brand'); S('desk_nontile_no_menu', !monMenu());",
   // Context menus never expose the global reset. The shared reset helper itself still routes
   // through confirmation + extinguisher, so verify that independently.
   "    showApp('show-mail'); ctxAt(mon()); S('global_reset_absent', !monReset()); if(monMenu())monMenu().remove();",

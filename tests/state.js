@@ -172,7 +172,23 @@ var RESET_DIFF_ALLOW = [
   // re-evaluates that new time, so either class direction may differ legitimately.
   // tests/growlight-schedule.js owns the exact boundary and reset assertions.
   "#garden-growlight +off",
-  "#garden-growlight -off"
+  "#garden-growlight -off",
+  // Background Dollhouse prewarming is cache state, not game state. It continues across an
+  // extinguisher reset and may advance between either snapshot while this long probe runs.
+  "#stage-kitchen +dollhouse-source-warm",
+  "#stage-kitchen -dollhouse-source-warm",
+  "#stage-garden +dollhouse-source-warm",
+  "#stage-garden -dollhouse-source-warm",
+  "#stage-cuddly +dollhouse-source-warm",
+  "#stage-cuddly -dollhouse-source-warm",
+  "#stage-office +dollhouse-source-warm",
+  "#stage-office -dollhouse-source-warm",
+  "#stage-balcony +dollhouse-source-warm",
+  "#stage-balcony -dollhouse-source-warm",
+  "#hunt-fullscreen-area +dollhouse-warm",
+  "#hunt-fullscreen-area -dollhouse-warm",
+  "#loft-dollhouse +dollhouse-warm",
+  "#loft-dollhouse -dollhouse-warm"
 ];
 
 // ── cascade harness ─────────────────────────────────────────────────────────

@@ -57,8 +57,8 @@ var harness = String.raw`<script>
   check("the genuinely modal coach occupies a substantial part of the shell",
     cardRect.width >= areaRect.width * .72 && cardRect.height >= areaRect.height * .35,
     JSON.stringify({ card: cardRect.toJSON(), area: areaRect.toJSON() }));
-  check("the modal surface visibly distinguishes its blocked background",
-    getComputedStyle(overlay).backgroundColor === "rgba(69, 58, 49, 0.2)",
+  check("the modal surface blocks input without washing out the scene",
+    getComputedStyle(overlay).backgroundColor === "rgba(0, 0, 0, 0)",
     getComputedStyle(overlay).backgroundColor);
   check("the coach dismiss control stays in the true upper-right corner",
     xRect.top - cardRect.top < 16 && cardRect.right - xRect.right < 16,

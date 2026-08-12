@@ -269,7 +269,7 @@ try {
     [map, message].forEach((step, index) => {
       const name = ["room-map", "messages"][index];
       check(step.kind === name && step.scrims.length === 4 && step.scrims.every(scrim =>
-        scrim[0] === "rgba(69, 58, 49, 0.2)" && scrim[1] === "auto"),
+        scrim[0] === "rgba(0, 0, 0, 0)" && scrim[1] === "auto"),
       prefix + name + " visibly blocks around one live target island", step);
       check(step.card.width >= step.area.width * .72 && step.card.height >= step.area.height * .35,
         prefix + name + " card occupies most of the shell", step);

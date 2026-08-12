@@ -82,7 +82,7 @@ var popupBefore = step("popupBeforeCoach"), popupCleared = step("popupCleared");
 check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.coach,
   "a visible notification keeps the due exploration coach off-screen", popupBefore);
 check(popupCleared && !popupCleared.thumb && popupCleared.coach && popupCleared.modal && popupCleared.cardLarge &&
-  popupCleared.scrim === "rgba(69, 58, 49, 0.2)",
+  popupCleared.scrim === "rgba(0, 0, 0, 0)",
   "the quiet channel reveals the large Dollhouse modal while Party stays live", popupCleared);
 check(step("duringMoment") && !step("duringMoment").coach && step("duringMoment").coachDue,
   "an authored Party moment hides exploration without retiring it", step("duringMoment"));

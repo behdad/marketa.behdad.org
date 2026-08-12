@@ -13,10 +13,13 @@ window.addEventListener("load",function(){setTimeout(function(){
     guests.classList.add("guests-in");
     window.__gardenPartyOn=true;
     window.__setPartyDance("techno");
+    var entrancePanes=[].slice.call(document.querySelectorAll("#entrance-room-art .entrance-window-pane"));
     report.beatScope={
       root:document.documentElement.style.getPropertyValue("--party-window-beat"),
       cinema:document.getElementById("cinema-window").style.getPropertyValue("--party-window-beat"),
-      bedroom:document.getElementById("bedroom-stained-glass").style.getPropertyValue("--party-window-beat")
+      bedroom:document.getElementById("bedroom-stained-glass").style.getPropertyValue("--party-window-beat"),
+      entrance:entrancePanes.map(function(el){return el.style.getPropertyValue("--party-window-beat");}),
+      entranceHalf:entrancePanes.map(function(el){return el.style.getPropertyValue("--party-window-half-beat");})
     };
     window.__musicPaused=false;
     var els=[].slice.call(guests.querySelectorAll(".guest-sway,.guest-arm-l,.guest-arm-r"));
@@ -46,7 +49,9 @@ check(r&&r.wrappers===93,"all named-guest sway and arm wrappers are retuned",r);
 check(r&&r.geometryReads===0,"tempo retuning performs no synchronous geometry reads",r);
 check(r&&r.cached&&r.durationSpread<0.001,"every wrapper caches its authored stagger and shares one duration",r);
 check(r&&r.phaseSpread<0.003,"authored staggers resolve onto one shared beat phase",r);
-check(r&&r.beatScope&&r.beatScope.root===""&&r.beatScope.cinema==="0.533s"&&r.beatScope.bedroom==="0.533s",
-  "dance tempo invalidates only the two lower-room bass windows",r&&r.beatScope);
+check(r&&r.beatScope&&r.beatScope.root===""&&r.beatScope.cinema==="0.533s"&&r.beatScope.bedroom==="0.533s"&&
+  r.beatScope.entrance.length===5&&r.beatScope.entrance.every(function(v){return v==="0.533s";})&&
+  r.beatScope.entranceHalf.every(function(v){return v==="-0.267s";}),
+  "dance tempo invalidates only the bass windows and five Entrance panes",r&&r.beatScope);
 if(failures){console.log("\n"+failures+" check(s) failed.");process.exit(1);}
 console.log("\nAll checks passed.");

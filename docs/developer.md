@@ -243,7 +243,8 @@ Exact-day birthdays are announced through the phase-two `bd_<who>` Messages row.
 matching postcard opens eight seconds after its reveal begins. Party/cake teardown cancels that
 timer, while the bounded queue is checkpointed and replays a transient in-flight ceremony after
 recovery. The greeting bypasses ordinary autonomous rewrite/drip deferral and lands synchronously at
-the first Party transition. `shareAutoShow` must not auto-open a birthday card when Party starts,
+the first Party transition: exact-day setup defines the row during the splash and registers it in
+the shared phase-two hold queue. `shareAutoShow` must not auto-open a birthday card when Party starts,
 and birthday delivery must not pre-render an inline postcard.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip

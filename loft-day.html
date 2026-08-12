@@ -98178,27 +98178,24 @@ def colormode(mode=None):
     }
     var BD_TEMPLATES = ["bd_msg_a", "bd_msg_b", "bd_msg_c", "bd_msg_d"];
     var BD_MB_PEOPLE = { jay: 1, spencer: 1, madla: 1, robert: 1, elisabeth: 1, felix: 1, daniel: 1, marie: 1, baka: 1 }; // Markéta's friends + Czech family
-    // A birthday announces ONCE per session (the applyBirthdays anchor-day latch), often at load —
-    // and it's the whole reason someone visits on the day, so an attract-time announcement is HELD
-    // rather than dropped or re-rolled: it goes out on "loft:gamestart". Bounded by construction —
-    // one slot per person, deduped, and the latch that queues it can't re-fire while the day holds.
-    var bdHeld = [];
+    // A birthday announces ONCE per session (the applyBirthdays anchor-day latch), often at load.
+    // Define it before checking the attract prompt, then use the phone's ordinary phase-one hold:
+    // the first Party transition can release the real row synchronously instead of depending on a
+    // birthday-only game-start relay. If a phase-two checkpoint is resumed, Continue's game-start
+    // wakes that same held queue after the recovery surface is gone.
     window.addEventListener("loft:gamestart", function () {
-      var q = bdHeld; bdHeld = [];
-      q.forEach(function (p) { window.__deliverBirthdayText(p.who, p.name); });
+      if (window.__secondRound) window.__flushHeldPhoneMessages();
     });
     window.__deliverBirthdayText = function (who, name) {
       if (!who || !name) return;
       var id = "bd_" + who;
       if (messagesThread.indexOf(id) !== -1) return; // already sent this session — fire once
-      if (!playerStarted()) {
-        for (var h = 0; h < bdHeld.length; h++) if (bdHeld[h].who === who) return;
-        bdHeld.push({ who: who, name: name });
-        return;
-      }
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
-      MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who };
-      return window.__deliverAutonomousPhoneMessage(id);
+      if (!MESSAGES[id]) MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who };
+      // Fresh phase one lands in phaseTwoHeldMessages; an attended phase-two date change lands now.
+      // Both paths deliberately bypass rewrite/drip delay for this exact-day greeting.
+      if (!playerStarted() && window.__secondRound) { holdForPhaseTwo(id); return false; }
+      return window.__deliverPhoneMessage(id, true);
     };
     // ── special-day INVITE text ── on a wedding/bbq/brunch occasion or a named holiday, the host texts
     // an invite a moment after load (the dateOccasions orchestrator picks sender + body + tap-action).

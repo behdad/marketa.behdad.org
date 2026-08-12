@@ -69,7 +69,6 @@ window.__loftMessages["cs"] = {
   "arcade_offer_tetris": "Nový rekord! Block Party se rozsvěcí. 🧱",
   "balcony_audience_callout": "Úsměv — máme publikum! 👀",
   "balcony_marketa_groceries": "Nákupy má na starost ona.",
-  "bd_action": "Oslavit 🎂",
   "bd_msg_a": "Dnes slaví {name} — všechno nejlepší! 🎂",
   "bd_msg_b": "{name} má dnes narozeniny!! 🥳",
   "bd_msg_c": "{name} má dnes velký den 🎂🎈",

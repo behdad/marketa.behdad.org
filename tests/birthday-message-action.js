@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Exact-day birthdays stay opt-in; each repeatable Celebrate runs the cake before its postcard.
+// Exact-day birthdays stay opt-in; each repeatable message action runs cake before postcard.
 "use strict";
 
 var lib = require("./lib");
@@ -21,12 +21,12 @@ var HARNESS = [
   ' window.__monitorMessageRewrite=function(){return new Promise(function(){});};window.__setPartyMode(true,true,false);',
   ' report.partyStart={phase2:!!window.__secondRound,message:window.__phoneMessageReceived("bd_marketa"),card:automaticCards,inlineRenders:postcardRenders,cake:!!window.__bdCakeOn};',
   ' window.__openMessagesAt("bd_marketa");await sleep(80);',
-  ' var row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]"),action=row&&row.querySelector(".pm-msg-act.bd-celebrate");',
-  ' report.english={sender:row&&row.querySelector(".pm-msg-from").textContent,body:row&&row.querySelector(".pm-msg-text").textContent,label:action&&action.textContent.trim(),available:!!action};',
-  ' window.__setLang("cs");await sleep(60);row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]");action=row&&row.querySelector(".pm-msg-act.bd-celebrate");',
-  ' report.czech={body:row&&row.querySelector(".pm-msg-text").textContent,label:action&&action.textContent.trim()};',
+  ' var row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]"),action=row&&row.querySelector(".pm-msg-act");',
+  ' report.english={sender:row&&row.querySelector(".pm-msg-from").textContent,body:row&&row.querySelector(".pm-msg-text").textContent,label:action&&action.textContent.trim(),arrow:!!(action&&action.querySelector("svg")),standard:!!(action&&action.className==="pm-msg-act"),available:!!action};',
+  ' window.__setLang("cs");await sleep(60);row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]");action=row&&row.querySelector(".pm-msg-act");',
+  ' report.czech={body:row&&row.querySelector(".pm-msg-text").textContent,label:action&&action.textContent.trim(),arrow:!!(action&&action.querySelector("svg"))};',
   ' var checkpoint=window.__checkpointPhoneCapture();window.__resetPhoneApps();window.__checkpointPhoneRestore(checkpoint);window.__loftControllers.phone.open("messages");await sleep(80);',
-  ' row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]");action=row&&row.querySelector(".pm-msg-act.bd-celebrate");report.restored={message:window.__phoneMessageReceived("bd_marketa"),available:!!action,state:window.__messageActionState("bd_marketa")};',
+  ' row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]");action=row&&row.querySelector(".pm-msg-act");report.restored={message:window.__phoneMessageReceived("bd_marketa"),available:!!action,state:window.__messageActionState("bd_marketa")};',
   ' window.__setLang("en");if(action)action.click();await sleep(420);',
   ' report.started={card:automaticCards,cake:!!window.__bdCakeOn,party:!!window.__gardenPartyOn,room:window.__currentStageName,state:window.__messageActionState("bd_marketa"),flow:window.__birthdayCelebrationState()};',
   ' checkpoint=window.__checkpointPhoneCapture();window.__resetPhoneApps();window.__endBdCakeCutting();window.__checkpointPhoneRestore(checkpoint);await sleep(900);',
@@ -58,20 +58,20 @@ check(r && !r.phaseOne.phase2 && !r.phaseOne.message && r.phaseOne.card === 0 &&
   "phase one holds the birthday greeting and celebration", r && r.phaseOne);
 check(r && r.partyStart.phase2 && r.partyStart.message && r.partyStart.card === 0 && r.partyStart.inlineRenders === 0 && !r.partyStart.cake,
   "starting Party synchronously releases only the greeting, bypassing rewrite/drip delay", r && r.partyStart);
-check(r && r.english.available && r.english.sender === "behdad" && /birthday.*Markéta/i.test(r.english.body) && /Celebrate/.test(r.english.label),
-  "the other host sends an English birthday greeting with a labeled action", r && r.english);
-check(r && /Markéta/.test(r.czech.body) && /Oslavit/.test(r.czech.label),
-  "the greeting and action relocalize in Czech", r && r.czech);
+check(r && r.english.available && r.english.sender === "behdad" && /birthday.*Markéta/i.test(r.english.body) && r.english.arrow && r.english.standard && r.english.label === "",
+  "the other host sends an English birthday greeting with the standard arrow-only action", r && r.english);
+check(r && /Markéta/.test(r.czech.body) && r.czech.arrow && r.czech.label === "",
+  "the Czech greeting keeps the same arrow-only action", r && r.czech);
 check(r && r.restored.message && r.restored.available && r.restored.state === null,
-  "an ignored Celebrate action remains available through a checkpoint round trip", r && r.restored);
+  "an ignored birthday action remains available through a checkpoint round trip", r && r.restored);
 check(r && r.started.card === 0 && r.started.cake && r.started.party && r.started.room === "garden" && r.started.state === null && r.started.flow.queue[0].phase === "reveal",
-  "Celebrate starts the cake without opening or consuming the postcard action", r && r.started);
+  "the birthday action starts the cake without opening or consuming itself", r && r.started);
 check(r && r.resumed.card === 0 && r.resumed.cake && r.resumed.state === null && r.resumed.flow.queue[0].phase === "reveal",
   "an in-flight celebration survives a checkpoint by replaying its transient cake", r && r.resumed);
 check(r && r.beforeEight.card === 0 && r.completed.card === 1 && r.completed.occ === "marketa" && r.completed.state === null && r.completed.flow.queue.length === 0,
   "the matching postcard stays closed until the celebration's fixed eight-second beat", { before: r && r.beforeEight, after: r && r.completed });
 check(r && r.repeatStarted.card === 1 && r.repeatStarted.cake && r.repeatStarted.state === null && r.repeatCompleted.card === 2 && r.repeatCompleted.occ === "marketa" && !r.repeatCompleted.cake && r.repeatCompleted.state === null,
-  "Celebrate remains available and repeats cake-first before a second postcard", { started: r && r.repeatStarted, completed: r && r.repeatCompleted });
+  "the birthday action remains available and repeats cake-first before a second postcard", { started: r && r.repeatStarted, completed: r && r.repeatCompleted });
 check(r && r.cancelled.card === 2 && r.cancelled.flow.queue.length === 0 && !r.cancelled.flow.postcardOpen,
   "Party teardown cancels an in-flight postcard timer", r && r.cancelled);
 check(r && r.errors.length === 0, "no uncaught JavaScript errors", r && r.errors);

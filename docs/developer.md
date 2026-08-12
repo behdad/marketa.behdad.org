@@ -239,7 +239,7 @@ restores that snapshot. Keep new staged moments on this owner so interruption an
 cannot relight or strand the blacklight.
 
 Exact-day birthdays are announced through the phase-two `bd_<who>` Messages row. Its repeatable
-**Celebrate** action queues the existing birthday router for the cake or authored remote venue; a
+standard arrow action queues the existing birthday router for the cake or authored remote venue; a
 matching postcard opens eight seconds after its reveal begins. Party/cake teardown cancels that
 timer, while the bounded queue is checkpointed and replays a transient in-flight ceremony after
 recovery. The greeting bypasses ordinary autonomous rewrite/drip deferral and lands synchronously at
@@ -248,7 +248,7 @@ the shared phase-two hold queue. `shareAutoShow` must not auto-open a birthday c
 and birthday delivery must not pre-render an inline postcard. Phone reset/checkpoint restore
 re-register the exact-day row after replacing phone state, preventing a retained visit from erasing
 the held greeting. The birthday ribbon fast-forwards through Party and enqueues the same serialized
-cake/postcard owner as Celebrate; it must not create a parallel ceremony timer.
+cake/postcard owner as the message arrow; it must not create a parallel ceremony timer.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been

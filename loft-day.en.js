@@ -69,7 +69,6 @@ window.__loftMessages["en"] = {
   "arcade_offer_tetris": "New best! Block Party is lighting up. 🧱",
   "balcony_audience_callout": "Smile — we have an audience! 👀",
   "balcony_marketa_groceries": "Groceries are always on her.",
-  "bd_action": "Celebrate 🎂",
   "bd_msg_a": "Happy birthday, {name}! 🎂",
   "bd_msg_b": "it's {name}'s birthday!! 🥳",
   "bd_msg_c": "big day for {name} today 🎂🎈",

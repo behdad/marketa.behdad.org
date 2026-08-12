@@ -21,8 +21,8 @@ var HARNESS = [
   ' await sleep(1700);',
   ' report.quietParty={message:!!window.__phoneMessageReceived("bd_marketa"),card:!!document.getElementById("sharecard-modal"),cake:!!window.__bdCakeOn};',
   ' key("/",{code:"Slash"});',
-  ' var row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]"),action=row&&row.querySelector(".pm-msg-act.bd-celebrate");',
-  ' report.partyStart={party:document.getElementById("loft-game-strip").classList.contains("party-on"),row:!!row,sender:row&&row.querySelector(".pm-msg-from").textContent,body:row&&row.querySelector(".pm-msg-text").textContent,label:action&&action.textContent.trim()};',
+  ' var row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]"),action=row&&row.querySelector(".pm-msg-act");',
+  ' report.partyStart={party:document.getElementById("loft-game-strip").classList.contains("party-on"),row:!!row,sender:row&&row.querySelector(".pm-msg-from").textContent,body:row&&row.querySelector(".pm-msg-text").textContent,arrow:!!(action&&action.querySelector("svg")),label:action&&action.textContent.trim(),standard:!!(action&&action.className==="pm-msg-act")};',
   ' if(action)action.click();',
   ' await sleep(450);report.celebrate={cake:!!document.querySelector("#garden-guests.bd-cake-cutting"),card:!!document.getElementById("sharecard-modal")};',
   ' await sleep(7200);report.beforeEight={card:!!document.getElementById("sharecard-modal")};',
@@ -30,7 +30,7 @@ var HARNESS = [
   ' var download=card&&await waitFor(function(){var link=card.querySelector(".sharecard-dl");return link&&link.getAttribute("download")==="marketa-behdad-marketa.png"&&link;},1800);',
   ' report.afterEight={card:!!card,matching:!!download,image:!!(card&&card.querySelector(".sharecard-img").getAttribute("src"))};',
   ' var close=card&&card.querySelector(".sharecard-x");if(close)close.click();await sleep(350);key("/",{code:"Slash"});await sleep(80);',
-  ' report.repeat={available:!!document.querySelector(".pm-msg-row[data-message-id=bd_marketa] .pm-msg-act.bd-celebrate")};',
+  ' report.repeat={available:!!document.querySelector(".pm-msg-row[data-message-id=bd_marketa] .pm-msg-act")};',
   '}',
   '})();',
   '</script>'
@@ -78,13 +78,13 @@ check(r && r.splash.visible && !r.splash.party && !r.splash.notice,
 check(r && r.quietParty.message && !r.quietParty.card && !r.quietParty.cake,
   "ordinary Party shows only the greeting, with no automatic cake or postcard", r && r.quietParty);
 check(r && r.partyStart.party && r.partyStart.row && r.partyStart.sender === "behdad" &&
-    /birthday.*Markéta/i.test(r.partyStart.body) && /Celebrate/.test(r.partyStart.label),
-  "actual Shift+P synchronously releases the exact-day greeting into Messages", r && r.partyStart);
+    /birthday.*Markéta/i.test(r.partyStart.body) && r.partyStart.arrow && r.partyStart.standard && r.partyStart.label === "",
+  "actual Shift+P releases the greeting with the standard arrow-only action", r && r.partyStart);
 check(r && r.celebrate.cake && !r.celebrate.card,
-  "the actual Celebrate button starts the cake without opening the postcard", r && r.celebrate);
+  "the actual message action starts the cake without opening the postcard", r && r.celebrate);
 check(r && !r.beforeEight.card && r.afterEight.card && r.afterEight.matching && r.afterEight.image,
   "the real matching postcard opens only after the fixed eight-second beat", { before: r && r.beforeEight, after: r && r.afterEight });
-check(r && r.repeat.available, "Celebrate remains available after closing the postcard", r && r.repeat);
+check(r && r.repeat.available, "the birthday action remains available after closing the postcard", r && r.repeat);
 check(r && r.errors.length === 0, "no uncaught JavaScript errors", r && r.errors);
 
 console.log("loft-day.html birthday ribbon flow:");

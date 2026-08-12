@@ -40622,7 +40622,7 @@ window.__entranceRoomOpen = false;
     paintPorscheDriveHud();
     announcePorscheTransmission();
     if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) {
-      playDryClickSound("entrance-drive-shifter");
+      playDryClickSound(porscheDrivePanFor("entrance-drive-shifter"));
     }
     if (range !== previousRange) porscheHaptic(40);
     if (window.__checkpointChanged) window.__checkpointChanged();
@@ -48368,23 +48368,39 @@ window.__entranceRoomOpen = false;
   function roadtripCabinExposure() {
     return porscheState.roofOpen ? 1 : porscheState.windowOpen ? .78 : .52;
   }
-  // panForElId forces a synchronous layout, and the per-tick spatial repaints made every
-  // drive step pay that reflow mid-tick. Road Trip's HUD and brake stay fixed; exterior
-  // anchors retain a 250ms refresh, whose staleness is inaudible because the params'
-  // setTargetAtTime smoothing glides over the refresh steps.
-  var porscheDrivePanCache = {};
-  var PORSCHE_ROADTRIP_STATIC_PAN = {
-    "entrance-drive-hud": true,
-    "entrance-drive-brake": true
+  // Driving sources already live in authored 680-unit scene or road coordinates. Derive
+  // stereo position from that state: a DOM geometry read here can synchronously lay out
+  // the entire 22k-object SVG after a highway paint, while adding no positional knowledge.
+  var PORSCHE_AUDIO_SCENE_WIDTH = 680;
+  var PORSCHE_AUDIO_CAR_CENTRE_X = PORSCHE_BASE_X + 8 + .85 * ((95 + 296) / 2 - 8);
+  var PORSCHE_HUD_AUDIO_X = {
+    "entrance-drive-hud": 340,
+    "entrance-drive-brake": 183 - 65 + 94.5,
+    "entrance-drive-shifter": -47 + 476,
+    "entrance-drive-glovebox": 482 + (607 - 482) * .75 / 2
   };
-  window.__porscheDrivePanFlush = function () { porscheDrivePanCache = {}; }; // deterministic test seam: re-read anchors NOW
+  function porscheAuthoredPan(x) {
+    var raw = Math.max(-1, Math.min(1, Number(x) / PORSCHE_AUDIO_SCENE_WIDTH * 2 - 1));
+    if (!raw) return 0;
+    return Math.max(-1, Math.min(1,
+      Math.sign(raw) * Math.pow(Math.abs(raw), .6) * .92));
+  }
+  function roadtripPoliceAudioPan() {
+    var node = roadtripPoliceFrontNode &&
+      roadtripPoliceFrontNode.getAttribute("visibility") !== "hidden" ? roadtripPoliceFrontNode :
+      roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden" ?
+        roadtripPoliceMirrorNode : null;
+    var x = node && Number(node.getAttribute("data-roadtrip-project-x"));
+    return Number.isFinite(x) ? porscheAuthoredPan(x) : 0;
+  }
   function porscheDrivePanFor(anchor) {
-    var now = performance.now();
-    var hit = porscheDrivePanCache[anchor];
-    if (hit && ((roadtripState.active && PORSCHE_ROADTRIP_STATIC_PAN[anchor]) || now - hit.at < 250)) return hit.pan;
-    var pan = panForElId(anchor);
-    porscheDrivePanCache[anchor] = { at: now, pan: pan };
-    return pan;
+    if (anchor === "entrance-porsche" || anchor === "entrance-porsche-idle") {
+      return roadtripState.active ? 0 :
+        porscheAuthoredPan(PORSCHE_AUDIO_CAR_CENTRE_X + driveState.position);
+    }
+    if (anchor === "entrance-roadtrip-mirror") return roadtripPoliceAudioPan();
+    return porscheAuthoredPan(Object.prototype.hasOwnProperty.call(PORSCHE_HUD_AUDIO_X, anchor) ?
+      PORSCHE_HUD_AUDIO_X[anchor] : PORSCHE_AUDIO_SCENE_WIDTH / 2);
   }
   function porscheDriveSpatialProfile(kind) {
     var cfg = PORSCHE_DRIVE_SPATIAL[kind] || PORSCHE_DRIVE_SPATIAL.engine;
@@ -49032,7 +49048,7 @@ window.__entranceRoomOpen = false;
       master.gain.linearRampToValueAtTime(.032, now + .34);
       fan.connect(fanFilter); fanFilter.connect(fanGain); fanGain.connect(master);
       motor.connect(motorFilter); motorFilter.connect(motorGain); motorGain.connect(master);
-      master.connect(pannedOut(bed, "entrance-porsche"));
+      master.connect(pannedOut(bed, porscheDrivePanFor("entrance-porsche")));
       porscheDriveAcNodes = {
         bed: bed,
         master: master,
@@ -50025,7 +50041,9 @@ window.__entranceRoomOpen = false;
     clampPorscheDriveSpeedToGear();
     completePorscheDriveCoachAction("gear");
     paintPorscheDriveHud();
-    if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) playDryClickSound("entrance-drive-shifter");
+    if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) {
+      playDryClickSound(porscheDrivePanFor("entrance-drive-shifter"));
+    }
     if (gear !== previousGear) porscheHaptic(40);
     return true;
   }
@@ -50348,7 +50366,9 @@ window.__entranceRoomOpen = false;
     if (!driveState.hudOpen) return false;
     driveState.gloveboxOpen = !driveState.gloveboxOpen;
     paintPorscheDriveHud();
-    if (typeof playDryClickSound === "function") playDryClickSound("entrance-drive-glovebox");
+    if (typeof playDryClickSound === "function") {
+      playDryClickSound(porscheDrivePanFor("entrance-drive-glovebox"));
+    }
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
@@ -50866,7 +50886,7 @@ window.__entranceRoomOpen = false;
       fundamental.connect(out);
       overtone.connect(overtoneGain); overtoneGain.connect(out);
       tremolo.connect(tremoloGain); tremoloGain.connect(out.gain);
-      out.connect(lowpass); lowpass.connect(pannedOut(bed, "entrance-porsche-idle"));
+      out.connect(lowpass); lowpass.connect(pannedOut(bed, porscheDrivePanFor("entrance-porsche-idle")));
       porscheIdleNodes = {
         bed: bed,
         sources: [fundamental, overtone, tremolo],

@@ -156,20 +156,23 @@ var PAN_HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
     window.__entranceRoadtripDevStart();
-    var hud = document.getElementById("entrance-drive-hud");
-    var viewport = document.querySelector(".hunt-viewport");
-    var hudReads = 0, viewportReads = 0;
-    var hudRect = hud.getBoundingClientRect.bind(hud);
-    var viewportRect = viewport.getBoundingClientRect.bind(viewport);
-    hud.getBoundingClientRect = function () { hudReads++; return hudRect(); };
-    viewport.getBoundingClientRect = function () { viewportReads++; return viewportRect(); };
-    window.__porscheDrivePanFlush();
-    window.__entranceDriveSpatialAudio("music");
+    var geometryReads = 0;
+    var originalRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      geometryReads++;
+      return originalRect.apply(this, arguments);
+    };
+    var profiles = {};
+    ["engine", "music", "tire", "screech", "abs", "crash", "reward", "police"].forEach(function (kind) {
+      profiles[kind] = window.__entranceDriveSpatialAudio(kind);
+    });
+    window.__entranceDriveRange("N");
+    window.__entranceDriveRange("D");
+    Element.prototype.getBoundingClientRect = originalRect;
     setTimeout(function () {
       try {
-        window.__entranceDriveSpatialAudio("music");
-        report.hudReads = hudReads;
-        report.viewportReads = viewportReads;
+        report.geometryReads = geometryReads;
+        report.profiles = profiles;
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -250,8 +253,12 @@ check(healthy && low && healthy.entityCount === 1 && low.entityCount === 1,
   "traffic simulation ownership is unchanged by paint cadence", { healthy: healthy, low: low });
 check(panResult && panResult.errors.length === 0,
   "static spatial-audio cache probe has no page errors", panResult && panResult.errors);
-check(panResult && panResult.hudReads === 1 && panResult.viewportReads === 1,
-  "Road Trip reuses static cabin pan geometry beyond the exterior 250 ms cache window", panResult);
+check(panResult && panResult.geometryReads === 0,
+  "Road Trip derives every driving/UI audio pan without a DOM geometry read", panResult);
+check(panResult && panResult.profiles && panResult.profiles.engine.pan === 0 &&
+  panResult.profiles.music.pan === 0 && panResult.profiles.crash.pan === 0 &&
+  panResult.profiles.reward.pan === 0 && panResult.profiles.abs.pan < -.45,
+  "modeled cabin/UI pans keep centred sources centred and ABS by the brake", panResult && panResult.profiles);
 
 if (failures) {
   console.error(failures + " adaptive Road Trip performance assertion(s) failed.");

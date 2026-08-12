@@ -264,6 +264,9 @@ two noise beds cannot overlap during the route handoff.
 Fancy-Stupid's engine/drivetrain, driving loop, tire screech, and ABS chatter keep their
 authored source gains and then enter a car-only spatial output stage. Engine and tire noise
 track the moving car; the score stays centered on the HUD and ABS sits by the brake control.
+These pans come directly from the authored 680-unit HUD/street coordinates and Road Trip's lane,
+projection, and police state; driving audio never requests live DOM geometry. Passing traffic can
+therefore follow its modeled lane, distance, and relative speed instead of a painted bounding box.
 The stage adds mild edge-distance attenuation plus stereo placement. Closing the soft top
 smoothly applies a shared `0.74` enclosure gain and source-appropriate low-pass cutoff;
 opening it restores unity/18 kHz. The continuous engine and score retarget as the car or roof

@@ -3,6 +3,7 @@
 "use strict";
 
 var lib = require("./lib");
+var fs = require("fs");
 var failures = 0;
 
 function check(ok, label, detail) {
@@ -113,6 +114,10 @@ var result = lib.runPageSync("loft-day.html", HARNESS, 4500, {
 });
 
 console.log("loft-day.html adaptive Road Trip painting:");
+var source = fs.readFileSync("loft-day.html", "utf8");
+check(/sample\.roadtripCurveOffset = roadtripCurveOffset\(sample\.remaining\)/.test(source) &&
+  /Number\.isFinite\(point\.roadtripCurveOffset\)/.test(source),
+  "shared road samples cache the curve integral instead of recomputing it for every SVG path");
 check(result && result.errors.length === 0, "focused performance probe has no page errors",
   result && result.errors);
 var healthy = result && result.healthy;

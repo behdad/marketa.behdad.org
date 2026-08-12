@@ -44888,8 +44888,11 @@ window.__entranceRoomOpen = false;
       "L" + boundaryX + " " + far.y.toFixed(2) + "Z";
   }
   function roadtripProjectLateral(point, roadFraction) {
-    return 340 + roadtripCurveOffset(point.remaining) +
-      (roadFraction - roadtripVisualLaneRoadFraction(roadtripPlayerLane(), true)) * point.halfWidth;
+    var curveOffset = Number.isFinite(point.roadtripCurveOffset) ?
+      point.roadtripCurveOffset : roadtripCurveOffset(point.remaining);
+    var playerFraction = Number.isFinite(point.roadtripPlayerFraction) ?
+      point.roadtripPlayerFraction : roadtripVisualLaneRoadFraction(roadtripPlayerLane(), true);
+    return 340 + curveOffset + (roadFraction - playerFraction) * point.halfWidth;
   }
   function roadtripLinePath(samples, roadFraction) {
     return samples.map(function (point, index) {
@@ -46148,8 +46151,13 @@ window.__entranceRoomOpen = false;
     ensureRoadtripScene();
     paintRoadtripScenery();
     var samples = [];
+    var playerFraction = roadtripVisualLaneRoadFraction(roadtripPlayerLane(), true);
     for (var sampleIndex = 0; sampleIndex <= 14; sampleIndex++) {
-      samples.push(roadtripProject(ROADTRIP_DRAW_DISTANCE * (1 - sampleIndex / 14)));
+      var sample = roadtripProject(ROADTRIP_DRAW_DISTANCE * (1 - sampleIndex / 14));
+      // Every road band reuses these samples; integrate its curve once per frame, not once per path.
+      sample.roadtripCurveOffset = roadtripCurveOffset(sample.remaining);
+      sample.roadtripPlayerFraction = playerFraction;
+      samples.push(sample);
     }
     var calgary = roadtripIsCalgaryRoute();
     var geometry = roadtripGeometryProfile();

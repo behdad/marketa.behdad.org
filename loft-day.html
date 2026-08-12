@@ -100532,8 +100532,6 @@ def colormode(mode=None):
     pretendPending = false;
     window.__weatherApprox = result.meta;
     applyCurrent();
-    if (window.__applyRealWx) window.__applyRealWx();
-    if (window.__loftTempSet) window.__loftTempSet();
     if (window.__refreshDeskClock) window.__refreshDeskClock();
     return true;
   }
@@ -100543,8 +100541,6 @@ def colormode(mode=None):
     window.__weatherApprox = null;
     window.__realWx = null; window.__realOutdoorC = null; window.__realWxMode = null;
     applyCurrent();
-    if (window.__applyRealWx) window.__applyRealWx();
-    if (window.__loftTempSet) window.__loftTempSet();
     if (window.__refreshDeskClock) window.__refreshDeskClock();
   }
   function refreshPretendWeather() {
@@ -100640,6 +100636,8 @@ def colormode(mode=None):
     }
     if (window.__refreshWeatherText) window.__refreshWeatherText(); // monitor weather app
     if (window.__refreshPhoneWeather) window.__refreshPhoneWeather(); // open pocket weather app, without touching other apps
+    if (window.__applyRealWx) window.__applyRealWx(); // resolved weather should paint now, not on the next 1s reconciliation tick
+    if (window.__loftTempSet) window.__loftTempSet();
     reportPublishedWeather();
   }
   // one raw METAR line -> {code (synthetic WMO for __wmoGlyph/__realWxRainy), temp, at}.
@@ -100742,7 +100740,8 @@ def colormode(mode=None):
     } catch (e) {}
   }
   setTimeout(fetchSmoke, 4000); // once per load, off the load path — haze moves slower than weather
-  setTimeout(fetchWx, 4000); // a few seconds after init, off the load path
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fetchWx, { once:true });
+  else fetchWx(); // start as soon as parsing finishes, during the splash
   setTimeout(refreshPretendWeather, 4200); // URL date/time preview: archive fetch beside, not ahead of, live weather
   setInterval(fetchWx, 15 * 60000); // fetch + set state only — nothing spawns, hidden-tab safe
   // The garden/balcony aurora follows the REAL space weather: NOAA SWPC's public planetary Kp

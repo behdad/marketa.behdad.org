@@ -203,6 +203,11 @@ first start. That latch opens free exploration and remains set even after Party 
 cleared only by a real reset. Do not use the music, lighting, guest population, or
 `__gardenPartyOn` alone as a proxy for story progress.
 
+Party ignition must remain layout-free: ambient `partyGroove` updates are idempotent class/style
+writes, and `__syncGardenFlashPace` preserves the already-armed delayed first flash unless the
+freeze state actually changes. Do not reintroduce geometry reads while the full floor is being
+revealed; they synchronously lay out the multi-room SVG.
+
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown

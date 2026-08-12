@@ -121048,7 +121048,7 @@ function spawnDustMote(container) {
   // one (no stranded animation to accumulate). The bloom + wash are persistent nodes (not
   // spawned), so there's nothing to pile up regardless; each flash just toggles a one-shot
   // .flashing class, cleared on animationend. Light only — no shutter sound.
-  var gardenFlashTimer = null;
+  var gardenFlashTimer = null, gardenFlashFast = false;
   function fireGardenFlash() {
     if (window.__roomHasPhotoSubjects && !window.__roomHasPhotoSubjects("garden")) return false;
     var bloom = document.getElementById("garden-flash-bloom");
@@ -121192,6 +121192,12 @@ function spawnDustMote(container) {
   }
   // freeze on/off changes the pace immediately (don't wait out the current ambient timer)
   window.__syncGardenFlashPace = function () {
+    var fast = partyFrozen();
+    // Party startup has already armed the ordinary first-pop delay. If the freeze state did
+    // not change, keep that clock: firing immediately would also force geometry while the
+    // whole newly revealed dance floor is style-dirty.
+    if (gardenFlashTimer && fast === gardenFlashFast) return;
+    gardenFlashFast = fast;
     if (gardenFlashTimer) { clearTimeout(gardenFlashTimer); gardenFlashTimer = null; }
     if (window.__gardenPartyOn &&
         (!window.__partyForegroundActive || window.__partyForegroundActive())) gardenFlashTick();
@@ -121203,6 +121209,7 @@ function spawnDustMote(container) {
   }
   function stopGardenFlash() {
     if (gardenFlashTimer) { clearTimeout(gardenFlashTimer); gardenFlashTimer = null; }
+    gardenFlashFast = false;
     var bloom = document.getElementById("garden-flash-bloom");
     var wash = document.getElementById("garden-flash-wash");
     if (bloom) bloom.classList.remove("flashing");       // drop any in-flight one-shot so nothing is stranded
@@ -125018,12 +125025,11 @@ function spawnDustMote(container) {
         el.classList.remove("grooving");
       }
     }
-    // party groove: no song, so no phase-lock — clear any stale inline duration/delay a
-    // prior song left behind and let the element's own CSS default tempo drive it.
+    // Party groove has no phase lock: clear any stale song timing and let CSS own the
+    // default tempo. Keeping the existing animation alive avoids a geometry flush across
+    // the newly revealed Party scene; a fresh element starts when the class is first added.
     function partyGroove(el) {
       if (!el) return;
-      el.classList.remove("grooving");
-      void el.getBoundingClientRect(); // reflow so re-adding restarts the animation
       el.style.animationDuration = "";
       el.style.animationDelay = "";
       el.classList.add("grooving");

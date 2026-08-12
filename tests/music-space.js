@@ -7,8 +7,8 @@ var harness = [
   '<pre id="__report">pending</pre>',
   '<script>(async function(){',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
-  'function space(){document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",code:"Space",bubbles:true,cancelable:true}));}',
-  'var out={errors:window.__errs};window.__goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
+  'function space(){var event=new KeyboardEvent("keydown",{key:" ",code:"Space",bubbles:true,cancelable:true});document.dispatchEvent(event);return event;}',
+  'var out={errors:window.__errs};if(window.__removeClickMe)window.__removeClickMe();if(window.__finishOpeningGuide)window.__finishOpeningGuide();var openingSpace=space();await sleep(80);out.opening={prevented:openingSpace.defaultPrevented,resumable:window.__checkpointWorthSavingNow(),playing:window.__anyMusicPlaying()};window.__goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
   'space();await sleep(180);out.desktop={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'space();await sleep(80);out.paused={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'mon.classList.remove("show-caps");mon.classList.add("show-weather");space();await sleep(180);out.app={weather:mon.classList.contains("show-weather"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
@@ -36,6 +36,8 @@ console.log("rsvp.html Space music transport:");
 check(result && !result.error, "focused harness completed", result && result.error);
 if (result && !result.error) {
   check(result.errors.length === 0, "no uncaught page errors", result.errors);
+  check(result.opening.prevented && !result.opening.resumable && !result.opening.playing,
+    "Space stays quiet at the checkpoint owner's untouched-Kitchen boundary", result.opening);
   check(result.desktop.playing && result.desktop.caps && !result.desktop.music,
     "Space starts music on the desktop without opening Music", result.desktop);
   check(!result.paused.playing && result.paused.caps && !result.paused.music,

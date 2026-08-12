@@ -144,8 +144,8 @@ a typing field, `?` opens the complete shortcut card.
   activity: the daytime Kitchen repeats the espresso steps, the visible Bar starts Flair Catch,
   and the Garden / Party toggles the roof disco ball's Party state.
 - `Space`: dismiss an open modal lesson; otherwise play, pause, or act in the current game or media
-  surface. While driving, it sets cruise control to the current speed; pressing it again resets the
-  held speed rather than cancelling it.
+  surface. It stays quiet during the initial Kitchen visit. While driving, it sets cruise control
+  to the current speed; pressing it again resets the held speed rather than cancelling it.
 - `C`: open or close the phone.
 - `/`: open or close Messages.
 - `M`: open the Office monitor.

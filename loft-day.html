@@ -3459,6 +3459,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    The live <use> previews then reopen without rebuilding five large SVG render trees. */
 #loft-dollhouse.dollhouse-warm[hidden]{display:grid;visibility:hidden;pointer-events:none}
 #hunt-fullscreen-area.dollhouse-warm #loft-game-strip .stage-far{visibility:visible}
+#hunt-fullscreen-area #loft-game-strip .stage-far.dollhouse-source-warm{visibility:visible}
 .loft-dollhouse-panel{
   position:relative; width:min(calc(100vw - clamp(.7rem,2vw,2rem)),calc((100vh - clamp(.7rem,2vw,2rem))*4));
   max-height:calc(100vh - clamp(.7rem,2vw,2rem)); box-sizing:border-box; padding:.72rem .78rem .82rem;
@@ -14710,8 +14711,8 @@ section{margin:1.9rem 0}
 /* Upper dollhouse cards <use> these stage groups directly. WebKit refuses to paint a
    reference while its source tree is visibility:hidden, so keep the raster gate suspended
    after the first view; the stage-far class still keeps its animations parked. */
-#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far,
-#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far *{visibility:hidden !important}
+#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far:not(.dollhouse-source-warm),
+#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far:not(.dollhouse-source-warm) *{visibility:hidden !important}
 /* ── the dance floor keeps two moving parts per figure, not five ──────────────
    Every dancer stacks .guest-orbit (the do-si-do travel) + .guest-move (their
    own signature step) + .guest-sway (body rock) + .guest-arm-l + .guest-arm-r.
@@ -14807,6 +14808,7 @@ section{margin:1.9rem 0}
       fill.style.transition = "none";
       draw(100);
       window.__installedLoaderComplete = true;
+      window.dispatchEvent(new Event("loftloadercomplete"));
       loader.classList.add("done");
       setTimeout(function () {
         document.documentElement.classList.remove("loft-loading-play");
@@ -14832,6 +14834,7 @@ section{margin:1.9rem 0}
       if (running) return true;
       if (ready) {
         window.__installedLoaderComplete = true;
+        window.dispatchEvent(new Event("loftloadercomplete"));
         loader.remove();
         window.__startGameEntryLoader = function (nextAction) {
           if (typeof nextAction === "function") nextAction();
@@ -113994,6 +113997,86 @@ function spawnDustMote(container) {
       }, 0);
     });
   }
+  // The opening Kitchen has spare frame budget. Spend it one quiet idle slice at a time so
+  // the first picker view reuses the same live render trees as every later view.
+  var dollhouseWarmIndex = 0;
+  var dollhouseProjectorWarmed = false;
+  var dollhouseWarmIdle = 0;
+  var dollhouseWarmDelay = 0;
+  var DOLLHOUSE_WARM_GAP_MS = 320;
+  function cancelDollhouseBackgroundWarm() {
+    if (dollhouseWarmIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseWarmIdle);
+    if (dollhouseWarmDelay) clearTimeout(dollhouseWarmDelay);
+    dollhouseWarmIdle = 0;
+    dollhouseWarmDelay = 0;
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (area && area.classList.contains("dollhouse-warm")) return;
+    dollhouseRooms.forEach(function (spec) {
+      spec.button.style.display = "";
+      var stage = spec.floor === "main" && document.getElementById("stage-" + spec.stage);
+      if (stage) stage.classList.remove("dollhouse-source-warm");
+    });
+    if (dollhouse) dollhouse.classList.remove("dollhouse-warm");
+  }
+  function finishDollhouseBackgroundWarm() {
+    if (!dollhouseRooms.length) return;
+    if (dollhouseWarmIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseWarmIdle);
+    if (dollhouseWarmDelay) clearTimeout(dollhouseWarmDelay);
+    dollhouseWarmIdle = 0;
+    dollhouseWarmDelay = 0;
+    dollhouseRooms.forEach(function (spec) {
+      spec.button.style.display = "";
+      var stage = spec.floor === "main" && document.getElementById("stage-" + spec.stage);
+      if (stage) stage.classList.remove("dollhouse-source-warm");
+    });
+    dollhouseWarmIndex = dollhouseRooms.length;
+    dollhouse.classList.add("dollhouse-warm");
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (area) area.classList.add("dollhouse-warm");
+  }
+  function scheduleDollhouseBackgroundWarm() {
+    if (!window.requestIdleCallback || dollhouseWarmIdle || dollhouseWarmDelay ||
+        (dollhouseRooms.length && dollhouseWarmIndex >= dollhouseRooms.length)) return;
+    dollhouseWarmDelay = setTimeout(function () {
+      dollhouseWarmDelay = 0;
+      dollhouseWarmIdle = window.requestIdleCallback(warmDollhouseInBackground);
+    }, DOLLHOUSE_WARM_GAP_MS);
+  }
+  function warmDollhouseInBackground() {
+    dollhouseWarmIdle = 0;
+    if (!dollhouse || !dollhouse.hidden || document.hidden) return;
+    if (window.__currentStageName !== "kitchen" || lowerRoomOwnsViewport() ||
+        strip.classList.contains("party-on")) {
+      cancelDollhouseBackgroundWarm();
+      return;
+    }
+    if (!dollhouseProjectorWarmed) {
+      if (window.__primeCuddlyProjectorPreview) window.__primeCuddlyProjectorPreview();
+      dollhouseProjectorWarmed = true;
+      scheduleDollhouseBackgroundWarm();
+      return;
+    }
+    if (!dollhouseRooms.length) {
+      buildDollhouse();
+      dollhouseRooms.forEach(function (spec) { spec.button.style.display = "none"; });
+      dollhouse.classList.add("dollhouse-warm");
+    }
+    var spec = dollhouseRooms[dollhouseWarmIndex++];
+    if (spec) {
+      spec.button.style.display = "";
+      var stage = spec.floor === "main" && document.getElementById("stage-" + spec.stage);
+      if (stage) stage.classList.add("dollhouse-source-warm");
+    }
+    if (dollhouseWarmIndex >= dollhouseRooms.length) finishDollhouseBackgroundWarm();
+    else scheduleDollhouseBackgroundWarm();
+  }
+  function startDollhouseBackgroundWarm() {
+    if (!window.requestIdleCallback || dollhouseWarmIdle || dollhouseWarmDelay ||
+        (dollhouseRooms.length && dollhouseWarmIndex >= dollhouseRooms.length)) return;
+    dollhouseWarmIdle = window.requestIdleCallback(warmDollhouseInBackground);
+  }
+  if (window.__installedLoaderComplete) startDollhouseBackgroundWarm();
+  else window.addEventListener("loftloadercomplete", startDollhouseBackgroundWarm, { once:true });
   function setDollhouseCursor(index) {
     if (!dollhouseRooms.length) return;
     var next = Math.max(0, Math.min(dollhouseRooms.length - 1, index));
@@ -114060,6 +114143,8 @@ function spawnDustMote(container) {
     if (window.__cancelQueuedAutonomousThunder) window.__cancelQueuedAutonomousThunder();
     if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     pauseRoadtripForDollhouse();
+    if (!dollhouseRooms.length) buildDollhouse();
+    finishDollhouseBackgroundWarm();
     prepareDollhousePreviewState();
     renderDollhouse();
     dollhouse.classList.add("dollhouse-warm");
@@ -114183,9 +114268,16 @@ function spawnDustMote(container) {
   window.__toggleDollhouse = toggleDollhouse;
   window.addEventListener("framehealthchange", syncDollhouseAnimationHealth);
   window.__dollhouseState = function () {
+    var area = document.getElementById("hunt-fullscreen-area");
     return {
       eligible: dollhouseEligible(), open: !!(dollhouse && !dollhouse.hidden),
       pausedAnimations: dollhousePausedAnimations.length,
+      backgroundWarm: {
+        projector: dollhouseProjectorWarmed,
+        previews: dollhouseWarmIndex,
+        complete: !!(area && area.classList.contains("dollhouse-warm")),
+        pending: !!(dollhouseWarmIdle || dollhouseWarmDelay)
+      },
       controlsUnlocked: dollhouseControlsUnlocked(),
       button: !!(dollhouseBtn && !dollhouseBtn.hidden),
       floorDisabled: !!(floorBtn && floorBtn.disabled),
@@ -115485,6 +115577,7 @@ function spawnDustMote(container) {
   };
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name, opts) {
+    if (name !== "kitchen") cancelDollhouseBackgroundWarm();
     // Closing a lower room as plumbing for another destination must not count the
     // paired upstairs room: it never became visible between the two pans.
     lowerRoomReturnVisitSuppressed = true;

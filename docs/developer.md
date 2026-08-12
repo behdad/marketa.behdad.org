@@ -175,8 +175,13 @@ settled room or paused drive state, not initialize a second instance. Lower-room
 return to the paired upper room only when the user explicitly asks to go up; Back/Escape first
 dismisses the active game, projector, or overlay owned by that lower room.
 
-After its first opening, the dollhouse keeps its hidden panel layout and parked upper-room SVG
-sources warm so repeat views can reuse their render trees. Normal stage parking still owns those
+Once the entry loader reaches 100%, the dollhouse primes its Cuddly still and ten preview render
+trees one at a time, starting with the first browser-reported idle period and spacing later slices
+so their render-tree costs cannot bunch together. The work continues through the loader fade and
+opening Kitchen. Opening the picker early completes whatever remains, while leaving the Kitchen
+discards a partial raster warm-up.
+Browsers without `requestIdleCallback` retain the on-demand path. Once warm, the hidden panel and
+parked upper-room SVG sources stay alive for later views. Normal stage parking still owns those
 off-screen animations. When frame health is low, the open dollhouse additionally pauses the live
 source animations it finds and resumes only that recorded set on close or frame-rate recovery.
 

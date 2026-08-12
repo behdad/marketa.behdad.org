@@ -119,12 +119,10 @@ var harness = String.raw`<script>
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");
     check("closing The Loft restores the real Office monitor surface",
       !officeMonitor.classList.contains("dollhouse-preview"));
-    check("closing The Loft removes the cached Office clone from paint",
-      getComputedStyle(document.querySelector('[data-dollhouse-room="office"] use')).visibility === "hidden");
-    check("closing The Loft paint-hides every cached room card",
-      [].slice.call(document.querySelectorAll(".loft-dollhouse-room")).every(function (room) {
-        return getComputedStyle(room).visibility === "hidden";
-      }));
+    check("closing The Loft removes the entire cached picker from paint",
+      getComputedStyle(document.getElementById("loft-dollhouse")).display === "none");
+    check("closing The Loft retains every cached room card in its warm DOM",
+      document.querySelectorAll(".loft-dollhouse-room").length === 10);
     check("closing The Loft bounds every warm upper-room source to its own stage",
       parkedUpperSources.every(function (stage) {
         return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&

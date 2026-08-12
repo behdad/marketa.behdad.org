@@ -135,7 +135,16 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+    var pristineCamp = document.getElementById("entrance-roadtrip-camp");
+    var pristineCampObserver = new MutationObserver(function () {});
+    pristineCampObserver.observe(pristineCamp, { attributes: true, subtree: true });
     report.healthy = run(false);
+    report.pristineCampMutations = pristineCampObserver.takeRecords().filter(function (record) {
+      return record.target !== pristineCamp || record.attributeName !== "style";
+    }).map(function (record) {
+      return { id: record.target.id || "", attribute: record.attributeName };
+    });
+    pristineCampObserver.disconnect();
     report.low = run(true);
     window.__exitEntranceRoadtrip();
     window.__syncScopeMirrors();
@@ -240,6 +249,9 @@ check(healthy && healthy.rumbleScope && healthy.rumbleScope[0] === "9px" &&
   healthy.rumbleScope[1] !== "9px",
   "shoulder-rumble tuning stays on the SVG root instead of invalidating its descendants",
   healthy && healthy.rumbleScope);
+check(result && result.pristineCampMutations && result.pristineCampMutations.length === 0,
+  "a fresh highway start leaves the already-pristine campsite SVG untouched",
+  result && result.pristineCampMutations);
 check(result && result.restoredVisibility.every(function (row) { return row[1] === "visible"; }),
   "exiting Road Trip immediately restores every covered room surface", result && result.restoredVisibility);
 check(result && result.restoredStripVisibility === "visible",

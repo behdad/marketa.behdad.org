@@ -104,8 +104,12 @@ var harness = String.raw`<script>
           getComputedStyle(item).pointerEvents === "none";
       }));
 
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
-  check("Escape dismisses the only opening coach", !window.__openingGuideShowing() && !overlay.classList.contains("show"));
+  var guideMusicBefore = window.__anySongPlaying && window.__anySongPlaying();
+  var guideSpace = new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true });
+  document.dispatchEvent(guideSpace);
+  check("Space dismisses and consumes the opening coach",
+    guideSpace.defaultPrevented && !window.__openingGuideShowing() && !overlay.classList.contains("show") &&
+      (!window.__anySongPlaying || window.__anySongPlaying() === guideMusicBefore));
   var solveCalls = 0, realKitchenDoNext = window.__kitchenDoNext;
   window.__kitchenDoNext = function () { solveCalls++; return true; };
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));

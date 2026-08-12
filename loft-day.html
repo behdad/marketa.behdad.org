@@ -88140,7 +88140,7 @@ def colormode(mode=None):
     if (!btn) return;
     btn.addEventListener("click", function (e) { e.stopPropagation(); window.__skipCurrentMusic(); });
   })();
-  // Spacebar always toggles the song, everywhere on the page -- deliberately NOT
+  // Spacebar toggles the song once the game owns the key -- deliberately NOT
   // deferring to a focused hunt-hit/button's own space-activation (an earlier version
   // did, but that meant "click something, then hit space" activated whatever was
   // clicked instead of the music, which read as broken/unpredictable). Only exception:
@@ -88165,6 +88165,20 @@ def colormode(mode=None):
       e.stopImmediatePropagation();
       if (window.__removeClickMe) window.__removeClickMe();
       if (window.__stopHintBlink) window.__stopHintBlink();
+      return;
+    }
+    // Modal lessons outrank media. This listener predates their own capture handler, so it must
+    // dismiss them here before a Space press can reach toggleMusicPlayback below.
+    if (window.__partyCoachModalActive && window.__partyCoachModalActive()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__dismissActivePartyCoach) window.__dismissActivePartyCoach();
+      return;
+    }
+    if (window.__openingGuideShowing && window.__openingGuideShowing()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__advanceOpeningGuide) window.__advanceOpeningGuide();
       return;
     }
     // Window Tetris registers its capture listener later. Let that listener own Space

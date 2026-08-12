@@ -1166,6 +1166,31 @@ function checkScopeMirrorHygiene(file, style, script) {
     pass(file + ": mir-* scope mirrors agree between CSS and syncScopeMirrors (" + Object.keys(cssMirs).length + ")");
   }
 }
+
+// A collision used to restart a transform animation on the 22k-object Road Trip SVG by
+// forcing a geometry read. That synchronously laid out the full page, then the SVG-root
+// transform repeated the cost through the shake. Keep collision feedback on the HTML
+// viewport's Web Animation path and never reintroduce a geometry flush in its hot path.
+function checkRoadtripImpactPaint(file, style, script) {
+  if (file !== "loft-day.html" || !style || !script) return;
+  var start = script.indexOf("function roadtripImpact(kind, damage, severity)");
+  var end = script.indexOf("function paintRoadtripScore()", start);
+  if (start < 0 || end <= start) {
+    fail(file + ": Road Trip collision paint boundary is readable");
+    return;
+  }
+  var body = script.slice(start, end);
+  var geometryFlush = /\.(?:getBoundingClientRect|getBBox|offsetWidth|offsetHeight)\b/.test(body);
+  var svgRootAnimation = /#entrance-drive-hud-svg\.roadtrip-impact-(?:bump|heavy)\s*\{[^}]*animation\s*:/s.test(style);
+  var viewportAnimation = /\bdriveHud\.animate\(frames\s*,/.test(body);
+  if (!geometryFlush && !svgRootAnimation && viewportAnimation) {
+    pass(file + ": Road Trip collisions shake the HTML viewport without an SVG layout flush");
+  } else {
+    fail(file + ": Road Trip collision shake regressed to main-thread SVG layout",
+      "geometry flush: " + geometryFlush + ", SVG-root animation: " + svgRootAnimation +
+      ", viewport animation: " + viewportAnimation);
+  }
+}
 function checkConsoleOutClipSlack(file, style) {
   if (file !== "loft-day.html" || !style) return;
   var m = style.match(/\.console-out\{([^}]*)\}/);
@@ -1645,6 +1670,7 @@ FILES.forEach(function (file) {
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);
   checkScopeMirrorHygiene(file, style, script);
+  checkRoadtripImpactPaint(file, style, script);
   checkSvgTagBalance(file, html);
   checkCampBuilderOverlayOrder(file, html);
   checkStaticDomIds(file, html);

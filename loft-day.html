@@ -2053,29 +2053,11 @@ html.frame-rate-low .entrance-roadtrip-camp-finale-fin-breath{animation:none!imp
 #entrance-drive-hud-svg.roadtrip-shoulder-rumble{
   animation:entrance-roadtrip-shoulder-rumble var(--roadtrip-rumble-period,.16s) steps(2,end) infinite
 }
-#entrance-drive-hud-svg.roadtrip-impact-bump{animation:entrance-roadtrip-impact-bump .54s ease-out}
-#entrance-drive-hud-svg.roadtrip-impact-heavy{animation:entrance-roadtrip-impact-heavy 1.08s ease-out}
 @keyframes entrance-roadtrip-shoulder-rumble{
   0%{translate:0 0}
   25%{translate:var(--roadtrip-rumble-x,.15px) var(--roadtrip-rumble-y,.5px)}
   50%{translate:var(--roadtrip-rumble-x-neg,-.15px) var(--roadtrip-rumble-y-neg,-.2px)}
   75%{translate:var(--roadtrip-rumble-x-neg,-.15px) var(--roadtrip-rumble-y,.5px)}
-}
-@keyframes entrance-roadtrip-impact-bump{
-  0%,100%{transform:translate(0,0)}
-  12%{transform:translate(0,var(--roadtrip-shake-y,5px)) scale(.992)}
-  28%{transform:translate(0,calc(var(--roadtrip-shake-y,5px) * -.6))}
-  48%{transform:translate(0,calc(var(--roadtrip-shake-y,5px) * .4))}
-}
-@keyframes entrance-roadtrip-impact-heavy{
-  0%,100%{transform:translate(0,0) rotate(0)}
-  7%{transform:translate(calc(var(--roadtrip-shake-x,12px) * -1),var(--roadtrip-shake-y,7px)) rotate(-.8deg) scale(.982)}
-  15%{transform:translate(calc(var(--roadtrip-shake-x,12px) * .83),calc(var(--roadtrip-shake-y,7px) * -.86)) rotate(.7deg)}
-  24%{transform:translate(calc(var(--roadtrip-shake-x,12px) * -.67),calc(var(--roadtrip-shake-y,7px) * .71)) rotate(-.5deg)}
-  35%{transform:translate(calc(var(--roadtrip-shake-x,12px) * .58),calc(var(--roadtrip-shake-y,7px) * -.43)) rotate(.4deg)}
-  49%{transform:translate(calc(var(--roadtrip-shake-x,12px) * -.42),calc(var(--roadtrip-shake-y,7px) * .43)) rotate(-.25deg)}
-  66%{transform:translate(calc(var(--roadtrip-shake-x,12px) * .25),calc(var(--roadtrip-shake-y,7px) * -.29)) rotate(.12deg)}
-  82%{transform:translate(calc(var(--roadtrip-shake-x,12px) * -.17),calc(var(--roadtrip-shake-y,7px) * .14))}
 }
 .entrance-drive-windshield-scenery{pointer-events:none}
 .entrance-drive-windshield-day,.entrance-drive-windshield-night{transition:opacity .9s ease}
@@ -2397,8 +2379,6 @@ html.mir-resume-pending #hunt-caption{visibility:hidden}
   #entrance-room.entrance-snowing .entrance-snowflake-row{animation:none}
   #entrance-door-art.horn-answering .entrance-door-answer-glow{animation:none;opacity:.1}
   .entrance-drive-windshield-rain-row,.entrance-drive-windshield-snow-row{animation:none !important}
-  #entrance-drive-hud-svg.roadtrip-impact-bump,
-  #entrance-drive-hud-svg.roadtrip-impact-heavy,
   #entrance-drive-hud-svg.roadtrip-shoulder-rumble{animation:none}
   #entrance-roadtrip-speed[data-roadtrip-speed-band="escape"]{animation:none}
   .entrance-roadtrip-police-mirror-flashes.is-pursuing .entrance-roadtrip-police-mirror-flash{
@@ -39887,6 +39867,7 @@ window.__entranceRoomOpen = false;
   var roadtripArrestLineNode = null;
   var porscheArrestAudioNodes = [];
   var roadtripImpactTimer = null;
+  var roadtripImpactAnimation = null;
   var roadtripCrackSerial = 0;
   var roadtripSuspensionTimer = null;
   var roadtripDemeritExpiryTimer = null;
@@ -42052,6 +42033,8 @@ window.__entranceRoomOpen = false;
     room.classList.remove("roadtrip-cracked", "roadtrip-shattered");
     room.style.removeProperty("--roadtrip-damage");
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
+    if (roadtripImpactAnimation) roadtripImpactAnimation.cancel();
+    roadtripImpactAnimation = null;
     if (driveHudSvg) driveHudSvg.classList.remove("roadtrip-impact-bump", "roadtrip-impact-heavy");
   }
   function playRoadtripImpactSound(kind, severity) {
@@ -42194,12 +42177,46 @@ window.__entranceRoomOpen = false;
     if (!driveHudSvg) return;
     clearTimeout(roadtripImpactTimer);
     var shakeScale = light ? .38 : 1;
-    driveHudSvg.style.setProperty("--roadtrip-shake-x", ((4 + severity * 9) * shakeScale).toFixed(2) + "px");
-    driveHudSvg.style.setProperty("--roadtrip-shake-y", ((2 + severity * 6) * shakeScale).toFixed(2) + "px");
+    var shakeX = (4 + severity * 9) * shakeScale;
+    var shakeY = (2 + severity * 6) * shakeScale;
+    driveHudSvg.style.setProperty("--roadtrip-shake-x", shakeX.toFixed(2) + "px");
+    driveHudSvg.style.setProperty("--roadtrip-shake-y", shakeY.toFixed(2) + "px");
     driveHudSvg.classList.remove("roadtrip-impact-bump", "roadtrip-impact-heavy");
-    void driveHudSvg.getBoundingClientRect();
     var className = heavy ? "roadtrip-impact-heavy" : "roadtrip-impact-bump";
     driveHudSvg.classList.add(className);
+    // Shaking the SVG root made each collision synchronously lay out the whole page,
+    // then repeat that cost throughout the animation. Its HTML viewport is a composited
+    // layer, so replay the same motion there without a geometry flush.
+    if (roadtripImpactAnimation) roadtripImpactAnimation.cancel();
+    roadtripImpactAnimation = null;
+    if (driveHud && driveHud.animate &&
+        !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      var frames = heavy ? [
+        { transform: "translate3d(0,0,0) rotate(0) scale(1)", offset: 0 },
+        { transform: "translate3d(" + (-shakeX) + "px," + shakeY + "px,0) rotate(-.8deg) scale(.982)", offset: .07 },
+        { transform: "translate3d(" + (shakeX * .83) + "px," + (-shakeY * .86) + "px,0) rotate(.7deg) scale(1)", offset: .15 },
+        { transform: "translate3d(" + (-shakeX * .67) + "px," + (shakeY * .71) + "px,0) rotate(-.5deg) scale(1)", offset: .24 },
+        { transform: "translate3d(" + (shakeX * .58) + "px," + (-shakeY * .43) + "px,0) rotate(.4deg) scale(1)", offset: .35 },
+        { transform: "translate3d(" + (-shakeX * .42) + "px," + (shakeY * .43) + "px,0) rotate(-.25deg) scale(1)", offset: .49 },
+        { transform: "translate3d(" + (shakeX * .25) + "px," + (-shakeY * .29) + "px,0) rotate(.12deg) scale(1)", offset: .66 },
+        { transform: "translate3d(" + (-shakeX * .17) + "px," + (shakeY * .14) + "px,0) rotate(0) scale(1)", offset: .82 },
+        { transform: "translate3d(0,0,0) rotate(0) scale(1)", offset: 1 }
+      ] : [
+        { transform: "translate3d(0,0,0) scale(1)", offset: 0 },
+        { transform: "translate3d(0," + shakeY + "px,0) scale(.992)", offset: .12 },
+        { transform: "translate3d(0," + (-shakeY * .6) + "px,0) scale(1)", offset: .28 },
+        { transform: "translate3d(0," + (shakeY * .4) + "px,0) scale(1)", offset: .48 },
+        { transform: "translate3d(0,0,0) scale(1)", offset: 1 }
+      ];
+      roadtripImpactAnimation = driveHud.animate(frames, {
+        duration: heavy ? 1080 : 540,
+        easing: "ease-out"
+      });
+      var animation = roadtripImpactAnimation;
+      animation.onfinish = animation.oncancel = function () {
+        if (roadtripImpactAnimation === animation) roadtripImpactAnimation = null;
+      };
+    }
     roadtripImpactTimer = setTimeout(function () {
       driveHudSvg.classList.remove(className);
       roadtripImpactTimer = null;

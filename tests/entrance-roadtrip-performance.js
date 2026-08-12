@@ -33,6 +33,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   var originalSet = Element.prototype.setAttribute;
   var originalRemove = Element.prototype.removeAttribute;
   var originalAppend = Element.prototype.appendChild;
+  var coveredAnimation = null;
   var counters = null;
   Element.prototype.setAttribute = function (name, value) {
     if (counters) {
@@ -73,6 +74,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     var coveredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
     var stripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
+    coveredAnimation = document.querySelector("#bathroom-room .bathroom-bubble");
     counters = {
       attributes: 0,
       removes: 0,
@@ -103,6 +105,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       containment: getComputedStyle(document.getElementById("entrance-room")).contain,
       coveredVisibility: coveredVisibility,
       stripVisibility: stripVisibility,
+      coveredAnimationState: coveredAnimation && getComputedStyle(coveredAnimation).animationPlayState,
       overlayContainment: overlayContainment,
       roomSize: [roomRect.width, roomRect.height],
       viewportSize: [viewportRect.width, viewportRect.height],
@@ -127,6 +130,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     report.restoredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
     report.restoredStripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
+    report.restoredAnimationState = coveredAnimation && getComputedStyle(coveredAnimation).animationPlayState;
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
   }
@@ -215,10 +219,14 @@ check(healthy && healthy.coveredVisibility.every(function (row) { return row[1] 
   "Road Trip skips rendering every fully covered room surface", healthy && healthy.coveredVisibility);
 check(healthy && healthy.stripVisibility === "hidden",
   "Road Trip hides the covered loft strip without applying size containment", healthy);
+check(healthy && healthy.coveredAnimationState === "paused",
+  "Road Trip pauses covered CSS animations instead of advancing invisible frames", healthy);
 check(result && result.restoredVisibility.every(function (row) { return row[1] === "visible"; }),
   "exiting Road Trip immediately restores every covered room surface", result && result.restoredVisibility);
 check(result && result.restoredStripVisibility === "visible",
   "exiting Road Trip immediately restores the loft strip", result && result.restoredStripVisibility);
+check(result && result.restoredAnimationState === "running",
+  "exiting Road Trip resumes covered CSS animations", result && result.restoredAnimationState);
 check(healthy && low && healthy.counters.roadPaints === 20 &&
   low.counters.roadPaints >= 9 && low.counters.roadPaints <= 11,
   "healthy driving paints every step while low-frame driving caps the world near 30 Hz",

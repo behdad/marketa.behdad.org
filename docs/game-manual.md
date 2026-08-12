@@ -79,11 +79,14 @@ The bottom caption carries the Morning clue trail, later feedback, and progressi
 feedback yields to important story or outcome text, then returns to the latest instruction rather
 than replaying an old line.
 
-Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The Party
-handoff coach allows navigation but holds new notifications and calls until it leaves. Opening a
-message never performs its suggested activity: use the separate activity arrow. Old messages remain
-readable even when their activity has expired. While the Office monitor or laptop is zoomed, message
-previews and unread bubbles wait until that focused view closes, just as they do while the phone is open.
+Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The large
+two-step opening coach is modal: the highlighted navigation and Reset controls remain available,
+but the room stays inert until each step is dismissed. Other coach bubbles remain compact and
+non-modal. The Party handoff coach allows navigation but holds new notifications and calls until it
+leaves. Opening a message never performs its suggested activity: use the separate activity arrow.
+Old messages remain readable even when their activity has expired. While the Office monitor or laptop
+is zoomed, message previews and unread bubbles wait until that focused view closes, just as they do
+while the phone is open.
 Irene and Hannah may ask to play the Bedroom's tic-tac-toe, Balcony Block Party, or the Cuddly piano;
 each activity arrow takes you straight to the named game.
 On a birthday, Behdad or Markéta's greeting arrives as Party begins with the usual activity arrow.

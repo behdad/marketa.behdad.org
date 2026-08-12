@@ -371,6 +371,12 @@ points at a moving room control must be hidden during the pan and placed only af
 settles. Keep coach focus/tab behavior consistent with the global input contract; decorative SVG
 groups should never become accidental tab stops.
 
+Only `#opening-guide-coach` carries `.modal-coach`: its large card and dimmed full-shell hit layer
+make the scene lock visible while leaving the deliberately raised navigation, Reset, and current
+arrow target readable. Compact Party, Messages, piano, shooting, and Drive coaches are not modal
+overlays and must not inherit that treatment; any narrower action sequencing they own stays local to
+their controller.
+
 ## Apps, automation, and chat
 
 ### App registries

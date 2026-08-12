@@ -29,7 +29,12 @@ var harness = String.raw`<script>
     await sleep(30);
     click(document.getElementById("click-me-overlay"));
     await sleep(60);
-    document.getElementById("hunt-fullscreen-area").scrollIntoView({ block: "start" });
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (innerHeight <= 400 && innerWidth > innerHeight) {
+      area.classList.add("is-fullscreen");
+      if (window.__sizeFullscreenFrame) window.__sizeFullscreenFrame();
+    }
+    area.scrollIntoView({ block: "start" });
     await sleep(30);
     window.dispatchEvent(new Event("resize"));
     await sleep(40);
@@ -49,6 +54,13 @@ var harness = String.raw`<script>
       copy.textContent === "Navigation lives here." && x.textContent === "×" &&
       card.querySelectorAll(":scope > .hunt-coach-x").length === 1);
   var cardRect = card.getBoundingClientRect(), xRect = x.getBoundingClientRect();
+  var areaRect = area.getBoundingClientRect();
+  check("the genuinely modal coach occupies a substantial part of the shell",
+    cardRect.width >= areaRect.width * .72 && cardRect.height >= areaRect.height * .35,
+    JSON.stringify({ card: cardRect.toJSON(), area: areaRect.toJSON() }));
+  check("the modal surface visibly distinguishes its blocked background",
+    getComputedStyle(overlay).backgroundColor === "rgba(69, 58, 49, 0.2)",
+    getComputedStyle(overlay).backgroundColor);
   check("the coach dismiss control stays in the true upper-right corner",
     xRect.top - cardRect.top < 16 && cardRect.right - xRect.right < 16,
     JSON.stringify({ card: cardRect.toJSON(), dismiss: xRect.toJSON() }));
@@ -83,6 +95,12 @@ var harness = String.raw`<script>
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
+  check("only the background-blocking coach carries the modal treatment",
+    overlay.classList.contains("modal-coach") && getComputedStyle(overlay).pointerEvents === "auto" &&
+      document.querySelectorAll(".hunt-coach-overlay.modal-coach").length === 1 &&
+      Array.prototype.slice.call(document.querySelectorAll("#party-switch-coach,#party-room-map-coach")).every(function (item) {
+        return !item.classList.contains("modal-coach") && getComputedStyle(item).pointerEvents === "none";
+      }));
 
   var dollhouseButton = document.getElementById("hunt-dollhouse-btn");
   var dollhouseRect = dollhouseButton.getBoundingClientRect();
@@ -128,12 +146,15 @@ var harness = String.raw`<script>
   click(x); await sleep(50);
   check("Czech caption coach is concise and localized", copy.textContent === "Nápovědy a pokyny se objevují tady." && !/pokračuj/i.test(copy.textContent));
   var cards = Array.prototype.slice.call(document.querySelectorAll(".hunt-coach-card"));
-  check("opening and both party coaches share one card and dismiss-control contract",
-    cards.length === 3 && cards.every(function (item) {
-      return cardSignature(item) === cardSignature(card) &&
-        item.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
-        item.querySelectorAll(":scope > .hunt-coach-x").length === 1;
-    }));
+  var partyCards = Array.prototype.slice.call(document.querySelectorAll("#party-switch-coach .hunt-coach-card,#party-room-map-coach .hunt-coach-card"));
+  check("non-modal party coaches retain the compact shared card treatment",
+    cards.length === 3 && partyCards.length === 2 &&
+      partyCards.every(function (item) {
+        return cardSignature(item) === cardSignature(partyCards[0]) &&
+          item.getBoundingClientRect().width <= 540 &&
+          item.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
+          item.querySelectorAll(":scope > .hunt-coach-x").length === 1;
+      }) && cardSignature(card) !== cardSignature(partyCards[0]));
   click(x);
 
   await showGuide("en");
@@ -158,9 +179,14 @@ var harness = String.raw`<script>
       watchHit && watchHit.closest("#watch-loft-btn"),
     JSON.stringify({ room: window.__currentStageName, phase2: !!window.__secondRound,
       max: window.__maxUnlocked(), started: window.__gameStarted(), watchHit: watchHit && (watchHit.id || String(watchHit.className)) }));
-  check("explicit Reset clears the resumable checkpoint but preserves unrelated browser data",
-    localStorage.getItem("loftCheckpoint:v1") === null &&
-      localStorage.getItem("opening-guide-reset-unrelated") === "keep",
+  check("explicit Reset replaces the discarded checkpoint with clean phase-one state and preserves unrelated browser data",
+    (function () {
+      var saved = localStorage.getItem("loftCheckpoint:v1"), parsed = null;
+      try { parsed = saved && JSON.parse(saved); } catch (_error) {}
+      return saved !== "discarded-by-explicit-reset" && parsed && parsed.progress &&
+        parsed.progress.room === "kitchen" && parsed.progress.phase2 === false &&
+        localStorage.getItem("opening-guide-reset-unrelated") === "keep";
+    })(),
     JSON.stringify({ checkpoint: localStorage.getItem("loftCheckpoint:v1"),
       unrelated: localStorage.getItem("opening-guide-reset-unrelated") }));
   localStorage.removeItem("opening-guide-reset-unrelated");
@@ -190,5 +216,8 @@ var mobile = run("mobile landscape/reduced motion", {
   forceReduce: true, forceCoarsePointer: true, patchRaf: true,
   chromeFlags: "--window-size=740,480 --force-prefers-reduced-motion"
 });
-if (!desktop || !mobile) process.exit(1);
+var mobileShort = run("390px-tall mobile landscape", {
+  forceCoarsePointer: true, patchRaf: true, chromeFlags: "--window-size=844,390"
+});
+if (!desktop || !mobile || !mobileShort) process.exit(1);
 console.log("opening guide: all focused checks passed");

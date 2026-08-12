@@ -70,6 +70,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     var viewportRect = document.querySelector(".hunt-viewport").getBoundingClientRect();
     var overlayContainment = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room", "entrance-room"]
       .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contain]; });
+    var coveredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
+      .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
+    var stripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
     counters = {
       attributes: 0,
       removes: 0,
@@ -98,6 +101,8 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       distance: after.roadtrip.distance - before.roadtrip.distance,
       entityCount: after.roadtrip.entityCount,
       containment: getComputedStyle(document.getElementById("entrance-room")).contain,
+      coveredVisibility: coveredVisibility,
+      stripVisibility: stripVisibility,
       overlayContainment: overlayContainment,
       roomSize: [roomRect.width, roomRect.height],
       viewportSize: [viewportRect.width, viewportRect.height],
@@ -117,6 +122,11 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
     report.healthy = run(false);
     report.low = run(true);
+    window.__exitEntranceRoadtrip();
+    window.__syncScopeMirrors();
+    report.restoredVisibility = ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room"]
+      .map(function (id) { return [id, getComputedStyle(document.getElementById(id)).contentVisibility]; });
+    report.restoredStripVisibility = getComputedStyle(document.getElementById("loft-game-strip")).visibility;
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
   }
@@ -201,6 +211,14 @@ check(healthy && healthy.containment === "layout paint" &&
   "the active highway is layout/paint-contained without changing its viewport size", healthy);
 check(healthy && healthy.overlayContainment.every(function (row) { return row[1] === "layout paint"; }),
   "all fixed-size overlay rooms establish independent layout/paint scopes", healthy && healthy.overlayContainment);
+check(healthy && healthy.coveredVisibility.every(function (row) { return row[1] === "hidden"; }),
+  "Road Trip skips rendering every fully covered room surface", healthy && healthy.coveredVisibility);
+check(healthy && healthy.stripVisibility === "hidden",
+  "Road Trip hides the covered loft strip without applying size containment", healthy);
+check(result && result.restoredVisibility.every(function (row) { return row[1] === "visible"; }),
+  "exiting Road Trip immediately restores every covered room surface", result && result.restoredVisibility);
+check(result && result.restoredStripVisibility === "visible",
+  "exiting Road Trip immediately restores the loft strip", result && result.restoredStripVisibility);
 check(healthy && low && healthy.counters.roadPaints === 20 &&
   low.counters.roadPaints >= 9 && low.counters.roadPaints <= 11,
   "healthy driving paints every step while low-frame driving caps the world near 30 Hz",

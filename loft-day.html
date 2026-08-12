@@ -97350,7 +97350,8 @@ def colormode(mode=None):
     }
     function finishBirthdayCelebration(who) {
       var item = birthdayCelebrations[0];
-      if (!item || item.who !== who || item.phase !== "cake") return false;
+      if (!item || item.who !== who || item.phase !== "reveal") return false;
+      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
       birthdayCelebrations.shift();
       birthdayPostcard(who);
       checkpointBirthdayCelebrations();
@@ -97360,31 +97361,20 @@ def colormode(mode=None):
       var item = birthdayCelebrations[0];
       if (!item || birthdayPostcardOpen || item.phase !== "queued") return false;
       if (window.__bdCakeOn) return false; // another birthday beat owns the floor; its end wakes this queue
-      item.phase = "cake";
+      item.phase = "reveal";
       checkpointBirthdayCelebrations();
       if (!window.__birthdayGoto || !window.__birthdayGoto(item.who)) {
         birthdayCelebrations.shift();
         checkpointBirthdayCelebrations();
         return false;
       }
-      // Garden figures have a finite candle/cake lifecycle. Call- and station-only birthday
-      // scenes have a static cake/hat instead, so their settled reveal is their completion point.
-      if (!(window.__bdGardenFigures && window.__bdGardenFigures[item.who])) {
-        birthdayCelebrationTimer = setTimeout(function () {
-          birthdayCelebrationTimer = null;
-          finishBirthdayCelebration(item.who);
-        }, 900);
-      } else {
-        birthdayCelebrationTimer = setTimeout(function () {
-          birthdayCelebrationTimer = null;
-          // Navigation/party teardown can prevent the delayed cake starter from ever owning the
-          // floor. Cancel that attempt without a postcard; the repeatable action remains available.
-          if (birthdayCelebrations[0] === item && item.phase === "cake" && !window.__bdCakeOn) {
-            birthdayCelebrations.shift();
-            checkpointBirthdayCelebrations();
-          }
-        }, 1200);
-      }
+      // One player-facing beat owns every venue: the reveal/cake gets eight seconds to play, then
+      // its matching postcard opens. The cake remains independently interactive; its exact timer
+      // is not an API boundary for Messages and a manual candle tap must not open the card early.
+      birthdayCelebrationTimer = setTimeout(function () {
+        birthdayCelebrationTimer = null;
+        finishBirthdayCelebration(item.who);
+      }, 8000);
       return true;
     }
     function queueBirthdayCelebration(who) {
@@ -97396,14 +97386,19 @@ def colormode(mode=None):
       return true;
     }
     window.addEventListener("loft:birthdaycakeend", function (event) {
-      var detail = event.detail || {}, who = Array.isArray(detail.who) ? detail.who : [];
-      var item = birthdayCelebrations[0];
-      if (!item) return;
-      if (item.phase === "cake" && who.indexOf(item.who) !== -1) {
-        if (detail.completed) finishBirthdayCelebration(item.who);
-        else { birthdayCelebrations.shift(); checkpointBirthdayCelebrations(); }
-      }
-      if (!birthdayPostcardOpen) scheduleBirthdayCelebrationRun(160);
+      var detail = event.detail || {};
+      if (detail.completed || !birthdayCelebrations.length) return;
+      // Party-off, room-leave and explicit cake teardown are cancellation, never completion.
+      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
+      birthdayCelebrations = [];
+      checkpointBirthdayCelebrations();
+    });
+    window.addEventListener("loft:statechange", function (event) {
+      var detail = event.detail || {}, args = detail.args || {};
+      if (detail.id !== "party.change" || args.on !== false || !birthdayCelebrations.length) return;
+      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
+      birthdayCelebrations = [];
+      checkpointBirthdayCelebrations();
     });
     window.addEventListener("loft:sharecardclose", function () {
       if (!birthdayPostcardOpen) return;
@@ -98143,7 +98138,13 @@ def colormode(mode=None):
       if (window.__loftSessionPreviewActive || window.__cinematic || !window.__secondRound || !phaseTwoHeldMessages.length) return 0;
       var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
       var delivered = 0;
-      held.forEach(function (id) { if (deliverAutonomousRewritten(id)) delivered++; });
+      held.forEach(function (id) {
+        // The exact-day birthday greeting IS the Party transition: land it synchronously rather
+        // than putting it behind the ordinary rewrite/deferred drip. Celebrate still owns every
+        // scene/card effect, so this immediate row is informational until the player taps it.
+        if (/^bd_/.test(id)) { if (window.__deliverPhoneMessage(id, true)) delivered++; }
+        else if (deliverAutonomousRewritten(id)) delivered++;
+      });
       return delivered;
     };
     // ── birthday-announcement texts ── when a guest's birthday window opens (the 'b'/console axis
@@ -98155,9 +98156,9 @@ def colormode(mode=None):
     // re-apply / repeated 'b' presses can't double-send. Unattended delivery is silent (the thumb
     // + notify buzz self-gate on the crickets rule inside showMessageThumb).
     // Occasion invites lazily rasterize their own share-card and hang it on the delivered message
-    // as a tappable inline postcard. Birthday greetings deliberately do not: their one-shot
-    // Celebrate action opens that person's postcard and ceremony together, so a casual player can
-    // leave the greeting alone without having either celebration put in the way.
+    // as a tappable inline postcard. Birthday greetings deliberately do not: their repeatable
+    // Celebrate action starts the ceremony and opens that person's postcard after its eight-second
+    // beat, so a casual player can leave the greeting alone without either effect getting in the way.
     function occForMessageId(id) {
       if (id.indexOf("bd_") === 0) return window.__shareBirthdayOcc ? window.__shareBirthdayOcc(id.slice(3)) : null;
       if (id.indexOf("occ_") === 0 || id.indexOf("hol_") === 0) return window.__shareOccForKey ? window.__shareOccForKey(id.replace(/^(occ_|hol_)/, "")) : null;

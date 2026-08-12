@@ -240,10 +240,11 @@ cannot relight or strand the blacklight.
 
 Exact-day birthdays are announced through the phase-two `bd_<who>` Messages row. Its repeatable
 **Celebrate** action queues the existing birthday router for the cake or authored remote venue; a
-garden postcard opens only on the cake owner's natural-completion event (never teardown), while a
-call/station postcard follows its settled reveal. The bounded queue is checkpointed and replays a
-transient in-flight ceremony after recovery. `shareAutoShow` must not auto-open a birthday card when
-Party starts, and birthday delivery must not pre-render an inline postcard.
+matching postcard opens eight seconds after its reveal begins. Party/cake teardown cancels that
+timer, while the bounded queue is checkpointed and replays a transient in-flight ceremony after
+recovery. The greeting bypasses ordinary autonomous rewrite/drip deferral and lands synchronously at
+the first Party transition. `shareAutoShow` must not auto-open a birthday card when Party starts,
+and birthday delivery must not pre-render an inline postcard.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been

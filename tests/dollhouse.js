@@ -64,15 +64,19 @@ var harness = String.raw`<script>
       JSON.stringify(state()));
     var firstUpperPreviews = [].slice.call(document.querySelectorAll("#loft-dollhouse-main use.loft-dollhouse-live-preview"));
     var firstLowerPreviews = [].slice.call(document.querySelectorAll("#loft-dollhouse-lower use.loft-dollhouse-live-preview"));
-    check("the first Dollhouse frame paints its complete shell and lower floor before activating heavy live upper previews",
+    check("the first Dollhouse stays visually withheld while its upper previews prepare",
       firstUpperPreviews.length === 5 && firstUpperPreviews.every(function (use) { return use.style.display === "none"; }) &&
-        firstLowerPreviews.length === 5 && firstLowerPreviews.every(function (use) { return use.style.display !== "none"; }),
+        firstLowerPreviews.length === 5 && firstLowerPreviews.every(function (use) { return use.style.display !== "none"; }) &&
+        getComputedStyle(document.getElementById("loft-dollhouse")).opacity === "0",
       JSON.stringify({ upper: firstUpperPreviews.map(function (use) { return use.style.display; }),
-        lower: firstLowerPreviews.map(function (use) { return use.style.display; }) }));
+        lower: firstLowerPreviews.map(function (use) { return use.style.display; }),
+        opacity: getComputedStyle(document.getElementById("loft-dollhouse")).opacity }));
     await sleep(140);
-    check("the first Dollhouse reveal restores every live upper preview over separate frames",
-      firstUpperPreviews.every(function (use) { return use.style.display !== "none"; }),
-      firstUpperPreviews.map(function (use) { return use.style.display; }).join(","));
+    check("the first Dollhouse appears only after every live upper preview is ready",
+      firstUpperPreviews.every(function (use) { return use.style.display !== "none"; }) &&
+        getComputedStyle(document.getElementById("loft-dollhouse")).opacity === "1",
+      JSON.stringify({ upper: firstUpperPreviews.map(function (use) { return use.style.display; }),
+        opacity: getComputedStyle(document.getElementById("loft-dollhouse")).opacity }));
     check("opening The Loft pauses an active Road Trip exactly once",
       transportPauseCalls === 1 && transportPaused,
       JSON.stringify({ calls: transportPauseCalls, paused: transportPaused }));

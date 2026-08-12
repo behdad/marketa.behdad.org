@@ -3507,6 +3507,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   padding:clamp(.35rem,1vw,1rem); background:rgba(38,28,23,.76);
 }
 #loft-dollhouse[hidden]{display:none}
+/* The first five live upper-room cards are staggered to avoid one large SVG paint burst.
+   Keep that preparation offscreen; revealing a complete picker slightly later is calmer than
+   flashing five empty cards. Opacity keeps the live <use> trees eligible for rasterization. */
+#loft-dollhouse.dollhouse-preparing{opacity:0}
 /* Keep the already-built picker and its parked upper-room sources warm after the first view.
    The live <use> previews then reopen without rebuilding five large SVG render trees. */
 #loft-dollhouse.dollhouse-warm[hidden]{display:none;pointer-events:none}
@@ -114556,6 +114560,7 @@ function spawnDustMote(container) {
   function cancelDollhouseFirstReveal() {
     dollhouseFirstRevealTimers.forEach(clearTimeout);
     dollhouseFirstRevealTimers = [];
+    if (dollhouse) dollhouse.classList.remove("dollhouse-preparing");
   }
   function stageDollhouseFirstReveal() {
     if (dollhouseFirstRevealComplete) return;
@@ -115091,6 +115096,9 @@ function spawnDustMote(container) {
     prepareDollhousePreviewState();
     renderDollhouse();
     stageDollhouseFirstReveal();
+    if (!dollhouseFirstRevealComplete && dollhouseFirstRevealQueue.length) {
+      dollhouse.classList.add("dollhouse-preparing");
+    }
     dollhouse.classList.add("dollhouse-warm");
     dollhouse.hidden = false;
     var area = document.getElementById("hunt-fullscreen-area");
@@ -115113,7 +115121,10 @@ function spawnDustMote(container) {
           if (spec.use) spec.use.style.display = "";
           if (index === revealQueue.length - 1) {
             dollhouseFirstRevealComplete = true;
-            dollhouseFirstRevealTimers = [];
+            dollhouseFirstRevealTimers.push(setTimeout(function () {
+              if (dollhouse && !dollhouse.hidden) dollhouse.classList.remove("dollhouse-preparing");
+              dollhouseFirstRevealTimers = [];
+            }, 20));
           }
         }, 20 * (index + 1)));
       });

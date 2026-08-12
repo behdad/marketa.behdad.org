@@ -191,6 +191,12 @@ and a static native-SVG caps thumbnail covers it while powered on. A
 temporary class removes the live monitor screen tree from the nested `<use>`; closing the picker
 also detaches that Office clone from paint, while captured card clicks prevent monitor summons.
 
+The live Office monitor retains every app's DOM and runtime state, but only the foreground HTML app
+group participates in layout; inactive SVG app groups use `display:none`. Room parking hides
+their paint only when Office becomes `stage-far`, after the strip transition settles, so a running app
+does not blank while the room is still sliding out. App-owned native screen fills match each HTML
+surface's outer color to conceal Chrome's occasional one-device-pixel foreignObject rounding edge.
+
 ### Morning routine and free exploration
 
 The first run follows the upper rooms in `STAGES` order. Each room-specific `__…DoNext` walker owns

@@ -88181,6 +88181,12 @@ def colormode(mode=None):
       if (window.__advanceOpeningGuide) window.__advanceOpeningGuide();
       return;
     }
+    // The recovery gate's later capture listener treats Space exactly like Enter. Yield before
+    // the untouched-Kitchen music gate, because a resumable Kitchen may still be the preview.
+    if (document.getElementById("loft-recovery-gate") || window.__recoveryActivationHeld) {
+      e.preventDefault();
+      return;
+    }
     // Share the checkpoint owner's definition of meaningful progress rather than adding
     // a second "left Kitchen" latch for global music.
     if (window.__checkpointWorthSavingNow && !window.__checkpointWorthSavingNow()) {
@@ -88192,13 +88198,6 @@ def colormode(mode=None):
     // instead of toggling music before the hard-drop handler gets the same event.
     var tetrisState = window.__balconyTetrisState && window.__balconyTetrisState();
     if (tetrisState && (tetrisState.active || tetrisState.result)) return;
-    // The recovery gate owns Space. Its dynamically-installed capture listener runs later
-    // than this long-lived music listener, so bail while the gate is visible; once accepted,
-    // the held-key flag keeps auto-repeat inert until the matching keyup.
-    if (document.getElementById("loft-recovery-gate") || window.__recoveryActivationHeld) {
-      e.preventDefault();
-      return;
-    }
     if (spaceIsTypingContext(document.activeElement)) return;
     e.preventDefault(); // don't let space scroll the page
     e.stopPropagation(); // ...or reach a focused control's own space-activation

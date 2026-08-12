@@ -114545,23 +114545,12 @@ function spawnDustMote(container) {
   var dollhouseRoadtripWorldStyle = null;
   var dollhouseRoadtripCampStyles = null;
   var dollhousePausedAnimations = [];
-  var dollhouseFirstRevealRaf = 0;
+  var dollhouseFirstRevealTimers = [];
   var dollhouseFirstRevealQueue = [];
   var dollhouseFirstRevealComplete = false;
   function cancelDollhouseFirstReveal() {
-    if (dollhouseFirstRevealRaf) cancelAnimationFrame(dollhouseFirstRevealRaf);
-    dollhouseFirstRevealRaf = 0;
-  }
-  function revealNextDollhousePreview() {
-    dollhouseFirstRevealRaf = 0;
-    if (!dollhouse || dollhouse.hidden) return;
-    var spec = dollhouseFirstRevealQueue.shift();
-    if (spec && spec.use) spec.use.style.display = "";
-    if (dollhouseFirstRevealQueue.length) {
-      dollhouseFirstRevealRaf = requestAnimationFrame(revealNextDollhousePreview);
-    } else {
-      dollhouseFirstRevealComplete = true;
-    }
+    dollhouseFirstRevealTimers.forEach(clearTimeout);
+    dollhouseFirstRevealTimers = [];
   }
   function stageDollhouseFirstReveal() {
     if (dollhouseFirstRevealComplete) return;
@@ -115106,7 +115095,21 @@ function spawnDustMote(container) {
     });
     setDollhouseCursor(selected >= 0 ? selected : 0);
     if (!dollhouseFirstRevealComplete && dollhouseFirstRevealQueue.length) {
-      dollhouseFirstRevealRaf = requestAnimationFrame(revealNextDollhousePreview);
+      // Queue independently: WebKit can stop advancing a nested rAF/timer chain while
+      // one large live SVG <use> tree composites. Independent tasks still spread the
+      // work across paints without letting one preview strand the remaining cards.
+      var revealQueue = dollhouseFirstRevealQueue.slice();
+      dollhouseFirstRevealQueue = [];
+      revealQueue.forEach(function (spec, index) {
+        dollhouseFirstRevealTimers.push(setTimeout(function () {
+          if (!dollhouse || dollhouse.hidden) return;
+          if (spec.use) spec.use.style.display = "";
+          if (index === revealQueue.length - 1) {
+            dollhouseFirstRevealComplete = true;
+            dollhouseFirstRevealTimers = [];
+          }
+        }, 20 * (index + 1)));
+      });
     }
     if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     return true;

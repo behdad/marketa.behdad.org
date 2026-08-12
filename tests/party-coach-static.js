@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 "use strict";
 
-var fs = require("fs");
-var path = require("path");
 var lib = require("./lib");
 
 var HARNESS = String.raw`<pre id="__report">pending</pre>
 <script>
 (function () {
-  var report = { errors: [], geometryReads: 0, shown: false, alignment: null, inline: null };
+  var report = { errors: [], shown: false, alignment: null, inline: null };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   window.addEventListener("load", function () {
     setTimeout(async function () {
@@ -27,24 +25,22 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         var mapButton = document.getElementById("hunt-dollhouse-btn");
         var dots = document.getElementById("hunt-dots");
         var bottomNav = document.getElementById("hunt-bottom-nav");
-        var watched = [viewport, card, arrow, mapButton];
-        var originalRect = Element.prototype.getBoundingClientRect;
-        Element.prototype.getBoundingClientRect = function () {
-          if (watched.indexOf(this) !== -1) report.geometryReads++;
-          return originalRect.apply(this, arguments);
-        };
         if (window.__setGardenParty) window.__setGardenParty(false, true);
         await sleep(80);
-        Element.prototype.getBoundingClientRect = originalRect;
         report.shown = coach.classList.contains("show") &&
           !!(window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive());
         var vr = viewport.getBoundingClientRect();
         var br = mapButton.getBoundingClientRect();
         var cr = card.getBoundingClientRect();
         var ar = arrow.getBoundingClientRect();
+        var areaRect = fullscreenArea.getBoundingClientRect();
+        var pathBox = arrow.querySelector(".hunt-coach-arrow").getBBox();
         report.alignment = {
-          card: (cr.left + cr.width / 2) - (vr.left + vr.width / 2),
-          arrow: (ar.left + ar.width / 2) - (br.left + br.width / 2),
+          cardInside: cr.left >= areaRect.left - 1 && cr.right <= areaRect.right + 1 &&
+            cr.top >= areaRect.top - 1 && cr.bottom <= areaRect.bottom + 1,
+          cardLarge: cr.width >= areaRect.width * .6 && cr.height >= areaRect.height * .35,
+          arrowX: areaRect.left + pathBox.x + pathBox.width / 2 - (br.left + br.width / 2),
+          arrowTipY: areaRect.top + pathBox.y - (br.bottom + 3),
           inner: [innerWidth, innerHeight],
           viewport: [vr.left, vr.width],
           map: [br.left, br.width],
@@ -83,29 +79,21 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("loft-day.html static room-map coach:");
+console.log("loft-day.html modal room-map coach:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(result && result.shown, "Party teardown reveals the room-map coach", result);
-check(result && result.geometryReads === 0,
-  "revealing the coach performs no geometry reads on its viewport, card, arrow, or map target",
-  result && result.geometryReads);
-check(result && result.alignment && Math.abs(result.alignment.card) < 0.6,
-  "the coach card stays centered in the scene", result && result.alignment);
-check(result && result.alignment && Math.abs(result.alignment.arrow) < 0.6,
+check(result && result.alignment && result.alignment.cardInside && result.alignment.cardLarge,
+  "the large modal card stays inside and occupies most of the game shell", result && result.alignment);
+check(result && result.alignment && Math.abs(result.alignment.arrowX) < 0.6 &&
+  Math.abs(result.alignment.arrowTipY) < 0.6,
   "the arrow stays centered on the whole-loft map button", result && result.alignment);
-check(result && result.inline && !result.inline.cardLeft && !result.inline.cardTop &&
-  result.inline.arrowViewBox === "0 0 58 104" && result.inline.arrowPath === "M16 104H42V39H58L29 3L0 39H16Z",
-  "the coach uses its authored static arrow and no JS-authored card coordinates", result && result.inline);
-
-var source = fs.readFileSync(path.join(__dirname, "..", "loft-day.html"), "utf8");
-check(!/function positionRoomMapCoach\(/.test(source) &&
-  !/requestAnimationFrame\(positionRoomMapCoach\)/.test(source) &&
-  /--party-map-target-x:calc\(50% - var\(--hunt-room-pill-half-width\) - var\(--hunt-map-gap\) - var\(--hunt-map-half-size\)\)/.test(source),
-  "the map coach remains declarative rather than restoring a forced-layout positioner");
+check(result && result.inline && !!result.inline.cardLeft && !!result.inline.cardTop &&
+  /^0 0 [0-9.]+ [0-9.]+$/.test(result.inline.arrowViewBox) && !!result.inline.arrowPath,
+  "the modal positioner records responsive card and arrow coordinates", result && result.inline);
 
 console.log("");
 if (failures) {
-  console.log(failures + " static room-map coach assertion" + (failures === 1 ? "" : "s") + " failed.");
+  console.log(failures + " modal room-map coach assertion" + (failures === 1 ? "" : "s") + " failed.");
   process.exit(1);
 }
-console.log("Static room-map coach assertions passed.");
+console.log("Modal room-map coach assertions passed.");

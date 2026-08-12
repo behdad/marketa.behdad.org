@@ -92,9 +92,9 @@ var harness = String.raw`<script>
   var switchCoachArrow = switchCoach.querySelector(".hunt-coach-arrow");
   var switchPlate = document.querySelector("#garden-lightswitch > rect:first-child");
   var switchArrowBox = switchCoachArrow.getBBox();
-  var switchViewport = document.querySelector(".hunt-viewport");
-  var expectedSwitchTip = switchViewport.clientHeight * 185 / 340 - 3;
-  check("the wall switch and its coach target move up together by fifteen pixels",
+  var switchAreaRect = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
+  var expectedSwitchTip = switchPlate.getBoundingClientRect().top - switchAreaRect.top - 3;
+  check("the wall-switch coach targets the switch at its current SVG top",
     switchPlate && Number(switchPlate.getAttribute("y")) === 185 &&
       Math.abs(switchArrowBox.y + switchArrowBox.height - expectedSwitchTip) < 1,
     JSON.stringify({ switchY: switchPlate && switchPlate.getAttribute("y"),

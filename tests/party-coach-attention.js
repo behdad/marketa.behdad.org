@@ -14,6 +14,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   }
   function snap(name) {
     var overlay = document.getElementById("party-switch-coach");
+    var area = document.getElementById("hunt-fullscreen-area");
+    var card = overlay.querySelector(".hunt-coach-card");
+    var cardBox = card.getBoundingClientRect(), areaBox = area.getBoundingClientRect();
     report.steps[name] = {
       room: window.__currentStageName,
       party: !!window.__gardenPartyOn,
@@ -25,8 +28,10 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       hold: window.__messageNotificationsHeld ? window.__messageNotificationsHeld() : null,
       heldCalls: window.__heldPartyCoachCalls ? window.__heldPartyCoachCalls() : [],
       dungeon: document.querySelector(".hunt-viewport").classList.contains("prince-basement-open"),
-      navBlocked: getComputedStyle(document.getElementById("hunt-next")).pointerEvents === "none",
-      scrim: getComputedStyle(overlay.querySelector(".party-switch-scrim-top")).display
+      modal: overlay.classList.contains("modal-coach") && getComputedStyle(overlay).pointerEvents === "auto" &&
+        window.__partyCoachModalActive && window.__partyCoachModalActive(),
+      cardLarge: cardBox.width >= areaBox.width * .72 && cardBox.height >= areaBox.height * .35,
+      scrim: getComputedStyle(overlay).backgroundColor
     };
   }
   async function run() {
@@ -57,11 +62,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       key: "ArrowRight", code: "ArrowRight", bubbles: true, cancelable: true
     }));
     await sleep(40);
+    snap("keyboardBlocked");
+    window.__goToStage("cuddly");
+    await sleep(40);
     snap("navigationAway");
     await sleep(720);
-    document.dispatchEvent(new KeyboardEvent("keydown", {
-      key: "ArrowLeft", code: "ArrowLeft", bubbles: true, cancelable: true
-    }));
+    window.__goToStage("garden");
     await sleep(40);
     snap("coachDuringReturnPan");
     await sleep(760);
@@ -116,6 +122,12 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     await sleep(40);
     document.getElementById("garden-lightswitch").dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true }));
+    await sleep(40);
+    snap("switchBlocked");
+    document.querySelector("#party-switch-coach .hunt-coach-x").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.getElementById("garden-lightswitch").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     await sleep(3400);
     snap("switchEndsParty");
   }
@@ -152,13 +164,15 @@ check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.c
   "a visible notification keeps the due switch coach off-screen", popupBefore);
 check(popupReentry && popupReentry.room === "garden" && popupReentry.thumb && !popupReentry.coach,
   "Garden re-entry cannot repaint the coach over that notification", popupReentry);
-check(popupCleared && !popupCleared.thumb && popupCleared.coach && !popupCleared.navBlocked &&
-  popupCleared.switchHole && popupCleared.scrim === "none",
-  "the quiet channel reveals a non-modal coach while leaving the switch and navigation live", popupCleared);
+check(popupCleared && !popupCleared.thumb && popupCleared.coach && popupCleared.modal &&
+  popupCleared.cardLarge && !popupCleared.switchHole && popupCleared.scrim === "rgba(69, 58, 49, 0.2)",
+  "the quiet channel reveals a large modal coach over the blocked Party room", popupCleared);
+check(step("keyboardBlocked") && step("keyboardBlocked").room === "garden" && step("keyboardBlocked").coach,
+  "the modal switch coach swallows room-navigation keys", step("keyboardBlocked"));
 var navigationAway = step("navigationAway"), coachDuringReturnPan = step("coachDuringReturnPan"),
   coachOnReturn = step("coachOnReturn");
 check(navigationAway && navigationAway.room === "cuddly" && !navigationAway.coach && navigationAway.coachDue,
-  "keyboard navigation leaves Garden and hides the still-pending switch coach", navigationAway);
+  "a controller-owned room transition hides the still-pending Garden coach", navigationAway);
 check(coachDuringReturnPan && coachDuringReturnPan.room === "garden" && !coachDuringReturnPan.coach &&
   coachDuringReturnPan.coachDue,
   "the pending coach stays hidden while Garden is still panning into view", coachDuringReturnPan);
@@ -197,8 +211,10 @@ var enterRelease = step("enterReleasedCall");
 check(enterRelease && enterRelease.party && !enterRelease.coach && enterRelease.ring &&
   enterRelease.heldCalls.length === 0,
   "global Enter dismisses the coach, keeps the party running, and releases one held call", enterRelease);
+check(step("switchBlocked") && step("switchBlocked").party && step("switchBlocked").coach,
+  "the modal coach blocks its wall-switch target until acknowledgement", step("switchBlocked"));
 check(step("switchEndsParty") && !step("switchEndsParty").party && !step("switchEndsParty").coach,
-  "the exposed Garden switch still ends the party through its canonical owner", step("switchEndsParty"));
+  "the Garden switch ends the party through its canonical owner after acknowledgement", step("switchEndsParty"));
 
 if (failed) process.exit(1);
 console.log("Party coach attention assertions passed.");

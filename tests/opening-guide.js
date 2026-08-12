@@ -95,11 +95,12 @@ var harness = String.raw`<script>
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
-  check("only the background-blocking coach carries the modal treatment",
+  check("the opening guide and two Party onboarding overlays own the modal treatment",
     overlay.classList.contains("modal-coach") && getComputedStyle(overlay).pointerEvents === "auto" &&
-      document.querySelectorAll(".hunt-coach-overlay.modal-coach").length === 1 &&
+      document.querySelectorAll(".hunt-coach-overlay.modal-coach").length === 3 &&
       Array.prototype.slice.call(document.querySelectorAll("#party-switch-coach,#party-room-map-coach")).every(function (item) {
-        return !item.classList.contains("modal-coach") && getComputedStyle(item).pointerEvents === "none";
+        return item.classList.contains("modal-coach") && item.classList.contains("party-onboarding-coach") &&
+          getComputedStyle(item).pointerEvents === "none";
       }));
 
   var dollhouseButton = document.getElementById("hunt-dollhouse-btn");
@@ -147,14 +148,13 @@ var harness = String.raw`<script>
   check("Czech caption coach is concise and localized", copy.textContent === "Nápovědy a pokyny se objevují tady." && !/pokračuj/i.test(copy.textContent));
   var cards = Array.prototype.slice.call(document.querySelectorAll(".hunt-coach-card"));
   var partyCards = Array.prototype.slice.call(document.querySelectorAll("#party-switch-coach .hunt-coach-card,#party-room-map-coach .hunt-coach-card"));
-  check("non-modal party coaches retain the compact shared card treatment",
+  check("opening and Party onboarding coaches share the approved large-card treatment",
     cards.length === 3 && partyCards.length === 2 &&
       partyCards.every(function (item) {
-        return cardSignature(item) === cardSignature(partyCards[0]) &&
-          item.getBoundingClientRect().width <= 540 &&
+        return cardSignature(item) === cardSignature(card) &&
           item.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
           item.querySelectorAll(":scope > .hunt-coach-x").length === 1;
-      }) && cardSignature(card) !== cardSignature(partyCards[0]));
+      }));
   click(x);
 
   await showGuide("en");

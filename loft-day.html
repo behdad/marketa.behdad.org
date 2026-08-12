@@ -7110,7 +7110,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #dropterm{
   position:absolute; left:0; right:0; top:0; z-index:60;
   max-height:var(--dropterm-max-height, 48%); display:flex; flex-direction:column;
-  background:rgba(24,20,16,.96); color:#e9e2d3;
+  background:#181410; color:#e9e2d3;
   font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5;
   border-bottom:2px solid var(--wine, #8e3a4a);
   transform:translateY(-102%); transition:transform .22s cubic-bezier(.4,.9,.3,1), visibility 0s .22s;
@@ -74103,6 +74103,7 @@ setOfficeProgress("pc", false);
     mkEl("circle", { cx: 376, cy: 194, r: .45, "class": "monitor-sleep-led" }, monitorSleepLayer);
   }
   window.addEventListener("keydown", function (e) {
+    if (window.__dropTermOpen && window.__dropTermOpen()) return;
     if (monitorCreditsLayer && monitorCreditsLayer.classList.contains("open") && e.key === " ") {
       if (toggleMonitorCreditsPause()) {
         e.preventDefault(); e.stopImmediatePropagation();
@@ -74488,6 +74489,7 @@ setOfficeProgress("pc", false);
     return !(controllers.phone && controllers.phone.status());
   }
   window.addEventListener("keydown", function (e) {
+    if (window.__dropTermOpen && window.__dropTermOpen()) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.isComposing) return;
     if (e.target === dockSearchInput) return;
     var active = dockSearchOpen || !!dockSearchQuery;
@@ -77320,8 +77322,16 @@ setOfficeProgress("pc", false);
     dtPanel.classList.add("open");
     if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(CONSOLE_WELCOME, "console-dim"); activeConsoleOut = prev; }
     startDropTermFps();
-    if (dtIn) setTimeout(function () { appAutoFocusTextControl(dtIn); }, 60);
+    // This console overlays every scene, including a zoomed monitor app. Its explicit open owns
+    // desktop keyboard focus until close, regardless of which surface was opened first.
+    if (dtIn) {
+      appAutoFocusTextControl(dtIn);
+      setTimeout(function () { if (dtOpen()) appAutoFocusTextControl(dtIn); }, 60);
+    }
     syncConsoleTab();
+  }
+  function claimDropTermFocus() {
+    return !!(dtOpen() && dtIn && appAutoFocusTextControl(dtIn));
   }
   function closeDropTerm() {
     if (!dtPanel || !dtOpen()) return;
@@ -77353,6 +77363,7 @@ setOfficeProgress("pc", false);
   window.__toggleDropTerm = toggleDropTerm;   // the backtick key calls this
   window.__closeDropTerm = closeDropTerm;     // reset / explicit callers
   window.__dropTermOpen = dtOpen;
+  window.__claimDropTermFocus = claimDropTermFocus;
   window.__dropTermFpsRunning = function () { return dtFpsRaf != null; };
   window.__revealConsoleTab = revealConsoleTab;
   window.__consoleTabDiscovered = function () { return consoleTabDiscovered; };
@@ -77392,17 +77403,39 @@ setOfficeProgress("pc", false);
     dtResize.addEventListener("pointercancel", function (e) { finishDropTermResize(e.pointerId); });
     dtResize.addEventListener("click", function (e) { e.stopPropagation(); });
   }
-  if (dtIn) {
-    dtIn.addEventListener("keydown", function (e) {
+  function handleDropTermKey(e, displaced) {
+      if (!dtIn) return;
       e.stopPropagation(); // game shortcuts don't fire while typing here
       if (e.key === "?" && !dtIn.value) { e.preventDefault(); if (controllers.shortcuts) controllers.shortcuts(); return; } // same empty-prompt shortcut as the monitor REPL
       if (e.key === "Tab") { e.preventDefault(); var p = activeConsoleOut; activeConsoleOut = dtOut; consoleTabComplete(dtIn); activeConsoleOut = p; return; }
-      if (e.key === "Enter") { var v = dtIn.value; dtIn.value = ""; consoleRun(v, dtCtx); }
+      if (e.key === "Enter") { e.preventDefault(); var v = dtIn.value; dtIn.value = ""; consoleRun(v, dtCtx); }
       else if (e.key === "`") { e.preventDefault(); closeDropTerm(); } // backtick toggles the panel shut even while its input is focused (Quake convention — the toggle key never types)
       else if (e.key === "Escape") { e.preventDefault(); }
       else if (e.key === "ArrowUp") { e.preventDefault(); if (dtHistIdx > 0) { dtHistIdx--; dtIn.value = dtHist[dtHistIdx] || ""; } }
       else if (e.key === "ArrowDown") { e.preventDefault(); if (dtHistIdx < dtHist.length) { dtHistIdx++; dtIn.value = dtHist[dtHistIdx] || ""; } }
-    });
+      else if (displaced && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        var start = dtIn.selectionStart == null ? dtIn.value.length : dtIn.selectionStart;
+        var end = dtIn.selectionEnd == null ? start : dtIn.selectionEnd;
+        var replacement = null, caret = start;
+        if (e.key === "Backspace") {
+          if (start === end && start > 0) start--;
+          replacement = ""; caret = start;
+        } else if (e.key === "Delete") {
+          if (start === end && end < dtIn.value.length) end++;
+          replacement = ""; caret = start;
+        } else if (e.key.length === 1) {
+          replacement = e.key; caret = start + e.key.length;
+        }
+        if (replacement != null) {
+          e.preventDefault();
+          dtIn.setRangeText(replacement, start, end, "end");
+          try { dtIn.setSelectionRange(caret, caret); } catch (_error) {}
+          dtIn.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+  }
+  if (dtIn) {
+    dtIn.addEventListener("keydown", function (e) { handleDropTermKey(e, false); });
   }
   if (dtPanel) {
     // click the panel (but not on a live text selection) focuses the input, like the monitor console
@@ -77416,6 +77449,14 @@ setOfficeProgress("pc", false);
         e.stopPropagation();
         e.preventDefault();
       }
+    }, true);
+    // The dropdown is a modal keyboard surface. A monitor app can retain DOM focus underneath,
+    // but while this panel is down no key is allowed to reach that app or a room shortcut.
+    document.addEventListener("keydown", function (e) {
+      if (!dtOpen() || e.target === dtIn || dtPanel.contains(e.target)) return;
+      e.stopImmediatePropagation();
+      appAutoFocusTextControl(dtIn);
+      handleDropTermKey(e, true);
     }, true);
   }
   (function () { // a subtle lower-chrome chevron that pulls the drop-down console down
@@ -78432,6 +78473,7 @@ setOfficeProgress("pc", false);
     // handler could intervene. Register this guard first: conflict editing owns Enter/Escape and
     // deliberately does nothing until the visitor either keeps typing or leaves the field.
     window.addEventListener("keydown", function (event) {
+      if (window.__dropTermOpen && window.__dropTermOpen()) return;
       if (document.activeElement !== codeName ||
           (event.key !== "Enter" && event.key !== "Escape" && event.key !== "Esc") ||
           !codeMarkNameConflict()) return;
@@ -78738,6 +78780,7 @@ setOfficeProgress("pc", false);
     // listener added HERE (this IIFE runs earlier → registers first) wins, and on a hit its
     // stopImmediatePropagation keeps that closer from firing.
     window.addEventListener("keydown", function (e) {
+      if (window.__dropTermOpen && window.__dropTermOpen()) return;
       if (e.key === "Escape" && codeAcVisible() && document.activeElement === codeCode) {
         codeAcHide(); e.preventDefault(); e.stopImmediatePropagation();
       }
@@ -80737,6 +80780,7 @@ setOfficeProgress("pc", false);
   document.addEventListener("fullscreenchange", resizePacmanPresentation);
   document.addEventListener("webkitfullscreenchange", resizePacmanPresentation);
   window.addEventListener("keydown", function (e) {
+    if (window.__dropTermOpen && window.__dropTermOpen()) return;
     if (!pacRoomPresented() || (e.key !== "Escape" && e.key !== "Esc")) return;
     e.preventDefault(); e.stopImmediatePropagation(); closePacmanRoomApp(true);
   }, true);
@@ -86205,6 +86249,7 @@ def colormode(mode=None):
     }); });
   }
   window.addEventListener("keydown", function (event) {
+    if (window.__dropTermOpen && window.__dropTermOpen()) return;
     if (!snakeLaunchDialog || (event.key !== "Escape" && event.key !== "Esc")) return;
     event.preventDefault(); event.stopImmediatePropagation();
     dismissSnakeLaunchDialog(true, false);
@@ -90320,9 +90365,17 @@ def colormode(mode=None):
     }));
   }
   function settleFocus(snapshot, entries) {
+    if (window.__dropTermOpen && window.__dropTermOpen()) {
+      if (window.__claimDropTermFocus) window.__claimDropTermFocus();
+      return;
+    }
     restoreFocus(snapshot, entries);
     setTimeout(function () {
       if (!active || active.entries !== entries || !snapshot || !snapshot.node || !snapshot.node.isConnected) return;
+      if (window.__dropTermOpen && window.__dropTermOpen()) {
+        if (window.__claimDropTermFocus) window.__claimDropTermFocus();
+        return;
+      }
       restoreFocus(snapshot, entries);
     }, 0);
   }
@@ -90603,6 +90656,7 @@ def colormode(mode=None):
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
     if (el === monitor && window.__monitorHtmlOverlayOpen) window.__monitorHtmlOverlayOpen();
+    if (window.__dropTermOpen && window.__dropTermOpen() && window.__claimDropTermFocus) window.__claimDropTermFocus();
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // screen focus settles musically: ~2.5s rather than the projector's ~1s
     if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(true);
@@ -90820,7 +90874,7 @@ def colormode(mode=None):
   // own stopPropagation can't strand the zoom)
   vp.addEventListener("pointerdown", function (e) {
     if (monitorContentFullscreen) return; // let the fullscreen host consume its black surround without dropping the underlying zoom
-    if (e.target && e.target.closest && e.target.closest("#monitor-html-overlay")) return;
+    if (e.target && e.target.closest && e.target.closest("#monitor-html-overlay,#dropterm")) return;
     if (!zoomEl || (e.target && zoomEl.contains(e.target))) return;
     if (e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // viewport chrome, not the room
     var other = zoomEl === monitor ? laptop : monitor;

@@ -162,6 +162,8 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
     "  var activeConsoleOut = consoleOut;\n" +
     mPrint[0].replace(/^\s*var activeConsoleOut = consoleOut;\n/, "") + "\n" +
     interpreterSrc + "\n" +
+    "  var CONSOLE_WELCOME = consoleT();\n" +
+    "  function appAutoFocusTextControl(control){ if(control&&control.focus)control.focus(); return true; }\n" +
     "  function consoleTabComplete(){}\n" +
     mBlock[0].replace(/\n  if \(dtPanel\) \{$/, "") + "\n" +
     "  return { win: window, dropterm: arguments[0].getElementById ? null : null };\n" +

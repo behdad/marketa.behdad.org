@@ -103,10 +103,17 @@ var harness = String.raw`<script>
       }).join(","));
     var officeMonitor = document.getElementById("office-monitor");
     var monitorScreen = document.getElementById("office-monitor-screen-content");
-    check("the Office preview replaces the whole live monitor screen with native caps art",
+    var officeMonitorPreview = document.querySelector('[data-dollhouse-room="office"] .loft-dollhouse-office-monitor-preview');
+    check("the powered-off Office preview keeps the real dark monitor instead of caps art",
       officeMonitor.classList.contains("dollhouse-preview") &&
         getComputedStyle(monitorScreen).display === "none" &&
-        !!document.querySelector('[data-dollhouse-room="office"] .loft-dollhouse-office-monitor-preview'));
+        officeMonitorPreview && getComputedStyle(officeMonitorPreview).display === "none");
+    officeMonitor.classList.add("screen-on");
+    window.__refreshRoomDots();
+    check("powering the monitor reveals the static caps thumbnail",
+      getComputedStyle(officeMonitorPreview).display !== "none");
+    officeMonitor.classList.remove("screen-on");
+    window.__refreshRoomDots();
     key("Tab");
     check("closing The Loft restores the Road Trip pause overlay",
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");

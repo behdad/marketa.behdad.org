@@ -186,7 +186,8 @@ off-screen animations. When frame health is low, the open dollhouse additionally
 source animations it finds and resumes only that recorded set on close or frame-rate recovery.
 The first visible view paints the shell and lower floor immediately, then activates the five large
 upper-room `<use>` previews one per frame; later views retain the complete live set.
-The Office preview deliberately renders the monitor as a static native-SVG caps thumbnail. A
+The Office preview follows physical monitor power: its real dark screen remains visible while off,
+and a static native-SVG caps thumbnail covers it while powered on. A
 temporary class removes the live monitor screen tree from the nested `<use>`; closing the picker
 also detaches that Office clone from paint, while captured card clicks prevent monitor summons.
 

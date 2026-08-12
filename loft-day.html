@@ -118494,10 +118494,8 @@ function spawnDustMote(container) {
     if (!window.__partyBeatEpoch) window.__partyBeatEpoch = performance.now();
     var phase = (((performance.now() - window.__partyBeatEpoch) / 1000) % period + period) % period;
     var dur = period * 2; // sway + arms both ride ~2 beats
-    var sels = [".guest-sway", ".guest-arm-l", ".guest-arm-r"];
-    sels.forEach(function (sel) {
-      var els = g.querySelectorAll(sel);
-      for (var i = 0; i < els.length; i++) {
+    var els = g.querySelectorAll(".guest-sway,.guest-arm-l,.guest-arm-r"), rows = [];
+    for (var i = 0; i < els.length; i++) {
         var el = els[i];
         // preserve the per-guest CSS stagger (Goli -.41s / Spencer -.2s keep their two
         // out-of-phase wrappers) by ADDING it to the phase-lock offset. Read + cache the
@@ -118505,15 +118503,23 @@ function spawnDustMote(container) {
         // inline delay, which would otherwise mask the CSS value). Cached in a data attr so
         // later retunes re-add the same authored stagger. A plain wrapper's base is 0 → all
         // locked to the one epoch. `stagger` is negative (a CSS lead), so subtract it back in.
-        var stagger = el.getAttribute("data-basedelay");
-        if (stagger == null) { stagger = parseFloat(getComputedStyle(el).animationDelay) || 0; el.setAttribute("data-basedelay", stagger); }
-        else stagger = parseFloat(stagger) || 0;
-        el.style.animationDuration = dur.toFixed(3) + "s";
-        void el.getBoundingClientRect(); // reflow → restart the anim in-phase
+        var stored = el.getAttribute("data-basedelay");
+        var stagger = stored == null ? (parseFloat(getComputedStyle(el).animationDelay) || 0) : (parseFloat(stored) || 0);
+        rows.push({ el: el, stagger: stagger, cache: stored == null });
+    }
+    // Batch the restart into one style/layout barrier. The old per-wrapper barrier more than
+    // doubled this retune's warm-path cost across the 93 sway/arm wrappers.
+    for (var j = 0; j < rows.length; j++) {
+      if (rows[j].cache) rows[j].el.setAttribute("data-basedelay", rows[j].stagger);
+      rows[j].el.style.animationDuration = dur.toFixed(3) + "s";
+    }
+    void g.getBoundingClientRect();
+    for (var k = 0; k < rows.length; k++) {
+        el = rows[k].el;
+        stagger = rows[k].stagger;
         // total lead = phase (epoch lock) − stagger (the authored CSS lead), wrapped into [0,dur)
         el.style.animationDelay = (-(((phase - stagger) % dur + dur) % dur)).toFixed(3) + "s";
-      }
-    });
+    }
     if (window.__refreshHiddenGardenAnimationParking) window.__refreshHiddenGardenAnimationParking();
   }
   window.__retuneDancers = retuneDancers;

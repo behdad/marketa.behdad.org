@@ -982,7 +982,6 @@ window.__loftMessages["en"] = {
   "msg_smores_body": "who wants s'mores? 🔥🍫",
   "msg_sparklers_body": "✨ sparklers out front for the send-off — form the tunnel!",
   "msg_spencer_from": "Spencer",
-  "msg_storm_body": "there's a storm coming! ⛈️",
   "msg_sunrise_body": "wait it's sunrise already?! 😳☀️ we pulled an all-nighter",
   "msg_sunset_baharak_awake_body": "Hannah! you too — why are you still awake?! 😳",
   "msg_sunset_bahareh_awake_body": "Irene! why are you still awake?! 😳",

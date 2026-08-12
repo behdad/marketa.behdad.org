@@ -982,7 +982,6 @@ window.__loftMessages["cs"] = {
   "msg_smores_body": "kdo chce opékat marshmallows? 🔥🍫",
   "msg_sparklers_body": "✨ prskavky na rozloučenou — udělejte tunel!",
   "msg_spencer_from": "Spencer",
-  "msg_storm_body": "blíží se bouřka! ⛈️",
   "msg_sunrise_body": "počkat, to už vychází slunce?! 😳☀️ propařili jsme celou noc",
   "msg_sunset_baharak_awake_body": "Hannah! ty taky — proč jsi ještě vzhůru?! 😳",
   "msg_sunset_bahareh_awake_body": "Irene! proč jsi ještě vzhůru?! 😳",

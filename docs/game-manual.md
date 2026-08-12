@@ -86,9 +86,8 @@ than replaying an old line.
 
 Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The large
 opening coach is modal: Reset remains available, but the room stays inert until it is dismissed.
-The first Party's exploration and first-unread
-Messages lessons are modal too. Each highlighted target stays live: using the map or unread message
-performs its normal action and retires that coach;
+The first Party's exploration and first-unread Messages lessons are modal too. Each highlighted
+target stays live: using the map or unread message performs its normal action and retires that coach;
 unrelated controls remain blocked. Party lessons hold new notifications and calls until they leave;
 other coach bubbles remain compact and non-modal. Opening a message never performs its suggested
 activity: use the separate activity arrow. Old messages remain readable after their activity expires,

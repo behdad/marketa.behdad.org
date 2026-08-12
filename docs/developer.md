@@ -175,11 +175,8 @@ dismisses the active game, projector, or overlay owned by that lower room.
 The dollhouse reuses the live room trees, so opening it must not create a second controller or wake
 parked room work. Preview warm-up is optional performance work: the picker must remain correct when
 idle scheduling is unavailable or interrupted. Keep its source animations under the same room and
-frame-health ownership used by the main strip. Its built panel stays cached between views; closed
-room cards are paint-gated and parked sources are clipped to their own stage only while the panel
-is closed, because several live source trees deliberately draw into the adjacent real viewport.
-The cached room-card nodes themselves are paint-hidden directly while closed; inherited visibility
-is not a reliable boundary for every engine's SVG `<use>` shadow tree.
+frame-health ownership used by the main strip. Its panel stays cached between views; closed cards
+must remain paint-gated, while opening it restores the live source boundaries and animations.
 
 The Office monitor retains app DOM and runtime state across zoom and room changes. At room scale,
 HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,
@@ -188,13 +185,10 @@ stay in the SVG path. This identity-preserving promotion is the default for HTML
 the WebKit-safe boundary for focused interaction; iframe-owned game canvases must be sized from the
 physical screen box rather than through ancestor CSS zoom. Establish that host before creating a
 runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
-place and must never reparent a live browsing context. While the ordinary-DOM surface owns paint,
-park every canonical `foreignObject` with `visibility:hidden`, promote the desktop toolbar above its
-HTML dock, and mirror the strip's SVG focus boundary. For a mixed owner with an opaque native
-backing, keep that backing canonical and promote only the controls that must paint above the HTML.
-Keep room parking, overlay fitting, mixed SVG/HTML stacking, real Calendar paint, and runtime
-identity covered by `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, and
-`tests/monitor-calendar.mjs`.
+place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
+canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later
+controls. Keep overlay fitting, stacking, Calendar paint, and runtime identity covered by the
+focused monitor tests.
 
 ### Morning routine and free exploration
 
@@ -213,22 +207,9 @@ cleared only by a real reset. Do not use the music, lighting, guest population, 
 `__gardenPartyOn` alone as a proxy for story progress.
 
 The Garden wall switch remains the day/night owner in both phases. The Balcony switch routes ON
-through the ordinary user-initiated Party path (including dusk and first-use phase-two unlock); OFF
-routes through `__stopPartyThen`, the canonical `__calStepDay(1)`, and daylight. Phase two reveals
-the roof disco ball flush at the ceiling, clear of message and roster chrome, as the time-neutral
-Party toggle: it passes `userInitiated=false`, so both edges preserve the current sky. Party state
-alone controls whether its one canonical native-SVG curved-facet subtree appears as a bright silver
-rotating sphere with a tight rear halo or as a subdued still fixture. The Party render references
-that same art from an unfiltered scene-overlay sibling; do not replace it with inverse filters, which
-flatten the facet grid in Chrome and do not correct SVG containers in WebKit. The first Party coach
-points to The Loft while Party remains active, and the first
-Messages coach is serialized behind it. Neither progression nor Road Trip requires a Party-off coach.
-
-The first Party transition starts the checkpointed `party-message-reveal` gate. For 4 seconds, every
-message request—including birthday greetings—stays outside the thread, preview, and badge in request
-order. Release waits behind authored Party moments and the exploration coach, then replays through
-the ordinary Messages owner. Party toggles do not re-arm the gate; reset does.
-
+through the ordinary Party path and OFF advances to daylight through the calendar owner. Phase two's
+disco ball is the time-neutral Garden Party toggle. The first exploration and Messages coaches are
+serialized, and the first Party's messages remain held behind that authored reveal; reset re-arms it.
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
@@ -272,10 +253,10 @@ Keep these ownership boundaries intact:
 - Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases
   that suspension. This parks Party foreground work without pretending the story latch was reset.
 - While Road Trip owns the viewport, `mir-roadtrip-active` removes the covered five-room SVG from
-  layout and pins the viewport to its established 2:1 ratio. Keep those rules paired: `display:none`
-  avoids laying out the hidden loft on every highway frame, while the explicit ratio prevents the
-  overlay-only viewport from collapsing. The Dollhouse's `dollhouse-open` class temporarily
-  restores the strip because its live room cards reference those source groups.
+layout and pins the viewport to its established 2:1 ratio. Keep those rules paired: `display:none`
+avoids laying out the hidden loft on every highway frame, while the explicit ratio prevents the
+overlay-only viewport from collapsing. The Dollhouse's `dollhouse-open` class temporarily
+restores the strip because its live room cards reference those source groups.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order

@@ -24016,7 +24016,7 @@ section{margin:1.9rem 0}
 <g class="sky-star sky-bright" style="animation-delay:.5s"><circle cx="198" cy="56" r="4.2" fill="url(#sky-glow)"/><circle cx="198" cy="56" r="1.2" fill="#fff6e6"/></g>
 <g class="sky-star sky-bright" style="animation-delay:2.4s"><circle cx="256" cy="74" r="4.6" fill="url(#sky-glow)"/><circle cx="256" cy="74" r="1.3" fill="#fff6e6"/></g>
 <g class="sky-star sky-bright" style="animation-delay:1.3s"><circle cx="209" cy="89" r="4" fill="url(#sky-glow)"/><circle cx="209" cy="89" r="1.1" fill="#fff6e6"/></g>
-<g class="sky-shoot-wrap" transform="translate(193,49)"><g class="sky-shoot"><line x1="-13" y1="-7.5" x2="0" y2="0" stroke="url(#sky-streak)" stroke-width="1.1" stroke-linecap="round"/><circle cx="0" cy="0" r="1.1" fill="#fffdf4"/></g></g>
+<g class="sky-shoot-wrap" transform="translate(193,49)"><g class="sky-shoot"><line x1="-18" y1="-10.4" x2="0" y2="0" stroke="url(#sky-streak)" stroke-width="0.72"/><circle cx="0" cy="0" r="0.58" fill="#fffdf4"/></g></g>
 </g>
 <g id="cuddly-workout" clip-path="url(#cuddly-screen-clip)" pointer-events="none">
 <defs>
@@ -105932,18 +105932,19 @@ function spawnCloudRain(svg, cx, cy) {
 // shower's radiant is then expressible once, in pole-relative units, and lands on the
 // same star in both rooms however differently the two skies are laid out.
 var METEOR_SKY = {
-  // `lone` is the wish-star's own patch and reach, unchanged; `shower` is the wider one a
-  // shower fills. px/py/u is the pole frame; the rest is the particle's own scale (the garden
-  // window is the smaller sky, so its meteors are the smaller ones).
+  // `lone` is the wish-star's own patch and reach; `shower` is the wider one a shower fills.
+  // px/py/u is the pole frame; the rest is the particle's own scale (the garden window is the
+  // smaller sky, so its meteors are the smaller ones). The narrow taper is deliberately longer
+  // than the tiny head: even a fireball remains a needle of light rather than a glowing orb.
   "balcony-skyfx": {
     lone:   { x: 445, y: 8, w: 110, h: 26, len: 169 },
     shower: { x: 440, y: 8, w: 140, h: 78, len: 112 }, // clipped to the open sky, so it must land its arc before the railing
-    px: 510, py: 22, u: 46, trail: 21, halo: 5, core: 2.6, sw: 2.3, dur: 1000
+    px: 510, py: 22, u: 46, trail: 34, taper: 1.45, spine: 0.65, head: 0.72, dur: 1000
   },
   "garden-skyfx": {
     lone:   { x: 150, y: 26, w: 180, h: 16, len: 108 },
     shower: { x: 118, y: 24, w: 296, h: 78, len: 104 }, // the dark band above the frosted panes, stopping short of the blind (x426) — the blind paints over this group, so anything spawned under it is a meteor nobody sees
-    px: 190, py: 30, u: 42, trail: 18, halo: 4, core: 2.2, sw: 2, dur: 950
+    px: 190, py: 30, u: 42, trail: 29, taper: 1.3, spine: 0.58, head: 0.65, dur: 950
   }
 };
 var METEOR_CAP = 16; // most meteors alive at once during a shower burst (a lone wish-star caps at 1)
@@ -105978,26 +105979,36 @@ function spawnSkyMeteor(hostId, shower, fireball) {
     dx = 0.887; dy = 0.462; // the lone wish-star's original down-right fall (150,78 normalized)
   }
   var reach = box.len * (fireball ? 1.15 : 1) * (shower ? 0.55 + Math.random() * 0.7 : 1);
-  var tl = sky.trail * (fireball ? 1.5 : 1);
+  var tl = sky.trail * (fireball ? 1.35 : 1);
   var g = document.createElementNS(SVGNS, "g");
   g.setAttribute("class", "sky-meteor");
-  // the tail streams back along the flight line, bowed a little to one side
+  // The tail streams back along the flight line, bowed a little to one side. A closed sliver
+  // supplies a real geometric taper without a filter; the fine centre line and sub-pixel head
+  // keep the streak legible at phone scale without turning its leading edge into a bulb.
   var cx = x0 - dx * tl * 0.55 - dy * 1.7, cy = y0 - dy * tl * 0.55 + dx * 1.7;
-  var trail = document.createElementNS(SVGNS, "path");
-  trail.setAttribute("d", "M" + x0.toFixed(1) + " " + y0.toFixed(1) + " Q" + cx.toFixed(1) + " " + cy.toFixed(1) + " " + (x0 - dx * tl).toFixed(1) + " " + (y0 - dy * tl).toFixed(1));
-  trail.setAttribute("fill", "none");
-  trail.setAttribute("stroke", "#ffffff");
-  trail.setAttribute("stroke-width", (sky.sw * (fireball ? 1.5 : 1)).toFixed(2));
-  trail.setAttribute("stroke-linecap", "round");
-  var halo = document.createElementNS(SVGNS, "circle");
-  halo.setAttribute("cx", x0.toFixed(1)); halo.setAttribute("cy", y0.toFixed(1));
-  halo.setAttribute("r", (sky.halo * (fireball ? 1.8 : 1)).toFixed(2));
-  halo.setAttribute("fill", fireball ? "#ffeab0" : "#fff8e0"); halo.setAttribute("opacity", fireball ? "0.95" : "0.85");
-  var core = document.createElementNS(SVGNS, "circle");
-  core.setAttribute("cx", x0.toFixed(1)); core.setAttribute("cy", y0.toFixed(1));
-  core.setAttribute("r", (sky.core * (fireball ? 1.45 : 1)).toFixed(2));
-  core.setAttribute("fill", "#ffffff");
-  g.appendChild(trail); g.appendChild(halo); g.appendChild(core);
+  var tailX = x0 - dx * tl, tailY = y0 - dy * tl;
+  var nx = -dy, ny = dx;
+  var half = sky.taper * (fireball ? 1.3 : 1) * 0.5;
+  var taper = document.createElementNS(SVGNS, "path");
+  taper.setAttribute("class", "sky-meteor-taper");
+  taper.setAttribute("d", "M" + (x0 + nx * half).toFixed(2) + " " + (y0 + ny * half).toFixed(2) +
+    " Q" + (cx + nx * half * 0.3).toFixed(2) + " " + (cy + ny * half * 0.3).toFixed(2) + " " + tailX.toFixed(2) + " " + tailY.toFixed(2) +
+    " Q" + (cx - nx * half * 0.3).toFixed(2) + " " + (cy - ny * half * 0.3).toFixed(2) + " " + (x0 - nx * half).toFixed(2) + " " + (y0 - ny * half).toFixed(2) + " Z");
+  taper.setAttribute("fill", fireball ? "#ffeab0" : "#fff8e0");
+  taper.setAttribute("opacity", fireball ? "0.86" : "0.68");
+  var spine = document.createElementNS(SVGNS, "path");
+  spine.setAttribute("class", "sky-meteor-spine");
+  spine.setAttribute("d", "M" + tailX.toFixed(2) + " " + tailY.toFixed(2) + " Q" + cx.toFixed(2) + " " + cy.toFixed(2) + " " + x0.toFixed(2) + " " + y0.toFixed(2));
+  spine.setAttribute("fill", "none");
+  spine.setAttribute("stroke", "#ffffff");
+  spine.setAttribute("stroke-width", (sky.spine * (fireball ? 1.25 : 1)).toFixed(2));
+  spine.setAttribute("stroke-linecap", "round");
+  var head = document.createElementNS(SVGNS, "circle");
+  head.setAttribute("class", "sky-meteor-head");
+  head.setAttribute("cx", x0.toFixed(1)); head.setAttribute("cy", y0.toFixed(1));
+  head.setAttribute("r", (sky.head * (fireball ? 1.3 : 1)).toFixed(2));
+  head.setAttribute("fill", "#ffffff");
+  g.appendChild(taper); g.appendChild(spine); g.appendChild(head);
   container.appendChild(g);
   var tx = dx * reach, ty = dy * reach;
   var dur = sky.dur * (fireball ? 1.45 : 1) + Math.random() * 300;
@@ -135760,6 +135771,7 @@ exposePrivateFunction("__playCampWisdomMurmurSound", function () { return playCa
 exposePrivateFunction("__playLaptopClickSound", function () { return playLaptopClickSound; }, function (fn) { playLaptopClickSound = fn; });
 exposePrivateFunction("__playPlushSquishSound", function () { return playPlushSquishSound; }, function (fn) { playPlushSquishSound = fn; });
 exposePrivateFunction("__spawnSteamWisps", function () { return spawnSteamWisps; }, function (fn) { spawnSteamWisps = fn; });
+exposePrivateFunction("__spawnSkyMeteor", function () { return spawnSkyMeteor; }, function (fn) { spawnSkyMeteor = fn; });
 exposePrivateFunction("__campFinLoveVoiceAllowed", function () { return campFinLoveVoiceAllowed; }, function (fn) { campFinLoveVoiceAllowed = fn; });
 exposePrivateFunction("__castPersonCard", function () { return castPersonCard; }, function (fn) { castPersonCard = fn; });
 Object.defineProperty(window, "__CAMP_FIN_MELODY_SECONDS", {

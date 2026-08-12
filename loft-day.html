@@ -53153,16 +53153,32 @@ window.__bedroomRoomOpen = false;
     room.classList.toggle("bedroom-sleeping",
       leftLamp.classList.contains("off") && rightLamp.classList.contains("off"));
   }
+  var partyWindowReflectionSignature = "";
+  function reflectionSignature(couple) {
+    var nodes = [couple].concat(Array.prototype.slice.call(couple.querySelectorAll("[class]")));
+    return nodes.map(function (node) { return node.getAttribute("class") || ""; }).join("|");
+  }
   function syncPartyWindowReflection() {
     if (!partyWindowReflection) return;
-    partyWindowReflection.replaceChildren();
     var garden = document.getElementById("stage-garden");
     var officeHangout = document.getElementById("office-hangout");
     var couple = officeHangout && officeHangout.querySelector(".of-couple.present");
-    if (!garden || !garden.classList.contains("garden-party") || !couple) return;
+    if (!garden || !garden.classList.contains("garden-party") || !couple) {
+      // Retain the last small reflection tree while hidden. Removing and rebuilding its ~35 SVG
+      // nodes at every Party boundary invalidated layout for the entire shared upper-room SVG.
+      partyWindowReflection.setAttribute("visibility", "hidden");
+      return;
+    }
+    var signature = reflectionSignature(couple);
+    if (partyWindowReflection.firstElementChild && signature === partyWindowReflectionSignature) {
+      partyWindowReflection.removeAttribute("visibility");
+      return;
+    }
     var reflection = couple.cloneNode(true);
     reflection.setAttribute("transform", "translate(82 278) scale(-1.95 1.95)");
-    partyWindowReflection.appendChild(reflection);
+    partyWindowReflection.replaceChildren(reflection);
+    partyWindowReflectionSignature = signature;
+    partyWindowReflection.removeAttribute("visibility");
   }
   function partyCoatsActive() {
     return !!(partyCoats && gameStrip && window.__bedroomRoomOpen &&

@@ -141,6 +141,11 @@ check(players.every(function(source) {
     /any-pointer:coarse/.test(source) && /left:max\(/.test(source) && /emitTouchKey/.test(source) && /setPointerCapture/.test(source) &&
     /releaseTouchKeys/.test(source);
 }), "all three players expose a coarse-pointer left-side WASD touch pad with held-key cleanup");
+check(players.every(function(source) {
+  return /--touch-cell:clamp\(25px,16\.6vmin,76px\)/.test(source) &&
+    /bottom:max\(clamp\(5px,2vmin,14px\),env\(safe-area-inset-bottom\)\)/.test(source) &&
+    !/top:50%;transform:translateY\(-50%\)/.test(source);
+}), "all three shooter D-pads share the enlarged bottom-left touch geometry");
 check(players.every(function(source) { return /shoot-pointer-lock/.test(source); }),
   "all three players report pointer-lock acquisition");
 check(/movementX \* 0\.25/.test(players[1]) && /movementY \* 0\.25/.test(players[1]),

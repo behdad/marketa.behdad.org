@@ -95164,6 +95164,7 @@ def colormode(mode=None):
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
     var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null, msgActionCoachShown = false, msgActionCoachActive = false, msgActionCoachAcknowledged = false, msgActionCoachHeld = []; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    var birthdayCelebrations = [], birthdayCelebrationTimer = null, birthdayPostcardOpen = false;
     function messageActionCoachEverUsed() {
       return Object.keys(messageActionUsed).some(function (id) { return !!messageActionUsed[id]; });
     }
@@ -95355,6 +95356,7 @@ def colormode(mode=None):
         msgActionCoachAcknowledged: !!msgActionCoachAcknowledged || messageActionCoachEverUsed(),
         msgBadgeCoachShown: !!msgBadgeCoachShown,
         msgBadgeCoachAcknowledged: !!msgBadgeCoachAcknowledged,
+        birthdayCelebrations: birthdayCelebrations.slice(0, 8).map(function (item) { return { who: item.who }; }),
         phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
         mailRead: Object.assign({}, mailRead),
         heldCalls: (heldCallRings || []).map(function (row) {
@@ -95448,6 +95450,13 @@ def colormode(mode=None):
         if (!row || typeof row.id !== "string") return;
         var id = row.id.slice(0, 120), saved = row.message || {}, m = MESSAGES[id];
         if (!m && /^reply_(?:user|ai)_/.test(id)) m = MESSAGES[id] = {};
+        if (!m && /^bd_[a-z][a-z0-9-]*$/.test(id)) {
+          var birthdayWho = id.slice(3), birthdaySenders = ["msg_behdad_from", "msg_marketa_from"];
+          if (saved.act === "bd:" + birthdayWho && typeof saved.bdName === "string" && saved.bdName.length <= 80 &&
+              birthdaySenders.indexOf(saved.fromKey) !== -1 && BD_TEMPLATES.indexOf(saved.bodyKey) !== -1) {
+            m = MESSAGES[id] = {};
+          }
+        }
         if (!m) return;
         ["fromKey", "bodyKey", "replyTo", "act", "bdName"].forEach(function (key) { if (saved[key] != null) m[key] = saved[key]; });
         if (saved.from != null) m.from = String(saved.from).slice(0, 120);
@@ -95466,6 +95475,13 @@ def colormode(mode=None):
       if (messageActionCoachEverUsed()) msgActionCoachAcknowledged = true;
       msgActionCoachShown = msgActionCoachAcknowledged;
       charlieIntroOffered = messagesThread.indexOf("charlie") !== -1;
+      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
+      birthdayPostcardOpen = false;
+      birthdayCelebrations = (Array.isArray(state.birthdayCelebrations) ? state.birthdayCelebrations : []).slice(0, 8).map(function (item) {
+        var who = item && typeof item.who === "string" ? item.who.toLowerCase().slice(0, 40) : "";
+        return /^[a-z][a-z0-9-]*$/.test(who) && MESSAGES["bd_" + who] ? { who: who, phase: "queued" } : null;
+      }).filter(Boolean);
+      if (birthdayCelebrations.length) scheduleBirthdayCelebrationRun(650);
       if (window.__updateMsgBadge) window.__updateMsgBadge();
       return true;
     };
@@ -97113,7 +97129,7 @@ def colormode(mode=None):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = []; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = []; phaseTwoHeldMessages = []; birthdayCelebrations = []; birthdayPostcardOpen = false; if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; } Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       releaseActionCoachMessages();
@@ -97269,7 +97285,7 @@ def colormode(mode=None):
     function messageActionIsOneShot(m, action) {
       return !!((action && action.id === "garden.moment.start") ||
         (action && action.id === "garden.set" && action.args && action.args.on === false) ||
-        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party_switch" || (m.act && m.act.indexOf("bd:") === 0))));
+        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party_switch")));
     }
     window.__expireStaleMessageActions = function () {
       var changed = expireStaleMessageActions();
@@ -97316,6 +97332,87 @@ def colormode(mode=None):
       }
       return false;
     }
+    function checkpointBirthdayCelebrations() {
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }
+    function scheduleBirthdayCelebrationRun(delay) {
+      if (birthdayCelebrationTimer) return;
+      birthdayCelebrationTimer = setTimeout(function () {
+        birthdayCelebrationTimer = null;
+        runNextBirthdayCelebration();
+      }, delay == null ? 0 : delay);
+    }
+    function birthdayPostcard(who) {
+      if (!window.__shareCard) return false;
+      window.__shareCard(window.__shareBirthdayOcc ? window.__shareBirthdayOcc(who) : null);
+      birthdayPostcardOpen = true;
+      return true;
+    }
+    function finishBirthdayCelebration(who) {
+      var item = birthdayCelebrations[0];
+      if (!item || item.who !== who || item.phase !== "cake") return false;
+      birthdayCelebrations.shift();
+      birthdayPostcard(who);
+      checkpointBirthdayCelebrations();
+      return true;
+    }
+    function runNextBirthdayCelebration() {
+      var item = birthdayCelebrations[0];
+      if (!item || birthdayPostcardOpen || item.phase !== "queued") return false;
+      if (window.__bdCakeOn) return false; // another birthday beat owns the floor; its end wakes this queue
+      item.phase = "cake";
+      checkpointBirthdayCelebrations();
+      if (!window.__birthdayGoto || !window.__birthdayGoto(item.who)) {
+        birthdayCelebrations.shift();
+        checkpointBirthdayCelebrations();
+        return false;
+      }
+      // Garden figures have a finite candle/cake lifecycle. Call- and station-only birthday
+      // scenes have a static cake/hat instead, so their settled reveal is their completion point.
+      if (!(window.__bdGardenFigures && window.__bdGardenFigures[item.who])) {
+        birthdayCelebrationTimer = setTimeout(function () {
+          birthdayCelebrationTimer = null;
+          finishBirthdayCelebration(item.who);
+        }, 900);
+      } else {
+        birthdayCelebrationTimer = setTimeout(function () {
+          birthdayCelebrationTimer = null;
+          // Navigation/party teardown can prevent the delayed cake starter from ever owning the
+          // floor. Cancel that attempt without a postcard; the repeatable action remains available.
+          if (birthdayCelebrations[0] === item && item.phase === "cake" && !window.__bdCakeOn) {
+            birthdayCelebrations.shift();
+            checkpointBirthdayCelebrations();
+          }
+        }, 1200);
+      }
+      return true;
+    }
+    function queueBirthdayCelebration(who) {
+      who = String(who || "").toLowerCase();
+      if (!/^[a-z][a-z0-9-]{0,39}$/.test(who)) return false;
+      birthdayCelebrations.push({ who: who, phase: "queued" });
+      checkpointBirthdayCelebrations();
+      runNextBirthdayCelebration();
+      return true;
+    }
+    window.addEventListener("loft:birthdaycakeend", function (event) {
+      var detail = event.detail || {}, who = Array.isArray(detail.who) ? detail.who : [];
+      var item = birthdayCelebrations[0];
+      if (!item) return;
+      if (item.phase === "cake" && who.indexOf(item.who) !== -1) {
+        if (detail.completed) finishBirthdayCelebration(item.who);
+        else { birthdayCelebrations.shift(); checkpointBirthdayCelebrations(); }
+      }
+      if (!birthdayPostcardOpen) scheduleBirthdayCelebrationRun(160);
+    });
+    window.addEventListener("loft:sharecardclose", function () {
+      if (!birthdayPostcardOpen) return;
+      birthdayPostcardOpen = false;
+      scheduleBirthdayCelebrationRun(160);
+    });
+    window.__birthdayCelebrationState = function () {
+      return { postcardOpen: birthdayPostcardOpen, queue: birthdayCelebrations.map(function (item) { return { who: item.who, phase: item.phase }; }) };
+    };
     function runTypedMsgAction(id, m, action) {
       if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") {
         renderMsgActionFailure(id, m);
@@ -97363,12 +97460,9 @@ def colormode(mode=None):
         return;
       }
       if (act.indexOf("pc:") === 0) { close(true); if (window.__openMonitorApp) window.__openMonitorApp(act.slice(3)); return; } // → an app on the office PC monitor (not the pocket phone) — e.g. the cue pointing at "the office speakers"
-      if (act.indexOf("bd:") === 0) { // the birthday greeting is the casual-play gate: one tap starts the existing reveal/cake and opens that person's postcard
+      if (act.indexOf("bd:") === 0) { // repeatable opt-in: finish this person's cake/reveal before opening their postcard
         close(true);
-        var birthdayWho = act.slice(3);
-        if (window.__birthdayGoto && window.__birthdayGoto(birthdayWho) && window.__shareCard) {
-          window.__shareCard(window.__shareBirthdayOcc ? window.__shareBirthdayOcc(birthdayWho) : null);
-        }
+        queueBirthdayCelebration(act.slice(3));
         return;
       }
       close(true); // the rest leave the phone for somewhere in the loft
@@ -120686,7 +120780,7 @@ function spawnDustMote(container) {
     // birthday people. The move rides the balance system's --balance-x (the CSS `translate`
     // property, distinct from the authored `transform` attribute → no animation clobber); each
     // cutter's prior nudge is saved and restored on end so they glide back to their floor spot.
-    var bdCakeTimer = null, bdCakeAnchor = null, bdCutters = [], bdSaved = [];
+    var bdCakeTimer = null, bdCakeAnchor = null, bdCutters = [], bdSaved = [], bdCakeWho = [];
     function bdGardenFigs() { return window.__bdGardenFigures || {}; }
     function authoredX(node) { var m = /translate\(\s*([-\d.]+)/.exec(node.getAttribute("transform") || ""); return m ? (parseFloat(m[1]) || 0) : 0; } // the figure's fixed floor slot (transform attr)
     function figCenterX(node) { return authoredX(node) + (parseFloat(node.style.getPropertyValue("--balance-x")) || 0); } // its live on-floor centre = slot + balance nudge
@@ -120701,8 +120795,9 @@ function spawnDustMote(container) {
       }
       return list;
     }
-    function endBdCakeCutting() {
+    function endBdCakeCutting(completed) {
       if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
+      var finishedWho = bdCakeWho.slice();
       setPartyMomentState("bdCake", false);
       group.classList.remove("bd-cake-cutting", "bd-candles-blow");
       var ckEl = document.getElementById("garden-bd-cake");
@@ -120715,17 +120810,20 @@ function spawnDustMote(container) {
         if (it.bx) it.el.style.setProperty("--balance-x", it.bx); else it.el.style.removeProperty("--balance-x");
       }
       bdSaved = [];
+      bdCakeWho = [];
       var ck = document.getElementById("garden-bd-cake");
       if (ck && bdCakeAnchor && bdCakeAnchor.parentNode === group) group.insertBefore(ck, bdCakeAnchor);
       bdCakeAnchor = null;
       if (window.__releaseBdCakeCrowd) window.__releaseBdCakeCrowd();
       else if (window.__trimFloorToCap) window.__trimFloorToCap();
+      if (finishedWho.length) window.dispatchEvent(new CustomEvent("loft:birthdaycakeend", { detail: { who: finishedWho, completed: completed === true } }));
     }
     function startBdCakeCutting(who) {
       if (!onFloor()) return false;                 // only meaningful with the crowd on the floor
       var list = bdWhoList(who);
       if (!list.length) return false;               // no garden birthday to celebrate right now
       if (window.__bdCakeOn) return true;           // idempotent (storm-safe)
+      bdCakeWho = list.slice();
       setPartyMomentState("bdCake", true);
       // the cake goes to the centre BETWEEN the hosts; the birthday person(s) dance there with it
       var hb = group.querySelector(".g-behdad"), hm = group.querySelector(".g-marketa");
@@ -120775,7 +120873,7 @@ function spawnDustMote(container) {
       }
       playSatisfiedExhaleSound("garden-bd-cake"); // a soft blow/"phew" (a click implies focus)
       if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
-      bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 500 : 1600); // linger a beat on the smoke, then rejoin the floor
+      bdCakeTimer = setTimeout(function () { endBdCakeCutting(true); }, reducedMotion() ? 500 : 1600); // linger a beat on the smoke, then rejoin the floor
       return true;
     }
     function beginBdCandleBlow() {
@@ -120797,6 +120895,7 @@ function spawnDustMote(container) {
     window.__beginBdCandleBlow = beginBdCandleBlow;
     window.__startBdCakeCutting = startBdCakeCutting;
     window.__endBdCakeCutting = endBdCakeCutting;
+    window.__completeBdCakeCutting = function () { return endBdCakeCutting(true); }; // deterministic lifecycle test hook
 
     // ── BOUQUET TOSS ──────────────────────────────────────────────────────────────
     // Markéta (garden-local x356, hand ~y196) winds up + tosses a bouquet; it arcs over the
@@ -128750,6 +128849,7 @@ function spawnDustMote(container) {
     m.classList.remove("show");
     setTimeout(function () { if (m.parentNode) m.remove(); }, 260);
     if (activateFestivity && window.__summonCurrentFestivity) window.__summonCurrentFestivity();
+    window.dispatchEvent(new CustomEvent("loft:sharecardclose"));
   }
   window.__shareCloseModal = shareCloseModal; // test / cleanup hook
   function shareOpenModal(options) {

@@ -86,6 +86,9 @@ readable even when their activity has expired. While the Office monitor or lapto
 previews and unread bubbles wait until that focused view closes, just as they do while the phone is open.
 Irene and Hannah may ask to play the Bedroom's tic-tac-toe, Balcony Block Party, or the Cuddly piano;
 each activity arrow takes you straight to the named game.
+On a birthday, Behdad or Markéta's greeting arrives as Party begins with the usual activity arrow.
+Tapping it starts that person's birthday ceremony; the birthday ribbon is a separate shortcut that
+skips the solve and starts the same ceremony immediately.
 
 If you are unsure what comes next:
 

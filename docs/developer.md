@@ -238,6 +238,11 @@ suppresses the physical UV class and snapshots its prior state; only the final o
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
 cannot relight or strand the blacklight.
 
+Exact-day birthdays are announced through the phase-two `bd_<who>` Messages row. Its one-shot
+**Celebrate** action owns the casual birthday reveal: it opens the matching postcard and calls the
+existing birthday router for the cake or authored remote venue. `shareAutoShow` must not auto-open a
+birthday card when Party starts, and birthday delivery must not pre-render an inline postcard.
+
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been
 visited. If the player reaches the Entrance while Party is still active, the canonical handoff winds

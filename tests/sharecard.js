@@ -17,7 +17,7 @@ var HARNESS = [
   "<script>",
   "(function () {",
   "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
-  "  var report = { errors: [], cards: [], autoBirthdayActivations: 0, composed: [] };",
+  "  var report = { errors: [], cards: [], deferredBirthdayActivations: 0, composed: [] };",
   "  window.__mailCompose = function (subject, body) { report.composed.push({ subject: subject, body: body }); };",
   "  async function make(name, setup) {",
   "    try { if (setup) setup(); } catch (e) { report.errors.push('setup ' + name + ': ' + e); }",
@@ -45,12 +45,12 @@ var HARNESS = [
   "  }",
   "  window.addEventListener('load', function () {",
   "    setTimeout(function () {",
-  "      make('default', null)",
+  "      make('default', function () { history.replaceState(null, '', '?date=2031-03-01'); if (window.__applySeasonDate) window.__applySeasonDate(); })",
   "        .then(function () { return make('season', function () { window.__loftControllers.season('spooky'); }); })",
   "        .then(function () { return make('birthday', function () { window.__loftControllers.birthday('jay'); }); })",
   "        .then(async function () {",
   "          var prior = window.__summonCurrentFestivity;",
-  "          window.__summonCurrentFestivity = function () { report.autoBirthdayActivations++; return true; };",
+  "          window.__summonCurrentFestivity = function () { report.deferredBirthdayActivations++; return true; };",
   "          await window.__shareCard(null, { activateFestivityOnClose: true });",
   "          window.__shareCloseModal();",
   "          await sleep(120);",
@@ -103,8 +103,8 @@ if (!r) {
   else fail("only birthday opens an email composition", JSON.stringify(composed));
   if (composed.length === 1 && /birthday postcard/.test(composed[0].body) && /marketa\.behdad\.org\/loft-day\?date=/.test(composed[0].body) && !/save-the-date/i.test(composed[0].body)) pass("birthday email describes the postcard and Loft Day link without save-the-date language");
   else fail("birthday email describes the postcard and Loft Day link without save-the-date language", JSON.stringify(composed));
-  if (r.autoBirthdayActivations === 1) pass("dismissing an automatic birthday postcard activates its festivity once");
-  else fail("dismissing an automatic birthday postcard activates its festivity once", r.autoBirthdayActivations);
+  if (r.deferredBirthdayActivations === 1) pass("an explicitly armed birthday postcard activates its festivity once on dismissal");
+  else fail("an explicitly armed birthday postcard activates its festivity once on dismissal", r.deferredBirthdayActivations);
   if ((r.errors || []).length === 0) pass("no uncaught JS errors across the run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));
 }

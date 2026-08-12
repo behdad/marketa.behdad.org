@@ -91,6 +91,7 @@ var CHROME_OPTS = {
   seedRandom: true,   // deterministic reaction pickers
   chromeFlags: "--autoplay-policy=no-user-gesture-required"
 };
+var PROBE_CHROME_OPTS = Object.assign({}, CHROME_OPTS, { urlSuffix: "?date=2031-03-01" }); // keep notification timing deterministic on real birthday dates
 
 // Vetted "el||one-shot selector" pairs where the conflict is real in CSS but
 // unreachable in JS today. Keep minimal — a reachable cascade bug belongs in a
@@ -1290,7 +1291,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 52000, CHROME_OPTS); // includes the persistent two-step opening guide + latest-popup-aware message-coach delay
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 52000, PROBE_CHROME_OPTS); // includes the persistent two-step opening guide + latest-popup-aware message-coach delay
   if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("loft-day.html", LOFT_FULLSCREEN_HARNESS, 7000, CHROME_OPTS);
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);

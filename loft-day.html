@@ -9665,6 +9665,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-act.used{background:transparent; color:var(--soft); border:1px solid var(--rule); box-shadow:none}
 .pm-msg-act.used:hover,.pm-msg-act.used:focus-visible{background:rgba(142,58,74,.08); color:var(--wine)}
 .pm-msg-act svg{width:15px; height:15px}
+.pm-msg-act.bd-celebrate{width:auto; min-width:28px; padding:0 8px; gap:4px; border-radius:14px; font:600 10px/1 "Source Serif 4",serif; white-space:nowrap}
+.pm-msg-act.bd-celebrate svg{width:12px; height:12px}
 .pm-msg-line{position:relative}
 /* This first-action lesson belongs to the phone, not to one message row. Keeping it on
    the non-scrolling app surface makes it survive thread repaints and keeps its arrow
@@ -37716,8 +37718,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-f3684f4cb1d7"></script>
-<script src="loft-day.cs.js?v=dict-8ffb5519de82"></script>
+<script src="loft-day.en.js?v=dict-063b87e049f1"></script>
+<script src="loft-day.cs.js?v=dict-ad1b6db74825"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -93250,9 +93252,10 @@ def colormode(mode=None):
         }
         var line = document.createElement("div"); line.className = "pm-msg-line"; line.appendChild(bub);
         if (messageActionAvailable(id, m)) {
-          var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act" + (messageActionUsed[id] ? " used" : "");
+          var birthdayAction = !!(m.act && m.act.indexOf("bd:") === 0);
+          var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act" + (birthdayAction ? " bd-celebrate" : "") + (messageActionUsed[id] ? " used" : "");
           actBtn; actBtn;
-          actBtn.innerHTML = '<svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          actBtn.innerHTML = (birthdayAction ? '<span>' + tr("bd_action") + '</span>' : '') + '<svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
           actBtn.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
           if (!msgActionCoachShown && !msgActionCoachAcknowledged && !messageActionCoachEverUsed() && !messageActionUsed[id]) {
             msgActionCoachShown = true;
@@ -97266,7 +97269,7 @@ def colormode(mode=None):
     function messageActionIsOneShot(m, action) {
       return !!((action && action.id === "garden.moment.start") ||
         (action && action.id === "garden.set" && action.args && action.args.on === false) ||
-        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party_switch")));
+        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party_switch" || (m.act && m.act.indexOf("bd:") === 0))));
     }
     window.__expireStaleMessageActions = function () {
       var changed = expireStaleMessageActions();
@@ -97360,7 +97363,14 @@ def colormode(mode=None):
         return;
       }
       if (act.indexOf("pc:") === 0) { close(true); if (window.__openMonitorApp) window.__openMonitorApp(act.slice(3)); return; } // → an app on the office PC monitor (not the pocket phone) — e.g. the cue pointing at "the office speakers"
-      if (act.indexOf("bd:") === 0) { close(true); if (window.__birthdayGoto) window.__birthdayGoto(act.slice(3)); return; } // → summon the birthday person: time-travel to their date + reveal them at their venue (garden/bar/dj/tehran-call/prague-call)
+      if (act.indexOf("bd:") === 0) { // the birthday greeting is the casual-play gate: one tap starts the existing reveal/cake and opens that person's postcard
+        close(true);
+        var birthdayWho = act.slice(3);
+        if (window.__birthdayGoto && window.__birthdayGoto(birthdayWho) && window.__shareCard) {
+          window.__shareCard(window.__shareBirthdayOcc ? window.__shareBirthdayOcc(birthdayWho) : null);
+        }
+        return;
+      }
       close(true); // the rest leave the phone for somewhere in the loft
       if (act.indexOf("lower:") === 0) {
         var lowerRoom = act.slice(6);
@@ -98050,14 +98060,10 @@ def colormode(mode=None):
     // session — messagesThread dedups the "bd_<who>" id, so re-renders / the ~4s air-quality
     // re-apply / repeated 'b' presses can't double-send. Unattended delivery is silent (the thumb
     // + notify buzz self-gate on the crickets rule inside showMessageThumb).
-    // Lazily rasterize the day's occasion share-card and hang it on a delivered message as a
-    // tappable inline postcard (m.img + m.share). Never blocks delivery — the text is already in
-    // the thread; if generation fails the message just stays image-less. If the messages app is
-    // open when the PNG lands, re-render so the postcard appears. The card reflects the MESSAGE's
-    // OWN occasion (parsed from its id: bd_<who> → that person's birthday; occ_/hol_<key> → that
-    // invite's occasion), NOT the loft's current date — so two birthday texts in one window each
-    // show the right person's card. The occasion is stashed on the message (m.shareOcc) so a tap
-    // on the thumbnail re-opens the matching modal card too.
+    // Occasion invites lazily rasterize their own share-card and hang it on the delivered message
+    // as a tappable inline postcard. Birthday greetings deliberately do not: their one-shot
+    // Celebrate action opens that person's postcard and ceremony together, so a casual player can
+    // leave the greeting alone without having either celebration put in the way.
     function occForMessageId(id) {
       if (id.indexOf("bd_") === 0) return window.__shareBirthdayOcc ? window.__shareBirthdayOcc(id.slice(3)) : null;
       if (id.indexOf("occ_") === 0 || id.indexOf("hol_") === 0) return window.__shareOccForKey ? window.__shareOccForKey(id.replace(/^(occ_|hol_)/, "")) : null;
@@ -98096,10 +98102,8 @@ def colormode(mode=None):
         return;
       }
       var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
-      MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who }; // tapping the text summons the birthday person (runMsgAction "bd:")
-      var accepted = window.__deliverAutonomousPhoneMessage(id);
-      if (accepted) attachSharePostcard(id); // carry the birthday's save-the-date postcard as a tappable inline image
-      return accepted;
+      MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who };
+      return window.__deliverAutonomousPhoneMessage(id);
     };
     // ── special-day INVITE text ── on a wedding/bbq/brunch occasion or a named holiday, the host texts
     // an invite a moment after load (the dateOccasions orchestrator picks sender + body + tap-action).
@@ -128811,21 +128815,20 @@ function spawnDustMote(container) {
   window.__shareCardDataURL = function (occOverride) {
     return shareRasterize(occOverride).then(function (out) { return out.dataURL; }, function () { return null; });
   };
-  // On a day of significance — a friend's EXACT birthday, either wedding day, or a named turn of
-  // the year (Nowruz / Čaháršanbe-Sûrî) — greet the visitor with the day's own save-the-date card,
-  // once. Reads the same pretend-date the decor does (seasonDate → honours ?date=), so previewing a
-  // birthday date raises the matching card. Never during a trip, and at most once per
-  // (occasion,day) via a localStorage stamp so a reload on the same day doesn't nag.
+  // On a wedding day or named turn of the year (Nowruz / Čaháršanbe-Sûrî), greet the visitor
+  // with the day's save-the-date card once. Birthdays stay out of this automatic path: their
+  // phase-two greeting offers the explicit Celebrate action that opens the card and ceremony.
   var SHARE_PLAIN_SEASONS = { winter: 1, spring: 1, summer: 1, smoky: 1, autumn: 1 }; // ordinary seasons don't auto-pop the card; only named occasions do
   function shareAutoShow() {
     if (!/loft-day/.test(location.pathname)) return; // auto-pop only in Loft Day, never the RSVP-named entry
     if (window.__tripActive) return;
-    var s = seasonDate(), id = null;
+    var s = seasonDate(), id = null, birthdayToday = false;
     for (var i = 0; i < BIRTHDAYS.length; i++) {
       var b = BIRTHDAYS[i];
       if (b.pending || b.m == null) continue;
-      if (b.m === s.m && b.d === s.d) { id = "bd-" + b.who; break; }
+      if (b.m === s.m && b.d === s.d) { birthdayToday = true; break; }
     }
+    if (birthdayToday) return;
     if (!id) {
       // any NAMED occasion the card can badge (canada day, nowruz, xmas, new year, spooky,
       // valentines, pride, chaharshanbe, both wedding windows, …) — but NOT an ordinary season.
@@ -128836,7 +128839,7 @@ function spawnDustMote(container) {
     if (!window.__secondRound) return; // phase one is for solving; setGardenParty retries this as phase two begins
     var mark = "shareAutoShown:" + id + ":" + shareLoftISO();
     try { if (localStorage.getItem(mark)) return; localStorage.setItem(mark, "1"); } catch (e) {}
-    window.__shareCard(null, { activateFestivityOnClose: id.indexOf("bd-") === 0 });
+    window.__shareCard();
   }
   window.__retryShareAutoShow = shareAutoShow;
   window.__resetShareAutoShow = function () {

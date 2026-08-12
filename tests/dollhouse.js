@@ -413,6 +413,13 @@ var harness = String.raw`<script>
       !kidGames.classList.contains("playing") &&
       document.getElementById("stage-cuddly").classList.contains("stage-far") &&
       getComputedStyle(document.getElementById("stage-cuddly")).clipPath.indexOf("loft-stage-room-clip") >= 0);
+    window.__openDollhouse();
+    check("the Cuddly card restores its Party kids while opened from another room",
+      window.__currentStageName === "office" && kidGames.classList.contains("playing") &&
+      getComputedStyle(roomButton("cuddly")).visibility === "visible");
+    window.__closeDollhouse();
+    check("closing the Dollhouse removes preview-only Cuddly kids",
+      window.__currentStageName === "office" && !kidGames.classList.contains("playing"));
     window.__setPartyMode(false, true, false);
   }
   window.addEventListener("load", function () {

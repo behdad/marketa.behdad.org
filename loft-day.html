@@ -63133,9 +63133,10 @@ setMusicPausedState(false);
 // crickets rule doesn't apply (no sound, no unattended work), and state.js stays green (idle loops
 // only run while .playing, dropped the instant it's removed; a reset lands party-off → .playing off).
 (function () {
+  var dollhousePreview = false;
   function want() {
-    if (window.__currentStageName !== "cuddly") return false; // only decorate the nook while it's on screen
-    if (window.__cinemaRoomOpen) return false;               // the cinema owns the lower viewport
+    if (!dollhousePreview && window.__currentStageName !== "cuddly") return false;
+    if (!dollhousePreview && window.__cinemaRoomOpen) return false;
     if (!window.__gardenPartyOn) return false;               // owner: only during the party
     var couple = document.getElementById("cuddly-couple");
     if (!couple || !couple.classList.contains("at-party")) return false; // hosts must be OFF at the garden (nook empty of adults)
@@ -63268,7 +63269,7 @@ setMusicPausedState(false);
     if (on && (!was || meal !== laidOutForMeal || kidSig !== laidOutKids)) randomize(kg, meal);
     laidOutForMeal = meal;
     laidOutKids = kidSig;
-    if (on && !was) {
+    if (on && !was && !dollhousePreview) {
       // ONE-ROOM rule (the other half): as the seated kids appear, clear any cuddly-nook cameo of
       // one of the same kids that happens to be mid-visit, so Irene/Robin/Navid can't be both seated
       // AND cameo'ing at once. Their scheduler already refuses to START a cameo for a kid in a game
@@ -63281,6 +63282,10 @@ setMusicPausedState(false);
     kg.classList.toggle("watching-totoro", on && !!window.__totoroWatchActive);
   }
   window.__updateKidGames = apply;
+  window.__setKidGamesDollhousePreview = function (on) {
+    dollhousePreview = !!on;
+    apply();
+  };
   window.__kidGamesReshuffle = function () { var kg = document.getElementById("cuddly-kidgames"); if (kg) randomize(kg, mealOn()); }; // private test hook
   // The assigned kids seated in the nook games right now, display-ready for the shared per-room
   // roster (window.__whoIsHere) — empty unless the scene is actually .playing.
@@ -114602,6 +114607,7 @@ function spawnDustMote(container) {
     return !!lowerRoomDiscovered && dollhouseEligible();
   }
   function restoreDollhousePreviewState() {
+    if (window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(false);
     var cuddlyScreen = document.getElementById("cuddly-wallscreen");
     if (cuddlyScreen && dollhouseCuddlyScreenClass !== null) {
       cuddlyScreen.setAttribute("class", dollhouseCuddlyScreenClass);
@@ -114648,6 +114654,7 @@ function spawnDustMote(container) {
     if (entranceArt) entranceArt.classList.remove("dollhouse-day-preview");
   }
   function prepareDollhousePreviewState() {
+    if (window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(true);
     var cuddlyScreen = document.getElementById("cuddly-wallscreen");
     if (cuddlyScreen && dollhouseCuddlyScreenClass === null) {
       dollhouseCuddlyScreenClass = cuddlyScreen.getAttribute("class") || "";

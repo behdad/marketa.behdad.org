@@ -131823,10 +131823,9 @@ function spawnDustMote(container) {
       { grp: "kids",   key: "navid", sel: ".g-navid", runSel: "#garden-kid-navid", name: "Navid", roleKey: "role_godson" }
     ];
 
-    // Is this figure actually ON the floor right now? Present = #garden-guests.guests-in AND the
-    // element is rendered (not display:none / .off-with-kids / opacity 0). Mirrors the presence
-    // gating the task describes: mouses only when .mouses-visiting; Bahareh drops out while
-    // .off-with-kids (chase / cuddly-nook).
+    // Is this figure actually ON the floor right now? The same state classes that own its CSS
+    // visibility are authoritative here; reading computed style after a party toggle would force
+    // layout across the whole document merely to answer the roster/photographer gate.
     function present(sel, runSel) {
       if (sel === "__dj") return djPresent();
       if (sel === "#garden-photog-hit") return photogPresent();
@@ -131846,22 +131845,21 @@ function spawnDustMote(container) {
       if (el.classList.contains("off-with-kids")) {
         return !!(runner && runner.classList.contains("chasing"));
       }
-      var cs = getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) === 0) return false;
+      if ((el.classList.contains("g-elisabeth") || el.classList.contains("g-felix")) &&
+          !g.classList.contains("mouses-visiting")) return false;
+      var host = el.classList.contains("g-behdad") || el.classList.contains("g-marketa");
+      if (!host && g.classList.contains("trickle") && !el.classList.contains("arrived")) return false;
       return true;
     }
-    function photogPresent() { // the photographer shows with the garden party (opacity gated on #stage-garden.garden-party)
+    function photogPresent() { // state classes own the same garden-party / empty-room opacity gates
       if (!window.__gardenPartyOn) return false;
-      var p = document.getElementById("garden-photographer");
-      if (!p) return false;
-      var cs = getComputedStyle(p);
-      return cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity) !== 0;
+      var p = document.getElementById("garden-photographer"), stage = document.getElementById("stage-garden");
+      return !!(p && stage && stage.classList.contains("garden-party") && !stage.classList.contains("photog-empty"));
     }
     function djPresent() { // the booth fades in with .garden-party; who's spinning is read live
       if (!window.__gardenPartyOn) return false;
-      var b = document.getElementById("garden-djbooth");
-      if (!b) return false;
-      return getComputedStyle(b).opacity !== "0";
+      var b = document.getElementById("garden-djbooth"), stage = document.getElementById("stage-garden");
+      return !!(b && stage && stage.classList.contains("garden-party"));
     }
     function djName() { // just the first name — the roster's role column already says "DJ"
       var b = document.getElementById("garden-djbooth");

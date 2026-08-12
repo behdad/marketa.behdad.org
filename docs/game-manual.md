@@ -84,6 +84,8 @@ handoff coach allows navigation but holds new notifications and calls until it l
 message never performs its suggested activity: use the separate activity arrow. Old messages remain
 readable even when their activity has expired. While the Office monitor or laptop is zoomed, message
 previews and unread bubbles wait until that focused view closes, just as they do while the phone is open.
+Irene and Hannah may ask to play the Bedroom's tic-tac-toe, Balcony Block Party, or the Cuddly piano;
+each activity arrow takes you straight to the named game.
 
 If you are unsure what comes next:
 

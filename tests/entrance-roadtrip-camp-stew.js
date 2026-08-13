@@ -129,10 +129,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             };
             window.__setLang("en");
             choose("chicken"); choose("beef");
-            var proteinSwap = stew();
+            var proteinMulti = stew();
             choose("barley"); choose("pasta");
-            var starchSwap = stew();
-            choose("pasta");
+            var baseMulti = stew();
+            choose("chicken"); choose("beef");
             click(cook);
             report.missing = {
               state: stew(), crate: shown(crate),
@@ -146,7 +146,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             var brew = game.querySelector(".entrance-roadtrip-stew-pot-brew");
             var clearFill = getComputedStyle(brew).fill;
             var clearOpacity = getComputedStyle(brew).fillOpacity;
-            choose("beef"); choose("pasta");
+            choose("beef"); choose("pasta"); choose("chicken"); choose("barley");
             var plainFill = getComputedStyle(brew).fill;
             choose("curry");
             var curryFill = getComputedStyle(brew).fill;
@@ -161,7 +161,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               state: stew(), clearFill: clearFill, clearOpacity: clearOpacity, plainFill: plainFill,
               curryFill: curryFill, tomatoFill: tomatoFill, tomatoCurryFill: tomatoCurryFill,
               beefPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="beef"]')).opacity,
+              chickenPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="chicken"]')).opacity,
               pastaPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="pasta"]')).opacity,
+              barleyPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="barley"]')).opacity,
               onionPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="onion"]')).opacity,
               garlicPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="garlic"]')).opacity,
               gingerPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="ginger"]')).opacity,
@@ -189,7 +191,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                   state: stew(), food: getComputedStyle(sceneFood).opacity, brew: getComputedStyle(sceneBrew).fill,
                   brewTarget: getComputedStyle(pot).getPropertyValue("--stew-raw").trim(),
                   bubble: getComputedStyle(surfaceBubble).animationName,
-                  pieces: ["beef", "pasta", "onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "salt", "pepper", "chilies", "coriander"].map(sceneItemOpacity)
+                  pieces: ["beef", "chicken", "pasta", "barley", "onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "salt", "pepper", "chilies", "coriander"].map(sceneItemOpacity)
                 };
                 click(pot);
                 setTimeout(function () {
@@ -210,7 +212,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                   brewTarget: getComputedStyle(pot).getPropertyValue("--stew-warming").trim(),
                   brewTransition: getComputedStyle(sceneBrew).transitionDuration,
                   bubble: getComputedStyle(surfaceBubble).animationName,
-                  pieces: ["beef", "pasta", "onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "salt", "pepper", "chilies", "coriander"].map(sceneItemOpacity),
+                  pieces: ["beef", "chicken", "pasta", "barley", "onion", "garlic", "ginger", "carrots", "celery", "mushrooms", "salt", "pepper", "chilies", "coriander"].map(sceneItemOpacity),
                   pastePackages: !!pot.querySelector('[data-stew-scene-item="tomato"],[data-stew-scene-item="curry"]')
                 };
                 report.simmeringOpen = window.__entranceRoadtripCampStewStep(Math.max(0, 6400 - stew().elapsed));
@@ -227,7 +229,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 var resetBefore = stew();
                 report.fireOutRestored = { before: resetBefore, after: window.__entranceRoadtripCampStewStep(4000), pot: shown(pot), grill: shown(grill), crate: shown(crate) };
                 window.__restoreCheckpointSystems({ entrance: readyCheckpoint }, "afterStage");
-                report.readyRestored = { state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate) };
+                report.readyRestored = {
+                  state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate),
+                  pieces: ["beef", "chicken", "pasta", "barley"].map(sceneItemOpacity)
+                };
                 click(pot);
                 report.served = {
                   state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(),
@@ -316,7 +321,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 }, 3200);
               } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
             }, 600);
-            report.swaps = { protein: proteinSwap, starch: starchSwap };
+            report.multi = { proteins: proteinMulti, bases: baseMulti };
           } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
         });
       } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
@@ -353,14 +358,16 @@ check(result && result.builder && result.builder.open && JSON.stringify(result.b
   JSON.stringify(result.builder.headings) === JSON.stringify(["PROTEIN", "BASE"]) && !result.builder.chooseText &&
   !result.builder.title && result.builder.cookAboveCards && result.builder.czech &&
   result.builder.lambPieces === 2 && result.builder.sceneLambPieces === 2 &&
-  JSON.stringify(result.builder.czech.headings) === JSON.stringify(["BÍLKOVINA", "ZÁKLAD"]) &&
+  JSON.stringify(result.builder.czech.headings) === JSON.stringify(["PROTEIN", "ZÁKLAD"]) &&
   JSON.stringify([result.builder.czech.onion, result.builder.czech.garlic, result.builder.czech.ginger,
     result.builder.czech.carrots, result.builder.czech.celery, result.builder.czech.mushrooms,
     result.builder.czech.coriander]) ===
     JSON.stringify(["Cibule", "Česnek", "Zázvor", "Mrkev", "Celer", "Houby", "Koriandr"]),
   "the compact builder has the exact 22-card bilingual palette, final headings, and top Cook action", result && result.builder);
-check(result && result.swaps && result.swaps.protein.protein === "beef" && result.swaps.starch.starch === "pasta",
-  "the five proteins and five bases remain mutually exclusive", result && result.swaps);
+check(result && result.multi &&
+  JSON.stringify(result.multi.proteins.proteins) === JSON.stringify(["chicken", "beef"]) &&
+  JSON.stringify(result.multi.bases.bases) === JSON.stringify(["barley", "pasta"]),
+  "proteins and bases toggle independently without replacing earlier selections", result && result.multi);
 check(result && result.missing && result.missing.state.status === "assembling" && !result.missing.state.recipeComplete &&
   result.missing.crate && result.missing.available && result.missing.overlay,
   "the real Cook button refuses only a missing required item without hiding the crate", result && result.missing);
@@ -368,13 +375,16 @@ check(result && result.closedDraft && !result.closedDraft.state.open && result.c
   result.closedDraft.crate && result.reopenedDraft && result.reopenedDraft.open && !result.reopenedDraft.recipeComplete,
   "closing and reopening keeps the crate but starts an empty draft", result && { closed: result.closedDraft, reopened: result.reopenedDraft });
 check(result && result.assembly && result.assembly.state.recipeComplete && result.assembly.state.tomato && result.assembly.state.curry &&
+  JSON.stringify(result.assembly.state.proteins) === JSON.stringify(["beef", "chicken"]) &&
+  JSON.stringify(result.assembly.state.bases) === JSON.stringify(["pasta", "barley"]) &&
   result.assembly.state.onion && result.assembly.state.garlic && result.assembly.state.ginger &&
   result.assembly.state.carrots && result.assembly.state.celery && result.assembly.state.mushrooms &&
   result.assembly.state.salt && result.assembly.state.pepper && result.assembly.state.chilies && result.assembly.state.coriander &&
   result.assembly.clearFill === "rgb(191, 228, 234)" && Number(result.assembly.clearOpacity) < .7 &&
   result.assembly.plainFill === "rgb(117, 82, 60)" && result.assembly.curryFill === "rgb(166, 111, 46)" &&
   result.assembly.tomatoFill === "rgb(153, 76, 62)" && result.assembly.tomatoCurryFill === "rgb(166, 80, 56)" &&
-  [result.assembly.beefPieces, result.assembly.pastaPieces, result.assembly.onionPieces,
+  [result.assembly.beefPieces, result.assembly.chickenPieces, result.assembly.pastaPieces,
+    result.assembly.barleyPieces, result.assembly.onionPieces,
     result.assembly.garlicPieces, result.assembly.gingerPieces, result.assembly.carrotPieces,
     result.assembly.celeryPieces, result.assembly.mushroomPieces, result.assembly.corianderPieces].every(function (opacity) { return opacity === "1"; }) &&
   !result.assembly.packagedPaste,
@@ -388,8 +398,10 @@ check(result && result.cookImmediate && result.cookImmediate.state.status === "c
   result.cookImmediate.checkpoint.onion && result.cookImmediate.checkpoint.garlic &&
   result.cookImmediate.checkpoint.ginger && result.cookImmediate.checkpoint.carrots &&
   result.cookImmediate.checkpoint.celery && result.cookImmediate.checkpoint.mushrooms &&
-  result.cookImmediate.checkpoint.coriander,
-  "the visible Cook button commits the assembled batch and its add-ins, closes assembly, and moves the pot onto the grill", result && result.cookImmediate);
+  result.cookImmediate.checkpoint.coriander &&
+  JSON.stringify(result.cookImmediate.checkpoint.proteins) === JSON.stringify(["beef", "chicken"]) &&
+  JSON.stringify(result.cookImmediate.checkpoint.bases) === JSON.stringify(["pasta", "barley"]),
+  "the visible Cook button commits every selected protein, base, and add-in, closes assembly, and moves the pot onto the grill", result && result.cookImmediate);
 check(result && result.rawOpen && result.rawOpen.state.phase === "raw" && result.rawOpen.state.lidOpen &&
   result.rawOpen.food === "1" && result.rawOpen.brewTarget === "#a65038" && result.rawOpen.bubble === "none" &&
   result.rawOpen.pieces.every(function (opacity) { return opacity === "1"; }),
@@ -415,6 +427,9 @@ check(result && result.fireOutRestored && !result.fireOutRestored.before.fireLit
   result.fireOutRestored.before.phase === "cold" && result.fireOutRestored.before.status === "assembling" &&
   result.fireOutRestored.after.elapsed === 0 && !result.fireOutRestored.pot && !result.fireOutRestored.grill && !result.fireOutRestored.crate &&
   result.readyRestored && result.readyRestored.state.phase === "ready" && result.readyRestored.state.lidOpen &&
+  JSON.stringify(result.readyRestored.state.proteins) === JSON.stringify(["beef", "chicken"]) &&
+  JSON.stringify(result.readyRestored.state.bases) === JSON.stringify(["pasta", "barley"]) &&
+  result.readyRestored.pieces.every(function (opacity) { return opacity === "1"; }) &&
   result.readyRestored.pot && result.readyRestored.grill && !result.readyRestored.crate,
   "a fire-out checkpoint hard-resets food while a lit checkpoint restores committed cooking", result && { fireOut: result.fireOutRestored, ready: result.readyRestored });
 check(result && result.served && result.served.state.status === "served" && !result.served.pot && result.served.grill &&
@@ -442,6 +457,8 @@ check(result && result.earlyFireClick && result.earlyFireClick.state.status === 
   result && { clicked: result.earlyFireClick, restored: result.freshFireRestored });
 check(result && result.draftRestored && result.draftRestored.saved &&
   result.draftRestored.saved.protein === "tofu" && result.draftRestored.saved.starch === "barley" &&
+  JSON.stringify(result.draftRestored.saved.proteins) === JSON.stringify(["tofu"]) &&
+  JSON.stringify(result.draftRestored.saved.bases) === JSON.stringify(["barley"]) &&
   !result.draftRestored.state.open &&
   result.draftRestored.state.phase === "raw" && result.draftRestored.state.recipeComplete &&
   result.draftRestored.crate && !result.draftRestored.overlay,

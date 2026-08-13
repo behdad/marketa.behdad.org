@@ -43294,9 +43294,9 @@ window.__entranceRoomOpen = false;
   var CAMP_STEW_EXTRAS = ["onion", "garlic", "ginger", "carrots", "celery", "mushrooms",
     "tomato", "curry", "salt", "pepper", "chilies", "coriander"];
   var campStewState = {
-    open: false, protein: "", onion: false, garlic: false, ginger: false,
+    open: false, proteins: [], onion: false, garlic: false, ginger: false,
     carrots: false, celery: false, mushrooms: false, tomato: false, curry: false,
-    salt: false, pepper: false, chilies: false, coriander: false, starch: "",
+    salt: false, pepper: false, chilies: false, coriander: false, bases: [],
     status: "assembling", elapsed: 0, readyNotified: false, overcookedNotified: false
   };
   var CAMP_STARGAZING_LENGTHS = { "cassiopeia": 5, "ursa-major": 7, "ursa-minor": 7 };
@@ -43329,11 +43329,11 @@ window.__entranceRoomOpen = false;
   var campStewLastFrame = 0;
   var campStewClankTimer = null;
   function campStewHasAnything() {
-    return !!(campStewState.protein || campStewState.starch ||
+    return !!(campStewState.proteins.length || campStewState.bases.length ||
       CAMP_STEW_EXTRAS.some(function (name) { return campStewState[name]; }));
   }
   function campStewRecipeComplete() {
-    return !!(campStewState.protein && campStewState.starch);
+    return !!(campStewState.proteins.length && campStewState.bases.length);
   }
   function campStewPhase() {
     if (campStewState.status === "served") return "ready";
@@ -43347,7 +43347,8 @@ window.__entranceRoomOpen = false;
   function campStewSnapshot() {
     return {
       open: campStewState.open,
-      protein: campStewState.protein,
+      proteins: campStewState.proteins.slice(),
+      protein: campStewState.proteins[0] || "",
       onion: campStewState.onion,
       garlic: campStewState.garlic,
       ginger: campStewState.ginger,
@@ -43360,7 +43361,8 @@ window.__entranceRoomOpen = false;
       pepper: campStewState.pepper,
       chilies: campStewState.chilies,
       coriander: campStewState.coriander,
-      starch: campStewState.starch,
+      bases: campStewState.bases.slice(),
+      starch: campStewState.bases[0] || "",
       status: campStewState.status,
       phase: campStewPhase(),
       elapsed: Math.round(campStewState.elapsed),
@@ -43401,15 +43403,15 @@ window.__entranceRoomOpen = false;
     });
     campStewGame.classList.toggle("fire-lit", campFireState.complete && campFireState.lit);
     CAMP_STEW_PROTEINS.forEach(function (name) {
-      campStewGame.classList.toggle("has-protein-" + name, campStewState.protein === name);
+      campStewGame.classList.toggle("has-protein-" + name, campStewState.proteins.indexOf(name) >= 0);
     });
     CAMP_STEW_STARCHES.forEach(function (name) {
-      campStewGame.classList.toggle("has-starch-" + name, campStewState.starch === name);
+      campStewGame.classList.toggle("has-starch-" + name, campStewState.bases.indexOf(name) >= 0);
     });
     Array.prototype.forEach.call(campStewGame.querySelectorAll("[data-stew-item]"), function (node) {
       var item = node.getAttribute("data-stew-item");
-      var selected = CAMP_STEW_PROTEINS.indexOf(item) >= 0 ? campStewState.protein === item :
-        CAMP_STEW_STARCHES.indexOf(item) >= 0 ? campStewState.starch === item : !!campStewState[item];
+      var selected = CAMP_STEW_PROTEINS.indexOf(item) >= 0 ? campStewState.proteins.indexOf(item) >= 0 :
+        CAMP_STEW_STARCHES.indexOf(item) >= 0 ? campStewState.bases.indexOf(item) >= 0 : !!campStewState[item];
       node.classList.toggle("selected", selected);
     });
     if (campFireScene) {
@@ -43427,10 +43429,10 @@ window.__entranceRoomOpen = false;
         campPot.classList.toggle("has-" + name, scenePotActive && campStewState[name]);
       });
       CAMP_STEW_PROTEINS.forEach(function (name) {
-        campPot.classList.toggle("has-protein-" + name, scenePotActive && campStewState.protein === name);
+        campPot.classList.toggle("has-protein-" + name, scenePotActive && campStewState.proteins.indexOf(name) >= 0);
       });
       CAMP_STEW_STARCHES.forEach(function (name) {
-        campPot.classList.toggle("has-starch-" + name, scenePotActive && campStewState.starch === name);
+        campPot.classList.toggle("has-starch-" + name, scenePotActive && campStewState.bases.indexOf(name) >= 0);
       });
       campPot.classList.toggle("fire-lit", scenePotActive && campFireState.lit);
       campPot.classList.toggle("simmering", activeCooking && campFireState.lit &&
@@ -43523,9 +43525,9 @@ window.__entranceRoomOpen = false;
     stopCampStewClock();
     stopCampStewClank();
     campStewState.open = !!keepOpen;
-    campStewState.protein = "";
+    campStewState.proteins = [];
     CAMP_STEW_EXTRAS.forEach(function (name) { campStewState[name] = false; });
-    campStewState.starch = "";
+    campStewState.bases = [];
     campStewState.status = "assembling";
     campStewState.elapsed = 0;
     campStewState.readyNotified = false;
@@ -43554,9 +43556,13 @@ window.__entranceRoomOpen = false;
   function selectCampStewItem(item) {
     if (!campStewState.open || campStewState.status !== "assembling") return false;
     if (CAMP_STEW_PROTEINS.indexOf(item) >= 0) {
-      campStewState.protein = campStewState.protein === item ? "" : item;
+      var proteinIndex = campStewState.proteins.indexOf(item);
+      if (proteinIndex >= 0) campStewState.proteins.splice(proteinIndex, 1);
+      else campStewState.proteins.push(item);
     } else if (CAMP_STEW_STARCHES.indexOf(item) >= 0) {
-      campStewState.starch = campStewState.starch === item ? "" : item;
+      var baseIndex = campStewState.bases.indexOf(item);
+      if (baseIndex >= 0) campStewState.bases.splice(baseIndex, 1);
+      else campStewState.bases.push(item);
     } else if (CAMP_STEW_EXTRAS.indexOf(item) >= 0) {
       campStewState[item] = !campStewState[item];
     } else return false;
@@ -43622,10 +43628,11 @@ window.__entranceRoomOpen = false;
     return "served";
   }
   function captureCampStew() {
-    if (campStewState.status === "assembling" && !campStewState.protein && !campStewState.starch &&
+    if (campStewState.status === "assembling" && !campStewState.proteins.length && !campStewState.bases.length &&
         !CAMP_STEW_EXTRAS.some(function (name) { return campStewState[name]; })) return null;
     return {
-      protein: campStewState.protein,
+      proteins: campStewState.proteins.slice(),
+      protein: campStewState.proteins[0] || "",
       onion: campStewState.onion,
       garlic: campStewState.garlic,
       ginger: campStewState.ginger,
@@ -43638,7 +43645,8 @@ window.__entranceRoomOpen = false;
       pepper: campStewState.pepper,
       chilies: campStewState.chilies,
       coriander: campStewState.coriander,
-      starch: campStewState.starch,
+      bases: campStewState.bases.slice(),
+      starch: campStewState.bases[0] || "",
       status: campStewState.status,
       elapsed: Math.round(campStewState.elapsed)
     };
@@ -43646,9 +43654,16 @@ window.__entranceRoomOpen = false;
   function restoreCampStew(row) {
     resetCampStew(false);
     if (!row || typeof row !== "object") return;
-    campStewState.protein = CAMP_STEW_PROTEINS.indexOf(row.protein) >= 0 ? row.protein : "";
+    var savedProteins = Array.isArray(row.proteins) ? row.proteins : [row.protein];
+    campStewState.proteins = CAMP_STEW_PROTEINS.filter(function (name) {
+      return savedProteins.indexOf(name) >= 0;
+    });
     CAMP_STEW_EXTRAS.forEach(function (name) { campStewState[name] = row[name] === true; });
-    campStewState.starch = CAMP_STEW_STARCHES.indexOf(row.starch) >= 0 ? row.starch : "";
+    var savedBases = Array.isArray(row.bases) ? row.bases :
+      Array.isArray(row.starches) ? row.starches : [row.starch];
+    campStewState.bases = CAMP_STEW_STARCHES.filter(function (name) {
+      return savedBases.indexOf(name) >= 0;
+    });
     if (row.status === "assembling") {
       paintRoadtripCampStew();
       return;

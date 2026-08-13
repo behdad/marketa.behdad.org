@@ -229,8 +229,9 @@ returns later.
 Unfocusing pauses the highway. Reloading while it is visible restores that view paused; leaving
 Entrance instead offers **Continue**, **New**, or, once reached, **Camping**.
 
-At Camping, follow the caption through fire, stew, stargazing, and sleep. Stew can burn; Markéta’s
-open notebook pauses its cooking clock. The finale reports time spent in the loft and offers to
+At Camping, follow the caption through fire, stew, stargazing, and sleep. A stew needs at least one
+protein and one base, and can combine as many of either as you like. Stew can burn; Markéta’s open
+notebook pauses its cooking clock. The finale reports time spent in the loft and offers to
 share it in the RSVP.
 
 ## Saves and browser notes

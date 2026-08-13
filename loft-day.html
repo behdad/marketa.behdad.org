@@ -40311,7 +40311,7 @@ window.__entranceRoomOpen = false;
     return !!(window.__secondRound && window.__seenRooms && window.__seenRooms().length >= 10);
   }
   function roadtripAuthorized() {
-    return roadtripExplorationComplete() && !window.__gardenPartyOn;
+    return roadtripExplorationComplete();
   }
   function entranceIdleCaptionKey() {
     if (roadtripState.unlocked) return "lower_entrance";
@@ -51526,18 +51526,6 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function openPorscheDriveHud() {
-    // At the completed Phase 2 boundary, choosing the road is an intentional fallback
-    // for visitors who ignored the phone exchange. End the party through its canonical
-    // fade/walk-out owner before the dashboard or its coach can claim attention.
-    if (window.__gardenPartyOn && roadtripExplorationComplete() && window.__stopPartyThen) {
-      if (driveHudPartyStopPending) return true;
-      driveHudPartyStopPending = true;
-      window.__stopPartyThen(function () {
-        driveHudPartyStopPending = false;
-        if (window.__entranceRoomOpen && roadtripExplorationComplete()) openPorscheDriveHudNow();
-      });
-      return true;
-    }
     return openPorscheDriveHudNow();
   }
   function dismissPorscheDriveHud() {
@@ -98081,13 +98069,6 @@ def colormode(mode=None):
       close(true); // the rest leave the phone for somewhere in the loft
       if (act.indexOf("lower:") === 0) {
         var lowerRoom = act.slice(6);
-        if (lowerRoom === "entrance" && window.__gardenPartyOn && window.__stopPartyThen) {
-          window.__stopPartyThen(function () {
-            if (window.__hideEntrancePorscheDriveHud) window.__hideEntrancePorscheDriveHud();
-            openLowerRoomFromMessage("entrance");
-          });
-          return;
-        }
         if (lowerRoom === "entrance" && window.__hideEntrancePorscheDriveHud) {
           window.__hideEntrancePorscheDriveHud();
         }
@@ -114899,9 +114880,9 @@ function spawnDustMote(container) {
   window.__markRoomSeen = markRoomSeen;
   window.__showRoomProgress = showRoomProgress;
   // Deliberate Shift+R fast-forward: establish the Party-era room frontier, record every room as
-  // visited, retire a live Party through its normal wind-down owner, then land at the Entrance
-  // with the dashboard closed. Road Trip's existing authorization owner derives the unlock from
-  // exactly those facts; this shortcut never forges its private flags.
+  // visited, then land at the Entrance with the dashboard closed. Road Trip's existing
+  // authorization owner derives the unlock from exactly those facts; this shortcut never forges
+  // its private flags or changes the independently optional Party state.
   window.__prepareRoadtripShortcut = function () {
     setSecondRound(true);
     setSeenRooms(ROOM_IDS);
@@ -114918,10 +114899,6 @@ function spawnDustMote(container) {
         return !!(window.__openEntranceRoom && window.__openEntranceRoom());
       };
       if (!open()) setTimeout(open, 780);
-      return true;
-    }
-    if (window.__gardenPartyOn && window.__stopPartyThen) {
-      window.__stopPartyThen(landAtEntrance);
       return true;
     }
     return landAtEntrance();

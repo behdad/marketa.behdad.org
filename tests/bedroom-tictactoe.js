@@ -139,7 +139,7 @@ check(s.slipWin && s.slipWin.reply.slipped && s.slipWin.reply.board[0] === "X" &
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/class="bedroom-ttt-pane"/g) || []).length === 9 &&
-  /id="bedroom-stained-glass" class="bedroom-prop" transform="translate\(0 -18\)"/.test(source) &&
+  /id="bedroom-stained-glass" class="bedroom-prop" transform="translate\(-3 -18\)"/.test(source) &&
   /<rect x="10" y="62" width="145" height="145"/.test(source),
   "the complete square board moves up exactly 18 units without changing local geometry");
 check(!/M29 63L66 102L29 153L66 197|M135 63L105 102L135 153L105 197/.test(source),

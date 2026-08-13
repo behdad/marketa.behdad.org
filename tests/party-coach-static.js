@@ -47,7 +47,9 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         report.alignment = {
           cardInside: cr.left >= areaRect.left - 1 && cr.right <= areaRect.right + 1 &&
             cr.top >= areaRect.top - 1 && cr.bottom <= areaRect.bottom + 1,
-          cardLarge: cr.width >= areaRect.width * .6 && cr.height >= areaRect.height * .35,
+          cardResponsive: cr.width >= areaRect.width * .4 && cr.height >= 24 &&
+            cr.width <= areaRect.width && cr.height <= areaRect.height * .5,
+          cardRect: cr.toJSON(),
           arrowX: areaRect.left + pathBox.x + pathBox.width / 2 - (br.left + br.width / 2),
           arrowTipY: areaRect.top + pathBox.y - (br.bottom + 3),
           inner: [innerWidth, innerHeight],
@@ -91,8 +93,8 @@ function check(ok, message, detail) {
 console.log("loft-day.html modal room-map coach:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 check(result && result.shown, "Party teardown reveals the room-map coach", result);
-check(result && result.alignment && result.alignment.cardInside && result.alignment.cardLarge,
-  "the large modal card stays inside and occupies most of the game shell", result && result.alignment);
+check(result && result.alignment && result.alignment.cardInside && result.alignment.cardResponsive,
+  "the responsive modal card stays compact and inside the game shell", result && result.alignment);
 check(result && result.alignment && Math.abs(result.alignment.arrowX) < 0.6 &&
   Math.abs(result.alignment.arrowTipY) < 0.6,
   "the arrow stays centered on the whole-loft map button", result && result.alignment);

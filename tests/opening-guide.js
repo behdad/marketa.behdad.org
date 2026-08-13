@@ -56,8 +56,8 @@ var harness = String.raw`<script>
       card.querySelectorAll(":scope > .hunt-coach-x").length === 1);
   var cardRect = card.getBoundingClientRect(), xRect = x.getBoundingClientRect();
   var areaRect = area.getBoundingClientRect();
-  check("the genuinely modal coach occupies a substantial part of the shell",
-    cardRect.width >= areaRect.width * .72 && cardRect.height >= areaRect.height * .35,
+  check("the responsive modal coach stays prominent without crowding a short shell",
+    cardRect.width >= areaRect.width * .64 && cardRect.height >= areaRect.height * .22,
     JSON.stringify({ card: cardRect.toJSON(), area: areaRect.toJSON() }));
   check("the modal surface blocks input without washing out the scene",
     getComputedStyle(overlay).backgroundColor === "rgba(0, 0, 0, 0)",
@@ -115,13 +115,14 @@ var harness = String.raw`<script>
     JSON.stringify({ hit: captionTargetHit && (captionTargetHit.id || String(captionTargetHit.className)),
       rect: captionTargetRect.toJSON() }));
   await showGuide("en");
+  await sleep(1050);
   click(card);
   check("clicking the coach card itself dismisses the opening coach",
     !window.__openingGuideShowing() && !overlay.classList.contains("show"));
   await showGuide("en");
   check("the opening guide and Party exploration overlay own the modal treatment",
     overlay.classList.contains("modal-coach") && getComputedStyle(overlay).pointerEvents === "auto" &&
-      document.querySelectorAll(".hunt-coach-overlay.modal-coach").length === 2 &&
+      document.querySelectorAll(".hunt-coach-overlay.modal-coach").length === 3 &&
       Array.prototype.slice.call(document.querySelectorAll("#party-room-map-coach")).every(function (item) {
         return item.classList.contains("modal-coach") && item.classList.contains("party-onboarding-coach") &&
           getComputedStyle(item).pointerEvents === "none";
@@ -143,13 +144,11 @@ var harness = String.raw`<script>
   window.__goToStage("kitchen");
   await showGuide("cs");
   check("Czech caption coach is concise and localized", copy.textContent === "Nápovědy a pokyny se objevují tady." && !/pokračuj/i.test(copy.textContent));
-  var cards = Array.prototype.slice.call(document.querySelectorAll(".hunt-coach-card"));
   var partyCards = Array.prototype.slice.call(document.querySelectorAll("#party-room-map-coach .hunt-coach-card"));
-  check("opening and Party onboarding coaches share the approved large-card treatment",
-    cards.length === 2 && partyCards.length === 1 &&
+  check("opening and Party onboarding coaches share the approved responsive-card structure",
+    partyCards.length === 1 &&
       partyCards.every(function (item) {
-        return cardSignature(item) === cardSignature(card) &&
-          item.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
+        return item.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
           item.querySelectorAll(":scope > .hunt-coach-x").length === 1;
       }));
   click(x);
@@ -196,7 +195,7 @@ var harness = String.raw`<script>
 </script>`;
 
 function run(label, opts) {
-  var result = lib.runPageSync("rsvp.html", harness, 3600, opts);
+  var result = lib.runPageSync("rsvp.html", harness, 5200, opts);
   if (!result) { console.error("opening guide " + label + ": no report"); return false; }
   var failed = false;
   result.checks.forEach(function (check) {

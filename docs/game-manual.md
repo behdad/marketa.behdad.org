@@ -60,6 +60,9 @@ visiting is enough, and lower-room games remain optional. Guests stay active whi
 the DJ for song requests. Dances, toasts, photos, cake ceremonies, sparklers, and the bouquet toss
 can interrupt the ordinary Party scene without ending it.
 
+The Balcony window grid hides **Block Party**. With a keyboard, use `←` / `→` to move, `↑` to
+rotate, and `Space` to drop; touch-only devices show tap-and-swipe instructions instead.
+
 After the Party reveal settles, a large coach points to **The Loft** and invites you to explore while
 the Party keeps running. The Garden wall switch remains a day/night control. The Balcony switch
 starts a Party night; switching it off ends Party and advances to the next day in daylight. In phase

@@ -693,7 +693,7 @@ window.__loftMessages["cs"] = {
     "room_visit_entrance_many": "Tady je hlavní vchod. Před výletem prozkoumej ještě {n} místností.",
     "room_visit_entrance_one": "Tady je hlavní vchod. Před výletem prozkoumej ještě 1 místnost.",
     "tetris_game_over": "Konec hry · Enter: hrát znovu · Esc: ukončit.",
-    "tetris_hint": "Kliknutím otáčej; tažením posouvej nebo shazuj. Klávesy: ← → ↑, mezerník.",
+    "tetris_hint": "Klávesy: ← → posun · ↑ otočení · mezerník shodí.",
     "tetris_touch_game_over": "Konec hry · Klepni: hrát znovu · ×: ukončit.",
     "tetris_touch_hint": "Klepnutím otáčej; tažením posouvej nebo shazuj. × ukončí hru."
   },
@@ -1410,7 +1410,7 @@ window.__loftMessages["cs"] = {
   "tempnav_reset": "Předat tepelné žezlo zpět Edmontonu",
   "tempnav_up": "Tepleji",
   "tetris_again_key": "ENTER",
-  "tetris_controls": "KLIK OTOČ · TÁHNI POSUŇ/SHOĎ",
+  "tetris_controls": "← → POSUN · ↑ OTOČ · MEZERNÍK SHOĎ",
   "tetris_lines": "ŘADY",
   "tetris_next": "DALŠÍ",
   "tetris_title": "BLOCK PARTY",

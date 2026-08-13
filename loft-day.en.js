@@ -693,7 +693,7 @@ window.__loftMessages["en"] = {
     "room_visit_entrance_many": "Here’s the front entrance. Explore {n} more rooms before the Road Trip.",
     "room_visit_entrance_one": "Here’s the front entrance. Explore 1 more room before the Road Trip.",
     "tetris_game_over": "Game over · Enter: play again · Esc: exit.",
-    "tetris_hint": "Click to rotate; drag to move or drop. Keys: ← → ↑, Space.",
+    "tetris_hint": "Keys: ← → move · ↑ rotate · Space drops.",
     "tetris_touch_game_over": "Game over · Tap: play again · ×: exit.",
     "tetris_touch_hint": "Tap to rotate; swipe to move or drop. × exits."
   },
@@ -1410,7 +1410,7 @@ window.__loftMessages["en"] = {
   "tempnav_reset": "Hand the temperature back to Edmonton’s real weather",
   "tempnav_up": "Warmer",
   "tetris_again_key": "ENTER",
-  "tetris_controls": "CLICK ROTATE · DRAG MOVE/DROP",
+  "tetris_controls": "← → MOVE · ↑ ROTATE · SPACE DROP",
   "tetris_lines": "LINES",
   "tetris_next": "NEXT",
   "tetris_title": "BLOCK PARTY",

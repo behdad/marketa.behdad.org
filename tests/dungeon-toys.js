@@ -47,7 +47,7 @@ check(s.one && s.one.state.torchesOut === 1 && !s.one.state.dark &&
 check(s.dark && s.dark.state.torchesOut === 2 && s.dark.state.dark &&
   s.dark.caption === "prince_dark" && s.dark.wallPointer === "none" && s.dark.lights.every(function (opacity) { return opacity === 0; }),
   "both snuffed torches materially darken and disable the play wall", s.dark);
-check(s.cs && s.cs.caption === "Na zeď je příliš tma.",
+check(s.cs && s.cs.caption === "Není dost světla.",
   "the dark caption switches to Czech", s.cs);
 check(s.relit && s.relit.state.torchesOut === 1 && !s.relit.state.dark &&
   s.relit.caption === "lower_dungeon" && s.relit.lights[0] > .5 && s.relit.lights[1] === 0,

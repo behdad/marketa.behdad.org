@@ -20,11 +20,14 @@ var HARNESS = [
   "  function pressB(shift){document.dispatchEvent(new KeyboardEvent('keydown',{key: shift?'B':'b', shiftKey:!!shift, bubbles:true, cancelable:true}));}",
   "  function toastText(){var ts=document.querySelectorAll('.season-toast');return ts.length?ts[ts.length-1].textContent:'';}",
   "  function vis(sel){var el=document.querySelector(sel);return el?getComputedStyle(el).visibility:'(absent)';}",
+  "  function birthdayDay(iso,who,prop){window.__loftControllers.date(iso);var occ=window.__shareOccasion&&window.__shareOccasion(),banner=document.getElementById('occasion-banner');return {strip:hasCls('bd-'+who),body:document.body.classList.contains('bd-'+who),prop:vis(prop),cake:vis('.thr-bd-only'),tehran:document.body.classList.contains('thr-bd'),exact:(window.__exactBirthdayWhos&&window.__exactBirthdayWhos())||[],share:occ&&{kind:occ.kind,id:occ.id},banner:banner&&banner.textContent};}",
   "  function floorCount(){return document.querySelectorAll('#garden-guests .guest.arrived:not(.leaving):not(.off-with-kids):not(.off-at-games):not(.off-asleep):not(.off-at-bbq)').length;}",
   "  var report={errors:[],steps:{}};",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness: '+String(e&&e.stack||e));}).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "  async function run(){",
   "    report.steps.hasHooks = (typeof window.__loftControllers.birthday==='function') && (typeof window.__stepBirthday==='function');",
+  "    report.steps.hamidDays=[birthdayDay('2031-08-11','hamid','#garden-guests .g-hamid .bd-hat-hamid'),birthdayDay('2031-08-12','hamid','#garden-guests .g-hamid .bd-hat-hamid'),birthdayDay('2031-08-13','hamid','#garden-guests .g-hamid .bd-hat-hamid')];",
+  "    report.steps.mohsenDays=[birthdayDay('2031-08-22','mohsen','#tehran-hon-mohsen'),birthdayDay('2031-08-23','mohsen','#tehran-hon-mohsen'),birthdayDay('2031-08-24','mohsen','#tehran-hon-mohsen')];",
   "    // first 'b' → the ring leader, Markéta (Jan 20)",
   "    pressB(false);",
   "    report.steps.first = { bdMarketa: hasCls('bd-marketa'), toast: toastText(), sd: window.__seasonDate && window.__seasonDate() };",
@@ -119,6 +122,12 @@ if (!r) { fail("harness reported (page error before load, or budget too small)")
 else {
   var s = r.steps || {};
   if (s.hasHooks) pass("typed birthday + __stepBirthday hooks are wired"); else fail("birthday hooks wired");
+  var hamidOff = s.hamidDays && [s.hamidDays[0], s.hamidDays[2]].every(function (x) { return x && !x.strip && x.prop === "hidden" && x.exact.indexOf("hamid") < 0 && (!x.share || x.share.kind !== "birthday") && !/Hamid/i.test(x.banner || ""); });
+  var hamidOn = s.hamidDays && s.hamidDays[1] && s.hamidDays[1].strip && s.hamidDays[1].prop === "hidden" && s.hamidDays[1].exact.indexOf("hamid") >= 0 && s.hamidDays[1].share && s.hamidDays[1].share.kind === "birthday" && s.hamidDays[1].share.id === "hamid" && /Hamid/i.test(s.hamidDays[1].banner || "");
+  if (hamidOff && hamidOn) pass("Hamid's adornment class, banner, exact-date owner, and share-card classification agree on Aug 12 only"); else fail("Hamid exact-day birthday contract", JSON.stringify(s.hamidDays));
+  var mohsenOff = s.mohsenDays && [s.mohsenDays[0], s.mohsenDays[2]].every(function (x) { return x && !x.strip && !x.body && x.prop === "hidden" && x.cake === "hidden" && !x.tehran && x.exact.indexOf("mohsen") < 0 && (!x.share || x.share.kind !== "birthday"); });
+  var mohsenOn = s.mohsenDays && s.mohsenDays[1] && s.mohsenDays[1].strip && s.mohsenDays[1].body && s.mohsenDays[1].tehran && s.mohsenDays[1].exact.indexOf("mohsen") >= 0 && s.mohsenDays[1].share && s.mohsenDays[1].share.kind === "birthday" && s.mohsenDays[1].share.id === "mohsen";
+  if (mohsenOff && mohsenOn) pass("Tehran hats, cake/call props, and share-card classification agree on Mohsen's exact day only"); else fail("Tehran exact-day birthday contract", JSON.stringify(s.mohsenDays));
   if (s.first && s.first.bdMarketa) pass("first 'b' press leads with Markéta (bd-marketa set)"); else fail("first 'b' → Markéta", JSON.stringify(s.first));
   if (s.first && s.first.sd && s.first.sd.m === 0 && s.first.sd.d === 20) pass("Markéta's stop time-travels to Jan 20"); else fail("Markéta date = Jan 20", JSON.stringify(s.first && s.first.sd));
   if (s.first && /Mark/.test(s.first.toast)) pass("birthday toast names the person (" + (s.first && s.first.toast) + ")"); else fail("toast names the person", JSON.stringify(s.first && s.first.toast));
@@ -165,6 +174,19 @@ if (reduced && reduced.hat === "hidden") pass("reduced-motion suppression cannot
 if (reduced && reduced.errors && reduced.errors.length === 0) pass("no uncaught JS errors in reduced-motion runner probe"); else fail("reduced-motion probe errors", JSON.stringify(reduced && reduced.errors));
 
 var source = require("fs").readFileSync(require("path").join(__dirname, "..", "rsvp.html"), "utf8");
+if (!/\bbefore\s*:|\bafter\s*:/.test((/var BIRTHDAYS = \[([\s\S]*?)\n  \];/.exec(source) || ["", ""])[1]) && source.indexOf("inBirthdayWindow") < 0) {
+  pass("birthday registry and runtime contain no before/after range contract");
+} else {
+  fail("birthday ranges removed");
+}
+if (source.indexOf('body.thr-bd .thr-bd-only{visibility:visible}') >= 0 &&
+    source.indexOf('body.bd-payman .thr-hon-payman') >= 0 &&
+    source.indexOf('body.bd-ashraf .thr-hon-ashraf') >= 0 &&
+    source.indexOf('body.bd-mohsen .thr-hon-mohsen') >= 0) {
+  pass("the exact-day Tehran body classes still gate its cake and birthday seats");
+} else {
+  fail("Tehran birthday prop gates retained");
+}
 var retainedPropMinimums = { ali: 1, goli: 1, "patricia-son": 3, "patricia-daughter": 3 };
 if (Object.keys(retainedPropMinimums).every(function (who) {
   var matches = source.match(new RegExp('class="[^"]*bd-hat-' + who + '(?:\\s|"|$)', "g")) || [];
@@ -179,6 +201,12 @@ if (source.indexOf('#stage-garden > [id^="garden-kid-"]:not(.chasing) .bd-adorn'
   pass("parked-runner gate targets outer runners without catching their *-body descendants");
 } else {
   fail("parked-runner selector scope");
+}
+if (source.indexOf('#loft-game-strip #garden-guests.trickle .guest:not(.arrived) .bd-adorn') >= 0 &&
+    source.indexOf('#loft-game-strip.polyamory-day #garden-guests.trickle') < 0) {
+  pass("every fresh Party hides birthday adornments until their wearer arrives");
+} else {
+  fail("fresh-Party birthday adornment gate");
 }
 
 console.log("");

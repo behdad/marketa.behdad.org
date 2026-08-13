@@ -100,7 +100,8 @@ and previews wait while a device or focused Office screen is open. Irene and Han
 a game; its activity arrow takes you there.
 On a birthday, Behdad or Markéta's greeting arrives as Party begins with the usual activity arrow.
 Tapping it starts that person's ceremony and postcard, and remains available for an encore. The
-birthday ribbon is a shortcut that starts the Party and the same celebration.
+birthday ribbon is a shortcut that starts the Party and the same celebration. Birthday hats,
+crowns, and call decorations appear only on that birthday's calendar day.
 
 If you are unsure what comes next:
 

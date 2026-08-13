@@ -17,7 +17,7 @@ var HARNESS = [
   ' var thumb=document.querySelector(".tattoo-thumb");S("gallery_prevented",context(thumb));var m=menu(),mr=m&&m.getBoundingClientRect();S("gallery_menu",{exists:!!m,count:m?m.querySelectorAll("button").length:0,label:m?m.textContent.trim():"",appKill:!!(m&&m.querySelector(".ctx-kill")),topmost:!!(m&&document.elementsFromPoint(mr.left+5,mr.top+5).indexOf(m)>=0)});',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));S("esc_closed",!menu());',
   ' document.querySelector(".tattoo-new").closest(".tattoo-cell").click();await sleep(30);',
-  ' var canvas=document.querySelector(".tattoo-canvas"),before=canvas.toDataURL();',
+  ' var canvas=document.querySelector(".tattoo-canvas"),before=canvas.toDataURL(),ctx=canvas.getContext("2d");S("paint_skin",{size:[canvas.width,canvas.height],pixel:Array.from(ctx.getImageData(1,1,1,1).data),wrap:getComputedStyle(canvas.parentNode).backgroundColor,swatches:[].slice.call(document.querySelectorAll(".tattoo-swatch i")).map(function(i){return i.style.background;})});',
   ' var r=canvas.getBoundingClientRect();canvas.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:9,isPrimary:true,button:2,buttons:2,clientX:r.left+r.width/2,clientY:r.top+r.height/2}));',
   ' S("right_did_not_draw",canvas.toDataURL()===before);S("canvas_prevented",context(canvas));m=menu();S("canvas_menu",{exists:!!m,count:m?m.querySelectorAll("button").length:0,label:m?m.textContent.trim():""});',
   ' if(m)m.querySelector("button").click();S("copy_closed",!menu());',
@@ -48,6 +48,14 @@ check(s.canvas_prevented === true && s.canvas_menu.exists && s.canvas_menu.count
   s.canvas_menu.label === "Copy", "the drawn tattoo has only Copy", s.canvas_menu);
 check(s.copy_closed === true, "choosing Copy dismisses the menu");
 check(s.left_still_draws === true, "primary-button drawing still works");
+check(s.paint_skin.pixel.join(",") === "230,180,137,255" &&
+  s.paint_skin.wrap === "rgb(230, 180, 137)",
+  "the drawing surface uses Behdad's skin tone in CSS and canvas pixels", s.paint_skin);
+check(s.paint_skin.size.join("×") === "960×260",
+  "the drawing canvas keeps a crisp 2× backing store", s.paint_skin.size);
+check(s.paint_skin.swatches[3] === "rgb(127, 158, 192)" &&
+  s.paint_skin.swatches[4] === "rgb(43, 122, 75)",
+  "the light-blue ink swatch sits immediately before green", s.paint_skin.swatches);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

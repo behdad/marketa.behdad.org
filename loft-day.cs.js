@@ -1460,7 +1460,7 @@ window.__loftMessages["cs"] = {
   "tt_email_body": "Ahoj Markéto a Behdade!\n\nTady je návrh tetování z vašeho loftového studia — teď ho sem vlož, máš ho ve schránce (Ctrl/Cmd+V).\n\nUvidíme se na svatbě!",
   "tt_email_subject": "Návrh tetování 🖊️",
   "tt_new": "Nakresli si vlastní",
-  "tt_share": "Pošli nám to",
+  "tt_share": "Poslat",
   "typewriter_lines": [
     "Sliby: první verze. Smazáno.",
     "Poznámka: méně vtipů ve slibech.",

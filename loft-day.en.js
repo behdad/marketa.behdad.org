@@ -1460,7 +1460,7 @@ window.__loftMessages["en"] = {
   "tt_email_body": "Hi Markéta & Behdad!\n\nHere's a tattoo design from your loft studio — paste it now, it's on your clipboard (Ctrl/Cmd+V).\n\nSee you at the wedding!",
   "tt_email_subject": "A tattoo design 🖊️",
   "tt_new": "Draw your own",
-  "tt_share": "Send to us",
+  "tt_share": "Send",
   "typewriter_lines": [
     "Vows: first draft. Deleted.",
     "Note to self: fewer puns in the vows.",

@@ -4,6 +4,8 @@
 
 var fs = require("fs");
 var source = fs.readFileSync("rsvp.html", "utf8");
+var enMessages = fs.readFileSync("loft-day.en.js", "utf8");
+var csMessages = fs.readFileSync("loft-day.cs.js", "utf8");
 var failures = 0;
 
 function check(ok, message) {
@@ -48,10 +50,10 @@ check(shout.indexOf('id="entrance-roadtrip-arrest-shout-text"') >= 0 &&
   ["engine", "keys", "hands"].every(function (line) {
     return shout.indexOf('data-i="entrance_roadtrip_arrest_shout_' + line + '"') >= 0;
   }) &&
-  source.indexOf('entrance_roadtrip_arrest_shout_engine: "ENGINE OFF!"') >= 0 &&
-  source.indexOf('entrance_roadtrip_arrest_shout_hands: "HANDS THROUGH THE WHEEL!"') >= 0 &&
-  source.indexOf('entrance_roadtrip_arrest_shout_engine: "VYPNĚTE MOTOR!"') >= 0 &&
-  source.indexOf('entrance_roadtrip_arrest_shout_hands: "RUCE SKRZ VOLANT!"') >= 0,
+  enMessages.indexOf('"entrance_roadtrip_arrest_shout_engine": "ENGINE OFF!"') >= 0 &&
+  enMessages.indexOf('"entrance_roadtrip_arrest_shout_hands": "HANDS THROUGH THE WHEEL!"') >= 0 &&
+  csMessages.indexOf('"entrance_roadtrip_arrest_shout_engine": "VYPNĚTE MOTOR!"') >= 0 &&
+  csMessages.indexOf('"entrance_roadtrip_arrest_shout_hands": "RUCE SKRZ VOLANT!"') >= 0,
   "the severe-arrest shout is present and bilingual");
 check(source.indexOf("var ROADTRIP_POLICE_ARREST_SHOUT_OVER = 90;") >= 0 &&
   source.indexOf("police.overLimit >= ROADTRIP_POLICE_ARREST_SHOUT_OVER") >= 0 &&

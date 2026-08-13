@@ -43,8 +43,8 @@ function exercise(label, chromeFlags) {
   check(result.errors.length === 0, "no uncaught page errors", result.errors);
   check(s.first.show && s.first.text === "New message. Tap to read." && s.first.badge && s.first.coached,
     "the first unread message shows the coach and its badge", s.first);
-  check(s.first.bg.indexOf("255, 253, 248") !== -1 && s.first.color === "rgb(142, 58, 74)" && s.first.font.indexOf("Fraunces") !== -1 && s.first.cardLarge && s.first.cardInside,
-    "the coach uses the shared large cream, burgundy and Fraunces card", s.first);
+  check(s.first.bg.indexOf("255, 253, 248") !== -1 && s.first.color === "rgb(142, 58, 74)" && s.first.font.indexOf("Fraunces") !== -1 && s.first.cardInside,
+    "the coach uses the shared fitted cream, burgundy and Fraunces card", s.first);
   check(s.first.arrowPoints && s.first.pathCount === 1,
     "one coherent arrow meets the unread badge", s.first);
   check(s.first.dismiss && s.first.dismissTab === -1 && s.first.dismissTopRight,

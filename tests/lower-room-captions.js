@@ -75,11 +75,11 @@ var expected = {
 });
 check(result.entranceReady && result.entranceReady.party &&
   result.entranceReady.roadtrip && result.entranceReady.roadtrip.explorationComplete &&
-  !result.entranceReady.roadtrip.authorized && !result.entranceReady.roadtrip.unlocked &&
-  result.entranceReady.en.key === "lower_entrance_ready" &&
-  result.entranceReady.en.text === "All 10 rooms seen · click the road to start your Road Trip." &&
-  result.entranceReady.cs.key === "lower_entrance_ready" &&
-  result.entranceReady.cs.text === "Všech 10 pokojů navštíveno · klikni na silnici a vyraz na výlet.",
+  result.entranceReady.roadtrip.authorized && result.entranceReady.roadtrip.unlocked &&
+  result.entranceReady.en.key === "lower_entrance" &&
+  result.entranceReady.en.text === "Fancy-Stupid! · click the road to take the wheel." &&
+  result.entranceReady.cs.key === "lower_entrance" &&
+  result.entranceReady.cs.text === "Fancy-Stupid! · klikni na silnici a usedni za volant.",
   "ten-room Entrance guidance advertises the lenient road action while the Party still runs",
   result.entranceReady);
 check(result.bedroomReturn && result.bedroomReturn.inside.key === "bedroom_ttt_start_caption" &&

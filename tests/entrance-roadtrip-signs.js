@@ -68,7 +68,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceRoadtripSetRoute("lake-turnoff", 3);
         capture("abraham", "entrance-roadtrip-abraham-exit");
         sweep("abraham");
-        window.__entranceRoadtripSetRoute("abraham", 72);
+        window.__entranceRoadtripSetRoute("abraham", 57);
         capture("camp", "entrance-roadtrip-camp-exit");
         sweep("camp");
 

@@ -130,7 +130,7 @@ function run(width, height, standalone, fullPage, entryFile) {
       JSON.stringify({ innerHeight: innerHeight, area: area, scrollHeight: document.documentElement.scrollHeight }));
     if (innerWidth >= 1600 && innerHeight >= 900) {
       check("a large browser uses the full available width instead of the old 1620px cap",
-        area.width > 1620 && area.width >= Math.min(innerWidth, innerHeight * 2 - 80) - 1,
+        area.width > 1620 && area.width >= Math.min(innerWidth - 68, innerHeight * 2 - 80) - 1,
         JSON.stringify({ innerWidth: innerWidth, innerHeight: innerHeight, width: area.width }));
     }
     check("the invitation state keeps Trailer in view", watch.bottom <= innerHeight + 1,

@@ -98,7 +98,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.policeBounded = copy(trip());
 
       start("abraham");
-      window.__entranceRoadtripSetRoute("abraham", 72);
+      window.__entranceRoadtripSetRoute("abraham", 57);
       window.__entranceRoadtripSetDistance(trip().policeFirstDistance + 1);
       window.__entranceDriveSetMotion(0, 0);
       step(100);

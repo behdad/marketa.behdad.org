@@ -53,13 +53,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripDevStart();
-        window.__entranceRoadtripSetRoute("abraham", 75);
+        window.__entranceRoadtripSetRoute("abraham", 60);
         window.__entranceRoadtripSetLane(1);
         window.__entranceDriveSetMotion(0, 1);
         window.__entranceDriveStep(100);
         report.noMomentum = snapshot();
 
-        window.__entranceRoadtripSetRoute("abraham", 74.5);
+        window.__entranceRoadtripSetRoute("abraham", 59.5);
         window.__entranceRoadtripSetLane(1);
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceDriveSetMotion(80, 1);

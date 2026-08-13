@@ -179,13 +179,17 @@ room tree per idle slice into a bounded WebP capture; the map displays only thos
 does not wake parked room timelines. **CLICK ME** warms fresh day/night defaults, while **Continue**
 warms the checkpoint's saved lighting and Party shell. Day/night variants are reusable. Each Party
 ignition invalidates and recaptures only the five upper rooms after Party population settles, freezing
-the current occupants without retaining their animation trees. UV is deliberately excluded. Never
+the current occupants without retaining their animation trees; stopping Party and changing day/night
+likewise invalidate the newly selected state once. The exploration coach waits for that event-driven
+capture set to finish. Each deliberate raster capture discards only its partial frame-health sample
+(the independent FPS display remains honest), so encoding work cannot demote an otherwise healthy
+Party. Opening the picker and elapsed time never initiate another scan. UV is deliberately excluded. Never
 reintroduce live `<use>` cards: they multiply style/layout/animation work and let WebKit shadow content
 escape its room. Retain the compressed captures for immediate reopen. The picker itself is never
 withheld: cold cards expose a per-card progress indicator, while a missing lighting or Party variant
 keeps showing its last capture until the replacement lands. Each capture records a semantic key
-(lighting/Party variant plus that room's occupant assignment), so an active Party picker's paced
-background scan encodes only cards whose meaningful state changed. Animation phase and the
+(lighting/Party variant plus that room's occupant assignment), so only explicit Party/lighting
+transitions schedule work. Animation phase and the
 Garden card's fixed four-pool composition never invalidate the cache. Dungeon remains the direct
 static vector card because it has no authored state variation.
 

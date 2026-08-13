@@ -13,6 +13,9 @@ var harness = String.raw`<script>
   }
   var focused = true;
   document.hasFocus = function () { return focused; };
+  // Capture readiness is covered by dollhouse-event-refresh.js. This lifecycle fixture owns
+  // Party pacing/teardown only and must not race the asynchronous thumbnail compositor.
+  window.__dollhouseCapturesReady = function () { return true; };
 
   var patrons = document.getElementById("kitchen-bar-patrons");
   if (patrons) patrons.style.setProperty("transition", "none", "important");

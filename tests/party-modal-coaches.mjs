@@ -170,6 +170,9 @@ try {
       var restart=document.querySelector("#loft-recovery-gate .loft-recovery-btn:not(.primary)");
       if(restart){restart.click();await sleep(650);}if(window.__removeClickMe)window.__removeClickMe();
       if(window.__finishOpeningGuide)window.__finishOpeningGuide();if(window.__endAttract)window.__endAttract();
+      // Capture readiness has its own event-driven regression. This matrix owns modal geometry,
+      // target islands, and the Party control sequence, so keep thumbnail work out of its timing.
+      window.__dollhouseCapturesReady=function(){return true;};
       if(window.__shareCloseModal)window.__shareCloseModal();if(window.__resetPartyExitHint)window.__resetPartyExitHint();
       if(window.__setSeenRooms)window.__setSeenRooms(["kitchen","garden","cuddly"]);
       var preBall=document.getElementById("garden-disco-ball"),phase1={opacity:getComputedStyle(preBall).opacity,pointer:getComputedStyle(preBall).pointerEvents};

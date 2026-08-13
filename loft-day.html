@@ -90425,6 +90425,7 @@ def colormode(mode=None):
   var SAMPLE_MS = 1200, LOW_FPS = 40, RECOVER_FPS = 48;
   var LOW_WINDOWS = 2, RECOVER_WINDOWS = 3, PARTY_RECOVER_WINDOWS = 6;
   var raf = 0, started = 0, frames = 0, lowWindows = 0, recoverWindows = 0;
+  var excludedWork = 0;
   var slow = false, high = false, fps = null;
   function usable() {
     return !document.hidden && (!document.hasFocus || document.hasFocus());
@@ -90471,9 +90472,21 @@ def colormode(mode=None):
     return state();
   }
   function state() {
-    return { slow: slow, high: high, fps: fps, lowWindows: lowWindows, recoverWindows: recoverWindows };
+    return { slow: slow, high: high, fps: fps, lowWindows: lowWindows,
+      recoverWindows: recoverWindows, samplingExcluded: excludedWork > 0 };
   }
   function resetWindow() { started = 0; frames = 0; publishHigh(false); }
+  function excludeWork() {
+    excludedWork++;
+    resetWindow();
+    var released = false;
+    return function () {
+      if (released) return;
+      released = true;
+      excludedWork = Math.max(0, excludedWork - 1);
+      resetWindow();
+    };
+  }
   function beginGameplayEpoch() {
     // Entry and Continue are intentionally paint-covered while large SVG owners restore. Those
     // frames describe the loader, not delivered gameplay. Start the adaptive tier from a clean
@@ -90488,7 +90501,7 @@ def colormode(mode=None):
     publishHigh(false);
   }
   function sample(now) {
-    if (!usable()) {
+    if (!usable() || excludedWork) {
       resetWindow();
     } else {
       if (!started) started = now;
@@ -90514,6 +90527,7 @@ def colormode(mode=None):
   window.__frameHealthHigh = function () { return high; };
   window.__frameHealthFeed = evaluate; // deterministic performance regression tests
   window.__frameHealthBeginGameplay = beginGameplayEpoch;
+  window.__frameHealthExcludeWork = excludeWork;
   restart();
 })();
 // Slow devices keep the constellations alive as one shared one-second beat instead of
@@ -115010,18 +115024,14 @@ function spawnDustMote(container) {
   var dollhouseWarmMode = "fresh";
   var dollhouseWarmStarted = false;
   var dollhouseRecoveryPreview = null;
-  var dollhouseOpenRefreshTimer = null;
-  var dollhouseOpenRefreshPass = 0;
+  var dollhouseCapturesWereReady = false;
   var DOLLHOUSE_CAPTURE_GAP_MS = 150;
-  var DOLLHOUSE_OPEN_CAPTURE_GAP_MS = 750;
-  var DOLLHOUSE_PARTY_REFRESH_MS = 15000;
   function dollhouseCaptureGap(job) {
-    var update = !!(job && job.openRefresh);
     var visible = !!(dollhouse && !dollhouse.hidden);
     if (window.__frameHealthSlow && window.__frameHealthSlow()) {
-      return update ? 1200 : (visible ? 100 : 300);
+      return visible ? 100 : 300;
     }
-    return update ? DOLLHOUSE_OPEN_CAPTURE_GAP_MS : (visible ? 50 : DOLLHOUSE_CAPTURE_GAP_MS);
+    return visible ? 50 : DOLLHOUSE_CAPTURE_GAP_MS;
   }
   function floorText(key) {
     var l = document.documentElement.lang;
@@ -115040,18 +115050,6 @@ function spawnDustMote(container) {
     dollhouse.hidden = true;
     var area = document.getElementById("hunt-fullscreen-area");
     if (area) area.classList.remove("dollhouse-open");
-    if (dollhouseOpenRefreshTimer) clearTimeout(dollhouseOpenRefreshTimer);
-    dollhouseOpenRefreshTimer = null;
-    dollhouseOpenRefreshPass++;
-    dollhouseCaptureQueue = dollhouseCaptureQueue.filter(function (job) {
-      if (!job.openRefresh) return true;
-      delete job.spec.captureQueuedKeys[job.variant];
-      return false;
-    });
-    dollhouseRooms.forEach(function (spec) {
-      if (!spec.captureActiveOpenRefresh) return;
-      spec.captureToken++;
-    });
     syncDollhousePresentation();
     dollhouseLockedEnterRoom = "";
     dollhouseLockedEnterAt = 0;
@@ -115429,9 +115427,36 @@ function spawnDustMote(container) {
       return total + spec.snapshots[key].length;
     }, 0);
   }
+  function dollhouseCapturesReady() {
+    return dollhouseRooms.length === 10 && dollhouseRooms.every(function (spec) {
+      if (spec.staticArt) return !!spec.staticReady;
+      var variant = dollhouseVariantKey(spec);
+      return !!spec.snapshots[variant] &&
+        spec.snapshotSignatures[variant] === spec.captureDesiredSignatures[variant];
+    });
+  }
+  function publishDollhouseCaptureReadiness() {
+    var ready = dollhouseCapturesReady();
+    if (ready === dollhouseCapturesWereReady) return ready;
+    dollhouseCapturesWereReady = ready;
+    window.dispatchEvent(new CustomEvent("loft:dollhousecapturesready", {
+      detail: { ready: ready }
+    }));
+    return ready;
+  }
   function captureDollhouseRoom(spec, variant, signature) {
     if (!spec || !spec.image || !dollhouseCaptureTarget(spec)) return Promise.resolve(false);
     if (dollhouseVariantKey(spec) !== variant) return Promise.resolve(false);
+    // Detached SVG serialization, image decode and WebP encoding are deliberate background work,
+    // not evidence that the live scene cannot sustain its effects. Discard only the partial frame-
+    // health window around this capture; the independent FPS display remains honest, and sampling
+    // resumes from a clean window immediately afterward.
+    var releaseFrameHealth = window.__frameHealthExcludeWork ? window.__frameHealthExcludeWork() : null;
+    function releaseCaptureHealth() {
+      if (!releaseFrameHealth) return;
+      releaseFrameHealth();
+      releaseFrameHealth = null;
+    }
     var token = ++spec.captureToken;
     var started = performance.now();
     // Cuddly deliberately gates its Party children to the attended room. Materialize that
@@ -115442,7 +115467,10 @@ function spawnDustMote(container) {
     if (showCuddlyKids && window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(true);
     var source = buildDollhouseCaptureSvg(spec, variant);
     if (showCuddlyKids && window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(false);
-    if (!source) return Promise.resolve(false);
+    if (!source) {
+      releaseCaptureHealth();
+      return Promise.resolve(false);
+    }
     var sourceUrl = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
     return new Promise(function (resolve) {
       var bitmap = new Image();
@@ -115456,6 +115484,7 @@ function spawnDustMote(container) {
         URL.revokeObjectURL(sourceUrl);
         bitmap.removeAttribute("src");
         if (token !== spec.captureToken || dollhouseVariantKey(spec) !== variant) {
+          releaseCaptureHealth();
           resolve(false); return;
         }
         var data = canvas.toDataURL("image/webp", .82);
@@ -115463,10 +115492,12 @@ function spawnDustMote(container) {
         spec.captureMs = performance.now() - started;
         dollhouseCaptureCount++;
         syncDollhousePresentation();
+        releaseCaptureHealth();
         resolve(true);
       };
       bitmap.onerror = function () {
         URL.revokeObjectURL(sourceUrl);
+        releaseCaptureHealth();
         resolve(false);
       };
       bitmap.src = sourceUrl;
@@ -115494,6 +115525,7 @@ function spawnDustMote(container) {
         spec.staticReady = true;
         spec.captureActiveVariant = "";
         syncDollhousePresentation();
+        publishDollhouseCaptureReadiness();
         dollhouseCaptureDelay = setTimeout(function () {
           dollhouseCaptureDelay = 0;
           scheduleDollhouseCapture();
@@ -115508,13 +115540,12 @@ function spawnDustMote(container) {
       }
       dollhouseCaptureBusy = true;
       spec.captureActiveVariant = job.variant;
-      spec.captureActiveOpenRefresh = !!job.openRefresh;
       syncDollhousePresentation();
       captureDollhouseRoom(spec, job.variant, job.signature).finally(function () {
         spec.captureActiveVariant = "";
-        spec.captureActiveOpenRefresh = false;
         dollhouseCaptureBusy = false;
         syncDollhousePresentation();
+        publishDollhouseCaptureReadiness();
         dollhouseCaptureDelay = setTimeout(function () {
           dollhouseCaptureDelay = 0;
           scheduleDollhouseCapture();
@@ -115526,7 +115557,7 @@ function spawnDustMote(container) {
     } else if (window.requestIdleCallback) dollhouseCaptureIdle = window.requestIdleCallback(run, { timeout: 700 });
     else dollhouseCaptureDelay = setTimeout(function () { dollhouseCaptureDelay = 0; run(); }, 40);
   }
-  function queueDollhouseCapture(spec, variant, priority, force, urgent, gap, openRefresh) {
+  function queueDollhouseCapture(spec, variant, priority, force, urgent, gap) {
     if (!spec || !variant || (!spec.staticArt && !dollhouseCaptureTarget(spec))) return;
     var signature = dollhouseCaptureSignature(spec, variant);
     spec.captureDesiredSignatures[variant] = signature;
@@ -115535,8 +115566,7 @@ function spawnDustMote(container) {
     if (spec.captureQueuedKeys[variant] || spec.captureActiveVariant === variant) return;
     spec.captureQueuedKeys[variant] = true;
     var job = { spec: spec, variant: variant, signature: signature,
-      urgent: !!urgent, gap: gap || 0,
-      openRefresh: !!openRefresh };
+      urgent: !!urgent, gap: gap || 0 };
     if (priority) dollhouseCaptureQueue.unshift(job);
     else dollhouseCaptureQueue.push(job);
     if (urgent && dollhouseCaptureIdle && window.cancelIdleCallback) {
@@ -115548,6 +115578,7 @@ function spawnDustMote(container) {
       dollhouseCaptureDelay = 0;
     }
     syncDollhousePresentation();
+    publishDollhouseCaptureReadiness();
     scheduleDollhouseCapture();
   }
   function queueDollhouseCaptures(options) {
@@ -115583,7 +115614,7 @@ function spawnDustMote(container) {
       var variant = dollhouseVariantKey(spec);
       queueDollhouseCapture(spec, variant,
         !!options.partyFirst || spec.room === current, !!options.force, !!options.urgent,
-        options.gap || 0, !!options.openRefresh);
+        options.gap || 0);
     });
     // A room transition can pause an already-populated queue. Re-entering through Continue or
     // opening the map may add no new jobs, so explicitly restart the existing queue as well.
@@ -115594,47 +115625,34 @@ function spawnDustMote(container) {
     // shell, but subsystem adapters have not restored the saved people yet. Keep its useful base
     // captures, and defer authoritative invalidation until applyCheckpointNow finishes atomically.
     if (dollhouseRecoveryPreview && reason !== "recovery-applied") return;
-    // Lighting variants are reusable. Party keeps its previous bitmap as stale content while its
-    // semantic key is invalidated, so current occupants replace it one card at a time.
-    var partyStart = (reason === "party" || reason === "recovery-applied") &&
-      !!window.__gardenPartyOn;
-    if (reason === "party" || reason === "recovery-applied") {
+    // Party and lighting owners are the only automatic refresh triggers. Keep the old bitmap
+    // visible, but invalidate the newly selected variant so its current people/state replace it
+    // progressively. Opening the map itself never starts another scan.
+    var partyChange = reason === "party";
+    var recovery = reason === "recovery-applied";
+    var stateChange = partyChange || reason === "lighting" || recovery;
+    var mainOnly = partyChange;
+    var partyStart = (partyChange || recovery) && !!window.__gardenPartyOn;
+    if (stateChange) {
       dollhouseCaptureQueue = dollhouseCaptureQueue.filter(function (job) {
-        if (job.spec.floor !== "main") return true;
+        if (mainOnly && job.spec.floor !== "main") return true;
         delete job.spec.captureQueuedKeys[job.variant];
         return false;
       });
-    }
-    if (partyStart) {
       dollhouseRooms.forEach(function (spec) {
-        if (spec.floor !== "main") return;
-        delete spec.snapshotSignatures.party;
+        if (spec.staticArt || (mainOnly && spec.floor !== "main")) return;
+        delete spec.snapshotSignatures[dollhouseVariantKey(spec)];
         spec.captureToken++;
       });
     }
     queueDollhouseCaptures({
-      mainOnly: partyStart,
+      mainOnly: mainOnly,
       partyFirst: partyStart,
-      force: partyStart,
       urgent: false,
-      // A newly selected Party variant is the visible cold fill, not the periodic roster scan.
-      // Keep it progressive but prompt; only later semantic refreshes use the one-second pace.
-      gap: partyStart ? DOLLHOUSE_CAPTURE_GAP_MS : 0
+      gap: stateChange ? DOLLHOUSE_CAPTURE_GAP_MS : 0
     });
     syncDollhousePresentation();
-  }
-  function queueOpenPartyRefresh() {
-    if (!dollhouse || dollhouse.hidden || !window.__gardenPartyOn) return;
-    var pass = ++dollhouseOpenRefreshPass;
-    // The retained Party cards are a stale-while-refresh cache. Refresh one upstairs room per
-    // idle slice, at most once a second, while the map is actually visible. That captures the
-    // current roster without keeping five live SVG trees or continuously encoding offscreen art.
-    queueDollhouseCaptures({ mainOnly: true, partyFirst: true, force: true,
-      urgent: false, gap: DOLLHOUSE_OPEN_CAPTURE_GAP_MS, openRefresh: true });
-    dollhouseOpenRefreshTimer = setTimeout(function () {
-      dollhouseOpenRefreshTimer = null;
-      if (pass === dollhouseOpenRefreshPass) queueOpenPartyRefresh();
-    }, DOLLHOUSE_PARTY_REFRESH_MS);
+    publishDollhouseCaptureReadiness();
   }
   function cancelDollhouseBackgroundWarm() {
     if (dollhouseCaptureIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseCaptureIdle);
@@ -115777,15 +115795,14 @@ function spawnDustMote(container) {
     if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     pauseRoadtripForDollhouse();
     if (!dollhouseRooms.length) buildDollhouse();
-    finishDollhouseBackgroundWarm();
+    if (!dollhouseWarmStarted) startDollhouseBackgroundWarm("fresh", null);
+    else scheduleDollhouseCapture();
     dollhouse.hidden = false;
     var area = document.getElementById("hunt-fullscreen-area");
     if (area) area.classList.add("dollhouse-open");
     renderDollhouse();
-    // Retained captures make reopening immediate. State-specific refreshes are queued by
-    // their owners; opening the map must not rebuild all ten rooms on the critical path.
-    queueDollhouseCaptures({ priority: true });
-    queueOpenPartyRefresh();
+    // Retained captures make reopening immediate. Party and day/night owners queue the only
+    // state refreshes; opening merely resumes unfinished cold work.
     var selected = dollhouseRooms.findIndex(function (spec) {
       return spec.floor === (activeLowerRoom() ? "lower" : "main") &&
         (spec.floor === "lower" ? activeLowerRoom().id === spec.room : window.__currentStageName === spec.room);
@@ -115903,6 +115920,10 @@ function spawnDustMote(container) {
   window.__closeDollhouse = closeDollhouse;
   window.__toggleDollhouse = toggleDollhouse;
   window.__refreshDollhouseCaptures = refreshDollhouseCaptures;
+  window.__dollhouseCapturesReady = function () {
+    buildDollhouse();
+    return dollhouseCapturesReady();
+  };
   window.addEventListener("framehealthchange", syncDollhousePresentation);
   window.__dollhouseState = function () {
     var area = document.getElementById("hunt-fullscreen-area");
@@ -115912,12 +115933,7 @@ function spawnDustMote(container) {
         mode: dollhouseWarmMode,
         projector: dollhouseProjectorWarmed,
         previews: dollhouseCaptureCount,
-        complete: dollhouseRooms.length === 10 && dollhouseRooms.every(function (spec) {
-          if (spec.staticArt) return !!spec.staticReady;
-          var variant = dollhouseVariantKey(spec);
-          return !!spec.snapshots[variant] &&
-            spec.snapshotSignatures[variant] === spec.captureDesiredSignatures[variant];
-        }),
+        complete: dollhouseCapturesReady(),
         pending: !!(dollhouseCaptureIdle || dollhouseCaptureDelay || dollhouseCaptureBusy || dollhouseCaptureQueue.length)
       },
       livePreviews: dollhouseRooms.filter(function (spec) {
@@ -119311,6 +119327,7 @@ function spawnDustMote(container) {
     var finaleAt = null, finaleReason = null, finaleTextOffered = false, finaleDeck = [];
     var suppressNextStop = false;
     var roomMapCoachTimer = null, roomMapCoachDeadline = 0, roomMapCoachRemaining = 0;
+    var roomMapCoachDelayElapsed = false;
     var roomMapCoachActive = false, roomMapCoachAcknowledged = false;
     var handoffShown = false, roadtripInviteDelivered = false;
     var coachAttentionRetryTimer = null;
@@ -119431,6 +119448,9 @@ function spawnDustMote(container) {
     function coachOverlayShowing(overlay) {
       return !!(overlay && overlay.classList.contains("show"));
     }
+    function roomMapCapturesReady() {
+      return !window.__dollhouseCapturesReady || window.__dollhouseCapturesReady();
+    }
     function activePartyCoachOverlay() {
       if (coachOverlayShowing(roomMapCoachOverlay)) return roomMapCoachOverlay;
       return null;
@@ -119438,7 +119458,7 @@ function spawnDustMote(container) {
     function paintRoomMapCoach() {
       var wasShowing = coachOverlayShowing(roomMapCoachOverlay);
       var canShow = !!roomMapCoachActive && partyCoachSurfaceAvailable() &&
-        (wasShowing || partyAttentionQuiet());
+        roomMapCapturesReady() && (wasShowing || partyAttentionQuiet());
       if (roomMapCoachOverlay) {
         roomMapCoachOverlay.classList.toggle("show", canShow);
         var copy = roomMapCoachOverlay.querySelector(".party-bridge-room-copy");
@@ -119470,8 +119490,9 @@ function spawnDustMote(container) {
     }
     function activateRoomMapCoach() {
       clearRoomMapCoachTimer();
+      roomMapCoachDelayElapsed = true;
       var count = window.__seenRooms ? window.__seenRooms().length : 0;
-      if (roomMapCoachAcknowledged || count >= 10) return false;
+      if (roomMapCoachAcknowledged || count >= 10 || !roomMapCapturesReady()) return false;
       roomMapCoachActive = true;
       paint();
       checkpointBridge();
@@ -119482,11 +119503,19 @@ function spawnDustMote(container) {
       if (!window.__gardenPartyOn || roomMapCoachAcknowledged || roomMapCoachActive ||
           count >= 10 || roomMapCoachTimer) return false;
       roomMapCoachRemaining = Math.max(1, Number(delay) || roomMapCoachDelay);
+      roomMapCoachDelayElapsed = false;
       roomMapCoachDeadline = performance.now() + roomMapCoachRemaining;
       roomMapCoachTimer = setTimeout(activateRoomMapCoach, roomMapCoachRemaining);
       return true;
     }
     window.__showPartyExplorationCoach = activateRoomMapCoach;
+    window.addEventListener("loft:dollhousecapturesready", function (event) {
+      if (!event.detail || !event.detail.ready) return;
+      if (roomMapCoachActive) paintRoomMapCoach();
+      else if (roomMapCoachDelayElapsed && !roomMapCoachAcknowledged && window.__gardenPartyOn) {
+        activateRoomMapCoach();
+      }
+    });
     function show(withFinaleText) {
       if (active || !window.__gardenPartyOn) return false;
       active = true;
@@ -119615,6 +119644,7 @@ function spawnDustMote(container) {
         clearRoadtripExchange(false);
       }
       clearRoomMapCoachTimer(); stop();
+      roomMapCoachDelayElapsed = false;
       attendedSeconds = 0; active = false; finishing = false; suppressNextStop = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
       paint(); scheduleRoomMapCoach(pendingCoachDelay || roomMapCoachDelay);
@@ -119781,6 +119811,7 @@ function spawnDustMote(container) {
       suppressNextStop = true; attendedSeconds = 0; active = false; finishing = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
       roomMapCoachActive = false; roomMapCoachAcknowledged = false;
+      roomMapCoachDelayElapsed = false;
       handoffShown = false; roadtripInviteDelivered = false;
       stop(); clearRoomMapCoachTimer(); clearRoadtripExchange(); paint();
     };
@@ -119795,6 +119826,7 @@ function spawnDustMote(container) {
           roadtripInviteDelivered: roadtripInviteDelivered,
           roomMapCoachAcknowledged: roomMapCoachAcknowledged,
           roomMapCoachActive: roomMapCoachActive,
+          roomMapCoachDelayElapsed: roomMapCoachDelayElapsed,
           roomMapCoachDelay: Math.max(0, Math.round(coachDelay || 0)),
           roadtripExchangeDelay: Math.max(0, Math.round(exchangeDelay || 0))
         };
@@ -119812,12 +119844,14 @@ function spawnDustMote(container) {
               !Object.prototype.hasOwnProperty.call(row, "roomMapCoachAcknowledged"));
           roomMapCoachRemaining = row && Number.isFinite(Number(row.roomMapCoachDelay)) ?
             Math.max(0, Number(row.roomMapCoachDelay)) : 0;
+          roomMapCoachDelayElapsed = !!(row && row.roomMapCoachDelayElapsed);
           roadtripExchangeRemaining = row && Number.isFinite(Number(row.roadtripExchangeDelay)) ?
             Math.max(0, Number(row.roadtripExchangeDelay)) : 0;
         } else {
           paint();
           if (window.__gardenPartyOn && !roomMapCoachAcknowledged && !roomMapCoachActive) {
-            scheduleRoomMapCoach(roomMapCoachRemaining || roomMapCoachDelay);
+            if (roomMapCoachDelayElapsed) activateRoomMapCoach();
+            else scheduleRoomMapCoach(roomMapCoachRemaining || roomMapCoachDelay);
           }
           if (handoffShown && !roadtripInviteDelivered) {
             offerRoadtripInvite(roadtripExchangeRemaining);
@@ -119828,6 +119862,7 @@ function spawnDustMote(container) {
         clearRoomMapCoachTimer();
         clearRoadtripExchange();
         roomMapCoachActive = false; roomMapCoachAcknowledged = false;
+        roomMapCoachDelayElapsed = false;
         handoffShown = false; roadtripInviteDelivered = false;
         paint();
       }

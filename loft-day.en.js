@@ -149,7 +149,6 @@ window.__loftMessages["en"] = {
   "chat_unavailable": "Chat isn’t connected yet.",
   "chat_welcome": "Hi! I’m Charlie, your wedding assistant. I know this loft and how it works. Ask me anything.",
   "cheers_text": "Cheers! 🥂",
-  "cinema_screen_short": "drying out…",
   "cinema_short_gag": "The projector survived. The warranty did not.",
   "cinema_title": "What are we watching?",
   "ck_featured": "featured",

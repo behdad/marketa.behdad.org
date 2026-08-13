@@ -509,8 +509,6 @@ window.__loftMessages["en"] = {
     "entrance_roadtrip_kiss": "💋 collected · +{points} pts · {combo}× combo.",
     "entrance_roadtrip_mushroom": "🍄 collected · +{points} pts · {combo}× combo.",
     "entrance_roadtrip_new": "New",
-    "entrance_roadtrip_notebook_aria": "Open Markéta’s notebook",
-    "entrance_roadtrip_notebook_close": "Close Markéta’s notebook",
     "entrance_roadtrip_notebook_draft": "Without realizing, they formed a circle. How ridiculous, Parvaneh thought, glancing over her friends, who were exchanging uneasy looks. It was one of those first hot days of early summer that would burn her skin. In her youth, she’d chase the first scorching rays for a spring tan, but nowadays, she wanted to protect her skin at all costs. She shifted to the shade to avoid the sun climbing fast to its peak, which the others didn’t seem to mind. Of course, they were Iranians.",
     "entrance_roadtrip_notebook_title": "Chapter 1",
     "entrance_roadtrip_pass": "Clean close pass · +{points} pts · {combo}× combo.",

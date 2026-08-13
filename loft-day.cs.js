@@ -509,8 +509,6 @@ window.__loftMessages["cs"] = {
     "entrance_roadtrip_kiss": "💋 sebráno · +{points} b · kombo {combo}×.",
     "entrance_roadtrip_mushroom": "🍄 sebrána · +{points} b · kombo {combo}×.",
     "entrance_roadtrip_new": "Nový",
-    "entrance_roadtrip_notebook_aria": "Otevřít Markétin zápisník",
-    "entrance_roadtrip_notebook_close": "Zavřít Markétin zápisník",
     "entrance_roadtrip_notebook_draft": "Bezděčně vytvořili kruh. Absurdní, pomyslela si Parvaneh a rozhlédla se po ostatních, kteří si vyměňovali nejisté pohledy. Jeden z těch prvních horkých dnů na začátku léta, kdy si spálí kůži. Za mlada se honila za prvními spalujícími paprsky pro jarní opálení, ale posledních pár let chtěla svou kůži chránit za každou cenu. Přesunula se do stínu, aby unikla slunci, které rychle stoupalo k vrcholu. Ostatním zjevně nevadilo. Samozřejmě – Íránci.",
     "entrance_roadtrip_notebook_title": "Kapitola 1",
     "entrance_roadtrip_pass": "Těsné, ale čisté · +{points} b · kombo {combo}×.",

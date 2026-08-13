@@ -107,10 +107,12 @@ check(/scoringVersion: ROADTRIP_SCORING_VERSION/.test(source) &&
 check(/odometerKm: Math\.round\(driveState\.odometerKm/.test(checkpointCaptureSource) &&
   !/\brpm:|\btemperature:/.test(checkpointCaptureSource),
   "checkpoint capture keeps the durable odometer but excludes ticking RPM and temperature");
-check(/entrance_roadtrip_grade_sunday: "Scenic drive"/.test(source) &&
-  /entrance_roadtrip_grade_sunday: "Vyhlídková jízda"/.test(source) &&
-  /entrance_roadtrip_grade_legend: "Highway legend"/.test(source) &&
-  /entrance_roadtrip_grade_legend: "Legenda dálnice"/.test(source),
+var enMessages = fs.readFileSync(path.join(__dirname, "..", "loft-day.en.js"), "utf8");
+var csMessages = fs.readFileSync(path.join(__dirname, "..", "loft-day.cs.js"), "utf8");
+check(/"entrance_roadtrip_grade_sunday": "Scenic drive"/.test(enMessages) &&
+  /"entrance_roadtrip_grade_sunday": "Vyhlídková jízda"/.test(csMessages) &&
+  /"entrance_roadtrip_grade_legend": "Highway legend"/.test(enMessages) &&
+  /"entrance_roadtrip_grade_legend": "Legenda dálnice"/.test(csMessages),
   "English and Czech grade labels cover both ends of the scale");
 check(/gradeFallback\[gradeKey\]\[lang\]/.test(source) &&
   !/grade\.textContent\s*=.*:\s*gradeKey\s*;/.test(source),

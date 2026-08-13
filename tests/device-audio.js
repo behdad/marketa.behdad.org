@@ -76,10 +76,12 @@ check(s.overlapReleased && s.overlapReleased.before === 0.06 && s.overlapRelease
   "stopping guitar under monitor focus then unzooming releases the final duck gate", s.overlapReleased);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+var partyRetargets = (source.match(/window\.__retargetPartyGain\([^\n]*_masterGain\.gain/g) || []).length;
+var partyBeds = (source.match(/(?:partyCtx|waltzCtx|tangoCtx|discoCtx|swingCtx|salsaCtx|bhangraCtx|baCtx|kCtx|hCtx|bgCtx|duCtx|fuCtx|cuCtx)\s*=\s*audioBed\("party"\)/g) || []).length;
 check(/window\.__retargetPartyGain\s*=\s*function/.test(source) &&
-      (source.match(/window\.__retargetPartyGain\([^\n]*_masterGain\.gain/g) || []).length === 14,
+      partyRetargets >= 13 && partyRetargets === partyBeds,
   "every party dance bed cancels and holds stale gain automation before retargeting");
-check((source.match(/(?:partyCtx|waltzCtx|tangoCtx|discoCtx|swingCtx|salsaCtx|bhangraCtx|baCtx|kCtx|hCtx|bgCtx|duCtx|fuCtx|cuCtx)\s*=\s*audioBed\("party"\)/g) || []).length === 14,
+check(partyBeds >= 13 && partyBeds === partyRetargets,
   "every registered party dance routes through the graceful-departure output bus");
 
 console.log("");

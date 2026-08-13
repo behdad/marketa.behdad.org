@@ -72,7 +72,8 @@ var harness = String.raw`<script>
           rumiCycleBefore.entries === 7 && rumiCycleBefore.readings === 7 &&
           rumiCycleBefore.ghazals.join(",") === "553,553,553,162,4,1403,1798",
           JSON.stringify(rumiCycleBefore));
-        var rumiConsole = window.__loftControllers.rumi();
+        var rumiResult = window.__loftControllers.rumi();
+        var rumiConsole = rumiResult && rumiResult.reading || rumiResult;
         var rumiCycleAfter = window.__rumiCycleState();
         var rumiTrail = document.getElementById("fairy-clue-trail");
         check("the Rumi deck advances one slot instead of drawing again",

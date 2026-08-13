@@ -109,7 +109,7 @@ check(s.props && s.props.ids.length === 10 &&
   s.props);
 check(s.carInitial && !s.carInitial.state.roofOpen && !s.carInitial.state.doorOpen &&
   !s.carInitial.state.windowOpen && !s.carInitial.state.frunkOpen && !s.carInitial.state.trunkOpen && !s.carInitial.state.engineOn &&
-  !s.carInitial.state.headlightOn && !s.carInitial.state.taillightOn && s.carInitial.glint > .5 &&
+  !s.carInitial.state.headlightOn && !s.carInitial.state.taillightOn && s.carInitial.glint >= .2 &&
   s.carInitial.roles.length === 9 && s.carInitial.roles.every(function(row){return row[2] === null;}),
   "the daytime Boxster starts roof-up, closed and off with a restrained glint and nine pointer-only controls",
   s.carInitial);

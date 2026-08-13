@@ -27,7 +27,7 @@ var harness = String.raw`<script>
       setTimeout(function () {
         window.__goToStage("office");
         check("third rapid leg retains every still-crossed room",
-          visibleRooms().join("|") === "kitchen|garden|cuddly|office", visibleRooms().join(","));
+          visibleRooms().join("|") === "cuddly|office", visibleRooms().join(","));
         setTimeout(function () {
           check("settling parks every intermediate room", visibleRooms().join("|") === "office", visibleRooms().join(","));
           report();

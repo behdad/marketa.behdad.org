@@ -379,7 +379,7 @@ var harness = String.raw`<script>
     window.__goToStage("kitchen");
     key("Tab");
     roomButton("cinema").click();
-    check("Phase 2 single-click unlocks and opens any locked dollhouse room",
+    check("Phase 2 single-click visits and opens any unvisited Dollhouse room",
       !state().open && window.__currentStageName === "cuddly" && window.__cinemaRoomOpen &&
       window.__roomSeen("cinema") && !window.__roomSeen("cuddly"),
       JSON.stringify({ room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
@@ -390,11 +390,43 @@ var harness = String.raw`<script>
     key("Tab");
     key("ArrowDown");
     var phaseTwoEnter = key("Enter");
-    check("Phase 2 single-Enter has the same locked-room behavior",
+    check("Phase 2 single-Enter has the same unvisited-room behavior",
       phaseTwoEnter && !state().open && window.__currentStageName === "kitchen" &&
       window.__bathroomRoomOpen && window.__roomSeen("bathroom"),
       JSON.stringify({ room: window.__currentStageName, seen: window.__seenRooms(), open: state().open }));
     if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();
+    window.__setSeenRooms(["kitchen"]);
+    window.__setSecondRound(false, { releaseHeld: false });
+    window.__goToStage("kitchen");
+    key("Tab");
+    check("Phase 1 keeps unvisited Dollhouse cards locked and blurred",
+      state().rooms.filter(function (room) { return room.locked; }).length === 9 &&
+      getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1,
+      JSON.stringify(state().rooms));
+    window.__setPartyMode(true, true, false);
+    check("the real Phase 1 to Phase 2 transition immediately sharpens an open Dollhouse",
+      state().open && state().rooms.every(function (room) { return !room.locked; }) &&
+      getComputedStyle(roomButton("garden").querySelector("span")).filter === "none" &&
+      getComputedStyle(roomButton("garden").querySelector("svg")).filter === "none",
+      JSON.stringify(state().rooms));
+    window.__setPartyMode(false, true, false);
+    window.__setSecondRound(false, { releaseHeld: false });
+    check("returning to Phase 1 restores the unvisited-card lock semantics",
+      roomButton("garden").classList.contains("locked") &&
+      getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1);
+    window.__closeDollhouse();
+    window.__setPartyMode(true, true, false);
+    check("the Phase 2 transition also sharpens a closed cached Dollhouse",
+      !state().open && state().rooms.every(function (room) { return !room.locked; }),
+      JSON.stringify(state().rooms));
+    window.__setPartyMode(false, true, false);
+    key("Tab");
+    check("opening after the closed transition paints every card sharp",
+      state().rooms.every(function (room) { return !room.locked; }) &&
+      getComputedStyle(roomButton("garden").querySelector("span")).filter === "none" &&
+      getComputedStyle(roomButton("garden").querySelector("svg")).filter === "none",
+      JSON.stringify(state().rooms));
+    window.__closeDollhouse();
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony"]);
     window.__goToStage("cuddly");
     window.__setPartyMode(true, true, false);

@@ -235,6 +235,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
 
       prepareEncounter();
+      window.__entranceRoadtripSetDistance(0);
       setMotion(90, 3);
       window.__entranceRoadtripPolice(150);
       step(1000, 5);
@@ -333,6 +334,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       prepareEncounter();
       setMotion(90, 3);
       window.__entranceRoadtripSetLane(-.5);
+      window.__entranceRoadtripPoliceStep(0, 0);
       step(1000);
       var briefCenterline = copy(trip());
       window.__entranceRoadtripSetLane(.5);
@@ -344,7 +346,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       step(1000, 9);
       step(900);
       var centerlineGrace = copy(trip());
-      step(200);
+      step(100, 2);
       var centerlinePursuit = copy(trip());
       var centerlinePursuitCaption = document.getElementById("hunt-caption").textContent.trim();
       window.__entranceRoadtripSetLane(.5);
@@ -610,6 +612,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
       prepareEncounter();
       meetPolice(179);
+      window.__entranceRoadtripSetDistance(trip().police.stationAt + 30);
       window.__entranceRoadtripSetLane(.5);
       setMotion(0, 0);
       step(1000);
@@ -620,6 +623,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
       prepareEncounter();
       meetPolice(180);
+      window.__entranceRoadtripSetDistance(trip().police.stationAt + 30);
       window.__entranceRoadtripSetLane(1.5);
       setMotion(0, 0);
       step(1000);
@@ -1446,7 +1450,7 @@ check(s.shoutThreshold && s.shoutThreshold.eightyNineOver.police.overLimit === 8
     "ENGINE OFF! DROP THE KEYS! HANDS THROUGH THE WHEEL!" &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestAudioVoices > 0 &&
   s.shoutThreshold.ninetyOverCzech.police.arrestShoutText ===
-    "VYPNĚTE MOTOR! ZAHOĎTE KLÍČE! RUCE SKRZ VOLANT!" &&
+    "VYPNĚTE MOTOR! PUSŤE KLÍČE! RUCE SKRZ VOLANT!" &&
   s.shoutThreshold.blurred.police.arrestAudioVoices === 0,
   "the bilingual command shout and handcuffs begin at 90 over, and its audio tears down on blur",
   s.shoutThreshold);

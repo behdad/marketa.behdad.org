@@ -14,7 +14,7 @@ var HARNESS = [
   ' var oldLog=console.log;console.log=function(){report.logs.push([].slice.call(arguments).join(" "));};',
   ' try{',
   '  window.__resetDropTerm();window.__openDropTerm();var dropIn=document.getElementById("dropterm-in"),dropOut=document.getElementById("dropterm-out");dropOut.replaceChildren();await window.loft.environment.daylight.set(false);await sleep(20);report.outputs.direct=dropOut.textContent;report.outputs.drop=await command(dropIn,dropOut,"loft.environment.daylight.set(true)");window.__closeDropTerm();',
-  '  await window.loft.app.open("console");await sleep(100);var monitorIn=document.getElementById("monitor-console-in"),monitorOut=document.getElementById("monitor-console-out");report.outputs.monitor=await command(monitorIn,monitorOut,"loft.environment.daylight.set(false)");',
+  '  await window.loft.app.open("console");for(var i=0;i<100&&!document.getElementById("office-monitor").classList.contains("show-console");i++)await sleep(40);var monitorIn=document.getElementById("monitor-console-in"),monitorOut=document.getElementById("monitor-console-out");report.outputs.monitor=await command(monitorIn,monitorOut,"loft.environment.daylight.set(false)");',
   ' }finally{console.log=oldLog;}',
   '}',
   '})();</script>'

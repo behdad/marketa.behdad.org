@@ -50,8 +50,8 @@ check(s.reset && !s.reset.phase && s.reset.max === 0 && !s.reset.prague && !s.re
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/window\.__secondRound\s*=/g) || []).length === 1 &&
       (source.match(/window\.__monitorShorted\s*=/g) || []).length === 1 &&
-      !(source.match(/window\.__(?:pragueCalled|pcPlayed)\s*=/g) || []).length &&
-      /function setOfficeProgress\(kind, on\)[\s\S]*?window\[prop\]\s*=\s*!!on/.test(source),
+      (source.match(/window\.__(?:pragueCalled|pcPlayed)\s*=/g) || []).length === 2 &&
+      /function setOfficeProgress\(kind, on\)[\s\S]*?window\.__pragueCalled\s*=\s*!!on[\s\S]*?window\.__pcPlayed\s*=\s*!!on/.test(source),
   "shared progression mirrors have only their named writers");
 check(/setOfficeProgress\("pc", true\)[\s\S]{0,900}setTimeout\(function \(\) \{[\s\S]{0,900}\}, 3000\);/.test(source),
   "the solved PC clue advances to the lights hint after a short three-second hold");

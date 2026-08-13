@@ -4257,15 +4257,17 @@ html.mir-party #stage-garden.garden-party #garden-disco-ball-spin{animation:none
 html.mir-party #stage-garden.garden-party .db-sphere-shadow{opacity:0}
 html.frame-rate-low #stage-garden.garden-party #garden-disco-ball-spin{animation-duration:30s; animation-timing-function:steps(30,end)}
 @keyframes disco-ball-spin{to{transform:rotate(360deg)}}
-/* The anti-UV rendering is a pointer-transparent sibling of the filtered strip. Its room viewport
-   provides the hard scene clip, and the referenced art remains one canonical subtree. */
-#garden-disco-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:0;overflow:hidden}
-html.mir-party .hunt-viewport.viewing-garden>#loft-game-strip.second-round~#garden-disco-overlay{opacity:1}
+/* The anti-UV rendering is a pointer-transparent sibling of the filtered strip. It owns the same
+   five-room coordinate track and room-pan transition as the strip, so its Garden-local art enters
+   and leaves with the room instead of snapping to the destination viewport. */
+#garden-disco-overlay{position:absolute;left:0;top:0;display:block;width:500%;height:auto;z-index:2;pointer-events:none;opacity:0;overflow:hidden;transition:transform .72s cubic-bezier(.4,0,.2,1)}
+#loft-game-strip.recovery-preview~#garden-disco-overlay{transition:none}
+html.mir-party #loft-game-strip.second-round~#garden-disco-overlay{opacity:1}
 html.mir-party #garden-disco-ball-lightfx{opacity:0}
 #garden-disco-overlay-spin{transform-box:fill-box;transform-origin:center}
 html.mir-party .hunt-viewport.viewing-garden #garden-disco-overlay-spin{animation:disco-ball-spin 9s linear infinite;will-change:transform}
 html.frame-rate-low.mir-party .hunt-viewport.viewing-garden #garden-disco-overlay-spin{animation-duration:30s;animation-timing-function:steps(30,end)}
-@media(max-width:519px){#garden-disco-overlay-position{transform:translate(-230px,-89px)}}
+@media(max-width:519px){#garden-disco-overlay-position{transform:translate(450px,-89px)}}
 /* DISCO UV pulse: on the disco song only (garden data-partydance) AND while the blacklight's on, a
    soft violet wash blinks over the scene — a gentle periodic pulse, deliberately NOT a fast strobe. */
 #garden-uv-pulse{opacity:0}
@@ -32877,18 +32879,18 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
 </g>
     </svg>
-    <!-- Party anti-UV: a pointer-transparent scene overlay references the canonical sphere
-         art instead of restyling or duplicating its facets. It sits outside the filtered strip,
-         while its own viewport and clip keep the tight neutral halo inside the room. -->
-    <svg id="garden-disco-overlay" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet">
+    <!-- Party anti-UV: a pointer-transparent scene track references the canonical sphere art
+         instead of restyling or duplicating its facets. It sits outside the filtered strip, but
+         shares that strip's five-room pan while its Garden-local clip contains the neutral halo. -->
+    <svg id="garden-disco-overlay" viewBox="0 0 3400 340" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <clipPath id="garden-disco-overlay-room-clip"><rect width="680" height="340"/></clipPath>
+        <clipPath id="garden-disco-overlay-room-clip"><rect x="680" width="680" height="340"/></clipPath>
         <radialGradient id="garden-disco-overlay-halo" gradientUnits="userSpaceOnUse" cx="652" cy="130" r="29">
           <stop offset="0" stop-color="#fff" stop-opacity=".82"/><stop offset=".46" stop-color="#fff" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
         </radialGradient>
       </defs>
       <g clip-path="url(#garden-disco-overlay-room-clip)">
-        <g id="garden-disco-overlay-position" transform="translate(-81,-89)">
+        <g id="garden-disco-overlay-position" transform="translate(599,-89)">
           <circle cx="652" cy="130" r="29" fill="url(#garden-disco-overlay-halo)"/>
           <circle cx="653.2" cy="131.5" r="18.8" fill="#17212d" opacity=".28"/>
           <g id="garden-disco-overlay-spin"><use href="#garden-disco-ball-art"/></g>
@@ -117574,6 +117576,12 @@ function spawnDustMote(container) {
     postSlideActions.push(action);
     return true;
   };
+  function setUpperRoomPan(idx) {
+    var transform = "translateX(-" + (idx * 20) + "%)";
+    strip.style.transform = transform;
+    var discoTrack = document.getElementById("garden-disco-overlay");
+    if (discoTrack) discoTrack.style.transform = transform;
+  }
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name, opts) {
     if (name !== "kitchen") cancelDollhouseBackgroundWarm();
@@ -117624,7 +117632,7 @@ function spawnDustMote(container) {
     // particular, Chrome can otherwise snapshot the Balcony's large SVG paint chunks while
     // they are still visibility:hidden and omit them until the settle-time parking repaint.
     parkAfterSlide(idx, fromIdx);
-    strip.style.transform = "translateX(-" + (idx * 20) + "%)";
+    setUpperRoomPan(idx);
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     strip.classList.toggle("viewing-balcony", name === "balcony");
     strip.parentElement.classList.toggle("viewing-garden", name === "garden"); // the optional anti-UV sphere is an unfiltered scene-overlay sibling, never a child of the strip
@@ -131350,7 +131358,7 @@ function spawnDustMote(container) {
       var stage = document.getElementById(name === "balcony" ? "stage-balcony" : "stage-" + name);
       if (stage) stage.classList.toggle("dusk", progress.daylight === false);
     });
-    strip.style.transform = "translateX(-" + (idx * 20) + "%)";
+    setUpperRoomPan(idx);
     strip.classList.toggle("viewing-office", progress.room === "office");
     strip.classList.toggle("viewing-balcony", progress.room === "balcony");
     markFarRooms(idx);

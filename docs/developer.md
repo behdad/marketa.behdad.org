@@ -227,6 +227,8 @@ The Garden wall switch remains the day/night owner in both phases. The Balcony s
 through the ordinary Party path and OFF advances to daylight through the calendar owner. Phase two's
 disco ball is the time-neutral Garden Party toggle. The first exploration and Messages coaches are
 serialized, and the first Party's messages remain held behind that authored reveal; reset re-arms it.
+Party's neutral disco-ball rendering lives outside the UV-filtered strip, but its SVG owns the same
+five-room coordinate track and pan transform; keep overlay art room-local so it travels with Garden.
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
@@ -642,7 +644,7 @@ port nor another developer's server process.
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
 | Typed API | Catalogue shape, public Window ownership, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/global-surface.js`, `tests/api-gating.js` |
-| Rendering | Album signatures, monitor HTML/SVG alignment, overlay ownership, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, `tests/monitor-calendar.mjs`, `tests/monitor-kill-paint.mjs`, `tests/monitor-cross-room-summon.mjs`, screenshots or real CDP Chrome |
+| Rendering | Album signatures, monitor HTML/SVG alignment, overlay ownership, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/party-disco-pan.js`, `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, `tests/monitor-calendar.mjs`, `tests/monitor-kill-paint.mjs`, `tests/monitor-cross-room-summon.mjs`, screenshots or real CDP Chrome |
 
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the
 focused tests closest to the ownership boundary you changed; Enter and menu changes have their named

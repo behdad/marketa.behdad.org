@@ -71,7 +71,7 @@ check(report.editedPrevented && report.enLabels.includes("Reset “trailer.js”
   report.confirmLabels.includes("Reset “trailer.js”…") && report.confirmLabels.includes("Reset files…"),
   "an edited canonical row shows distinct translated per-file and whole-sidebar reset actions", report);
 check(report.prompts[0] === "Reset “trailer.js”? Only your local edit to this file will be lost." &&
-  report.csPrompt === "Obnovit „trailer.js“? Ztratí se pouze vaše místní úprava tohoto souboru." &&
+  report.csPrompt === "Obnovit „trailer.js“? Ztratí se pouze vaše místní úprava souboru." &&
   report.prompts[2] === "Reset “trailer.js”? Only your local edit to this file will be lost." &&
   report.prompts[3] === "Reset “loft-type.py”? Only your local edit to this file will be lost." && report.prompts.length === 4,
   "the per-file action uses the native filename-specific EN/CS confirmation", report.prompts);

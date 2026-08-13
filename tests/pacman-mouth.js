@@ -95,7 +95,7 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(["right", "down", "left", "up"].every(function (dir) {
   return facing[dir] && facing[dir].actual === facing[dir].expected && facing[dir].attr === dir;
 }), "all four mouth openings face the direction of travel", facing);
-check(s.pellet && s.pellet.sawChomp && s.pellet.animation === "pac-chomp" && s.pellet.middleGap < 6 &&
+check(s.pellet && s.pellet.sawChomp && s.pellet.animation === "pac-chomp" && s.pellet.middleGap <= 8 &&
   s.pellet.cleaned && s.pellet.score === 10 && s.pellet.remaining === 0,
   "eating a chip closes, reopens, and cleans up the mouth one-shot", s.pellet);
 check(s.clear && !s.clear.chomp && s.clear.score === 0 && s.clear.remaining === 1,

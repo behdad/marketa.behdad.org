@@ -96,7 +96,15 @@ function buildScene() {
 /* ── shim document/window + captured __whoPop calls ─────────────────────────── */
 var whoPopCalls = [];
 var T_EN = extractRoles(html);
-var namePairs = Array.from(html.matchAll(/name_patricia_son:\s*"([^"]*)", name_patricia_daughter:\s*"([^"]*)"/g));
+var dictionaries = [
+  fs.readFileSync(path.join(__dirname, "..", "loft-day.en.js"), "utf8"),
+  fs.readFileSync(path.join(__dirname, "..", "loft-day.cs.js"), "utf8")
+];
+var namePairs = dictionaries.map(function (dictionary) {
+  var son = /"name_patricia_son":\s*"([^"]*)"/.exec(dictionary);
+  var daughter = /"name_patricia_daughter":\s*"([^"]*)"/.exec(dictionary);
+  return [null, son && son[1], daughter && daughter[1]];
+});
 var T_NAMES = {
   en: { "patricia-son": namePairs[0] && namePairs[0][1], "patricia-daughter": namePairs[0] && namePairs[0][2] },
   cs: { "patricia-son": namePairs[1] && namePairs[1][1], "patricia-daughter": namePairs[1] && namePairs[1][2] }
@@ -122,7 +130,7 @@ var coupleEl, visEl;
 
 /* gate stubs the IIFE's want() reads */
 var winShim = {
-  currentStageName: "cuddly",
+  __currentStageName: "cuddly",
   __gardenPartyOn: true,
   __totoroWatchActive: false,
   __whoPop: function (anchor, html) { whoPopCalls.push({ anchor: anchor, html: html }); }

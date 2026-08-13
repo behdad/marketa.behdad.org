@@ -8,7 +8,9 @@ var harness = String.raw`<script>
   var out = { checks: [], errors: [] };
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
-  function click(node) { if (node) node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  function click(node, x, y) { if (node) node.dispatchEvent(new MouseEvent("click", {
+    bubbles: true, cancelable: true, clientX: x || 0, clientY: y || 0
+  })); }
   function report() {
     out.errors = (window.__errs || []).slice();
     var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
@@ -80,22 +82,43 @@ var harness = String.raw`<script>
   var cabinet = document.getElementById("kitchen-cabinet-2");
   var machine = document.getElementById("kitchen-lamarzocco"), cr = machine.getBoundingClientRect();
   var hit = document.elementFromPoint(cr.left + cr.width / 2, cr.top + cr.height / 2);
-  if (!hit) {
+  var hitX = cr.left + cr.width / 2, hitY = cr.top + cr.height / 2;
+  if (!hit || hit.closest(".hunt-coach-card")) {
+    hit = null;
     for (var py = 8; py < innerHeight && !hit; py += 28) {
       for (var px = 8; px < innerWidth; px += 28) {
         var candidate = document.elementFromPoint(px, py);
         if (candidate && candidate.closest("#opening-guide-coach") && !candidate.closest(".hunt-coach-card")) {
-          hit = candidate; break;
+          var targetRect = document.getElementById("hunt-caption").getBoundingClientRect();
+          if (px < targetRect.left || px > targetRect.right || py < targetRect.top || py > targetRect.bottom) {
+            hit = candidate; hitX = px; hitY = py; break;
+          }
         }
       }
     }
   }
-  click(hit);
+  click(hit, hitX, hitY);
   check("background input is swallowed without advancing or operating Kitchen",
     hit && hit.closest("#opening-guide-coach") && window.__openingGuideStep() === "caption" &&
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
+  await showGuide("en");
+  var captionTarget = document.getElementById("hunt-caption");
+  var captionTargetRect = captionTarget.getBoundingClientRect();
+  var captionTargetHit = document.elementFromPoint(captionTargetRect.left + captionTargetRect.width / 2,
+    captionTargetRect.top + captionTargetRect.height / 2);
+  click(captionTargetHit || captionTarget, captionTargetRect.left + captionTargetRect.width / 2,
+    captionTargetRect.top + captionTargetRect.height / 2);
+  check("clicking the taught caption target dismisses the opening coach",
+    !window.__openingGuideShowing() && !overlay.classList.contains("show"),
+    JSON.stringify({ hit: captionTargetHit && (captionTargetHit.id || String(captionTargetHit.className)),
+      rect: captionTargetRect.toJSON() }));
+  await showGuide("en");
+  click(card);
+  check("clicking the coach card itself dismisses the opening coach",
+    !window.__openingGuideShowing() && !overlay.classList.contains("show"));
+  await showGuide("en");
   check("the opening guide and Party exploration overlay own the modal treatment",
     overlay.classList.contains("modal-coach") && getComputedStyle(overlay).pointerEvents === "auto" &&
       document.querySelectorAll(".hunt-coach-overlay.modal-coach").length === 2 &&

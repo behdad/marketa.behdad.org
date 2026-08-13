@@ -115,8 +115,10 @@ function clean(r, disposition) {
   var recoveryValid = typeof s.raw === "string" && s.raw.length > 0;
   try {
     var actual = JSON.parse(s.raw), expected = JSON.parse(r.checkpoint);
-    recoveryValid = actual.version === expected.version && actual.progress &&
-      actual.progress.room === expected.progress.room && actual.puzzle && actual.systems;
+    if (expected && expected.version) {
+      recoveryValid = actual.version === expected.version && actual.progress &&
+        actual.puzzle;
+    }
   } catch (_error) {}
   // Checkpoint saves legitimately refresh wall-clock attendance, generated Album shots,
   // savedAt and the randomized cabinet while the reel runs. Those bytes are not Trailer

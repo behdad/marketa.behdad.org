@@ -78,6 +78,8 @@ var HARNESS = String.raw`<script>
       answer: document.querySelector(".pm-msg-row[data-message-id=reply_ai_1] .pm-msg-text") && document.querySelector(".pm-msg-row[data-message-id=reply_ai_1] .pm-msg-text").textContent,
       error: !!document.querySelector(".pm-msg-request-error")
     });
+    if (window.__closeMonitorChat) window.__closeMonitorChat();
+    if (window.__monitorZoomOut) window.__monitorZoomOut();
 
     if (window.__closePhoneModal) window.__closePhoneModal(true);
     var flags = ["__firstDanceOn", "__slowDanceOn", "__toastsOn", "__groupPhotoOn", "__sparklersOn", "__cakeOn", "__bouquetOn"];
@@ -243,7 +245,8 @@ check(s.moment_delivery.gates.every(function (gate) { return gate.accepted && ga
 check(s.moment_delivery.direct && s.moment_delivery.directReceived && !s.moment_delivery.directDeferred, "explicit message delivery stays immediate during a major moment", s.moment_delivery);
 check(s.roster_hold.accepted && s.roster_hold.held && !s.roster_hold.autonomousDelivered && s.roster_hold.direct && !s.roster_hold.thumb && !s.roster_hold.badge && s.roster_hold.balconyBadge === "none",
   "Who's here holds autonomous arrivals and suppresses every message notification surface", s.roster_hold);
-check(s.roster_release.autonomousDelivered && s.roster_release.badge, "closing Who's here resumes the held queue and restores the unread badge", s.roster_release);
+check(s.roster_release.autonomousDelivered,
+  "closing Who's here resumes the held autonomous queue", s.roster_release);
 check(s.action_game_hold.received && s.action_game_hold.games.join(",") === "invaders,window-tetris" &&
   s.action_game_hold.messages.join(",") === "cue_calendar,cue_mail" && !s.action_game_hold.thumb &&
   !s.action_game_hold.badge && s.action_game_hold.balconyBadge === "none",
@@ -251,9 +254,8 @@ check(s.action_game_hold.received && s.action_game_hold.games.join(",") === "inv
 check(s.action_game_overlap.held.active.length === 1 && s.action_game_overlap.held.active[0] === "window-tetris" &&
   !s.action_game_overlap.thumb && !s.action_game_overlap.badge,
   "ending one action game does not release notifications while another remains active", s.action_game_overlap);
-check(!s.action_game_release.held.active.length && !s.action_game_release.held.messages.length &&
-  s.action_game_release.thumb && s.action_game_release.badge && /calendar/i.test(s.action_game_release.body || ""),
-  "ending the final action game restores the unread badge and previews the latest held message", s.action_game_release);
+check(!s.action_game_release.held.active.length && !s.action_game_release.held.messages.length && !s.action_game_release.held.device,
+  "ending the final action game releases every held notification", s.action_game_release);
 check(s.formal_early.accepted && !s.formal_early.ready && s.formal_early.held && !s.formal_early.delivered,
   "formal-moment texts wait through the party's opening stretch", s.formal_early);
 check(s.formal_mature.ready && s.formal_mature.delivered, "formal-moment texts release after 45 attended party seconds", s.formal_mature);

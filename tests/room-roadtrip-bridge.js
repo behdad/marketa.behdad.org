@@ -215,36 +215,34 @@ check(forged && !forged.roadtrip.unlocked && !forged.roadtrip.invitationReady &&
 check(partyOff && partyOff.ids.length === 0 && partyOff.bridge.roomMapCoachActive &&
   !partyOff.bridge.roadtripInviteDelivered,
   "party teardown at 9/10 points back to loft exploration and sends no invitation", partyOff);
-check(first && first.ids.join(",") === "downstairs_entrance" && first.roadtrip.explorationComplete &&
-  !first.roadtrip.authorized && !first.roadtrip.unlocked && !first.roadtrip.invitationReady &&
+check(first && first.ids.length === 0 && first.roadtrip.explorationComplete &&
+  first.roadtrip.authorized && first.roadtrip.unlocked && first.roadtrip.invitationReady &&
   !first.bridge.roadtripInviteDelivered,
-  "the tenth room can start the exchange during the party without authorizing Road Trip", first);
+  "the tenth room authorizes Road Trip while its exchange remains pending", first);
 var partyOnAuth = step("party-on-ten-auth");
 check(partyOnAuth && partyOnAuth.party && !partyOnAuth.start && !partyOnAuth.chooser &&
-  !partyOnAuth.roadtrip.authorized && !partyOnAuth.roadtrip.unlocked,
-  "Phase 2 plus 10/10 cannot launch or choose Road Trip while the party is active", partyOnAuth);
+  partyOnAuth.roadtrip.authorized && partyOnAuth.roadtrip.unlocked,
+  "Phase 2 plus 10/10 authorizes Road Trip without bypassing its invitation", partyOnAuth);
 var ignoredClick = step("ignored-phone-click"), ignoredEnter = step("ignored-phone-enter");
-check(ignoredClick && !ignoredClick.party && ignoredClick.entrance.drive.hud &&
+check(ignoredClick && ignoredClick.party && ignoredClick.entrance.drive.hud &&
   ignoredClick.entrance.drive.roadtrip.authorized && ignoredClick.entrance.drive.roadtrip.unlocked &&
   !ignoredClick.entrance.drive.roadtrip.invitationVisible,
-  "clicking the road at 10/10 canonically ends an ignored party before opening the driving coach",
+  "clicking the road at 10/10 preserves Party while opening the driving coach",
   ignoredClick);
-check(ignoredEnter && !ignoredEnter.party && ignoredEnter.entrance.drive.hud &&
+check(ignoredEnter && ignoredEnter.party && ignoredEnter.entrance.drive.hud &&
   ignoredEnter.entrance.drive.roadtrip.authorized && ignoredEnter.entrance.drive.roadtrip.unlocked &&
   !ignoredEnter.entrance.drive.roadtrip.invitationVisible,
-  "global Enter at the road uses the same party-stop → driving-coach fallback", ignoredEnter);
+  "global Enter at the road uses the same Party-preserving driving-coach fallback", ignoredEnter);
 
 var whereBefore = step("where-restored-before"), whereAfter = step("where-restored-after");
 var journeyBefore = step("journey-restored-before"), journeyAfter = step("journey-restored-after");
 var goBefore = step("go-restored-before"), goAfter = step("go-restored-after");
-check(whereBefore && whereBefore.ids.length === 1 && whereAfter &&
-  whereAfter.ids.join(",") === "downstairs_entrance,downstairs_roadtrip_where",
-  "reload after ‘Fancy a road trip?’ resumes with exactly ‘Where to?’", { before: whereBefore, after: whereAfter });
-check(journeyBefore && journeyBefore.ids.length === 2 && journeyAfter &&
-  journeyAfter.ids.join(",") === "downstairs_entrance,downstairs_roadtrip_where,downstairs_roadtrip_journey",
-  "reload after ‘Where to?’ resumes with exactly ‘The journey is the destination.’",
+check(whereBefore && whereAfter && whereAfter.bridge.roadtripExchangeNext === "downstairs_roadtrip_journey",
+  "reload after ‘Fancy a road trip?’ advances to ‘Where to?’", { before: whereBefore, after: whereAfter });
+check(journeyBefore && journeyAfter && journeyAfter.bridge.roadtripExchangeNext === "downstairs_roadtrip_go",
+  "reload after ‘Where to?’ advances to ‘The journey is the destination.’",
   { before: journeyBefore, after: journeyAfter });
-check(goBefore && goBefore.ids.length === 3 && goAfter &&
+check(goBefore && goAfter &&
   goAfter.ids.join(",") === "downstairs_entrance,downstairs_roadtrip_where,downstairs_roadtrip_journey,downstairs_roadtrip_go" &&
   goAfter.bridge.roadtripInviteDelivered,
   "reload after the motto resumes with one final ‘Let’s go!’", { before: goBefore, after: goAfter });
@@ -253,9 +251,9 @@ check(goAfter && goAfter.actions.length === 4 && goAfter.actions.slice(0, 3).eve
   "only ‘Let’s go!’ carries an action", goAfter && goAfter.actions);
 var action = step("go-action"), hudCoach = step("hud-coach"), hudInvite = step("hud-invite");
 check(action && action.room === "balcony" && action.entranceOpen && !action.hud &&
-  !action.party && action.roadtrip.authorized && action.roadtrip.unlocked &&
+  action.party && action.roadtrip.authorized && action.roadtrip.unlocked &&
   (!action.act || action.act.armed === false),
-  "‘Let’s go!’ finishes the party/coda owner, then opens Entrance with the dashboard closed", action);
+  "‘Let’s go!’ preserves Party and opens Entrance with the dashboard closed", action);
 check(hudCoach && hudCoach.roadtrip.unlocked && hudCoach.roadtrip.invitationReady &&
   !hudCoach.roadtrip.invitationVisible && !hudCoach.chooserOpened &&
   hudCoach.coach && !hudCoach.coach.complete && !hudCoach.coach.dismissed,

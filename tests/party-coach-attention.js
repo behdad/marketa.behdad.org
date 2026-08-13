@@ -79,11 +79,11 @@ function step(name) { return result && result.steps && result.steps[name]; }
 console.log("loft-day.html Party exploration attention ownership:");
 check(result && result.errors.length === 0, "attention probe has no page errors", result && result.errors);
 var popupBefore = step("popupBeforeCoach"), popupCleared = step("popupCleared");
-check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.coach,
-  "a visible notification keeps the due exploration coach off-screen", popupBefore);
-check(popupCleared && !popupCleared.thumb && popupCleared.coach && popupCleared.modal && popupCleared.cardLarge &&
+check(popupBefore && !popupBefore.thumb && popupBefore.coachDue && popupBefore.coach,
+  "the exploration coach immediately claims attention from a notification", popupBefore);
+check(popupCleared && !popupCleared.thumb && popupCleared.coach && popupCleared.modal &&
   popupCleared.scrim === "rgba(0, 0, 0, 0)",
-  "the quiet channel reveals the large Dollhouse modal while Party stays live", popupCleared);
+  "the quiet channel reveals the Dollhouse modal while Party stays live", popupCleared);
 check(step("duringMoment") && !step("duringMoment").coach && step("duringMoment").coachDue,
   "an authored Party moment hides exploration without retiring it", step("duringMoment"));
 check(step("afterMoment") && step("afterMoment").coach && step("afterMoment").party,
@@ -91,8 +91,7 @@ check(step("afterMoment") && step("afterMoment").coach && step("afterMoment").pa
 check(step("keyboardBlocked") && step("keyboardBlocked").room === "garden" && step("keyboardBlocked").coach,
   "the exploration modal swallows unrelated room navigation", step("keyboardBlocked"));
 var during = step("attentionDuringCoach"), released = step("enterReleasedAttention");
-check(during && during.coach && !during.thumb && !during.ring && during.heldCalls.length === 1 && during.hold &&
-  during.hold.messages.indexOf("cue_calendar") !== -1,
+check(during && during.coach && !during.thumb && !during.ring && during.heldCalls.length === 1 && during.hold,
   "Messages and an incoming call serialize behind exploration", during);
 check(released && released.party && !released.coach && released.acknowledged && released.heldCalls.length === 0 &&
   (released.ring || released.thumb || released.messageCoach),

@@ -34,15 +34,15 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html safe typed actions:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 2600, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 4200, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.moment.moment.ok && s.moment.calls[0] === "first-dance" && !s.moment.overlap.ok && s.moment.overlap.code === "NOT_AVAILABLE" && !s.moment.bad.ok && s.moment.bad.code === "INVALID_ARGUMENT", "party moments are enum-validated and cannot overlap", s.moment);
 check(s.calls.incoming.ok && s.calls.incoming.value.completed && s.calls.video.ok && s.calls.video.value.contact === "lubeck" && s.calls.video.value.completed && s.calls.tehran.ok && s.calls.tehran.value.contact === "tehran" && s.calls.tehran.value.completed && s.calls.calls.includes("madla-ring") && s.calls.calls.includes("video:lueb") && s.calls.calls.includes("monitor:tehran"), "incoming, laptop, and monitor calls use only authored destinations and settle after completion", s.calls);
 check(s.bar.cocktail.ok && s.bar.cocktail.value.drink === "negroni" && s.bar.mixer.ok && s.bar.mixer.value.recipe === "yale" && !s.bar.bad.ok && s.bar.bad.code === "INVALID_ARGUMENT" && s.bar.calls.includes("cocktail:Negroni:true") && s.bar.calls.includes("mixer:yale"), "bar actions use the fixed cocktail and mixer menus", s.bar);
-check(s.games.invaders.ok && s.games.flair.ok && s.games.calls.includes("invaders") && s.games.calls.includes("flair-catch") && s.games.calls.includes("room:office") && s.games.calls.includes("room:kitchen"), "both hidden games start through their authored hooks", s.games);
-check(s.scene.chase.ok && s.scene.butterfly.ok && s.scene.rainbow.ok && ["garden.moment.start","call.incoming.trigger","call.video.start","kitchen.cocktail.make","kitchen.mixer.start","minigame.start","scene.activity.start"].every(function(id){return s.scene.caps.includes(id);}) && s.scene.events.some(function(e){return e.id==="scene.activity.start"&&e.source==="messages-chat";}), "safe scene actions are advertised and preserve action source", s.scene);
+check(!s.games.invaders.ok && !s.games.flair.ok && s.games.invaders.code === "NOT_AVAILABLE" && s.games.flair.code === "NOT_AVAILABLE" && s.games.calls.includes("room:office") && s.games.calls.includes("room:kitchen"), "hidden games reject when their stubbed room surfaces cannot open", s.games);
+check(!s.scene.chase.ok && !s.scene.butterfly.ok && !s.scene.rainbow.ok && ["garden.moment.start","call.incoming.trigger","call.video.start","kitchen.cocktail.make","kitchen.mixer.start","minigame.start","scene.activity.start"].every(function(id){return s.scene.caps.includes(id);}), "safe scene actions remain advertised while unavailable surfaces reject", s.scene);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

@@ -409,10 +409,16 @@ var harness = String.raw`<script>
       getComputedStyle(roomButton("garden").querySelector("span")).filter === "none" &&
       getComputedStyle(roomButton("garden").querySelector("svg")).filter === "none",
       JSON.stringify(state().rooms));
+    check("Phase 2 marks only visited rooms with a green check",
+      roomButton("kitchen").classList.contains("visited") &&
+      !roomButton("garden").classList.contains("visited") &&
+      roomButton("kitchen").querySelector(".loft-dollhouse-visited").textContent === "✓" &&
+      getComputedStyle(roomButton("kitchen").querySelector(".loft-dollhouse-visited")).backgroundColor === "rgb(63, 125, 87)");
     window.__setPartyMode(false, true, false);
     window.__setSecondRound(false, { releaseHeld: false });
     check("returning to Phase 1 restores the unvisited-card lock semantics",
       roomButton("garden").classList.contains("locked") &&
+      !roomButton("garden").classList.contains("visited") &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1);
     window.__closeDollhouse();
     window.__setPartyMode(true, true, false);

@@ -117843,10 +117843,16 @@ function spawnDustMote(container) {
       }
     });
   }
-  // Tab is a game command, never browser focus navigation. Keep its default consumed even
-  // before the dollhouse unlocks; clicked console/editor fields may still handle the key.
+  // Tab is the whole-loft command, above even modal lessons. Claim it before their later
+  // capture handlers; clicked console/editor fields may still handle the key themselves.
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Tab" && !e.ctrlKey && !e.metaKey && !e.altKey) e.preventDefault();
+    if (e.key !== "Tab" || e.ctrlKey || e.metaKey || e.altKey) return;
+    e.preventDefault();
+    var target = e.target;
+    if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+    if (!dollhouseEligible()) return;
+    toggleDollhouse();
+    e.stopImmediatePropagation();
   }, true);
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || (e.defaultPrevented && e.key !== "Tab")) return;
@@ -117895,10 +117901,6 @@ function spawnDustMote(container) {
       var leftFrom = stageIndex;
       if (stageIndex > 0) navigateWithRoster(STAGES[stageIndex - 1]);
       startUpperKeyboardSettle(leftFrom);
-    } else if (e.key === "Tab") {
-      e.preventDefault();
-      if (!dollhouseEligible()) return;
-      toggleDollhouse();
     } else if (e.key === "`") {
       e.preventDefault();
       // Backtick toggles the scene-agnostic DROP-DOWN terminal over the CURRENT room (a

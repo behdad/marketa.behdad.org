@@ -95,6 +95,16 @@ var harness = String.raw`<script>
     check("the first Bathroom thumbnail has a towel paint fallback",
       document.getElementById("bathroom-waffle-towel").getAttribute("fill") ===
         "url(#bathroom-waffle) #a8a39e");
+    key("Tab");
+    var realPartyCoachActive = window.__partyCoachModalActive;
+    var realRoadtripCoachActive = window.__roadtripCompletionCoachActive;
+    window.__partyCoachModalActive = function () { return true; };
+    window.__roadtripCompletionCoachActive = function () { return true; };
+    var modalTab = key("Tab");
+    check("Tab opens The Loft above modal coaches",
+      modalTab && state().open, JSON.stringify(state()));
+    window.__partyCoachModalActive = realPartyCoachActive;
+    window.__roadtripCompletionCoachActive = realRoadtripCoachActive;
     var parkedUpperSources = ["stage-garden", "stage-cuddly", "stage-office", "stage-balcony"]
       .map(function (id) { return document.getElementById(id); });
     check("opening The Loft makes every parked upper source tree raster-visible for WebKit",

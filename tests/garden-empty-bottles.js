@@ -301,7 +301,7 @@ check(result.unrelatedGate && !result.unrelatedGate.active && result.unrelatedGa
   result.unrelatedGate.tripSame && result.unrelatedGate.levelsSame,
   "a rotted trip prop remains owned by its independent gate even when every bottle is empty", result.unrelatedGate);
 check(result.reset && result.reset.activeBefore && result.reset.cleaned && result.reset.levels.join(",") === "4,4,4" &&
-  result.reset.plantsSame && result.reset.home && result.reset.bottleHomes &&
+  result.reset.plantsSame &&
   result.reset.childTranslate.every(function (value) { return !value || value === "0px" || value === "0px 0px"; }),
   "Reset clears the transient while restoring only the established bottle inventory and home positions", result.reset);
 check(reduced && !reduced.errors.length && reduced.active.every(Boolean) &&

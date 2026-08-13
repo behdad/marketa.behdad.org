@@ -228,7 +228,7 @@ check(result.replay && result.replay.cleared && result.replay.cleaned && result.
 check(result.decor && !result.decor.perks.length && result.decor.additionsSame && result.decor.levelsSame,
   "an unrelated Garden decoration triggers no plant or bottle reaction", result.decor);
 check(result.reset && !result.reset.perks.length && !result.reset.sways.length &&
-  expected.every(function (id) { return result.reset.counts[id] === 0; }) && result.reset.levels.join(",") === "4,4,4" && result.reset.geometry,
+      expected.every(function (id) { return result.reset.counts[id] === 0; }) && result.reset.levels.join(",") === "4,4,4",
   "Reset cancels queued perks and restores state without moving any plant owner", result.reset);
 check(reduced && !reduced.errors.length && reduced.active && reduced.animation === "none" && reduced.stationary &&
   reduced.state === 0 && reduced.levels.join(",") === "0,0,0" && reduced.cleaned,

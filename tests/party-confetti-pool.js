@@ -6,12 +6,16 @@ var lib = require("./lib");
 var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>(function(){
 window.addEventListener("load",function(){setTimeout(function(){
-  var report={errors:window.__errs,started:0,hidden:false,reused:false,removed:0,active:0};
+  var report={errors:window.__errs,started:0,hidden:false,reused:false,removed:0,active:0,delays:[]};
   try{
     window.__goToStage("garden");
     var container=document.getElementById("garden-confettifx");
     window.__setGardenParty(true,false);
     report.started=container.childElementCount;
+    report.delays=Array.prototype.map.call(container.children,function(piece){
+      var timing=piece.__confettiFall&&piece.__confettiFall.effect.getTiming();
+      return timing&&{delay:timing.delay,fill:timing.fill};
+    });
     var first=container.firstElementChild;
     var nativeRemove=Element.prototype.remove;
     Element.prototype.remove=function(){if(container.contains(this))report.removed++;return nativeRemove.apply(this,arguments);};
@@ -32,6 +36,9 @@ function check(ok,msg,detail){if(ok)console.log("  ✓ "+msg);else{failures++;co
 console.log("rsvp.html Party confetti pool:");
 check(r&&r.errors.length===0,"no uncaught page errors",r&&r.errors);
 check(r&&r.started===20,"full-motion Party starts the bounded 20-piece pool",r);
+check(r&&r.delays.length===20&&r.delays.every(function(timing){
+  return timing&&timing.delay>=0&&timing.fill==="backwards";
+}),"the hidden offstage keyframe owns every random pre-fall delay",r&&r.delays);
 check(r&&r.hidden&&r.removed===0,"teardown hides and cancels without removing pooled SVG nodes",r);
 check(r&&r.reused&&r.active===20,"the next Party restarts all twenty existing nodes",r);
 if(failures){console.log("\n"+failures+" check(s) failed.");process.exit(1);}

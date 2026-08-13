@@ -229,6 +229,8 @@ disco ball is the time-neutral Garden Party toggle. The first exploration and Me
 serialized, and the first Party's messages remain held behind that authored reveal; reset re-arms it.
 Party's neutral disco-ball rendering lives outside the UV-filtered strip, but its SVG owns the same
 five-room coordinate track and pan transform; keep overlay art room-local so it travels with Garden.
+The bounded Party confetti pool reuses its SVG nodes. Its fall timeline owns the random delay with
+backwards fill so each piece stays hidden and offstage instead of briefly painting at SVG origin.
 Every authored Party beat routes its boolean through `setPartyMomentState`. Its first active moment
 suppresses the physical UV class and snapshots its prior state; only the final overlapping end
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown

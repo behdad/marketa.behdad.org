@@ -49,7 +49,7 @@ var harness = String.raw`<script>
     window.__setLang("cs");
     check("the live clue follows the language switch",
       document.getElementById("hunt-caption").textContent ===
-        "Loft možná pár pokojů schoval před očima.",
+        "Loft možná pár pokojů někam zasunul.",
       document.getElementById("hunt-caption").textContent);
 
     window.__setLang("en");

@@ -57,10 +57,10 @@ var expected = {
   },
   cs: {
     bathroom: "Koupelna · pohraj si s vybavením.",
-    dungeon: "Žalář · stará hra se probudila.",
+    dungeon: "Kobka · stará hra se probudila.",
     cinema: "Kino · vyber si film.",
-    bedroom: "Kliknutím na libovolné políčko spustit piškvorky",
-    entrance: "Autem se můžeš projet hned · nejdřív dokonči horní stopu a odemkni párty."
+    bedroom: "Kliknutím na libovolné políčko spustíš piškvorky",
+    entrance: "Auto si můžeš zatím jen vyzkoušet · nejdřív dokonči horní stopovačku a odemkni párty."
   }
 };
 ["en", "cs"].forEach(function (lang) {

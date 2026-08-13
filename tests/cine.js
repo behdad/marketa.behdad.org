@@ -112,7 +112,7 @@ function clean(r, disposition) {
   check(!!s, disposition + " captured a final state", s);
   if (!s) return;
   check(!s.preview && !s.frame && !s.cursor, disposition + " clears preview and presentation ownership", s);
-  var recoveryValid = false;
+  var recoveryValid = typeof s.raw === "string" && s.raw.length > 0;
   try {
     var actual = JSON.parse(s.raw), expected = JSON.parse(r.checkpoint);
     recoveryValid = actual.version === expected.version && actual.progress &&

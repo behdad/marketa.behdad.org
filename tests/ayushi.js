@@ -49,7 +49,7 @@ var harness = String.raw`<script>
         check("the English direct-person card carries the supplied role and fun fact",
           /Ayushi/.test(en) && /diva/.test(en) && !/from India/.test(en) && /Stand-up comedian in practice\./.test(en), en);
         check("the Czech direct-person card mirrors all Ayushi copy",
-          /Ayushi/.test(cs) && /diva/.test(cs) && !/z Indie/.test(cs) && /stand-up komička v zácviku\./.test(cs), cs);
+          /Ayushi/.test(cs) && /diva/.test(cs) && !/z Indie/.test(cs) && /stand-up komička v praxi\./.test(cs), cs);
 
         window.__goToStage("cuddly");
         document.getElementById("stage-cuddly").classList.remove("dusk");
@@ -69,6 +69,7 @@ var harness = String.raw`<script>
         window.__resetCuddlyVisitors();
 
         await window.loft.garden.set(true);
+        window.__goToStage("garden");
         window.__duoArrive("ayushi");
         await sleep(150);
         var here = window.__whoIsHere("garden").filter(function (p) { return p.key === "ayushi"; })[0];

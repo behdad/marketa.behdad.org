@@ -69,7 +69,7 @@ function pass(m) { console.log("  ✓ " + m); }
 function fail(m, d) { failures++; console.log("  ✗ " + m); if (d) console.log("      " + String(d).split("\n").join("\n      ")); }
 
 console.log("rsvp.html share-card generator:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 30000, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 8000);
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {

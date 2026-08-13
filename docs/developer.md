@@ -169,16 +169,20 @@ inventing parallel navigation.
 
 The opening caption coach blocks scene input while leaving the explicit whole-loft Reset available.
 
-Opening the dollhouse can pause or cover a live subsystem. Returning to a room must restore the same
+Opening the dollhouse can pause a live subsystem such as Road Trip. Returning to a room must restore the same
 settled room or paused drive state, not initialize a second instance. Lower-room navigation should
 return to the paired upper room only when the user explicitly asks to go up; Back/Escape first
 dismisses the active game, projector, or overlay owned by that lower room.
 
-The dollhouse reuses the live room trees, so opening it must not create a second controller or wake
-parked room work. Preview warm-up is optional performance work: the picker must remain correct when
-idle scheduling is unavailable or interrupted. Keep its source animations under the same room and
-frame-health ownership used by the main strip. Its panel stays cached between views; closed cards
-must remain paint-gated, while opening it restores the live source boundaries and animations.
+The dollhouse is a retained static compositor, not ten live room clones. It serializes one canonical
+room tree per idle slice into a bounded WebP capture; the map displays only those images, so opening it
+does not wake parked room timelines. **CLICK ME** warms fresh day/night defaults, while **Continue**
+warms the checkpoint's saved lighting and Party shell. Day/night variants are reusable. Each Party
+ignition invalidates and recaptures only the five upper rooms after Party population settles, freezing
+the current occupants without retaining their animation trees. UV is deliberately excluded. Never
+reintroduce live `<use>` cards: they multiply style/layout/animation work and let WebKit shadow content
+escape its room. Keep cold presentation withheld until all ten desired variants exist, then retain the
+compressed captures for immediate reopen.
 
 The Office monitor retains app DOM and runtime state across zoom and room changes. At room scale,
 HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,
@@ -270,8 +274,8 @@ Keep these ownership boundaries intact:
 - While Road Trip owns the viewport, `mir-roadtrip-active` removes the covered five-room SVG from
 layout and pins the viewport to its established 2:1 ratio. Keep those rules paired: `display:none`
 avoids laying out the hidden loft on every highway frame, while the explicit ratio prevents the
-overlay-only viewport from collapsing. The Dollhouse's `dollhouse-open` class temporarily
-restores the strip because its live room cards reference those source groups.
+overlay-only viewport from collapsing. The Dollhouse uses retained images, so opening it does not
+restore or lay out the covered strip.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order

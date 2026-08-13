@@ -1039,7 +1039,7 @@ html.mir-autumn #entrance-room :is(.entrance-tree-autumn,.entrance-autumn-foregr
    keep the viewport ratio explicit so dropping its normal SVG sizing child cannot
    collapse the highway. */
 html.mir-roadtrip-active .hunt-viewport{aspect-ratio:2/1}
-html.mir-roadtrip-active #hunt-fullscreen-area:not(.dollhouse-open) #loft-game-strip{display:none}
+html.mir-roadtrip-active #loft-game-strip{display:none}
 html.mir-roadtrip-active :is(#bathroom-room,#prince-basement,#cinema-room,#bedroom-room){
   content-visibility:hidden;
 }
@@ -3534,20 +3534,9 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   padding:clamp(.35rem,1vw,1rem); background:rgba(38,28,23,.76);
 }
 #loft-dollhouse[hidden]{display:none}
-/* The first five live upper-room cards are staggered to avoid one large SVG paint burst.
-   Keep that preparation offscreen; revealing a complete picker slightly later is calmer than
-   flashing five empty cards. Opacity keeps the live <use> trees eligible for rasterization. */
+/* A cold picker stays transparent until its canonical room captures are ready. Every later open
+   paints the retained captures immediately; replacements are double-buffered behind them. */
 #loft-dollhouse.dollhouse-preparing{opacity:0}
-/* Keep the already-built picker and its parked upper-room sources warm after the first view.
-   The live <use> previews then reopen without rebuilding five large SVG render trees. */
-#loft-dollhouse.dollhouse-warm[hidden]{display:none;pointer-events:none}
-#hunt-fullscreen-area.dollhouse-warm #loft-game-strip .stage-far{visibility:visible}
-#hunt-fullscreen-area #loft-game-strip .stage-far.dollhouse-source-warm{visibility:visible}
-/* A closed warm picker retains each parked source's render tree, but it must not paint into
-   the real viewport. Bound it only while closed: the open <use> thumbnail and a departing room
-   still get all of their authored overflow. WebKit foreignObjects still use visibility below. */
-#hunt-fullscreen-area:not(.dollhouse-open) #loft-game-strip .stage-far.dollhouse-source-warm,
-#hunt-fullscreen-area.dollhouse-warm:not(.dollhouse-open) #loft-game-strip .stage-far{clip-path:url(#loft-stage-room-clip)}
 .loft-dollhouse-panel{
   position:relative; width:min(calc(100vw - clamp(.7rem,2vw,2rem)),calc((100vh - clamp(.7rem,2vw,2rem))*4));
   max-height:calc(100vh - clamp(.7rem,2vw,2rem)); box-sizing:border-box; padding:.72rem .78rem .82rem;
@@ -3570,7 +3559,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   background:transparent; color:var(--ink); cursor:pointer; box-shadow:none;
 }
 .loft-dollhouse-room svg{
-  display:block; width:100%; aspect-ratio:2/1; box-sizing:border-box; border:1px solid rgba(69,58,49,.38);
+  display:block; width:100%; aspect-ratio:2/1; overflow:hidden; box-sizing:border-box; border:1px solid rgba(69,58,49,.38);
   border-radius:5px; background:var(--cream); pointer-events:none; box-shadow:0 1px 3px rgba(69,58,49,.18)
 }
 .loft-dollhouse-room span{display:block; overflow:hidden; padding:.24rem .1rem 0; background:none; font-size:clamp(.5rem,1.5vw,.75rem); font-weight:700; line-height:1; text-overflow:ellipsis; white-space:nowrap}
@@ -3598,6 +3587,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   --storm-flash-weak:0;
   --storm-flash-medium:0;
 }
+.loft-dollhouse-static-preview{pointer-events:none}
 #bedroom-room.dollhouse-preview :is(.bedroom-suit,.bedroom-sprinkler-water,.bedroom-bed-wet,#bedroom-party-coats,.bedroom-sleep-zz){opacity:0!important}
 #loft-dollhouse-default-art,#loft-dollhouse-scene-art{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 @media (max-width:520px){
@@ -14920,12 +14910,8 @@ section{margin:1.9rem 0}
    origin and destination unparked, so even a direct kitchen→balcony jump has no blank middle;
    only after transform transitionend does the destination become the sole visible stage.
    visibility (not display) keeps the five-room geometry stable. */
-/* Upper dollhouse cards <use> these stage groups directly. WebKit refuses to paint a
-   reference while its source tree is visibility:hidden, so keep the raster gate suspended
-   after the first view; the closed-picker clip gate above keeps those warm sources out
-   of the real viewport without changing what their live <use> thumbnails contain. */
-#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far:not(.dollhouse-source-warm),
-#hunt-fullscreen-area:not(.dollhouse-warm) #loft-game-strip .stage-far:not(.dollhouse-source-warm) *{visibility:hidden !important}
+#loft-game-strip .stage-far,
+#loft-game-strip .stage-far *{visibility:hidden !important}
 /* ── the dance floor keeps two moving parts per figure, not five ──────────────
    Every dancer stacks .guest-orbit (the do-si-do travel) + .guest-move (their
    own signature step) + .guest-sway (body rock) + .guest-arm-l + .guest-arm-r.
@@ -100345,6 +100331,7 @@ def colormode(mode=None):
       if (!dusk && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // daybreak offers a cookout; later nightfall never cancels one already started
       if (window.__bbqDayNightChanged) window.__bbqDayNightChanged(); // active BBQ host pair follows the day/night indoor-outdoor weighting
       if (window.__reconcileBalconyKidsPlay) window.__reconcileBalconyKidsPlay(); // night clears daytime play; day restores the date/weather match
+      if (window.__refreshDollhouseCaptures) window.__refreshDollhouseCaptures("lighting");
       if (window.__loftStateChanged) window.__loftStateChanged("environment.daylight", { daylight: !dusk }, silent ? "clock" : "ui");
     }
     window.__autoToggleDusk = toggleDusk; // the garden light switch flips day/night through this (then stops the auto cycle itself)
@@ -115002,59 +114989,16 @@ function spawnDustMote(container) {
   var dollhouseCursor = 0;
   var dollhouseLockedEnterRoom = "";
   var dollhouseLockedEnterAt = 0;
-  var dollhouseCuddlyScreenClass = null;
-  var dollhouseCuddlyFireStyles = null;
-  var dollhouseKitchenStyles = null;
-  var dollhouseRoadtripPauseStyle = null;
-  var dollhouseRoadtripWorldStyle = null;
-  var dollhouseRoadtripCampStyles = null;
-  var dollhousePausedAnimations = [];
-  var dollhouseFirstRevealTimers = [];
-  var dollhouseFirstRevealQueue = [];
-  var dollhouseFirstRevealComplete = false;
-  function cancelDollhouseFirstReveal() {
-    dollhouseFirstRevealTimers.forEach(clearTimeout);
-    dollhouseFirstRevealTimers = [];
-    if (dollhouse) dollhouse.classList.remove("dollhouse-preparing");
-  }
-  function stageDollhouseFirstReveal() {
-    if (dollhouseFirstRevealComplete) return;
-    cancelDollhouseFirstReveal();
-    var priority = [window.__currentStageName, "kitchen", "garden", "balcony", "cuddly", "office"];
-    dollhouseFirstRevealQueue = dollhouseRooms.filter(function (spec) {
-      return spec.floor === "main" && spec.use;
-    }).sort(function (a, b) {
-      return priority.indexOf(a.stage) - priority.indexOf(b.stage);
-    });
-    dollhouseFirstRevealQueue.forEach(function (spec) { spec.use.style.display = "none"; });
-  }
-  function resumeDollhouseAnimations() {
-    dollhousePausedAnimations.forEach(function (animation) {
-      if (animation.playState === "paused") animation.play();
-    });
-    dollhousePausedAnimations = [];
-  }
-  function syncDollhouseAnimationHealth() {
-    var slow = !!(window.__frameHealthSlow && window.__frameHealthSlow());
-    if (!slow || !dollhouse || dollhouse.hidden) {
-      resumeDollhouseAnimations();
-      return;
-    }
-    if (dollhousePausedAnimations.length || !document.getAnimations) return;
-    var area = document.getElementById("hunt-fullscreen-area");
-    document.getAnimations().forEach(function (animation) {
-      var target = animation.effect && animation.effect.target;
-      if (target && target.element) target = target.element;
-      if (!area || !target || !area.contains(target) || animation.playState !== "running") return;
-      animation.pause();
-      dollhousePausedAnimations.push(animation);
-    });
-  }
-  function dollhouseRoadtripLive(transport) {
-    var entrance = document.getElementById("entrance-room");
-    return !!((transport && transport.active) ||
-      (entrance && entrance.classList.contains("roadtrip-active")));
-  }
+  var dollhouseCaptureQueue = [];
+  var dollhouseCaptureIdle = 0;
+  var dollhouseCaptureDelay = 0;
+  var dollhouseCaptureBusy = false;
+  var dollhouseCaptureStyles = "";
+  var dollhouseCaptureCount = 0;
+  var dollhouseWarmMode = "fresh";
+  var dollhouseWarmStarted = false;
+  var dollhouseRecoveryPreview = null;
+  var DOLLHOUSE_CAPTURE_GAP_MS = 180;
   function floorText(key) {
     var l = document.documentElement.lang;
     return (T[l] && T[l][key]) || T.en[key] || key;
@@ -115066,134 +115010,15 @@ function spawnDustMote(container) {
   function dollhouseControlsUnlocked() {
     return !!lowerRoomDiscovered && dollhouseEligible();
   }
-  function restoreDollhousePreviewState() {
-    if (window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(false);
-    var cuddlyScreen = document.getElementById("cuddly-wallscreen");
-    if (cuddlyScreen && dollhouseCuddlyScreenClass !== null) {
-      cuddlyScreen.setAttribute("class", dollhouseCuddlyScreenClass);
-    }
-    dollhouseCuddlyScreenClass = null;
-    if (dollhouseCuddlyFireStyles) {
-      dollhouseCuddlyFireStyles.forEach(function (entry) {
-        if (entry.style) entry.node.setAttribute("style", entry.style);
-        else entry.node.removeAttribute("style");
-      });
-    }
-    dollhouseCuddlyFireStyles = null;
-    var officeMonitor = document.getElementById("office-monitor");
-    if (officeMonitor) officeMonitor.classList.remove("dollhouse-preview");
-    var bedroom = document.getElementById("bedroom-room");
-    if (bedroom) bedroom.classList.remove("dollhouse-preview");
-    if (dollhouseKitchenStyles) {
-      dollhouseKitchenStyles.forEach(function (entry) {
-        if (entry.style) entry.node.setAttribute("style", entry.style);
-        else entry.node.removeAttribute("style");
-      });
-    }
-    dollhouseKitchenStyles = null;
-    var roadtripPause = document.getElementById("entrance-roadtrip-pause-dialog");
-    if (roadtripPause && dollhouseRoadtripPauseStyle !== null) {
-      if (dollhouseRoadtripPauseStyle) roadtripPause.setAttribute("style", dollhouseRoadtripPauseStyle);
-      else roadtripPause.removeAttribute("style");
-    }
-    dollhouseRoadtripPauseStyle = null;
-    var roadtripWorld = document.getElementById("entrance-roadtrip-world");
-    if (roadtripWorld && dollhouseRoadtripWorldStyle !== null) {
-      if (dollhouseRoadtripWorldStyle) roadtripWorld.setAttribute("style", dollhouseRoadtripWorldStyle);
-      else roadtripWorld.removeAttribute("style");
-    }
-    dollhouseRoadtripWorldStyle = null;
-    if (dollhouseRoadtripCampStyles) {
-      dollhouseRoadtripCampStyles.forEach(function (entry) {
-        if (entry.style) entry.node.setAttribute("style", entry.style);
-        else entry.node.removeAttribute("style");
-      });
-    }
-    dollhouseRoadtripCampStyles = null;
-    var entranceArt = document.getElementById("entrance-room-art");
-    if (entranceArt) entranceArt.classList.remove("dollhouse-day-preview");
-  }
-  function prepareDollhousePreviewState() {
-    if (window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(true);
-    var cuddlyScreen = document.getElementById("cuddly-wallscreen");
-    if (cuddlyScreen && dollhouseCuddlyScreenClass === null) {
-      dollhouseCuddlyScreenClass = cuddlyScreen.getAttribute("class") || "";
-      Array.prototype.slice.call(cuddlyScreen.classList).forEach(function (name) {
-        if (name.indexOf("chan-") === 0) cuddlyScreen.classList.remove(name);
-      });
-      cuddlyScreen.classList.add("chan-fire");
-      dollhouseCuddlyFireStyles = Array.prototype.map.call(
-        cuddlyScreen.querySelectorAll("#cuddly-flame-img,.fire-live"), function (node) {
-          var entry = { node: node, style: node.getAttribute("style") || "" };
-          node.style.filter = "none";
-          return entry;
-        });
-    }
-    var officeMonitor = document.getElementById("office-monitor");
-    if (officeMonitor) officeMonitor.classList.add("dollhouse-preview");
-    var bedroom = document.getElementById("bedroom-room");
-    if (bedroom) bedroom.classList.add("dollhouse-preview");
-    var kitchen = document.getElementById("stage-kitchen");
-    if (kitchen && dollhouseBarActive() && !dollhouseKitchenStyles) {
-      var visible = ["kitchen-post", "kitchen-extinguisher", "kitchen-bathroom-marker", "kitchen-bar", "kitchen-bar-couples"];
-      dollhouseKitchenStyles = Array.prototype.map.call(kitchen.querySelectorAll(":scope > g"), function (node) {
-        var entry = { node: node, style: node.getAttribute("style") || "" };
-        node.style.opacity = visible.indexOf(node.id) >= 0 ? "1" : "0";
-        node.style.pointerEvents = "none";
-        return entry;
-      });
-    }
-    var entranceArt = document.getElementById("entrance-room-art");
-    var balcony = document.getElementById("stage-balcony");
-    if (entranceArt) entranceArt.classList.toggle("dollhouse-day-preview", !(balcony && balcony.classList.contains("dusk")));
-    var transport = window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState();
-    var roadtripPause = document.getElementById("entrance-roadtrip-pause-dialog");
-    if (dollhouseRoadtripLive(transport) && roadtripPause && dollhouseRoadtripPauseStyle === null) {
-      dollhouseRoadtripPauseStyle = roadtripPause.getAttribute("style") || "";
-      roadtripPause.style.display = "none";
-    }
-    var roadtripWorld = document.getElementById("entrance-roadtrip-world");
-    if (dollhouseRoadtripLive(transport) && roadtripWorld && dollhouseRoadtripWorldStyle === null) {
-      dollhouseRoadtripWorldStyle = roadtripWorld.getAttribute("style") || "";
-      roadtripWorld.style.opacity = "1";
-      roadtripWorld.style.visibility = "visible";
-    }
-    var entrance = document.getElementById("entrance-room");
-    if (roadtripWorld && entrance && entrance.classList.contains("roadtrip-route-camp") &&
-        !dollhouseRoadtripCampStyles) {
-      var campPreview = [
-        [document.getElementById("entrance-roadtrip-world-clip"), "clipPath", "none"],
-        [document.getElementById("entrance-roadtrip-camp"), "opacity", "1"],
-        [document.getElementById("entrance-roadtrip-camp-day"), "opacity",
-          entrance.classList.contains("entrance-day") ? "1" : "0"],
-        [document.getElementById("entrance-roadtrip-camp-night"), "opacity",
-          entrance.classList.contains("entrance-day") ? "0" : "1"]
-      ];
-      Array.prototype.forEach.call(roadtripWorld.children, function (node) {
-        if (node.id !== "entrance-roadtrip-world-clip") campPreview.push([node, "display", "none"]);
-      });
-      dollhouseRoadtripCampStyles = campPreview.filter(function (entry) { return entry[0]; })
-        .map(function (entry) {
-          var saved = { node: entry[0], style: entry[0].getAttribute("style") || "" };
-          entry[0].style[entry[1]] = entry[2];
-          return saved;
-        });
-    }
-  }
   function closeDollhouse() {
     if (!dollhouse) return false;
     var wasOpen = !dollhouse.hidden;
-    cancelDollhouseFirstReveal();
-    resumeDollhouseAnimations();
     dollhouse.hidden = true;
     var area = document.getElementById("hunt-fullscreen-area");
     if (area) area.classList.remove("dollhouse-open");
-    dollhouseRooms.forEach(function (spec) {
-      if (spec.room === "office" && spec.use) spec.use.style.display = "none";
-    });
+    syncDollhousePresentation();
     dollhouseLockedEnterRoom = "";
     dollhouseLockedEnterAt = 0;
-    restoreDollhousePreviewState();
     return wasOpen;
   }
   function dollhouseBlocked() {
@@ -115279,7 +115104,7 @@ function spawnDustMote(container) {
     return !!(strip.classList.contains("party-on") ||
       (strip.classList.contains("second-round") && stage && stage.classList.contains("dusk")));
   }
-  function addDollhouseRoom(host, spec, offset) {
+  function addDollhouseRoom(host, spec) {
     if (!host) return;
     var button = document.createElement("button");
     button.type = "button";
@@ -115288,41 +115113,16 @@ function spawnDustMote(container) {
     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 680 340");
     svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
-    var use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    var image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+    image.setAttribute("class", "loft-dollhouse-static-preview");
+    image.setAttribute("width", "680");
+    image.setAttribute("height", "340");
+    image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+    image.style.display = "none";
+    svg.appendChild(image);
     var targetId = spec.defaultArt ? "loft-dollhouse-" + spec.defaultArt + "-art" :
       (spec.floor === "main" ? "stage-" + spec.stage : spec.art);
-    if (targetId) {
-      use.setAttribute("class", "loft-dollhouse-live-preview");
-      use.setAttribute("href", "#" + targetId);
-      use.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + targetId);
-      if (offset) use.setAttribute("transform", "translate(" + (-offset) + " 0)");
-      if (spec.floor !== "main") { use.setAttribute("width", "680"); use.setAttribute("height", "340"); }
-      svg.appendChild(use);
-      if (spec.room === "office") {
-        var monitorPreview = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        monitorPreview.setAttribute("class", "loft-dollhouse-office-monitor-preview");
-        monitorPreview.setAttribute("transform", "translate(3,0) translate(-32.4,-21.3) scale(1.1025)");
-        monitorPreview.innerHTML = '<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#efe6cf"/>' +
-          '<ellipse cx="286" cy="172" rx="40" ry="22" fill="#d9a6a6" opacity=".12"/>' +
-          '<ellipse cx="350" cy="181" rx="42" ry="24" fill="#7f9ec0" opacity=".12"/>' +
-          '<g opacity=".2" transform="translate(292,156.5) scale(.28)"><use href="#cap-pink"/>' +
-          '<use href="#cap-blue"/></g><rect x="254" y="154" width="124" height="5.5" fill="#8e3a4a"/>';
-        svg.appendChild(monitorPreview);
-        spec.officeMonitorPreview = monitorPreview;
-      }
-      if (spec.room === "cinema") {
-        var cinemaLake = document.createElementNS("http://www.w3.org/2000/svg", "use");
-        cinemaLake.setAttribute("class", "loft-dollhouse-cinema-lake");
-        cinemaLake.setAttribute("href", "#cinema-lake-screen-art");
-        cinemaLake.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#cinema-lake-screen-art");
-        cinemaLake.setAttribute("x", "175.5");
-        cinemaLake.setAttribute("y", "44");
-        cinemaLake.setAttribute("width", "340");
-        cinemaLake.setAttribute("height", "196");
-        cinemaLake.setAttribute("pointer-events", "none");
-        svg.appendChild(cinemaLake);
-      }
-    } else {
+    if (!targetId) {
       svg.innerHTML = '<rect width="680" height="340" fill="#282128"/>' +
         '<path d="M0 35H680M0 95H680M0 155H680M0 215H680M0 275H680M85 35V95M255 35V95M425 35V95M595 35V95M170 95V155M340 95V155M510 95V155M85 155V215M255 155V215M425 155V215M595 155V215" stroke="#6f5554" stroke-width="8" opacity=".58"/>' +
         '<path d="M250 340V125Q340 70 430 125V340" fill="#171318" stroke="#9a7b63" stroke-width="13"/>' +
@@ -115362,8 +115162,12 @@ function spawnDustMote(container) {
     host.appendChild(button);
     spec.button = button;
     spec.svg = svg;
+    spec.image = image;
     spec.label = label;
-    spec.use = use;
+    spec.targetId = targetId || "";
+    spec.captureToken = 0;
+    spec.snapshots = Object.create(null);
+    spec.captureQueuedKeys = Object.create(null);
     dollhouseRooms.push(spec);
   }
   function buildDollhouse() {
@@ -115376,99 +115180,338 @@ function spawnDustMote(container) {
       ["cinema", "cinema-room-art", ""], ["bedroom", "bedroom-room-art", ""],
       ["entrance", "entrance-room-art", ""]
     ];
-    STAGES.forEach(function (stage, index) {
-      addDollhouseRoom(mainHost, { room: stage, stage: stage, floor: "main" }, index * 680);
+    STAGES.forEach(function (stage) {
+      addDollhouseRoom(mainHost, { room: stage, stage: stage, floor: "main" });
     });
     lower.forEach(function (entry, index) {
       addDollhouseRoom(lowerHost, {
         room: entry[0], stage: STAGES[index], floor: "lower", art: entry[1],
         defaultArt: entry[2] || ""
-      }, 0);
+      });
     });
   }
-  // The opening Kitchen has spare frame budget. Spend it one quiet idle slice at a time so
-  // the first picker view reuses the same live render trees as every later view.
-  var dollhouseWarmIndex = 0;
+  // The opening Kitchen has spare frame budget. Spend it on one canonical room capture per
+  // idle slice; retained bitmaps make subsequent views immediate without keeping ten SVG trees live.
   var dollhouseProjectorWarmed = false;
-  var dollhouseWarmIdle = 0;
-  var dollhouseWarmDelay = 0;
-  var DOLLHOUSE_WARM_GAP_MS = 320;
-  function cancelDollhouseBackgroundWarm() {
-    if (dollhouseWarmIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseWarmIdle);
-    if (dollhouseWarmDelay) clearTimeout(dollhouseWarmDelay);
-    dollhouseWarmIdle = 0;
-    dollhouseWarmDelay = 0;
-    var area = document.getElementById("hunt-fullscreen-area");
-    if (area && area.classList.contains("dollhouse-warm")) return;
-    dollhouseRooms.forEach(function (spec) {
-      spec.button.style.display = "";
-      var stage = spec.floor === "main" && document.getElementById("stage-" + spec.stage);
-      if (stage) stage.classList.remove("dollhouse-source-warm");
-    });
-    if (dollhouse) dollhouse.classList.remove("dollhouse-warm");
+  function dollhouseCaptureCss() {
+    if (dollhouseCaptureStyles) return dollhouseCaptureStyles;
+    dollhouseCaptureStyles = Array.prototype.map.call(document.querySelectorAll("style"), function (style) {
+      return style.textContent || "";
+    }).join("\n").replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\bhtml(?=[.#:\s{])/g, "svg");
+    return dollhouseCaptureStyles;
   }
-  function finishDollhouseBackgroundWarm() {
-    if (!dollhouseRooms.length) return;
-    var area = document.getElementById("hunt-fullscreen-area");
-    if (dollhouseWarmIndex >= dollhouseRooms.length &&
-        dollhouse.classList.contains("dollhouse-warm") &&
-        area && area.classList.contains("dollhouse-warm")) return;
-    if (dollhouseWarmIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseWarmIdle);
-    if (dollhouseWarmDelay) clearTimeout(dollhouseWarmDelay);
-    dollhouseWarmIdle = 0;
-    dollhouseWarmDelay = 0;
-    dollhouseRooms.forEach(function (spec) {
-      spec.button.style.display = "";
-      var stage = spec.floor === "main" && document.getElementById("stage-" + spec.stage);
-      if (stage) stage.classList.remove("dollhouse-source-warm");
-    });
-    dollhouseWarmIndex = dollhouseRooms.length;
-    dollhouse.classList.add("dollhouse-warm");
-    if (area) area.classList.add("dollhouse-warm");
+  function stripDollhouseCaptureNodes(root) {
+    root.querySelectorAll("foreignObject,script,animate,animateTransform,animateMotion,set")
+      .forEach(function (node) { node.remove(); });
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+    var comments = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    comments.forEach(function (node) { node.remove(); });
   }
-  function scheduleDollhouseBackgroundWarm() {
-    if (!window.requestIdleCallback || dollhouseWarmIdle || dollhouseWarmDelay ||
-        (dollhouseRooms.length && dollhouseWarmIndex >= dollhouseRooms.length)) return;
-    dollhouseWarmDelay = setTimeout(function () {
-      dollhouseWarmDelay = 0;
-      dollhouseWarmIdle = window.requestIdleCallback(warmDollhouseInBackground);
-    }, DOLLHOUSE_WARM_GAP_MS);
-  }
-  function warmDollhouseInBackground() {
-    dollhouseWarmIdle = 0;
-    if (!dollhouse || !dollhouse.hidden || document.hidden) return;
-    if (window.__currentStageName !== "kitchen" || lowerRoomOwnsViewport() ||
-        strip.classList.contains("party-on")) {
-      cancelDollhouseBackgroundWarm();
-      return;
+  function appendDollhouseExternalUses(source, defs) {
+    var known = new Set();
+    source.querySelectorAll("[id]").forEach(function (node) { known.add(node.id); });
+    defs.querySelectorAll("[id]").forEach(function (node) { known.add(node.id); });
+    var pending = Array.prototype.slice.call(source.querySelectorAll("use"));
+    for (var index = 0; index < pending.length; index++) {
+      var use = pending[index];
+      var href = use.getAttribute("href") || use.getAttribute("xlink:href") || "";
+      if (href.charAt(0) !== "#" || known.has(href.slice(1))) continue;
+      var target = document.getElementById(href.slice(1));
+      if (!target || target.namespaceURI !== "http://www.w3.org/2000/svg") continue;
+      var clone = target.cloneNode(true);
+      stripDollhouseCaptureNodes(clone);
+      defs.appendChild(clone);
+      clone.querySelectorAll("[id]").forEach(function (node) { known.add(node.id); });
+      if (clone.id) known.add(clone.id);
+      pending.push.apply(pending, Array.prototype.slice.call(clone.querySelectorAll("use")));
     }
+  }
+  function dollhouseCaptureTarget(spec) {
+    if (!spec || !spec.targetId) return null;
+    return document.getElementById(spec.targetId);
+  }
+  function dollhouseNight() {
+    if (dollhouseRecoveryPreview) return !dollhouseRecoveryPreview.daylight;
+    var balcony = document.getElementById("stage-balcony");
+    return !!(balcony && balcony.classList.contains("dusk"));
+  }
+  function dollhouseVariantKey(spec) {
+    if (spec && spec.floor === "main" &&
+        (window.__gardenPartyOn || (dollhouseRecoveryPreview && dollhouseRecoveryPreview.party))) return "party";
+    return dollhouseNight() ? "night" : "day";
+  }
+  function buildDollhouseCaptureSvg(spec, variant) {
+    var target = dollhouseCaptureTarget(spec);
+    if (!target) return "";
+    var shell = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    shell.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    shell.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+    shell.setAttribute("viewBox", "0 0 680 340");
+    shell.setAttribute("width", "680");
+    shell.setAttribute("height", "340");
+    var shellClasses = (document.documentElement.getAttribute("class") || "").split(/\s+/).filter(function (name) {
+      return name && name !== "mir-uv" && name !== "mir-uv-live";
+    });
+    shell.setAttribute("class", shellClasses.join(" "));
+    shell.setAttribute("xml:base", new URL(".", location.href).href);
+    var style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    style.textContent = dollhouseCaptureCss() +
+      "\n*{animation:none!important;transition:none!important}" +
+      "\n#hunt-fullscreen-area,#loft-game-strip{transform:none!important}" +
+      "\n#bathroom-room,#cinema-room,#bedroom-room,#entrance-room,#prince-basement" +
+      "{display:inline!important;visibility:visible!important;opacity:1!important;transform:none!important}";
+    shell.appendChild(style);
+    var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    var pageDefs = document.querySelector("#loft-game-strip > defs");
+    if (pageDefs) Array.prototype.forEach.call(pageDefs.children, function (node) {
+      defs.appendChild(node.cloneNode(true));
+    });
+    shell.appendChild(defs);
+    var viewport = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    var pageViewport = strip.closest(".hunt-viewport");
+    viewport.setAttribute("class", pageViewport ? pageViewport.getAttribute("class") || "hunt-viewport" : "hunt-viewport");
+    var area = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    area.id = "hunt-fullscreen-area";
+    var pageArea = document.getElementById("hunt-fullscreen-area");
+    area.setAttribute("class", pageArea ? pageArea.getAttribute("class") || "" : "");
+    var stripClone = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    stripClone.id = "loft-game-strip";
+    stripClone.setAttribute("class", strip.getAttribute("class") || "");
+    stripClone.classList.remove("uv-mode");
+    if (variant !== "party") stripClone.classList.remove("party-on");
+    var roomWrap = stripClone;
+    if (spec.floor === "lower") {
+      roomWrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      roomWrap.id = spec.room === "dungeon" ? "prince-basement" : spec.room + "-room";
+      var sourceRoom = document.getElementById(roomWrap.id);
+      if (sourceRoom) roomWrap.setAttribute("class", sourceRoom.getAttribute("class") || "");
+      stripClone.appendChild(roomWrap);
+    }
+    var clone;
+    if (target.localName === "symbol") {
+      clone = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      Array.prototype.forEach.call(target.children, function (node) { clone.appendChild(node.cloneNode(true)); });
+    } else {
+      clone = target.cloneNode(true);
+    }
+    stripDollhouseCaptureNodes(clone);
+    clone.classList.remove("stage-far", "dollhouse-source-warm");
+    clone.style.setProperty("display", "inline", "important");
+    clone.style.setProperty("visibility", "visible", "important");
+    clone.style.setProperty("opacity", "1", "important");
+    if (spec.floor === "main") {
+      // The canonical upstairs stages are positioned across the 5× strip with SVG transform
+      // attributes. Remove that positioning from the detached 680px capture structurally:
+      // WebKit does not reliably let an important CSS transform override the presentation
+      // attribute while rasterizing an SVG blob.
+      clone.removeAttribute("transform");
+      clone.style.setProperty("transform", "none", "important");
+    }
+    roomWrap.appendChild(clone);
+    area.appendChild(stripClone);
+    viewport.appendChild(area);
+    shell.appendChild(viewport);
+    appendDollhouseExternalUses(shell, defs);
+    stripDollhouseCaptureNodes(shell);
+    return new XMLSerializer().serializeToString(shell);
+  }
+  function setDollhouseSnapshot(spec, variant, data) {
+    spec.snapshots[variant] = data;
+    spec.snapshotReady = true;
+    spec.snapshotBytes = Object.keys(spec.snapshots).reduce(function (total, key) {
+      return total + spec.snapshots[key].length;
+    }, 0);
+  }
+  function captureDollhouseRoom(spec, variant) {
+    if (!spec || !spec.image || !dollhouseCaptureTarget(spec)) return Promise.resolve(false);
+    if (dollhouseVariantKey(spec) !== variant) return Promise.resolve(false);
+    var token = ++spec.captureToken;
+    var started = performance.now();
+    // Cuddly deliberately gates its Party children to the attended room. Materialize that
+    // persistent layer only for the synchronous clone, then return the live source immediately.
+    // This gives the frozen card the saved assignment without keeping the off-room animation live.
+    var showCuddlyKids = spec.room === "cuddly" && variant === "party" &&
+      !dollhouseRecoveryPreview && !!window.__gardenPartyOn;
+    if (showCuddlyKids && window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(true);
+    var source = buildDollhouseCaptureSvg(spec, variant);
+    if (showCuddlyKids && window.__setKidGamesDollhousePreview) window.__setKidGamesDollhousePreview(false);
+    if (!source) return Promise.resolve(false);
+    var sourceUrl = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
+    return new Promise(function (resolve) {
+      var bitmap = new Image();
+      bitmap.decoding = "async";
+      bitmap.onload = function () {
+        var canvas = document.createElement("canvas");
+        canvas.width = 680;
+        canvas.height = 340;
+        var context = canvas.getContext("2d");
+        context.drawImage(bitmap, 0, 0, 680, 340);
+        URL.revokeObjectURL(sourceUrl);
+        bitmap.removeAttribute("src");
+        if (token !== spec.captureToken || dollhouseVariantKey(spec) !== variant) {
+          resolve(false); return;
+        }
+        var data = canvas.toDataURL("image/webp", .82);
+        setDollhouseSnapshot(spec, variant, data);
+        spec.captureMs = performance.now() - started;
+        dollhouseCaptureCount++;
+        syncDollhousePresentation();
+        resolve(true);
+      };
+      bitmap.onerror = function () {
+        URL.revokeObjectURL(sourceUrl);
+        resolve(false);
+      };
+      bitmap.src = sourceUrl;
+    });
+  }
+  function scheduleDollhouseCapture() {
+    if (dollhouseCaptureIdle || dollhouseCaptureDelay || dollhouseCaptureBusy ||
+        !dollhouseCaptureQueue.length || document.hidden) return;
+    var run = function () {
+      dollhouseCaptureIdle = 0;
+      var job = dollhouseCaptureQueue.shift();
+      if (!job || !job.spec) return;
+      var spec = job.spec;
+      delete spec.captureQueuedKeys[job.variant];
+      if (dollhouseVariantKey(spec) !== job.variant) {
+        queueDollhouseCapture(spec, dollhouseVariantKey(spec), true, false);
+        scheduleDollhouseCapture();
+        return;
+      }
+      dollhouseCaptureBusy = true;
+      captureDollhouseRoom(spec, job.variant).finally(function () {
+        dollhouseCaptureBusy = false;
+        dollhouseCaptureDelay = setTimeout(function () {
+          dollhouseCaptureDelay = 0;
+          scheduleDollhouseCapture();
+        }, dollhouseCaptureQueue[0] && dollhouseCaptureQueue[0].urgent ? 48 : DOLLHOUSE_CAPTURE_GAP_MS);
+      });
+    };
+    if (dollhouseCaptureQueue[0].urgent) {
+      dollhouseCaptureDelay = setTimeout(function () { dollhouseCaptureDelay = 0; run(); }, 32);
+    } else if (window.requestIdleCallback) dollhouseCaptureIdle = window.requestIdleCallback(run, { timeout: 700 });
+    else dollhouseCaptureDelay = setTimeout(function () { dollhouseCaptureDelay = 0; run(); }, 40);
+  }
+  function queueDollhouseCapture(spec, variant, priority, force, urgent) {
+    if (!spec || !variant || !dollhouseCaptureTarget(spec) ||
+        (!force && spec.snapshots[variant]) || spec.captureQueuedKeys[variant]) return;
+    spec.captureQueuedKeys[variant] = true;
+    var job = { spec: spec, variant: variant, urgent: !!urgent };
+    if (priority) dollhouseCaptureQueue.unshift(job);
+    else dollhouseCaptureQueue.push(job);
+    if (urgent && dollhouseCaptureIdle && window.cancelIdleCallback) {
+      window.cancelIdleCallback(dollhouseCaptureIdle);
+      dollhouseCaptureIdle = 0;
+    }
+    if (urgent && dollhouseCaptureDelay) {
+      clearTimeout(dollhouseCaptureDelay);
+      dollhouseCaptureDelay = 0;
+    }
+    scheduleDollhouseCapture();
+  }
+  function queueDollhouseCaptures(options) {
+    options = options || {};
+    buildDollhouse();
+    var active = activeLowerRoom();
+    var current = active ? active.id : window.__currentStageName;
+    var rooms = dollhouseRooms.slice();
+    if (options.partyFirst) {
+      var partyOrder = ["garden", "kitchen", "cuddly", "office", "balcony"];
+      rooms.sort(function (a, b) {
+        var ai = partyOrder.indexOf(a.room), bi = partyOrder.indexOf(b.room);
+        if (ai < 0) ai = partyOrder.length + dollhouseRooms.indexOf(a);
+        if (bi < 0) bi = partyOrder.length + dollhouseRooms.indexOf(b);
+        return ai - bi;
+      });
+      // queueDollhouseCapture prepends urgent work; walk backward so Garden remains first.
+      rooms.reverse();
+    }
+    rooms.forEach(function (spec) {
+      if (options.mainOnly && spec.floor !== "main") return;
+      var variant = dollhouseVariantKey(spec);
+      queueDollhouseCapture(spec, variant,
+        !!options.partyFirst || spec.room === current, !!options.force, !!options.urgent);
+    });
+  }
+  function refreshDollhouseCaptures(reason) {
+    // Recovery's preview DOM is deliberately incomplete: it carries the saved lighting and Party
+    // shell, but subsystem adapters have not restored the saved people yet. Keep its useful base
+    // captures, and defer authoritative invalidation until applyCheckpointNow finishes atomically.
+    if (dollhouseRecoveryPreview && reason !== "recovery-applied") return;
+    // Lighting variants are reusable. Party is deliberately recaptured once per ignition so the
+    // five upstairs cards freeze the actual current occupants, not an earlier party's roster.
+    var partyStart = (reason === "party" || reason === "recovery-applied") &&
+      !!window.__gardenPartyOn;
+    if (reason === "party" || reason === "recovery-applied") {
+      dollhouseCaptureQueue = dollhouseCaptureQueue.filter(function (job) {
+        if (job.spec.floor !== "main") return true;
+        delete job.spec.captureQueuedKeys[job.variant];
+        return false;
+      });
+    }
+    if (partyStart) {
+      dollhouseRooms.forEach(function (spec) {
+        if (spec.floor !== "main") return;
+        delete spec.snapshots.party;
+        spec.captureToken++;
+      });
+    }
+    queueDollhouseCaptures({
+      mainOnly: partyStart,
+      partyFirst: partyStart,
+      force: partyStart,
+      urgent: partyStart
+    });
+    syncDollhousePresentation();
+  }
+  function cancelDollhouseBackgroundWarm() {
+    if (dollhouseCaptureIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseCaptureIdle);
+    if (dollhouseCaptureDelay) clearTimeout(dollhouseCaptureDelay);
+    dollhouseCaptureIdle = 0;
+    dollhouseCaptureDelay = 0;
+  }
+  function finishDollhouseBackgroundWarm(mode, saved) {
+    buildDollhouse();
+    if (mode) {
+      dollhouseWarmMode = mode;
+      dollhouseRecoveryPreview = mode === "continue" && saved && saved.progress ? {
+        party: !!saved.progress.party,
+        daylight: saved.progress.daylight !== false
+      } : null;
+    }
+    queueDollhouseCaptures();
+  }
+  function startDollhouseBackgroundWarm(mode, saved) {
+    dollhouseWarmStarted = true;
     if (!dollhouseProjectorWarmed) {
       if (window.__primeCuddlyProjectorPreview) window.__primeCuddlyProjectorPreview();
       dollhouseProjectorWarmed = true;
-      scheduleDollhouseBackgroundWarm();
-      return;
     }
-    if (!dollhouseRooms.length) {
-      buildDollhouse();
-      dollhouseRooms.forEach(function (spec) { spec.button.style.display = "none"; });
-      dollhouse.classList.add("dollhouse-warm");
-    }
-    var spec = dollhouseRooms[dollhouseWarmIndex++];
-    if (spec) {
-      spec.button.style.display = "";
-      var stage = spec.floor === "main" && document.getElementById("stage-" + spec.stage);
-      if (stage) stage.classList.add("dollhouse-source-warm");
-    }
-    if (dollhouseWarmIndex >= dollhouseRooms.length) finishDollhouseBackgroundWarm();
-    else scheduleDollhouseBackgroundWarm();
+    finishDollhouseBackgroundWarm(mode || "fresh", saved || null);
   }
-  function startDollhouseBackgroundWarm() {
-    if (!window.requestIdleCallback || dollhouseWarmIdle || dollhouseWarmDelay ||
-        (dollhouseRooms.length && dollhouseWarmIndex >= dollhouseRooms.length)) return;
-    dollhouseWarmIdle = window.requestIdleCallback(warmDollhouseInBackground);
-  }
-  if (window.__installedLoaderComplete) startDollhouseBackgroundWarm();
-  else window.addEventListener("loftloadercomplete", startDollhouseBackgroundWarm, { once:true });
+  window.__warmDollhouseFromEntry = function (saved) {
+    startDollhouseBackgroundWarm(saved ? "continue" : "fresh", saved || null);
+  };
+  window.__finishDollhouseRecoveryWarm = function () {
+    dollhouseRecoveryPreview = null;
+    dollhouseWarmMode = "session";
+    refreshDollhouseCaptures(window.__gardenPartyOn ? "recovery-applied" : "lighting");
+  };
+  window.__cancelDollhouseRecoveryWarm = function () {
+    dollhouseRecoveryPreview = null;
+    dollhouseWarmMode = "fresh";
+    queueDollhouseCaptures();
+    syncDollhousePresentation();
+  };
+  // Browser load completion is deliberately independent of the splash action. A visitor who
+  // pauses on CLICK ME should still spend that quiet time preparing the first Dollhouse view.
+  if (document.readyState === "complete") startDollhouseBackgroundWarm("fresh", null);
+  else window.addEventListener("load", function () {
+    if (!dollhouseWarmStarted) startDollhouseBackgroundWarm("fresh", null);
+  }, { once:true });
   function setDollhouseCursor(index) {
     if (!dollhouseRooms.length) return;
     var next = Math.max(0, Math.min(dollhouseRooms.length - 1, index));
@@ -115487,12 +115530,42 @@ function spawnDustMote(container) {
       spec.button.classList.toggle("visited", !!window.__secondRound && roomSeen(spec.room));
     });
   }
+  function dollhouseCurrentRoom() {
+    var lower = activeLowerRoom();
+    return lower ? lower.id : window.__currentStageName;
+  }
+  function dollhouseFallbackSnapshot(spec, variant) {
+    if (spec.snapshots[variant]) return spec.snapshots[variant];
+    var fallback = variant === "party" ? (dollhouseNight() ? "night" : "day") : "";
+    if (fallback && spec.snapshots[fallback]) return spec.snapshots[fallback];
+    var keys = Object.keys(spec.snapshots);
+    return keys.length ? spec.snapshots[keys[0]] : "";
+  }
+  function syncDollhousePresentation() {
+    dollhouseRooms.forEach(function (spec) {
+      var variant = dollhouseVariantKey(spec);
+      var data = dollhouseFallbackSnapshot(spec, variant);
+      if (spec.image && data) {
+        if (spec.image.getAttribute("href") !== data) {
+          spec.image.setAttribute("href", data);
+          spec.image.setAttributeNS("http://www.w3.org/1999/xlink", "href", data);
+        }
+        spec.image.style.display = "";
+      } else if (spec.image) spec.image.style.display = "none";
+      spec.button.classList.remove("live-preview");
+      spec.button.dataset.dollhouseVariant = variant;
+    });
+    var ready = dollhouseRooms.length && dollhouseRooms.every(function (spec) {
+      return !!spec.snapshots[dollhouseVariantKey(spec)];
+    });
+    if (dollhouse) dollhouse.classList.toggle("dollhouse-preparing", !ready);
+    return 0;
+  }
   function renderDollhouse() {
     if (window.__primeCuddlyProjectorPreview) window.__primeCuddlyProjectorPreview();
     buildDollhouse();
     syncDollhouseLocks();
     var activeLower = activeLowerRoom();
-    var transport = window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState();
     dollhouseRooms.forEach(function (spec) {
       var discovered = roomSeen(spec.room);
       spec.button.classList.toggle("current", discovered &&
@@ -115500,36 +115573,14 @@ function spawnDustMote(container) {
                                 : !activeLower && window.__currentStageName === spec.room));
       var bar = spec.room === "kitchen" && dollhouseBarActive();
       spec.button.classList.toggle("bar-active", bar);
-      if (spec.room === "office" && spec.officeMonitorPreview) {
-        var officeMonitor = document.getElementById("office-monitor");
-        spec.officeMonitorPreview.style.display = officeMonitor && officeMonitor.classList.contains("screen-on") ? "" : "none";
-      }
-      if (spec.room === "entrance" && spec.use) {
-        var liveRoadtrip = dollhouseRoadtripLive(transport);
-        var previewId = liveRoadtrip ? "entrance-roadtrip-world" : "entrance-room-art";
-        spec.use.setAttribute("href", "#" + previewId);
-        spec.use.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + previewId);
-        var previewViewBox = "0 0 680 340";
-        if (liveRoadtrip) {
-          var entrance = document.getElementById("entrance-room");
-          previewViewBox = entrance && entrance.classList.contains("roadtrip-route-camp")
-            ? "0 -120 680 340" : "0 -120 680 216";
-        }
-        var box = previewViewBox.trim().split(/\s+/).map(Number);
-        if (box.length !== 4 || box.some(function (value) { return !isFinite(value); })) {
-          box = [0, 0, 680, 340];
-          previewViewBox = box.join(" ");
-        }
-        if (spec.svg) spec.svg.setAttribute("viewBox", previewViewBox);
-        spec.use.setAttribute("x", liveRoadtrip ? 0 : box[0]);
-        spec.use.setAttribute("y", liveRoadtrip ? 0 : box[1]);
-        spec.use.setAttribute("width", box[2]);
-        spec.use.setAttribute("height", box[3]);
-        spec.button.classList.toggle("roadtrip-active", liveRoadtrip);
+      if (spec.room === "entrance") {
+        if (spec.svg) spec.svg.setAttribute("viewBox", "0 0 680 340");
+        spec.button.classList.remove("roadtrip-active");
       }
       spec.label.textContent = spec.room === "kitchen" ? floorText("room_kitchen_bar") :
         (spec.room === "garden" ? floorText("room_garden_party") : roomDotLabel(spec.room));
     });
+    syncDollhousePresentation();
     var title = document.getElementById("loft-dollhouse-title");
     if (title) title.textContent = floorText("dollhouse_title");
   }
@@ -115546,46 +115597,19 @@ function spawnDustMote(container) {
     if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     pauseRoadtripForDollhouse();
     if (!dollhouseRooms.length) buildDollhouse();
-    dollhouseRooms.forEach(function (spec) {
-      if (spec.room === "office" && spec.use) spec.use.style.display = "";
-    });
     finishDollhouseBackgroundWarm();
-    prepareDollhousePreviewState();
-    renderDollhouse();
-    stageDollhouseFirstReveal();
-    if (!dollhouseFirstRevealComplete && dollhouseFirstRevealQueue.length) {
-      dollhouse.classList.add("dollhouse-preparing");
-    }
-    dollhouse.classList.add("dollhouse-warm");
     dollhouse.hidden = false;
     var area = document.getElementById("hunt-fullscreen-area");
-    if (area) area.classList.add("dollhouse-warm", "dollhouse-open");
-    syncDollhouseAnimationHealth();
+    if (area) area.classList.add("dollhouse-open");
+    renderDollhouse();
+    // Retained captures make reopening immediate. State-specific refreshes are queued by
+    // their owners; opening the map must not rebuild all ten rooms on the critical path.
+    queueDollhouseCaptures({ priority: true });
     var selected = dollhouseRooms.findIndex(function (spec) {
       return spec.floor === (activeLowerRoom() ? "lower" : "main") &&
         (spec.floor === "lower" ? activeLowerRoom().id === spec.room : window.__currentStageName === spec.room);
     });
     setDollhouseCursor(selected >= 0 ? selected : 0);
-    if (!dollhouseFirstRevealComplete && dollhouseFirstRevealQueue.length) {
-      // Queue independently: WebKit can stop advancing a nested rAF/timer chain while
-      // one large live SVG <use> tree composites. Independent tasks still spread the
-      // work across paints without letting one preview strand the remaining cards.
-      var revealQueue = dollhouseFirstRevealQueue.slice();
-      dollhouseFirstRevealQueue = [];
-      revealQueue.forEach(function (spec, index) {
-        dollhouseFirstRevealTimers.push(setTimeout(function () {
-          if (!dollhouse || dollhouse.hidden) return;
-          if (spec.use) spec.use.style.display = "";
-          if (index === revealQueue.length - 1) {
-            dollhouseFirstRevealComplete = true;
-            dollhouseFirstRevealTimers.push(setTimeout(function () {
-              if (dollhouse && !dollhouse.hidden) dollhouse.classList.remove("dollhouse-preparing");
-              dollhouseFirstRevealTimers = [];
-            }, 20));
-          }
-        }, 20 * (index + 1)));
-      });
-    }
     if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     return true;
   }
@@ -115697,22 +115721,32 @@ function spawnDustMote(container) {
   window.__openDollhouse = openDollhouse;
   window.__closeDollhouse = closeDollhouse;
   window.__toggleDollhouse = toggleDollhouse;
-  window.addEventListener("framehealthchange", syncDollhouseAnimationHealth);
+  window.__refreshDollhouseCaptures = refreshDollhouseCaptures;
+  window.addEventListener("framehealthchange", syncDollhousePresentation);
   window.__dollhouseState = function () {
     var area = document.getElementById("hunt-fullscreen-area");
     return {
       eligible: dollhouseEligible(), open: !!(dollhouse && !dollhouse.hidden),
-      pausedAnimations: dollhousePausedAnimations.length,
       backgroundWarm: {
+        mode: dollhouseWarmMode,
         projector: dollhouseProjectorWarmed,
-        previews: dollhouseWarmIndex,
-        complete: !!(area && area.classList.contains("dollhouse-warm")),
-        pending: !!(dollhouseWarmIdle || dollhouseWarmDelay)
+        previews: dollhouseCaptureCount,
+        complete: dollhouseRooms.length === 10 && dollhouseRooms.every(function (spec) {
+          return !!spec.snapshots[dollhouseVariantKey(spec)];
+        }),
+        pending: !!(dollhouseCaptureIdle || dollhouseCaptureDelay || dollhouseCaptureBusy || dollhouseCaptureQueue.length)
       },
+      livePreviews: dollhouseRooms.filter(function (spec) { return !!(spec.use && spec.use.parentNode); })
+        .map(function (spec) { return spec.room; }),
       controlsUnlocked: dollhouseControlsUnlocked(),
       button: !!(dollhouseBtn && !dollhouseBtn.hidden),
       floorDisabled: !!(floorBtn && floorBtn.disabled),
-      rooms: dollhouseRooms.map(function (spec) { return { room: spec.room, floor: spec.floor, locked: spec.button.classList.contains("locked") }; })
+      rooms: dollhouseRooms.map(function (spec) {
+        return { room: spec.room, floor: spec.floor, locked: spec.button.classList.contains("locked"),
+          snapshot: !!spec.snapshotReady, variant: dollhouseVariantKey(spec),
+          variants: Object.keys(spec.snapshots), captureMs: spec.captureMs || 0,
+          bytes: spec.snapshotBytes || 0 };
+      })
     };
   };
   var lowerRoomSlideTimer = null;
@@ -124167,6 +124201,7 @@ function spawnDustMote(container) {
     if (on && window.__partyForegroundActive && !window.__partyForegroundActive()) {
       suspendPartyForegroundRuntime();
     }
+    if (wasOn !== on && window.__refreshDollhouseCaptures) window.__refreshDollhouseCaptures("party");
   }
   window.__setGardenParty = setGardenParty;
   function pauseActivePartyBed() {
@@ -131228,6 +131263,9 @@ function spawnDustMote(container) {
     // applied. This makes Continue one atomic reveal instead of exposing fresh-page decor.
     recoveryPreviewLook = null;
     hideRecoveryGate();
+    // The gate warmed the saved lighting/Party shell. Now that every checkpoint adapter has
+    // restored its authoritative occupants, replace only the affected Party cards in idle slices.
+    if (window.__finishDollhouseRecoveryWarm) window.__finishDollhouseRecoveryWarm();
     if (window.__frameHealthBeginGameplay) window.__frameHealthBeginGameplay();
     if (window.__secondRound && window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
     syncLoftAttendedTime();
@@ -131346,6 +131384,10 @@ function spawnDustMote(container) {
     if (recoveryArea) recoveryArea.classList.add("recovery-active");
     dockIntroWatchControls(recoveryArea);
     previewRecoveryRoom(saved);
+    // Recovery preview has already applied the saved room, day/night, and Party shell. Use the
+    // decision screen's quiet time to build those variants; occupant-sensitive Party cards are
+    // finalized after Continue restores the subsystem adapters.
+    if (window.__warmDollhouseFromEntry) window.__warmDollhouseFromEntry(saved);
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate; gate; gate; gate;
     var brand = document.createElement("p"); recoveryBrand = brand; brand.className = "loft-entry-brand"; brand.setAttribute("data-i", "hunt_title"); brand.textContent = huntTitleText();
@@ -131364,7 +131406,9 @@ function spawnDustMote(container) {
         return;
       }
       runGameEntryAction(function () {
-        hideRecoveryGate(); clearCheckpoint(); resetHunt({ enterPageMode: true, resetDateTime: false });
+        hideRecoveryGate();
+        if (window.__cancelDollhouseRecoveryWarm) window.__cancelDollhouseRecoveryWarm();
+        clearCheckpoint(); resetHunt({ enterPageMode: true, resetDateTime: false });
       });
     }
     continueBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(0); });

@@ -9,6 +9,14 @@ var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+  async function waitFor(predicate, timeout) {
+    var until = Date.now() + (timeout || 8000);
+    while (Date.now() < until) {
+      if (predicate()) return true;
+      await sleep(40);
+    }
+    return !!predicate();
+  }
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   function key(name, repeat) {
     var event = new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true, repeat: !!repeat });
@@ -62,39 +70,26 @@ var harness = String.raw`<script>
       undiscoveredTab && state().eligible && !state().controlsUnlocked && state().button && state().floorDisabled && state().open &&
         !document.getElementById("hunt-floor-btn").hidden && !document.getElementById("hunt-dollhouse-btn").hidden,
       JSON.stringify(state()));
-    var firstUpperPreviews = [].slice.call(document.querySelectorAll("#loft-dollhouse-main use.loft-dollhouse-live-preview"));
-    var firstLowerPreviews = [].slice.call(document.querySelectorAll("#loft-dollhouse-lower use.loft-dollhouse-live-preview"));
-    check("the first Dollhouse stays visually withheld while its upper previews prepare",
-      firstUpperPreviews.length === 5 && firstUpperPreviews.every(function (use) { return use.style.display === "none"; }) &&
-        firstLowerPreviews.length === 5 && firstLowerPreviews.every(function (use) { return use.style.display !== "none"; }) &&
-        getComputedStyle(document.getElementById("loft-dollhouse")).opacity === "0",
-      JSON.stringify({ upper: firstUpperPreviews.map(function (use) { return use.style.display; }),
-        lower: firstLowerPreviews.map(function (use) { return use.style.display; }),
-        opacity: getComputedStyle(document.getElementById("loft-dollhouse")).opacity }));
-    await sleep(140);
-    check("the first Dollhouse appears only after every live upper preview is ready",
-      firstUpperPreviews.every(function (use) { return use.style.display !== "none"; }) &&
+    var firstPreviews = [].slice.call(document.querySelectorAll(".loft-dollhouse-static-preview"));
+    check("the Dollhouse owns ten static image surfaces and no live room clones",
+      firstPreviews.length === 10 && !document.querySelector(".loft-dollhouse-room use") &&
+        state().livePreviews.length === 0,
+      JSON.stringify({ images: firstPreviews.length, live: state().livePreviews }));
+    var warmed = await waitFor(function () { return state().backgroundWarm.complete; });
+    check("the first Dollhouse appears only after every desired capture is ready",
+      warmed && firstPreviews.every(function (image) { return !!image.getAttribute("href"); }) &&
         getComputedStyle(document.getElementById("loft-dollhouse")).opacity === "1",
-      JSON.stringify({ upper: firstUpperPreviews.map(function (use) { return use.style.display; }),
-        opacity: getComputedStyle(document.getElementById("loft-dollhouse")).opacity }));
+      JSON.stringify(state()));
     check("opening The Loft pauses an active Road Trip exactly once",
       transportPauseCalls === 1 && transportPaused,
       JSON.stringify({ calls: transportPauseCalls, paused: transportPaused }));
-    check("the Entrance card mirrors the active Road Trip without its pause overlay",
-      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") ===
-        "#entrance-roadtrip-world" &&
-      roomButton("entrance").querySelector("svg").getAttribute("viewBox") === "0 -120 680 216" &&
-      document.getElementById("entrance-roadtrip-pause-dialog").style.display === "none");
-    check("the first Cuddly-puddly thumbnail is initialized with a warm projector image",
-      document.getElementById("cuddly-wallscreen").classList.contains("chan-fire") &&
-      !!document.getElementById("cuddly-flame-img").getAttribute("href") &&
-      document.getElementById("cuddly-flame-img").style.filter === "none");
-    check("the Entrance thumbnail uses the real scene's daylight state",
-      document.getElementById("entrance-room-art").classList.contains("dollhouse-day-preview") &&
-      !document.getElementById("entrance-sky-bg").getAttribute("style"));
-    check("the first Bathroom thumbnail has a towel paint fallback",
-      document.getElementById("bathroom-waffle-towel").getAttribute("fill") ===
-        "url(#bathroom-waffle) #a8a39e");
+    check("the static Entrance capture never exposes the Road Trip pause overlay",
+      roomButton("entrance").dataset.dollhouseVariant === "day" &&
+        !roomButton("entrance").querySelector("#entrance-roadtrip-pause-dialog"),
+      roomButton("entrance").dataset.dollhouseVariant);
+    check("warming leaves the live Cuddly and Entrance sources untouched",
+      !document.getElementById("cuddly-wallscreen").classList.contains("chan-fire") &&
+        !document.getElementById("entrance-room-art").classList.contains("dollhouse-day-preview"));
     key("Tab");
     var realPartyCoachActive = window.__partyCoachModalActive;
     var realRoadtripCoachActive = window.__roadtripCompletionCoachActive;
@@ -107,25 +102,23 @@ var harness = String.raw`<script>
     window.__roadtripCompletionCoachActive = realRoadtripCoachActive;
     var parkedUpperSources = ["stage-garden", "stage-cuddly", "stage-office", "stage-balcony"]
       .map(function (id) { return document.getElementById(id); });
-    check("opening The Loft makes every parked upper source tree raster-visible for WebKit",
+    check("opening The Loft leaves every off-room source tree paint-parked",
       parkedUpperSources.every(function (stage) {
-        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&
-          getComputedStyle(stage.firstElementChild).visibility === "visible";
+        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "hidden" &&
+          getComputedStyle(stage.firstElementChild).visibility === "hidden";
       }), parkedUpperSources.map(function (stage) {
         return stage.id + ":" + getComputedStyle(stage).visibility + "/" +
           getComputedStyle(stage.firstElementChild).visibility;
       }).join(","));
     var officeMonitor = document.getElementById("office-monitor");
     var monitorScreen = document.getElementById("office-monitor-screen-content");
-    var officeMonitorPreview = document.querySelector('[data-dollhouse-room="office"] .loft-dollhouse-office-monitor-preview');
-    check("the powered-off Office preview keeps the real dark monitor instead of caps art",
-      officeMonitor.classList.contains("dollhouse-preview") &&
-        getComputedStyle(monitorScreen).display === "none" &&
-        officeMonitorPreview && getComputedStyle(officeMonitorPreview).display === "none");
+    check("the static Office card does not put the live monitor into preview mode",
+      !officeMonitor.classList.contains("dollhouse-preview"), officeMonitor.getAttribute("class"));
     officeMonitor.classList.add("screen-on");
     window.__refreshRoomDots();
-    check("powering the monitor reveals the static caps thumbnail",
-      getComputedStyle(officeMonitorPreview).display !== "none");
+    check("a retained Office capture is not rebuilt by monitor-only activity",
+      !!roomButton("office").querySelector("image").getAttribute("href") &&
+        !officeMonitor.classList.contains("dollhouse-preview"));
     officeMonitor.classList.remove("screen-on");
     window.__refreshRoomDots();
     key("Tab");
@@ -137,13 +130,12 @@ var harness = String.raw`<script>
       getComputedStyle(document.getElementById("loft-dollhouse")).display === "none");
     check("closing The Loft retains every cached room card in its warm DOM",
       document.querySelectorAll(".loft-dollhouse-room").length === 10);
-    check("closing The Loft bounds every warm upper-room source to its own stage",
+    check("closing The Loft keeps every off-room source paint-parked",
       parkedUpperSources.every(function (stage) {
-        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&
-          getComputedStyle(stage).clipPath.indexOf("loft-stage-room-clip") >= 0;
+        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "hidden";
       }),
       parkedUpperSources.map(function (stage) {
-        return stage.id + ":" + getComputedStyle(stage).visibility + "/" + getComputedStyle(stage).clipPath;
+        return stage.id + ":" + getComputedStyle(stage).visibility;
       }).join(","));
     window.__openDollhouse();
     check("reopening restores every cached room card without rebuilding it",
@@ -152,11 +144,10 @@ var harness = String.raw`<script>
       }), [].slice.call(document.querySelectorAll(".loft-dollhouse-room")).map(function (room) {
         return room.getAttribute("data-dollhouse-room") + ":" + getComputedStyle(room).visibility;
       }).join(","));
-    check("reopening the cached Dollhouse reveals all live upper sources again",
+    check("reopening uses retained images without waking upper sources",
       parkedUpperSources.every(function (stage) {
-        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "visible" &&
-          getComputedStyle(stage.firstElementChild).visibility === "visible" &&
-          getComputedStyle(stage).clipPath === "none";
+        return stage.classList.contains("stage-far") && getComputedStyle(stage).visibility === "hidden" &&
+          getComputedStyle(stage.firstElementChild).visibility === "hidden";
       }), parkedUpperSources.map(function (stage) {
         return stage.id + ":" + getComputedStyle(stage).visibility + "/" +
           getComputedStyle(stage.firstElementChild).visibility;
@@ -169,20 +160,15 @@ var harness = String.raw`<script>
     document.getElementById("entrance-room").classList.add("roadtrip-active", "roadtrip-route-camp");
     window.__frameHealthFeed(0); window.__frameHealthFeed(0);
     key("Tab");
-    check("low-FPS Dollhouse pauses its live source animations", state().pausedAnimations > 0,
+    check("low-FPS Dollhouse still owns no animated preview trees",
+      state().livePreviews.length === 0 && !!roomButton("entrance").querySelector("image").getAttribute("href"),
       JSON.stringify(state()));
-    check("the Entrance card fills with the live Camping view",
-      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") ===
-        "#entrance-roadtrip-world" &&
-      roomButton("entrance").querySelector("svg").getAttribute("viewBox") === "0 -120 680 340" &&
-      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("x") === "0" &&
-      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("y") === "0" &&
-      document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "none");
+    check("the static Entrance card does not mutate the live Camping surface",
+      roomButton("entrance").querySelector("svg").getAttribute("viewBox") === "0 0 680 340" &&
+        document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "");
     key("Tab");
-    check("closing Dollhouse resumes only the animations it paused", state().pausedAnimations === 0,
-      JSON.stringify(state()));
     window.__frameHealthFeed(60); window.__frameHealthFeed(60); window.__frameHealthFeed(60);
-    check("closing the Camping preview restores its live SVG styles",
+    check("opening and closing never changes live Camping SVG styles",
       document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "" &&
       document.getElementById("entrance-roadtrip-world-clip").style.clipPath === "" &&
       document.getElementById("entrance-roadtrip-camp").style.opacity === "");
@@ -190,13 +176,6 @@ var harness = String.raw`<script>
     document.getElementById("entrance-drive-hud-svg").setAttribute("viewBox", "0 -31 680 207");
     window.__entranceRoadtripTransportState = realTransportState;
     window.__toggleEntranceRoadtripTransport = realTransportToggle;
-
-    document.getElementById("stage-balcony").classList.add("dusk");
-    key("Tab");
-    check("the Entrance thumbnail follows the live night state",
-      !document.getElementById("entrance-room-art").classList.contains("dollhouse-day-preview"));
-    key("Tab");
-    document.getElementById("stage-balcony").classList.remove("dusk");
 
     await sleep(0);
     var tabStops = [].slice.call(document.querySelectorAll("button,a[href],input,select,textarea,summary,iframe,[contenteditable],[tabindex]"))
@@ -242,13 +221,12 @@ var harness = String.raw`<script>
       roomButton("garden").querySelector("span").textContent === "Garden / Party" &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1 &&
       getComputedStyle(roomButton("garden").querySelector("svg")).filter.indexOf("blur") !== -1);
-    check("all lower previews are SVG uses of their real art or the Dungeon portrait",
-      ["bathroom", "cinema", "bedroom", "entrance"].every(function (name) {
-        return roomButton(name).querySelector('use.loft-dollhouse-live-preview');
-      }) && roomButton("dungeon").querySelector('use[href="#loft-dollhouse-dungeon-art"]'));
-    check("the Cinema lake belongs only to its dollhouse preview",
-      !!roomButton("cinema").querySelector('use.loft-dollhouse-cinema-lake[href="#cinema-lake-screen-art"]') &&
-      !document.querySelector('#cinema-room use[href="#cinema-lake-screen-art"]') &&
+    check("all lower previews are retained images rather than live SVG uses",
+      ["bathroom", "dungeon", "cinema", "bedroom", "entrance"].every(function (name) {
+        return !!roomButton(name).querySelector("image").getAttribute("href") &&
+          !roomButton(name).querySelector("use");
+      }));
+    check("capturing Cinema does not add preview-only art to the live room",
       !document.getElementById("cinema-screen-lake"));
     check("Cinema click targets stay transparent in the cloned room art",
       getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill === "rgba(0, 0, 0, 0)",
@@ -287,33 +265,6 @@ var harness = String.raw`<script>
       !state().open && window.__currentStageName === "kitchen" && window.__bathroomRoomOpen, JSON.stringify(state()));
 
     key("Tab");
-    document.getElementById("loft-game-strip").classList.add("party-on");
-    window.__closeDollhouse(); key("Tab");
-    check("the Kitchen / Bar cell switches its complete live stage to the Bar with the party",
-      roomButton("kitchen").classList.contains("bar-active") &&
-      roomButton("kitchen").querySelector("span").textContent === "Kitchen / Bar" &&
-      roomButton("kitchen").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") === "#stage-kitchen" &&
-      document.getElementById("kitchen-bar").style.opacity === "1" &&
-      document.getElementById("kitchen-post").style.opacity === "1");
-    document.getElementById("loft-game-strip").classList.remove("party-on");
-    window.__closeDollhouse();
-
-    document.getElementById("loft-game-strip").classList.remove("second-round");
-    document.getElementById("stage-kitchen").classList.add("dusk");
-    key("Tab");
-    check("first-round dusk keeps the Kitchen / Bar cell in the live Kitchen mode",
-      !roomButton("kitchen").classList.contains("bar-active") &&
-      document.getElementById("kitchen-bar").style.opacity !== "1");
-    window.__closeDollhouse();
-
-    document.getElementById("loft-game-strip").classList.add("second-round");
-    key("Tab");
-    check("the Kitchen / Bar cell switches to the Bar at night in the second round",
-      roomButton("kitchen").classList.contains("bar-active") &&
-      document.getElementById("kitchen-bar").style.opacity === "1");
-    document.getElementById("stage-kitchen").classList.remove("dusk");
-    document.getElementById("loft-game-strip").classList.remove("second-round");
-    window.__closeDollhouse();
 
     if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();
     await sleep(450);
@@ -445,14 +396,24 @@ var harness = String.raw`<script>
     window.__closeDollhouse();
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony"]);
     window.__goToStage("cuddly");
+    var dayCuddly = roomButton("cuddly").querySelector("image").getAttribute("href");
     window.__setPartyMode(true, true, false);
     if (window.__setPartyKidFormation) window.__setPartyKidFormation("play");
     var kidGames = document.getElementById("cuddly-kidgames");
-    check("the Party's Cuddly kids are live in their open Dollhouse card",
-      kidGames.classList.contains("playing") && window.__openDollhouse() &&
-      getComputedStyle(roomButton("cuddly")).visibility === "visible" &&
-      getComputedStyle(document.getElementById("stage-cuddly")).clipPath === "none");
-    window.__closeDollhouse();
+    var partyCaptured = await waitFor(function () {
+      return state().backgroundWarm.complete && state().rooms.filter(function (room) {
+        return room.floor === "main";
+      }).every(function (room) { return room.variants.indexOf("party") >= 0; });
+    }, 12000);
+    var partyCuddly = roomButton("cuddly").querySelector("image").getAttribute("href");
+    check("Party ignition replaces all five upstairs captures",
+      partyCaptured && partyCuddly && partyCuddly !== dayCuddly &&
+        state().rooms.filter(function (room) { return room.floor === "main"; })
+          .every(function (room) { return room.variant === "party"; }),
+      JSON.stringify(state()));
+    check("capturing Party occupants restores the live Cuddly source immediately",
+      kidGames.classList.contains("playing") &&
+        !document.getElementById("stage-cuddly").classList.contains("stage-far"));
     window.__goToStage("office");
     check("Cuddly kids remain rendered at the start of the pan away",
       kidGames.classList.contains("playing") &&
@@ -464,13 +425,14 @@ var harness = String.raw`<script>
     check("Cuddly kids clear only after their room is fully out of view",
       !kidGames.classList.contains("playing") &&
       document.getElementById("stage-cuddly").classList.contains("stage-far") &&
-      getComputedStyle(document.getElementById("stage-cuddly")).clipPath.indexOf("loft-stage-room-clip") >= 0);
+      getComputedStyle(document.getElementById("stage-cuddly")).visibility === "hidden");
     window.__openDollhouse();
-    check("the Cuddly card restores its Party kids while opened from another room",
-      window.__currentStageName === "office" && kidGames.classList.contains("playing") &&
-      getComputedStyle(roomButton("cuddly")).visibility === "visible");
+    check("the frozen Party card does not wake Cuddly when opened from another room",
+      window.__currentStageName === "office" && !kidGames.classList.contains("playing") &&
+      roomButton("cuddly").querySelector("image").getAttribute("href") === partyCuddly &&
+      getComputedStyle(document.getElementById("stage-cuddly")).visibility === "hidden");
     window.__closeDollhouse();
-    check("closing the Dollhouse removes preview-only Cuddly kids",
+    check("closing the Dollhouse leaves the parked Cuddly source untouched",
       window.__currentStageName === "office" && !kidGames.classList.contains("playing"));
     window.__setPartyMode(false, true, false);
   }
@@ -482,7 +444,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 10000, { patchRaf: true, seedRandom: true, forceMotion: true });
+var result = lib.runPageSync("rsvp.html", harness, 30000, { patchRaf: true, seedRandom: true, forceMotion: true });
 if (!result) { console.error("dollhouse: no report"); process.exit(1); }
 var failed = false;
 result.checks.forEach(function (item) {

@@ -249,8 +249,8 @@ check(healthy && healthy.coveredVisibility.every(function (row) { return row[1] 
 check(healthy && healthy.stripDisplay === "none" &&
   healthy.roomSize[0] === healthy.viewportSize[0] && healthy.roomSize[1] === healthy.viewportSize[1],
   "Road Trip removes the covered loft strip from layout without collapsing the highway", healthy);
-check(result && result.dollhouseStripDisplay === "block",
-  "opening The Loft temporarily restores its live room-card sources", result);
+check(result && result.dollhouseStripDisplay === "none",
+  "opening the static Dollhouse leaves the covered loft strip out of layout", result);
 check(result && result.closedDollhouseStripDisplay === "none",
   "closing The Loft parks the covered source strip again", result);
 check(healthy && healthy.coveredAnimationState === "paused",

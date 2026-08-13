@@ -239,6 +239,10 @@ Neither path rewrites the caption. The caption’s story priority rejects ordina
 rotation while allowing stronger modal and cinematic claims; opening Entrance acknowledges it and
 restores the car’s caption.
 
+Phase 2 also derives each portal prop's two-second discovery wobble independently from `seenRooms`.
+Unlocking lower-floor navigation does not consume any cue: each paired lower-room visit clears only
+its own prop. Phase 1, reduced motion, lost attention, cinematics, and low frame health clear all five.
+
 ### Road Trip and Camping
 
 Road Trip and Camping are modes of the Entrance controller, not separate rooms in `STAGES`. The main

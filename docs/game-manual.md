@@ -57,7 +57,9 @@ exploration.
 
 Start the Party in the Garden, then visit all ten rooms. Introductions and the map keep count;
 visiting is enough, and lower-room games remain optional. Guests stay active while you explore. Tap
-the DJ for song requests. Dances, toasts, photos, cake ceremonies, sparklers, and the bouquet toss
+the DJ for song requests. Until its downstairs neighbour has been visited, each main room's portal
+prop gives a small periodic wobble; reduced-motion and low-frame-rate modes keep it still. Dances,
+toasts, photos, cake ceremonies, sparklers, and the bouquet toss
 can interrupt the ordinary Party scene without ending it.
 
 The Balcony window grid hides **Block Party**. With a keyboard, use `←` / `→` to move, `↑` to

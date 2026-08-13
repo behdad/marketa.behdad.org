@@ -675,13 +675,16 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 #cuddly-cinema-ticket.portal-insisting .cinema-ticket-wobble{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
 @keyframes lower-portal-insist{0%,100%{rotate:0deg;translate:0 0}22%{rotate:-4deg;translate:-1px 0}48%{rotate:3deg;translate:1px 0}72%{rotate:-2deg;translate:-.5px 0}}
 @media (prefers-reduced-motion:reduce){
-  .lower-room-marker.portal-insisting{animation:none}
+  .lower-room-marker.portal-insisting,
+  #cuddly-cinema-ticket.portal-insisting .cinema-ticket-wobble{animation:none}
   #kitchen-bathroom-marker.bathroom-sign-swinging #kitchen-bathroom-sign{animation:none}
   #office-bedroom-marker.bedroom-zzz-breathing .office-sleep-mark{animation:none}
   #garden-dungeon-door,#garden-dungeon-door-cast{transition:none}
   #balcony-entrance-marker.key-turning #balcony-golden-key-turn,
   #balcony-entrance-marker.key-turning #balcony-entrance-key-glint{animation:none}
 }
+.frame-rate-low .lower-room-marker.portal-insisting,
+.frame-rate-low #cuddly-cinema-ticket.portal-insisting .cinema-ticket-wobble{animation:none}
 #entrance-room[hidden]{display:none}
 #entrance-room{
   position:absolute; inset:0; z-index:12; overflow:hidden; color:#fffdf8;
@@ -114698,6 +114701,7 @@ function spawnDustMote(container) {
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(null, seenRoomList().length);
     if (window.__syncRoadtripDepartureCaption) window.__syncRoadtripDepartureCaption();
     if (window.__syncRoadtripCompletionCoach) window.__syncRoadtripCompletionCoach();
+    clearLowerRoomPortalWobbles();
     return seenRoomList();
   }
   var LOWER_ROOM_PROGRESS_KEYS = {
@@ -114741,6 +114745,7 @@ function spawnDustMote(container) {
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(name, seenRoomList().length);
     if (window.__syncRoadtripDepartureCaption) window.__syncRoadtripDepartureCaption();
     if (window.__syncRoadtripCompletionCoach) window.__syncRoadtripCompletionCoach();
+    if (LOWER_ROOM_IDS.indexOf(name) !== -1) clearLowerRoomPortalWobbleForRoom(name);
     return true;
   }
   var bathroomSignTimer = null;
@@ -115761,21 +115766,73 @@ function spawnDustMote(container) {
     };
     return table[name] || null;
   }
+  var LOWER_ROOM_IDS = ["bathroom", "dungeon", "cinema", "bedroom", "entrance"];
+  var LOWER_PORTAL_MARKERS = {
+    kitchen: "kitchen-bathroom-marker",
+    garden: "garden-dungeon-marker",
+    cuddly: "cuddly-cinema-ticket",
+    office: "office-bedroom-marker",
+    balcony: "balcony-entrance-marker"
+  };
+  function clearLowerRoomPortalWobbles() {
+    Object.keys(LOWER_PORTAL_MARKERS).forEach(function (name) {
+      var marker = document.getElementById(LOWER_PORTAL_MARKERS[name]);
+      if (marker) marker.classList.remove("portal-insisting");
+    });
+  }
+  function clearLowerRoomPortalWobbleForRoom(room) {
+    Object.keys(LOWER_PORTAL_MARKERS).some(function (name) {
+      var lowerRoom = lowerRoomForStage(name);
+      if (!lowerRoom || lowerRoom.id !== room) return false;
+      var marker = document.getElementById(LOWER_PORTAL_MARKERS[name]);
+      if (marker) marker.classList.remove("portal-insisting");
+      return true;
+    });
+  }
   function pulseLowerRoomMarkerForStage(name) {
-    var markers = {
-      kitchen: "kitchen-bathroom-marker",
-      garden: "garden-dungeon-marker",
-      cuddly: "cuddly-cinema-ticket",
-      office: "office-bedroom-marker",
-      balcony: "balcony-entrance-marker"
-    };
-    var marker = document.getElementById(markers[name]);
+    var marker = document.getElementById(LOWER_PORTAL_MARKERS[name]);
     if (!marker) return false;
     marker.classList.remove("portal-insisting");
     void marker.getBBox();
     marker.classList.add("portal-insisting");
     return true;
   }
+  function lowerRoomPortalWobbleTick(forceAttended) {
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var unattended = !forceAttended && (document.hidden || !document.hasFocus());
+    if (!window.__secondRound || window.__cinematic || reduced || unattended ||
+        (window.__frameHealthSlow && window.__frameHealthSlow())) {
+      clearLowerRoomPortalWobbles();
+      return false;
+    }
+    var pulsed = false;
+    Object.keys(LOWER_PORTAL_MARKERS).forEach(function (stage) {
+      var lowerRoom = lowerRoomForStage(stage);
+      if (!lowerRoom || roomSeen(lowerRoom.id)) {
+        if (lowerRoom) clearLowerRoomPortalWobbleForRoom(lowerRoom.id);
+        return;
+      }
+      if (pulseLowerRoomMarkerForStage(stage)) pulsed = true;
+    });
+    return pulsed;
+  }
+  window.__lowerRoomPortalWobbleTick = lowerRoomPortalWobbleTick;
+  window.__lowerRoomPortalWobbleState = function () {
+    return Object.keys(LOWER_PORTAL_MARKERS).map(function (stage) {
+      var marker = document.getElementById(LOWER_PORTAL_MARKERS[stage]);
+      var lowerRoom = lowerRoomForStage(stage);
+      return { stage: stage, room: lowerRoom ? lowerRoom.id : null,
+        active: !!(marker && marker.classList.contains("portal-insisting")) };
+    });
+  };
+  setInterval(function () { lowerRoomPortalWobbleTick(false); }, 2000);
+  window.addEventListener("blur", clearLowerRoomPortalWobbles);
+  window.addEventListener("framehealthchange", function () {
+    if (window.__frameHealthSlow && window.__frameHealthSlow()) clearLowerRoomPortalWobbles();
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) clearLowerRoomPortalWobbles();
+  });
   function activeLowerRoom() {
     if (window.__bathroomRoomOpen) return lowerRoomForStage("kitchen");
     var princeState = window.__princeState && window.__princeState();
@@ -120129,6 +120186,7 @@ function spawnDustMote(container) {
     }
     if (previous !== window.__secondRound && window.__refreshKitchenBar) window.__refreshKitchenBar();
     if (previous !== window.__secondRound && window.__updateMonitorKillCaption) window.__updateMonitorKillCaption();
+    if (!window.__secondRound) clearLowerRoomPortalWobbles();
     return previous;
   }
   window.__setSecondRound = setSecondRound;

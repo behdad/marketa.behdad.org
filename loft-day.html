@@ -37900,8 +37900,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-0884baa83412"></script>
-<script src="loft-day.cs.js?v=dict-bfedde34a29d"></script>
+<script src="loft-day.en.js?v=dict-ed17b553c38a"></script>
+<script src="loft-day.cs.js?v=dict-e9eaf4051bee"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -47942,7 +47942,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripScore();
     updateRoadtripPoliceSiren();
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_roadtrip_drive");
+    syncPorscheDriveInstruction(true);
     if (roadtripState.route === "camp") {
       ensureCampStewClock();
       scheduleCampSleepFinale();
@@ -48115,6 +48115,11 @@ window.__entranceRoomOpen = false;
     if (roadtripState.active && roadtripState.police.phase === "pursuit" &&
         roadtripState.police.escapeGap > 0) return "entrance_roadtrip_police_escape";
     if (roadtripState.active && roadtripState.police.phase === "pursuit") return "entrance_roadtrip_police_pull_over";
+    if (roadtripState.active && !porscheState.engineOn) return "entrance_roadtrip_start_engine";
+    if (roadtripState.active && (porscheTransmission.mode === "auto" ?
+        porscheTransmission.range !== "D" : driveState.gear <= 0)) {
+      return "entrance_roadtrip_select_gear";
+    }
     if (driveState.cruiseActive) return "entrance_drive_cruise_active";
     if (porscheState.engineOn && driveState.rpm >= PORSCHE_REV_SHIFT_PROMPT_RPM &&
         (porscheTransmission.mode === "auto" ?
@@ -50306,7 +50311,8 @@ window.__entranceRoomOpen = false;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     playPorscheStallSound();
     syncPorscheState();
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_drive_stalled");
+    if (roadtripState.active) syncPorscheDriveInstruction(true);
+    else if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_drive_stalled");
     return true;
   }
   function selectPorscheDriveGear(gear, clutchBypass) {
@@ -51420,9 +51426,6 @@ window.__entranceRoomOpen = false;
           porscheState.headlightOn = true;
           porscheState.taillightOn = true;
         }
-        if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(
-          porscheTransmission.mode === "auto" ? "entrance_drive_auto_park_hint" :
-            "entrance_drive_manual");
       } else {
         driveState.stalled = false;
         driveState.rpm = 0;
@@ -51434,10 +51437,6 @@ window.__entranceRoomOpen = false;
         porscheState.taillightOn = false;
         clearPorscheIndicator();
         Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
-        if (window.__setLowerRoomCaption) {
-          window.__setLowerRoomCaption(driveState.hudOpen ? "entrance_drive_ignition_hint" :
-            entranceIdleCaptionKey());
-        }
       }
       playPorscheEngineSound(porscheState.engineOn);
       porscheHaptic(porscheState.engineOn ? [45, 35, 80] : 50);
@@ -51447,6 +51446,14 @@ window.__entranceRoomOpen = false;
     else if (action === "indicator") flashPorscheIndicator();
     else return false;
     syncPorscheState();
+    if (action === "engine") {
+      if (roadtripState.active) syncPorscheDriveInstruction(true);
+      else if (window.__setLowerRoomCaption) {
+        window.__setLowerRoomCaption(porscheState.engineOn ?
+          porscheTransmission.mode === "auto" ? "entrance_drive_auto_park_hint" : "entrance_drive_manual" :
+          driveState.hudOpen ? "entrance_drive_ignition_hint" : entranceIdleCaptionKey());
+      }
+    }
     if (action !== "indicator" && window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }

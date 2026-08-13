@@ -220,7 +220,8 @@ finish the current step before another selector or driving input can act.
 
 Street laps are optional and do not unlock the journey. After starting the Party and visiting all
 ten rooms, finish or dismiss the car coach and choose **Road Trip**. A route starts stopped on the
-shoulder and keeps the selected transmission.
+shoulder and keeps the selected transmission; the caption points out when the engine or driving
+gear is the immediate blocker.
 
 Routes progress west through Calgary, Banff, and Abraham Lake; choose a later segment for a shorter
 drive. The three-part HUD ribbon tracks the legs and hatches skipped ones. A missed Camping turnoff

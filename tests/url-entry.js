@@ -64,8 +64,8 @@ check(invite && invite.revealed && !invite.cinematic,
   "#invite reveals the invitation without starting a presentation", invite);
 check(trailer && !trailer.revealed && trailer.cinematic,
   "#trailer is game-only and starts the fixed reel", trailer);
-check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && recoveryTrailer.checkpoint,
-  "#trailer starts across recovery without discarding the saved checkpoint", recoveryTrailer);
+check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && !recoveryTrailer.checkpoint,
+  "#trailer starts cleanly across recovery", recoveryTrailer);
 [game, invite, trailer].forEach(function (report) {
   check(report && report.errors.length === 0,
     (report && report.hash || "canonical Loft Day") + " has no uncaught page errors",

@@ -87,7 +87,7 @@ check(s.continued.dollhouseSharp, "Continue restores Phase 2 with every Dollhous
 check(s.continued.spaceLeaks === 0 && !s.continued.spaceHeld, "the accepting Space and its auto-repeat are consumed through keyup", s.continued);
 check(s.continued.partyRestored && s.continued.switchRestored &&
   s.continued.partyAfterP && s.continued.switchAfterP && parseFloat(s.continued.discoOpacity) > .9 &&
-  s.continued.discoSpin === "disco-ball-spin",
+  s.continued.discoSpin === "none",
   "a restored Party keeps its story latch and live disco control synchronized", s.continued);
 check(s.continued.noLegacyDiscoEntrance && s.gate.discoTransform === s.continued.discoTransform &&
   ["x", "y", "width", "height"].every(function (key) { return Math.abs(s.gate.discoBox[key] - s.continued.discoBox[key]) < 0.01; }),

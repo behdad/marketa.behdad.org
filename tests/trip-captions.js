@@ -98,7 +98,7 @@ if (result) {
       s.key === "trip_caption_" + variant && s.text === expected[variant] && s.clearsFrame;
   }), "all eight trips briefly use the main clue line", result.english);
   check(result.czech && result.czech.key === "trip_caption_iboga" &&
-    result.czech.text === "Někde za tebou se minulost pořád načítá.",
+    result.czech.text === "Minulost za tebou se pořád načítá.",
     "language changes translate the temporary caption", result.czech);
   check(result.roomChange && !result.roomChange.flash && result.roomChange.key === "office_call",
     "a room change cancels the previous room's temporary trip caption", result.roomChange);

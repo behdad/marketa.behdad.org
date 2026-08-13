@@ -131,7 +131,8 @@ var rendered = lib.runPageSync("rsvp.html", harness, 2500, { patchRaf: true, for
 check(rendered && (!rendered.errors || rendered.errors.length === 0),
   "runtime vocabulary probe has no uncaught errors",
   rendered && rendered.errors && rendered.errors.join("\n"));
-check(rendered && /CLICK ROTATE/.test(rendered.enTetris.text) && /KLIK OTOČ/.test(rendered.csTetris.text) &&
+check(rendered && /MOVE/.test(rendered.enTetris.text) && /POSUN/.test(rendered.csTetris.text) &&
+      /SPACE DROP/.test(rendered.enTetris.text) && /MEZERNÍK SHOĎ/.test(rendered.csTetris.text) &&
       rendered.enTetris.width <= 140 && rendered.csTetris.width <= 140,
   "Block Party labels switch language and fit the HUD",
   rendered && JSON.stringify({ en: rendered.enTetris, cs: rendered.csTetris }));

@@ -57,7 +57,7 @@ check(w.playing && w.playing.channel === "coffee" && w.playing.playing && w.play
   "coffee music joins the shared bed, now-playing UI and checkpoint row", w.playing);
 check(w.paused && w.paused.flag && !w.paused.playing && w.resumed && !w.resumed.flag && w.resumed.playing,
   "the shared transport pauses and resumes the coffee loop", { paused: w.paused, resumed: w.resumed });
-check(w.cs && w.cs.label === "Pomalá káva" && w.cs.toast === "♪ Pomalá káva",
+check(w.cs && w.cs.label === "Pomalé kafe" && w.cs.toast === "♪ Pomalé kafe",
   "the live coffee now-playing label is mirrored in Czech", w.cs);
 check(w.restored && w.restored.channel === "coffee" && w.restored.playing && w.restored.captured.channel === "coffee",
   "checkpoint restore retains an explicit coffee channel", w.restored);

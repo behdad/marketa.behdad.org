@@ -87,6 +87,19 @@ var PARTY_HEALTH_RECOVERY_HARNESS = [
   '},250);});})();</script>'
 ].join("\n");
 
+var RESUME_HEALTH_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var report={errors:[]};',
+  'window.addEventListener("load",function(){setTimeout(function(){try{',
+  'window.__frameHealthFeed(30);window.__frameHealthFeed(30);report.poisoned=window.__frameHealthState();',
+  'window.__frameHealthBeginGameplay();report.continued=window.__frameHealthState();',
+  'window.__frameHealthFeed(60);report.firstVisible=window.__frameHealthState();',
+  '}catch(e){report.errors.push(String(e&&e.stack||e));}',
+  'report.errors=report.errors.concat(window.__errs||[]);document.getElementById("__report").textContent=JSON.stringify(report);',
+  '},250);});})();</script>'
+].join("\n");
+
 var CANVAS_QUALITY_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
@@ -168,6 +181,14 @@ check(partyRecovery && partyRecovery.errors.length === 0 && partyRecovery.entere
   partyRecovery.reentered.health.slow && /^steps\(30/.test(partyRecovery.reentered.spin) &&
   partyRecovery.reentered.pools === 0,
   "Party retries full effects after six 49-fps windows and quickly falls back again if they overload the device", partyRecovery);
+
+var resumeHealth = lib.runPageSync("rsvp.html", RESUME_HEALTH_HARNESS, 1400, { patchRaf: true, forceMotion: true, seedRandom: true });
+check(resumeHealth && resumeHealth.errors.length === 0 && resumeHealth.poisoned.slow &&
+  !resumeHealth.continued.slow && resumeHealth.continued.fps === null &&
+  resumeHealth.continued.lowWindows === 0 && resumeHealth.continued.recoverWindows === 0 &&
+  !resumeHealth.firstVisible.slow && resumeHealth.firstVisible.fps === 60 &&
+  resumeHealth.firstVisible.recoverWindows === 1,
+  "Continue discards covered restore samples and starts adaptive health from visible gameplay", resumeHealth);
 
 var quality = lib.runPageSync("rsvp.html", CANVAS_QUALITY_HARNESS, 1800, { patchRaf: true, forceMotion: true, seedRandom: true });
 var q = quality && quality.steps;

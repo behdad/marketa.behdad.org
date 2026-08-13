@@ -90280,6 +90280,19 @@ def colormode(mode=None):
     return { slow: slow, high: high, fps: fps, lowWindows: lowWindows, recoverWindows: recoverWindows };
   }
   function resetWindow() { started = 0; frames = 0; publishHigh(false); }
+  function beginGameplayEpoch() {
+    // Entry and Continue are intentionally paint-covered while large SVG owners restore. Those
+    // frames describe the loader, not delivered gameplay. Start the adaptive tier from a clean
+    // visible epoch so a restored Party cannot inherit two stale low samples while its live FPS
+    // has already recovered.
+    started = 0;
+    frames = 0;
+    lowWindows = 0;
+    recoverWindows = 0;
+    fps = null;
+    publish(false);
+    publishHigh(false);
+  }
   function sample(now) {
     if (!usable()) {
       resetWindow();
@@ -90306,6 +90319,7 @@ def colormode(mode=None):
   window.__frameHealthSlow = function () { return slow; };
   window.__frameHealthHigh = function () { return high; };
   window.__frameHealthFeed = evaluate; // deterministic performance regression tests
+  window.__frameHealthBeginGameplay = beginGameplayEpoch;
   restart();
 })();
 // Slow devices keep the constellations alive as one shared one-second beat instead of
@@ -130635,6 +130649,7 @@ function spawnDustMote(container) {
     // applied. This makes Continue one atomic reveal instead of exposing fresh-page decor.
     recoveryPreviewLook = null;
     hideRecoveryGate();
+    if (window.__frameHealthBeginGameplay) window.__frameHealthBeginGameplay();
     if (window.__secondRound && window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
     syncLoftAttendedTime();
     saveCheckpoint();

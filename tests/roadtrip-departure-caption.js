@@ -160,12 +160,12 @@ check(step("continued-pending") && step("continued-pending").text === exact &&
   "Continue restores the pending caption with Party still running", step("continued-pending"));
 check(step("reached-car") && step("reached-car").entrance && step("reached-car").party &&
   !step("reached-car").departure.pending && step("reached-car").departure.acknowledged &&
-  step("reached-car").key === "lower_entrance_ready" && step("reached-car").text !== exact &&
+  step("reached-car").key === "lower_entrance" && step("reached-car").text !== exact &&
   !step("reached-car").departureClass,
   "direct Entrance navigation hands the caption to the car without requiring Party-off",
   step("reached-car"));
 check(step("entrance-last") && step("entrance-last").entrance && step("entrance-last").seen.length === 10 &&
-  step("entrance-last").key === "lower_entrance_ready" &&
+  step("entrance-last").key === "lower_entrance" &&
   step("entrance-last").text.indexOf("explore all 10 rooms") === -1,
   "unlocking Entrance last records 10/10 before the car chooses its first caption",
   step("entrance-last"));

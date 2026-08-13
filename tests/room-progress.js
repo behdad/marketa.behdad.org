@@ -47,7 +47,7 @@ var harness = String.raw`<script>
     window.__setLang("cs");
     var czechLive = snapshot();
     check("a live progress caption keeps its count when switched to Czech",
-      czechLive.caption === "Navštíveno: 3/10 · pokračuj dál.", czechLive);
+      czechLive.caption === "Navštíveno: 3/10 · zkoumej dál.", czechLive);
     window.__setLang("en");
 
     window.__clearFlashCaption("room-progress");
@@ -59,12 +59,12 @@ var harness = String.raw`<script>
     window.__markRoomSeen("entrance");
     var partyComplete = snapshot();
     check("completion points toward the street even while the party remains optional",
-      partyComplete.key === "room_visit_entrance_complete_party" &&
-      partyComplete.caption === "You’ve seen the whole loft. The road is right outside.", partyComplete);
+      partyComplete.key === "roadtrip_departure_caption" &&
+      partyComplete.caption === "Who wants to go on a Road Trip? Head out to the car.", partyComplete);
     window.__setLang("cs");
     var partyCompleteCzech = snapshot();
     check("party-on completion keeps the same street direction in Czech",
-      partyCompleteCzech.caption === "Celý loft je prozkoumaný. Silnice čeká hned venku.", partyCompleteCzech);
+      partyCompleteCzech.caption === "Kdo chce vyrazit na výlet? Vydej se ven k autu.", partyCompleteCzech);
     window.__setLang("en");
     window.__gardenPartyOn = false;
 
@@ -121,7 +121,8 @@ var harness = String.raw`<script>
     check("continuing downstairs still skips every hidden paired upstairs room",
       JSON.stringify(entrancePan.seen) === JSON.stringify(["kitchen", "garden", "dungeon", "cinema", "entrance"]) &&
       entrancePan.seen.indexOf("balcony") === -1 &&
-      entrancePan.caption === "Here’s the front entrance. Explore 5 more rooms before the Road Trip.",
+      entrancePan.key === "lower_entrance_locked" &&
+      entrancePan.caption === "The car is yours to drive · explore all 10 rooms to unlock Road Trip.",
       entrancePan);
     window.__closeEntranceRoom();
     var balconyReturn = snapshot();
@@ -140,15 +141,16 @@ var harness = String.raw`<script>
     window.__openEntranceRoom();
     await sleep(40);
     var complete = snapshot();
-    check("the completion line fires only on the tenth distinct room",
-      complete.seen.length === 10 && complete.key === "room_visit_entrance_complete" &&
-      complete.caption === "You’ve seen the whole loft. The road is right outside." &&
-      complete.flash && complete.flash.owner === "room-progress", complete);
+    check("the tenth room unlocks the car without replaying a stale exploration line",
+      complete.seen.length === 10 && complete.key === "lower_entrance" &&
+      complete.caption.indexOf("explore all 10 rooms") === -1 &&
+      (!complete.flash || complete.flash.owner !== "room-progress"), complete);
 
     window.__setLang("cs");
     var czechComplete = snapshot();
-    check("the live completion line switches to Czech",
-      czechComplete.caption === "Celý loft je prozkoumaný. Silnice čeká hned venku.", czechComplete);
+    check("the unlocked car line switches to Czech",
+      czechComplete.key === "lower_entrance" &&
+      czechComplete.caption.indexOf("prozkoumej všech 10") === -1, czechComplete);
     window.__setLang("en");
 
     window.__clearFlashCaption("room-progress");

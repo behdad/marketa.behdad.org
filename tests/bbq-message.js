@@ -23,6 +23,7 @@ var harness = String.raw`<script>
     return originalCheer ? originalCheer() : false;
   };
   window.__setGardenParty(true, true);
+  if (window.__resetPhoneApps) window.__resetPhoneApps();
   window.__goToStage("balcony");
   window.__setBalconyBBQCrowd(true);
   document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));

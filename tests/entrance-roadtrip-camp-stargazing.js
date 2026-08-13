@@ -510,7 +510,7 @@ check(result && result.handoff && result.handoff.state.wisdomHandoffReady &&
   result.handoff.caption === "entrance_roadtrip_stargazing_continue" &&
   result.handoff.wisdomContinue && result.handoff.wisdomContinue.ready &&
   result.handoff.wisdomContinue.opacity === 1 && result.handoff.wisdomContinue.pointer === "all" &&
-  !result.handoff.wisdomContinue.tabindex && result.handoff.wisdomContinue.stroke === "rgb(248, 245, 236)" &&
+  !result.handoff.wisdomContinue.tabindex && result.handoff.wisdomContinue.stroke === "none" &&
   result.handoff.wisdomContinue.text === "Continue" &&
   result.englishContinue === "Great wisdom dispensed.",
   "the persistent handoff clue appears after all four two-second reveals", result && result.handoff);
@@ -518,11 +518,11 @@ check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.builderNames.join("|") === "Kasiopeja|Velká medvědice|Malá medvědice" &&
   result.czech.liveNames === 0 &&
   result.czech.wisdom.indexOf("Když něco skončí,") >= 0 &&
-  result.czech.wisdom.indexOf("něco jiného začne") >= 0 &&
+  result.czech.wisdom.indexOf("něco dalšího začne") >= 0 &&
   result.czech.wisdomTypography.every(function (row) {
     return row.fontSize >= 12 && row.textWidth <= row.shapeWidth - 24 && row.textHeight <= row.shapeHeight - 10;
   }) &&
-  result.czech.continueButton === "Pokračovat" && result.czech.continueText === "Velká moudrost rozdána.",
+  result.czech.continueButton === "Pokračovat" && result.czech.continueText === "Velká moudrost utržena.",
   "builder labels and spacious wisdom bubbles switch cleanly to Czech while the permanent sky stays unlabeled", result && result.czech);
 check(result && result.backdropAfter && result.backdropTarget === "entrance-roadtrip-camp-wisdom-hit" &&
   !result.backdropAfter.state.wisdomDismissed && result.backdropAfter.wisdomShown && !result.backdropAfter.tentOpen &&

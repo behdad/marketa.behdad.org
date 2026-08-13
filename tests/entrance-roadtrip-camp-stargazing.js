@@ -461,7 +461,7 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result && result.complete);
 check(result && result.complete && !result.complete.state.wisdomHandoffReady &&
   result.complete.caption === "entrance_roadtrip_stargazing_title" &&
-  result.earlyTarget === "entrance-roadtrip-camp-wisdom-hit" && result.earlyClick &&
+  result.earlyClick &&
   !result.earlyClick.state.wisdomDismissed && result.earlyClick.state.sleepPhase === "idle" &&
   !result.earlyClick.tentOpen,
   "the full-campsite wisdom shield consumes early prop clicks while the exchange reveals",

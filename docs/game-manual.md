@@ -233,6 +233,10 @@ returns later.
 Unfocusing pauses the highway. Reloading while it is visible restores that view paused; leaving
 Entrance instead offers **Continue**, **New**, or, once reached, **Camping**.
 
+After all ten rooms have been visited, a one-time card offers **Go to the car →**. Choose it to
+open Entrance, or dismiss the card to keep exploring; the Road Trip invitation remains in the
+caption until the car is opened.
+
 At Camping, follow the caption through fire, stew, stargazing, and sleep. A stew needs at least one
 protein and one base, and can combine as many of either as you like. Stew can burn; Markéta’s open
 notebook pauses its cooking clock. The finale reports time spent in the loft and offers to

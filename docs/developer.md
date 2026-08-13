@@ -233,8 +233,11 @@ exploration is complete only after Party/free exploration has begun and all ten 
 visited. If the player reaches the Entrance while Party is still active, the canonical handoff winds
 it down before authorizing the trip. Keep that lenient path: eligibility should not depend on noticing
 or obeying one phone message. The tenth visit also derives a checkpointed `roadtrip-departure`
-caption base. Its story priority rejects ordinary room/feedback rotation while allowing stronger
-modal and cinematic claims; opening Entrance acknowledges it and restores the car’s caption.
+caption base and arms a delayed, checkpointed completion coach. The coach waits behind existing
+modal/cinematic attention; its action opens Entrance while dismissal leaves exploration available.
+Neither path rewrites the caption. The caption’s story priority rejects ordinary room/feedback
+rotation while allowing stronger modal and cinematic claims; opening Entrance acknowledges it and
+restores the car’s caption.
 
 ### Road Trip and Camping
 

@@ -3483,6 +3483,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   text-wrap:balance;-webkit-tap-highlight-color:transparent;user-select:none;
 }
 #party-room-map-coach .hunt-coach-arrow{vector-effect:non-scaling-stroke}
+#roadtrip-completion-coach{background:rgba(38,28,23,.44)}
+#roadtrip-completion-coach .hunt-coach-card{
+  left:50%;top:50%;transform:translate(-50%,-50%);flex-direction:column;gap:1.35rem;cursor:pointer
+}
+.roadtrip-completion-action{
+  border:0;border-radius:999px;padding:.7rem 1.25rem;background:var(--wine);color:#fff;
+  font:700 clamp(17px,1.8vw,22px)/1.1 "Source Serif 4",serif;cursor:pointer;
+  box-shadow:0 3px 9px rgba(69,58,49,.3)
+}
+.roadtrip-completion-action:hover{background:var(--ink)}
+.roadtrip-completion-action:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .hunt-coach-x{
   position:absolute;right:.55rem;top:.55rem;display:grid;place-items:center;
   width:2.2rem;height:2.2rem;
@@ -3500,6 +3511,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   .hunt-coach-overlay.modal-coach .hunt-coach-x{
     right:.55rem;top:.55rem;width:2.5rem;height:2.5rem;font-size:27px;
   }
+  #roadtrip-completion-coach .hunt-coach-card{gap:1rem}
+  .roadtrip-completion-action{font-size:18px;padding:.65rem 1.05rem}
 }
 @media (prefers-reduced-motion:reduce){.hunt-coach-overlay{transition:none}.hunt-coach-arrow{animation:none}}
 /* Whole-loft picker: two aligned rows of five paired rooms. Live scene previews are used
@@ -37760,6 +37773,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <svg><path class="hunt-coach-arrow"/></svg>
     <div class="hunt-coach-card"><span class="hunt-coach-copy"></span><span class="hunt-coach-x">×</span></div>
   </div>
+  <div id="roadtrip-completion-coach" class="hunt-coach-overlay modal-coach">
+    <div class="hunt-coach-card">
+      <span class="hunt-coach-copy" data-i="roadtrip_completion_coach"></span>
+      <button type="button" class="roadtrip-completion-action" data-i="roadtrip_completion_action"></button>
+      <button type="button" class="hunt-coach-x" tabindex="-1">×</button>
+    </div>
+  </div>
   <svg id="loft-dollhouse-scene-art">
     <symbol id="cinema-lake-screen-art" viewBox="0 0 340 196">
       <rect width="340" height="196" fill="#367579"/>
@@ -37900,8 +37920,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-4a0480ca1d4c"></script>
-<script src="loft-day.cs.js?v=dict-7e9422ae09aa"></script>
+<script src="loft-day.en.js?v=dict-7747eee9a956"></script>
+<script src="loft-day.cs.js?v=dict-f08bc891766d"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -51933,6 +51953,7 @@ window.__entranceRoomOpen = false;
     // idle instruction, so the first visible caption reflects the completed frontier.
     if (window.__markLowerRoomEntered) window.__markLowerRoomEntered();
     if (window.__completeRoadtripDepartureCaption) window.__completeRoadtripDepartureCaption();
+    if (window.__dismissRoadtripCompletionCoach) window.__dismissRoadtripCompletionCoach();
     if (window.__hideCallRing) window.__hideCallRing();
     paintPorscheDriveHud();
     restoreRoadtripCampPresentationWhenReady();
@@ -88421,6 +88442,12 @@ def colormode(mode=None):
       if (window.__stopHintBlink) window.__stopHintBlink();
       return;
     }
+    if (window.__roadtripCompletionCoachActive && window.__roadtripCompletionCoachActive()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__dismissRoadtripCompletionCoach) window.__dismissRoadtripCompletionCoach();
+      return;
+    }
     // Modal lessons outrank media. This listener predates their own capture handler, so it must
     // dismiss them here before a Space press can reach toggleMusicPlayback below.
     if (window.__partyCoachModalActive && window.__partyCoachModalActive()) {
@@ -114681,6 +114708,7 @@ function spawnDustMote(container) {
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(null, seenRoomList().length);
     if (window.__syncRoadtripDepartureCaption) window.__syncRoadtripDepartureCaption();
+    if (window.__syncRoadtripCompletionCoach) window.__syncRoadtripCompletionCoach();
     return seenRoomList();
   }
   var LOWER_ROOM_PROGRESS_KEYS = {
@@ -114723,6 +114751,7 @@ function spawnDustMote(container) {
     if (window.__roadtripExplorationChanged) window.__roadtripExplorationChanged(seenRoomList().length);
     if (window.__partyExplorationChanged) window.__partyExplorationChanged(name, seenRoomList().length);
     if (window.__syncRoadtripDepartureCaption) window.__syncRoadtripDepartureCaption();
+    if (window.__syncRoadtripCompletionCoach) window.__syncRoadtripCompletionCoach();
     return true;
   }
   var bathroomSignTimer = null;
@@ -116601,6 +116630,162 @@ function spawnDustMote(container) {
     return { pending: roadtripDepartureCaptionPending,
       acknowledged: roadtripDepartureCaptionAcknowledged };
   };
+  var ROADTRIP_COMPLETION_COACH_DELAY = 2200;
+  var ROADTRIP_COMPLETION_COACH_RETRY = 240;
+  var roadtripCompletionCoachPending = false;
+  var roadtripCompletionCoachShown = false;
+  var roadtripCompletionCoachAcknowledged = false;
+  var roadtripCompletionCoachVisible = false;
+  var roadtripCompletionCoachTimer = null;
+  var roadtripCompletionCoach = document.getElementById("roadtrip-completion-coach");
+  function roadtripCompletionCoachComplete() {
+    return !!(window.__secondRound && seenRoomList().length >= ROOM_IDS.length);
+  }
+  function roadtripCompletionCoachSurfaceAvailable() {
+    if (!attractOver() || window.__cinematic || huntIntroShowing || openingGuideShowing ||
+        document.getElementById("click-me-overlay") || document.getElementById("loft-recovery-gate")) return false;
+    if (window.__partyCoachModalActive && window.__partyCoachModalActive()) return false;
+    if (window.__partyCoachSurfaceAvailable && !window.__partyCoachSurfaceAvailable()) return false;
+    if (window.__partyAttentionChannelQuiet && !window.__partyAttentionChannelQuiet()) return false;
+    if (document.querySelector(".pb-dialog-backdrop, #sharecard-modal.show, .phone-backdrop.show, " +
+        "#monitor-focus-dialog[open], #loft-dollhouse:not([hidden])")) return false;
+    return true;
+  }
+  function paintRoadtripCompletionCoach() {
+    if (roadtripCompletionCoach) {
+      roadtripCompletionCoach.classList.toggle("show", roadtripCompletionCoachVisible);
+    }
+  }
+  function cancelRoadtripCompletionCoachTimer() {
+    if (roadtripCompletionCoachTimer && window.__cancelAttention) {
+      window.__cancelAttention(roadtripCompletionCoachTimer);
+    }
+    roadtripCompletionCoachTimer = null;
+  }
+  function scheduleRoadtripCompletionCoach(delay) {
+    if (roadtripCompletionCoachAcknowledged || roadtripCompletionCoachVisible ||
+        !roadtripCompletionCoachComplete() || roadtripCompletionCoachTimer) return false;
+    roadtripCompletionCoachTimer = window.__scheduleAttended(function () {
+      roadtripCompletionCoachTimer = null;
+      if (roadtripCompletionCoachAcknowledged || !roadtripCompletionCoachComplete()) return;
+      if (!roadtripCompletionCoachSurfaceAvailable()) {
+        scheduleRoadtripCompletionCoach(ROADTRIP_COMPLETION_COACH_RETRY);
+        return;
+      }
+      roadtripCompletionCoachPending = false;
+      roadtripCompletionCoachShown = true;
+      roadtripCompletionCoachVisible = true;
+      paintRoadtripCompletionCoach();
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }, Math.max(1, Number(delay) || ROADTRIP_COMPLETION_COACH_DELAY), {
+      owner: "roadtrip-completion-coach", scope: "global"
+    });
+    return !!roadtripCompletionCoachTimer;
+  }
+  function acknowledgeRoadtripCompletionCoach() {
+    if (!roadtripCompletionCoachComplete() || roadtripCompletionCoachAcknowledged) return false;
+    roadtripCompletionCoachPending = false;
+    roadtripCompletionCoachAcknowledged = true;
+    roadtripCompletionCoachVisible = false;
+    cancelRoadtripCompletionCoachTimer();
+    paintRoadtripCompletionCoach();
+    if (window.__checkpointChanged) window.__checkpointChanged();
+    return true;
+  }
+  function resetRoadtripCompletionCoach() {
+    cancelRoadtripCompletionCoachTimer();
+    roadtripCompletionCoachPending = false;
+    roadtripCompletionCoachShown = false;
+    roadtripCompletionCoachAcknowledged = false;
+    roadtripCompletionCoachVisible = false;
+    paintRoadtripCompletionCoach();
+  }
+  function goToRoadtripCompletionCar() {
+    acknowledgeRoadtripCompletionCoach();
+    var lower = activeLowerRoom();
+    if (lower && window.__navigateLowerRoom) {
+      return !!window.__navigateLowerRoom("balcony", null, { unlockLocked: true });
+    }
+    if (window.__goToStage) window.__goToStage("balcony", { rosterNavigation: true });
+    var open = function () {
+      if (window.__entranceRoomOpen) return true;
+      return !!(window.__openEntranceRoom && window.__openEntranceRoom());
+    };
+    if (!open()) setTimeout(open, 780);
+    return true;
+  }
+  window.__syncRoadtripCompletionCoach = function () {
+    if (!roadtripCompletionCoachComplete()) {
+      resetRoadtripCompletionCoach();
+      return false;
+    }
+    if (window.__entranceRoomOpen) {
+      acknowledgeRoadtripCompletionCoach();
+      return false;
+    }
+    if (roadtripCompletionCoachAcknowledged || roadtripCompletionCoachVisible) return false;
+    if (!roadtripCompletionCoachPending && !roadtripCompletionCoachShown) {
+      roadtripCompletionCoachPending = true;
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }
+    return scheduleRoadtripCompletionCoach(roadtripCompletionCoachShown ?
+      ROADTRIP_COMPLETION_COACH_RETRY : ROADTRIP_COMPLETION_COACH_DELAY);
+  };
+  window.__restoreRoadtripCompletionCoach = function (progress) {
+    cancelRoadtripCompletionCoachTimer();
+    roadtripCompletionCoachVisible = false;
+    progress = progress || {};
+    var complete = roadtripCompletionCoachComplete();
+    var hasState = Object.prototype.hasOwnProperty.call(progress, "roadtripCompletionCoachAcknowledged") ||
+      Object.prototype.hasOwnProperty.call(progress, "roadtripCompletionCoachPending") ||
+      Object.prototype.hasOwnProperty.call(progress, "roadtripCompletionCoachShown");
+    roadtripCompletionCoachAcknowledged = complete && (hasState ?
+      !!progress.roadtripCompletionCoachAcknowledged : progress.lowerRoom === "entrance");
+    roadtripCompletionCoachShown = complete && !roadtripCompletionCoachAcknowledged &&
+      !!progress.roadtripCompletionCoachShown;
+    roadtripCompletionCoachPending = complete && !roadtripCompletionCoachAcknowledged &&
+      (hasState ? !!progress.roadtripCompletionCoachPending : progress.lowerRoom !== "entrance");
+    paintRoadtripCompletionCoach();
+    if (complete && !roadtripCompletionCoachAcknowledged) {
+      if (!roadtripCompletionCoachPending && !roadtripCompletionCoachShown) roadtripCompletionCoachPending = true;
+      scheduleRoadtripCompletionCoach(roadtripCompletionCoachShown ?
+        ROADTRIP_COMPLETION_COACH_RETRY : ROADTRIP_COMPLETION_COACH_DELAY);
+    }
+    return roadtripCompletionCoachPending || roadtripCompletionCoachShown;
+  };
+  window.__roadtripCompletionCoachState = function () {
+    return { pending: roadtripCompletionCoachPending, shown: roadtripCompletionCoachShown,
+      acknowledged: roadtripCompletionCoachAcknowledged, visible: roadtripCompletionCoachVisible,
+      scheduled: !!roadtripCompletionCoachTimer };
+  };
+  window.__roadtripCompletionCoachActive = function () { return roadtripCompletionCoachVisible; };
+  window.__dismissRoadtripCompletionCoach = acknowledgeRoadtripCompletionCoach;
+  window.__goToRoadtripCompletionCar = goToRoadtripCompletionCar;
+  if (roadtripCompletionCoach) {
+    var roadtripCompletionCard = roadtripCompletionCoach.querySelector(".hunt-coach-card");
+    var roadtripCompletionAction = roadtripCompletionCoach.querySelector(".roadtrip-completion-action");
+    var roadtripCompletionDismiss = roadtripCompletionCoach.querySelector(".hunt-coach-x");
+    roadtripCompletionCoach.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    if (roadtripCompletionCard) roadtripCompletionCard.addEventListener("click", function (event) {
+      if (event.target === roadtripCompletionAction || event.target === roadtripCompletionDismiss) return;
+      event.preventDefault();
+      event.stopPropagation();
+      acknowledgeRoadtripCompletionCoach();
+    });
+    if (roadtripCompletionDismiss) roadtripCompletionDismiss.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      acknowledgeRoadtripCompletionCoach();
+    });
+    if (roadtripCompletionAction) roadtripCompletionAction.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      goToRoadtripCompletionCar();
+    });
+  }
   function setCaption(key, force, originScope, originGeneration) {
     if (typeof key !== "string" || !key) return false;
     var scope = originScope || captionViewportScope();
@@ -117655,6 +117840,11 @@ function spawnDustMote(container) {
     if (e.ctrlKey || e.metaKey || e.altKey || (e.defaultPrevented && e.key !== "Tab")) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    if (window.__roadtripCompletionCoachActive && window.__roadtripCompletionCoachActive()) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     if (document.getElementById("click-me-overlay") &&
         (e.key === " " || e.key === "Spacebar" || e.key === "Enter" ||
          e.key === "Escape" || e.key === "Esc" || e.key === "Backspace")) {
@@ -119940,6 +120130,9 @@ function spawnDustMote(container) {
     }
     if (previous !== window.__secondRound && window.__syncRoadtripDepartureCaption) {
       window.__syncRoadtripDepartureCaption();
+    }
+    if (previous !== window.__secondRound && window.__syncRoadtripCompletionCoach) {
+      window.__syncRoadtripCompletionCoach();
     }
     if (previous !== window.__secondRound && window.__refreshKitchenBar) window.__refreshKitchenBar();
     if (previous !== window.__secondRound && window.__updateMonitorKillCaption) window.__updateMonitorKillCaption();
@@ -130581,6 +130774,9 @@ function spawnDustMote(container) {
         seenRooms: seenRoomList(),
         roadtripDepartureCaptionPending: roadtripDepartureCaptionPending,
         roadtripDepartureCaptionAcknowledged: roadtripDepartureCaptionAcknowledged,
+        roadtripCompletionCoachPending: roadtripCompletionCoachPending,
+        roadtripCompletionCoachShown: roadtripCompletionCoachShown,
+        roadtripCompletionCoachAcknowledged: roadtripCompletionCoachAcknowledged,
         lowerRoom: (activeLowerRoom() || {}).id,
         phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
         daylight: !(balcony && balcony.classList.contains("dusk")),
@@ -130881,6 +131077,7 @@ function spawnDustMote(container) {
     setSeenRooms(Array.isArray(p.seenRooms) ? p.seenRooms : ["kitchen", p.room, p.lowerRoom]);
     setSecondRound(!!p.phase2, { releaseHeld: false });
     if (window.__restoreRoadtripDepartureCaption) window.__restoreRoadtripDepartureCaption(p);
+    if (window.__restoreRoadtripCompletionCoach) window.__restoreRoadtripCompletionCoach(p);
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     // The retained phone can predate this exact birthday. Re-register today's greeting after its

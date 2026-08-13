@@ -671,6 +671,8 @@ window.__loftMessages["en"] = {
     "recovery_minutes": "{n} min ago",
     "recovery_restart": "↻ Start over",
     "recovery_title": "Welcome back",
+    "roadtrip_completion_action": "Go to the car →",
+    "roadtrip_completion_coach": "You’ve seen the whole Loft. Let’s go on a Road Trip.",
     "roadtrip_departure_caption": "Who wants to go on a Road Trip? Head out to the car.",
     "room_progress": "Rooms seen: {n}/10 · keep exploring.",
     "room_visit_bathroom_few": "Here’s the bathroom. {n} more rooms to go.",

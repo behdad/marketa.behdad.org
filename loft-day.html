@@ -117485,6 +117485,7 @@ function spawnDustMote(container) {
   var lastLockedRightAt = 0;
   var lastLockedDownAt = 0;
   var upperKeyboardSlideTimer = null;
+  var monitorSummonPending = false;
   function upperKeyboardSlideBusy() { return !!upperKeyboardSlideTimer; }
   function startUpperKeyboardSettle(fromIndex) {
     if (stageIndex === fromIndex) return;
@@ -117497,6 +117498,35 @@ function spawnDustMote(container) {
   window.__upperRoomKeyboardNavigationState = function () {
     return { settling: upperKeyboardSlideBusy(), room: STAGES[stageIndex] };
   };
+  function finishMonitorSummon() {
+    monitorSummonPending = false;
+    var monEl = document.getElementById("office-monitor");
+    if (!monEl || window.__currentStageName !== "office") return;
+    if (controllers.computer && !controllers.computer.status()) controllers.computer.set(true);
+    else { try { monEl.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })); } catch (mErr) {} }
+  }
+  function finishMonitorRoomPan() {
+    if (window.__afterRoomPan) window.__afterRoomPan(finishMonitorSummon);
+    else finishMonitorSummon();
+  }
+  function finishLowerRoomReturnThen(action) {
+    var viewport = strip.closest(".hunt-viewport");
+    if (!viewport) { action(); return; }
+    var done = false, timer = null;
+    function finish(event) {
+      if (event && (event.target !== viewport || event.propertyName !== "--floor-pan")) return;
+      if (done) return;
+      done = true;
+      viewport.removeEventListener("transitionend", finish);
+      clearTimeout(timer);
+      action();
+    }
+    // Register before goToStage removes the lower-room class. The custom-property
+    // transition is the exact ownership handoff back upstairs; the timer covers engines
+    // that omit transitionend when motion is reduced or the transition is interrupted.
+    viewport.addEventListener("transitionend", finish);
+    timer = setTimeout(finish, LOWER_FLOOR_PAN_MS + 80);
+  }
   function lowerRoomOpenerForStage(name) {
     if (name === "kitchen") return window.__openBathroomRoom;
     if (name === "garden") return window.__openGardenPrince;
@@ -117681,12 +117711,15 @@ function spawnDustMote(container) {
       if (controllers.laptop) controllers.laptop.set(!controllers.laptop.status()); // 'l' → the office laptop
     } else if (e.key === "m" || e.key === "M") {
       e.preventDefault();
+      if (monitorSummonPending) return;
+      monitorSummonPending = true;
+      var returningFromLowerRoom = lowerRoomOwnsViewport();
+      if (returningFromLowerRoom) finishLowerRoomReturnThen(finishMonitorRoomPan);
       if (window.__goToStage) window.__goToStage("office"); // 'm' → the monitor: boot the PC if it's off, else zoom into the desktop
-      var monEl = document.getElementById("office-monitor");
-      if (monEl) {
-        if (controllers.computer && !controllers.computer.status()) controllers.computer.set(true);
-        else { try { monEl.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })); } catch (mErr) {} }
-      }
+      // A summon can own two consecutive transitions: first the lower-floor return,
+      // then the upper-room pan. Promoting the dock before both settle can sample the
+      // Office's parked visibility and leave only the native wallpaper and top bar.
+      if (!returningFromLowerRoom) finishMonitorRoomPan();
     } else if (e.key === "k" || e.key === "K") {
       e.preventDefault();
       // 'k' releases the cat; once it's OUT, each 'k' makes it do a mischief (zoomies / knock a

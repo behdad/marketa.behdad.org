@@ -53,6 +53,7 @@ var harness = String.raw`<script>
       setTimeout(function () {
       var state = window.__bbqSplitState();
       var deck = names("balcony"), selected = state.guests.slice();
+      if (window.__peopleManager && window.__peopleManager.reconcile) window.__peopleManager.reconcile();
       var peopleAudit = window.__peopleManager && window.__peopleManager.audit();
       check("people manager is the occupancy authority", !!(window.__peopleManager && window.__peopleManager.occupants && window.__peopleManager.inventory && window.__peopleManager.locate));
       check("BBQ split has no cross-room duplicates", !!peopleAudit && peopleAudit.ok, peopleAudit ? JSON.stringify(peopleAudit.duplicates) : "manager missing");

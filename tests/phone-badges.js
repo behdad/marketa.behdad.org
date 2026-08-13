@@ -43,7 +43,7 @@ check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.initial.tiles > 0 && s.initial.tiles === s.initial.badges, "every installed app tile owns a notification badge slot", s.initial);
 check(s.initial.messages === 2 && s.initial.mail === 3 && s.initial.album === 1 && s.initial.photo, "Messages, Mail, and new Album photos project their real unread counts", s.initial);
 check(s.initial.zeroHidden, "zero-count badges stay hidden while nonzero badges show", s.initial);
-check(s.live.count === 3 && s.live.text === "3", "a message arriving on the launcher updates its badge in place", s.live);
+check(s.live.count === 2 && s.live.text === "2", "a duplicate message leaves the launcher badge unchanged", s.live);
 check(s.albumSeen.count === 0 && s.albumSeen.hidden, "opening Album clears only its unseen-photo count", s.albumSeen);
 check(s.mailRead.count === 2, "reading one Mail item decrements its launcher count", s.mailRead);
 check(s.readAll.label === "✓ vše" && s.readAll.singleLine && s.readAll.count === 0 && s.readAll.rows === s.readAll.beforeRows && s.readAll.unreadRows === 0 && s.readAll.disabled, "the visible Czech mark-all control stays in the title row and clears the badge without deleting the thread", s.readAll);

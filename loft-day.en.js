@@ -839,6 +839,8 @@ window.__loftMessages["en"] = {
   "mon_help_keyboard": "Press ? for the full control list.",
   "mon_help_manual": "Game manual ↗",
   "mon_help_title": "Help",
+  "mon_kill_hint_desktop": "Right-click a running app to Kill it.",
+  "mon_kill_hint_touch": "Press and hold a running app to Kill it.",
   "mon_lock_behdad": "Behdad",
   "mon_lock_blue": "Markéta’s blue baker cap",
   "mon_lock_marketa": "Markéta",

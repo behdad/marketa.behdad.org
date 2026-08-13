@@ -839,6 +839,8 @@ window.__loftMessages["cs"] = {
   "mon_help_keyboard": "Stiskni ? pro úplný seznam ovládání.",
   "mon_help_manual": "Herní manuál ↗",
   "mon_help_title": "Nápověda",
+  "mon_kill_hint_desktop": "Pravým kliknutím ukončíš spuštěnou aplikaci.",
+  "mon_kill_hint_touch": "Podržením ukončíš spuštěnou aplikaci.",
   "mon_lock_behdad": "Behdad",
   "mon_lock_blue": "Markétina modrá bekovka",
   "mon_lock_marketa": "Markéta",

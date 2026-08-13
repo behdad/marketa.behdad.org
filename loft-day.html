@@ -37900,8 +37900,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-73a84a367719"></script>
-<script src="loft-day.cs.js?v=dict-ea37344ea8ff"></script>
+<script src="loft-day.en.js?v=dict-82370018df10"></script>
+<script src="loft-day.cs.js?v=dict-47caf19db4bd"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -90959,6 +90959,7 @@ def colormode(mode=None):
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // screen focus settles musically: ~2.5s rather than the projector's ~1s
     if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(true);
     if (el === monitor && window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
+    if (el === monitor && window.__updateMonitorKillCaption) window.__updateMonitorKillCaption();
   }
   function zoomOut() {
     if (!zoomEl) return;
@@ -90986,6 +90987,7 @@ def colormode(mode=None):
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
     if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(false);
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
+    if (window.__updateMonitorKillCaption) window.__updateMonitorKillCaption();
   }
   // A room slide and a device-zoom glide both own the same strip transform. Collapse any
   // active (or still-settling) device zoom to the current room in one unanimated commit
@@ -91021,6 +91023,7 @@ def colormode(mode=None):
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck();
     if (window.__setDeviceNotificationHold) window.__setDeviceNotificationHold(false);
+    if (window.__updateMonitorKillCaption) window.__updateMonitorKillCaption();
     return true;
   }
   // re-fit the zoom whenever the box it frames may have moved or resized under us — a
@@ -116666,6 +116669,25 @@ function spawnDustMote(container) {
     captionArbiter.refresh();
     if (openingGuideShowing) paintOpeningGuide();
   };
+  // The monitor has its own non-modal base line while it owns the view. Stronger story
+  // bases and temporary captions retain their normal precedence over this small nudge.
+  window.__updateMonitorKillCaption = function () {
+    var owner = "monitor-kill-discovery", state = captionArbiter.state();
+    var active = !!(window.__secondRound && window.__currentStageName === "office" &&
+      window.__monitorZoomed && window.__monitorZoomed());
+    if (active) {
+      if (state.base && state.base.owner !== owner && state.base.priority > CAPTION_PRIORITY.base) return false;
+      return captionArbiter.base({
+        key: window.matchMedia && window.matchMedia("(pointer: coarse)").matches ?
+          "mon_kill_hint_touch" : "mon_kill_hint_desktop",
+        owner: owner, scope: "stage:office", priority: CAPTION_PRIORITY.base
+      });
+    }
+    if (!state.base || state.base.owner !== owner) return false;
+    captionArbiter.cancel(owner, { base: true });
+    if (window.__currentStageName === "office" && window.__restoreStageHint) window.__restoreStageHint("office");
+    return true;
+  };
   var finaleTimers = [], finaleActTimer = null;
   var balconyIntroSeen = false;
   window.__balconyUnlocked = function () { return balconyIntroSeen; }; // "first phase over" = the balcony's been properly reached (gates the autonomous kids-outside chance)
@@ -119852,6 +119874,7 @@ function spawnDustMote(container) {
       window.__syncRoadtripDepartureCaption();
     }
     if (previous !== window.__secondRound && window.__refreshKitchenBar) window.__refreshKitchenBar();
+    if (previous !== window.__secondRound && window.__updateMonitorKillCaption) window.__updateMonitorKillCaption();
     return previous;
   }
   window.__setSecondRound = setSecondRound;

@@ -40,7 +40,7 @@ var failures=0;
 function check(ok,msg,detail){if(ok)console.log("  ✓ "+msg);else{failures++;console.log("  ✗ "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
 
 console.log("rsvp.html calendar event navigation:");
-var r=lib.runPageSync("rsvp.html",HARNESS,2200,{patchRaf:true});
+var r=lib.runPageSync("rsvp.html",HARNESS,2000,{patchRaf:true});
 if(!r){console.log("  ✗ harness produced no report");process.exit(1);}
 var s=r.steps;
 check(r.errors.length===0,"no uncaught page errors",r.errors);

@@ -100,8 +100,21 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           try {
             report.freshFire = {
               crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: mealShown(),
-              available: camp.classList.contains("stew-crate-available")
+              available: camp.classList.contains("stew-crate-available"),
+              hiddenContinueHit: getComputedStyle(document.querySelector(".entrance-roadtrip-camp-wisdom-continue-hit")).pointerEvents === "none"
             };
+            var crateRect = crate.getBoundingClientRect();
+            function clickCratePoint(xRatio, yRatio) {
+              var target = document.elementFromPoint(crateRect.left + crateRect.width * xRatio,
+                crateRect.top + crateRect.height * yRatio);
+              click(target);
+            }
+            clickCratePoint(.62, .62);
+            report.cratePoints = { sign: { open: stew().open } };
+            click(close);
+            clickCratePoint(.62, .84);
+            report.cratePoints.front = { open: stew().open };
+            click(close);
             var freshFireCheckpoint = window.__captureCheckpointSystems().entrance;
             click(crate);
             var itemIds = Array.from(game.querySelectorAll("[data-stew-item]"))
@@ -350,9 +363,11 @@ var result = lib.runPageSync("loft-day.html", HARNESS, 12000, {
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the real stew interaction loop has no uncaught errors", result && result.errors);
-check(result && result.freshFire && result.freshFire.crate && result.freshFire.available &&
+check(result && result.freshFire && result.freshFire.crate && result.freshFire.available && result.freshFire.hiddenContinueHit &&
   !result.freshFire.pot && !result.freshFire.grill && !result.freshFire.meal,
   "a fresh lit fire is bare and exposes only the food crate", result && result.freshFire);
+check(result && result.cratePoints && result.cratePoints.sign.open && result.cratePoints.front.open,
+  "the STEW sign and the crate front both open Cook through real hit-testing", result && result.cratePoints);
 var exactItems = ["barley", "beans", "beef", "carrots", "celery", "chicken", "chilies", "coriander", "curry", "garlic", "ginger", "lamb", "mushrooms", "onion", "pasta", "pepper", "pork", "potatoes", "rice", "salt", "tofu", "tomato"];
 check(result && result.builder && result.builder.open && JSON.stringify(result.builder.items) === JSON.stringify(exactItems) &&
   JSON.stringify(result.builder.headings) === JSON.stringify(["PROTEIN", "BASE"]) && !result.builder.chooseText &&

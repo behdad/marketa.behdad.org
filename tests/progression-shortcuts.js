@@ -34,8 +34,8 @@ var harness = String.raw`<script>
     var shiftR = key("R", true);
     await sleep(1400);
     var entrance = window.__entranceRoomState && window.__entranceRoomState();
-    check("Shift+R winds down the Party and lands at the Road Trip-ready Entrance",
-      !shiftR && !window.__gardenPartyOn && window.__secondRound &&
+    check("Shift+R preserves optional Party state and lands at the Road Trip-ready Entrance",
+      !shiftR && window.__gardenPartyOn && window.__secondRound &&
       window.__seenRooms().length === 10 && window.__currentStageName === "balcony" &&
       window.__entranceRoomOpen && entrance && entrance.drive.hud === false &&
       entrance.drive.roadtrip.unlocked && entrance.drive.roadtrip.invitationReady,

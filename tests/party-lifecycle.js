@@ -63,7 +63,7 @@ var harness = String.raw`<script>
   check("the room-map coach queues an incoming call instead of letting it cover the coach",
     !document.querySelector(".call-ring.show") && window.__heldPartyCoachCalls &&
       window.__heldPartyCoachCalls().length === 1, window.__heldPartyCoachCalls && window.__heldPartyCoachCalls());
-  roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
   check("the room-map coach’s explicit dismiss control closes it without opening the map or releasing Road Trip early",
     !window.__partyLifecycleState().roomMapCoachActive &&
       !roomCoach.classList.contains("show") && !window.__partyLifecycleState().roadtripInviteDelivered &&
@@ -96,7 +96,7 @@ var harness = String.raw`<script>
       roomCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
       getComputedStyle(roomCoachArrow).animationName === "kitchen-arrow-bounce",
     roomCoach.querySelector(".party-bridge-room-copy").textContent);
-  roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
   check("dismissing exploration leaves Party live and acknowledges that lesson",
     !roomCoach.classList.contains("show") && window.__gardenPartyOn && window.__partyLifecycleState().roomMapCoachAcknowledged);
 

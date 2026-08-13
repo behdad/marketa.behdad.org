@@ -74,24 +74,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.steer = snap({ downPrevented: leftDown.defaultPrevented,
         upPrevented: leftUp.defaultPrevented, held: held });
 
-      // A requested HUD also owns keys while the canonical party-stop callback is
-      // pending. Nothing should navigate or start early; the callback hands the same
-      // owner to a fresh coach, where Enter starts the car normally.
+      // Road Trip no longer requires ending Party. Reopening the HUD while Party is
+      // live must immediately transfer keyboard ownership to its fresh coach.
       window.__dismissEntrancePorscheDriveHud();
       window.__setSecondRound(false, { releaseHeld: false });
       window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
         "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
       window.__setSecondRound(true, { releaseHeld: false });
       window.__setGardenParty(true, false);
-      var partyStopCallback = null;
-      window.__stopPartyThen = function (callback) { partyStopCallback = callback; return true; };
       road.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      var pendingEnter = key("keydown", "Enter", "Enter", document);
-      var pendingRight = key("keydown", "ArrowRight", "ArrowRight", viewport);
-      report.steps.pending = snap({ enterPrevented: pendingEnter.defaultPrevented,
-        rightPrevented: pendingRight.defaultPrevented, callback: typeof partyStopCallback });
-      window.__setGardenParty(false, true);
-      partyStopCallback();
+      report.steps.partyOpen = snap({ party: !!window.__gardenPartyOn });
       var handoffEnter = key("keydown", "Enter", "Enter", document);
       report.steps.handoff = snap({ enterPrevented: handoffEnter.defaultPrevented });
     } catch (error) {
@@ -133,15 +125,15 @@ check(s.steer && s.steer.downPrevented && s.steer.upPrevented && s.steer.held.st
   !s.steer.state.drive.holds.steerLeft && s.steer.room === "balcony" &&
   s.steer.entranceOpen && !s.steer.lowerSlide.active,
   "steering press/release cannot leak into lower-room navigation during a repaint gap", s.steer);
-check(s.pending && s.pending.callback === "function" && !s.pending.state.drive.hud &&
-  s.pending.ownership.owned && s.pending.ownership.partyStopPending &&
-  s.pending.enterPrevented && s.pending.rightPrevented && !s.pending.state.car.engineOn &&
-  s.pending.room === "balcony" && s.pending.entranceOpen && !s.pending.lowerSlide.active,
-  "the requested HUD swallows car keys throughout the party-stop handoff", s.pending);
+check(s.partyOpen && s.partyOpen.party && s.partyOpen.state.drive.hud &&
+  s.partyOpen.ownership.owned && !s.partyOpen.ownership.partyStopPending &&
+  !s.partyOpen.state.car.engineOn && s.partyOpen.room === "balcony" &&
+  s.partyOpen.entranceOpen && !s.partyOpen.lowerSlide.active,
+  "Road Trip opens immediately and owns the keyboard while Party stays live", s.partyOpen);
 check(s.handoff && s.handoff.enterPrevented && s.handoff.state.drive.hud &&
   s.handoff.state.car.engineOn && s.handoff.coach && s.handoff.ownership.owned &&
   s.handoff.ownership.hudOpen && !s.handoff.ownership.partyStopPending,
-  "the handoff transfers ownership to the fresh coach and Enter starts the car", s.handoff);
+  "the fresh coach keeps ownership and Enter starts the car", s.handoff);
 
 if (failures) process.exit(1);
 console.log("Entrance HUD keyboard ownership assertions passed.");

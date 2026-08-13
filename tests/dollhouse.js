@@ -71,13 +71,27 @@ var harness = String.raw`<script>
         !document.getElementById("hunt-floor-btn").hidden && !document.getElementById("hunt-dollhouse-btn").hidden,
       JSON.stringify(state()));
     var firstPreviews = [].slice.call(document.querySelectorAll(".loft-dollhouse-static-preview"));
-    check("the Dollhouse owns ten static image surfaces and no live room clones",
-      firstPreviews.length === 10 && !document.querySelector(".loft-dollhouse-room use") &&
-        state().livePreviews.length === 0,
-      JSON.stringify({ images: firstPreviews.length, live: state().livePreviews }));
+    var dungeonArt = roomButton("dungeon").querySelector(".loft-dollhouse-static-art");
+    check("the Dollhouse owns nine captured rooms plus one exact-vector Dungeon card",
+      firstPreviews.length === 10 && !!dungeonArt &&
+        !document.querySelector(".loft-dollhouse-live-preview") && state().livePreviews.length === 0,
+      JSON.stringify({ images: firstPreviews.length, dungeon: !!dungeonArt, live: state().livePreviews }));
+    check("the Dollhouse opens progressively instead of waiting for every cold capture",
+      state().open && getComputedStyle(document.getElementById("loft-dollhouse")).opacity === "1",
+      JSON.stringify(state()));
+    check("a cold Dungeon waits on the same blue progress surface as captured rooms",
+      getComputedStyle(dungeonArt).display === "none" &&
+        roomButton("dungeon").classList.contains("capture-pending") &&
+        roomButton("dungeon").classList.contains("capture-cold"),
+      JSON.stringify({ display: getComputedStyle(dungeonArt).display,
+        classes: roomButton("dungeon").getAttribute("class") }));
     var warmed = await waitFor(function () { return state().backgroundWarm.complete; });
-    check("the first Dollhouse appears only after every desired capture is ready",
-      warmed && firstPreviews.every(function (image) { return !!image.getAttribute("href"); }) &&
+    check("the progressive queue fills every captured card and retains direct Dungeon art",
+      warmed && firstPreviews.filter(function (image) {
+        return image.closest("[data-dollhouse-room]").dataset.dollhouseRoom !== "dungeon";
+      }).every(function (image) { return !!image.getAttribute("href"); }) && !!dungeonArt &&
+        getComputedStyle(dungeonArt).display !== "none" &&
+        !roomButton("dungeon").classList.contains("capture-pending") &&
         getComputedStyle(document.getElementById("loft-dollhouse")).opacity === "1",
       JSON.stringify(state()));
     check("opening The Loft pauses an active Road Trip exactly once",
@@ -221,11 +235,12 @@ var harness = String.raw`<script>
       roomButton("garden").querySelector("span").textContent === "Garden / Party" &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1 &&
       getComputedStyle(roomButton("garden").querySelector("svg")).filter.indexOf("blur") !== -1);
-    check("all lower previews are retained images rather than live SVG uses",
-      ["bathroom", "dungeon", "cinema", "bedroom", "entrance"].every(function (name) {
+    check("lower previews use retained captures except for the exact-vector Dungeon card",
+      ["bathroom", "cinema", "bedroom", "entrance"].every(function (name) {
         return !!roomButton(name).querySelector("image").getAttribute("href") &&
           !roomButton(name).querySelector("use");
-      }));
+      }) && !!roomButton("dungeon").querySelector(".loft-dollhouse-static-art") &&
+        !roomButton("dungeon").querySelector("image").getAttribute("href"));
     check("capturing Cinema does not add preview-only art to the live room",
       !document.getElementById("cinema-screen-lake"));
     check("Cinema click targets stay transparent in the cloned room art",
@@ -431,6 +446,22 @@ var harness = String.raw`<script>
       window.__currentStageName === "office" && !kidGames.classList.contains("playing") &&
       roomButton("cuddly").querySelector("image").getAttribute("href") === partyCuddly &&
       getComputedStyle(document.getElementById("stage-cuddly")).visibility === "hidden");
+    var unchangedCaptureCount = state().backgroundWarm.previews;
+    window.__refreshDollhouseCaptures("semantic-scan");
+    await sleep(500);
+    check("an unchanged semantic scan skips every room without capture work",
+      state().backgroundWarm.previews === unchangedCaptureCount,
+      JSON.stringify({ before: unchangedCaptureCount, after: state().backgroundWarm.previews }));
+    var realBarCoupleNow = window.__barCoupleNow;
+    window.__barCoupleNow = function () { return ["__dollhouse_test_person__"]; };
+    window.__refreshDollhouseCaptures("semantic-scan");
+    var oneRoomChanged = await waitFor(function () {
+      return state().backgroundWarm.previews === unchangedCaptureCount + 1;
+    }, 4000);
+    check("one changed room key recaptures exactly that card",
+      oneRoomChanged && state().backgroundWarm.previews === unchangedCaptureCount + 1,
+      JSON.stringify({ before: unchangedCaptureCount, after: state().backgroundWarm.previews }));
+    window.__barCoupleNow = realBarCoupleNow;
     window.__closeDollhouse();
     check("closing the Dollhouse leaves the parked Cuddly source untouched",
       window.__currentStageName === "office" && !kidGames.classList.contains("playing"));

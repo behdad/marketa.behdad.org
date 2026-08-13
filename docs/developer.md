@@ -181,8 +181,13 @@ warms the checkpoint's saved lighting and Party shell. Day/night variants are re
 ignition invalidates and recaptures only the five upper rooms after Party population settles, freezing
 the current occupants without retaining their animation trees. UV is deliberately excluded. Never
 reintroduce live `<use>` cards: they multiply style/layout/animation work and let WebKit shadow content
-escape its room. Keep cold presentation withheld until all ten desired variants exist, then retain the
-compressed captures for immediate reopen.
+escape its room. Retain the compressed captures for immediate reopen. The picker itself is never
+withheld: cold cards expose a per-card progress indicator, while a missing lighting or Party variant
+keeps showing its last capture until the replacement lands. Each capture records a semantic key
+(lighting/Party variant plus that room's occupant assignment), so an active Party picker's paced
+background scan encodes only cards whose meaningful state changed. Animation phase and the
+Garden card's fixed four-pool composition never invalidate the cache. Dungeon remains the direct
+static vector card because it has no authored state variation.
 
 The Office monitor retains app DOM and runtime state across zoom and room changes. At room scale,
 HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,

@@ -3531,16 +3531,13 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    where they paint faithfully; stateful lower rooms use stable portrait art instead. */
 #loft-dollhouse{
   position:fixed; inset:0; z-index:110; display:grid; place-items:center; box-sizing:border-box;
-  padding:clamp(.35rem,1vw,1rem); background:rgba(38,28,23,.76);
+  padding:clamp(.35rem,1vw,1rem); background:rgba(38,28,23,.5);
 }
 #loft-dollhouse[hidden]{display:none}
-/* A cold picker stays transparent until its canonical room captures are ready. Every later open
-   paints the retained captures immediately; replacements are double-buffered behind them. */
-#loft-dollhouse.dollhouse-preparing{opacity:0}
 .loft-dollhouse-panel{
   position:relative; width:min(calc(100vw - clamp(.7rem,2vw,2rem)),calc((100vh - clamp(.7rem,2vw,2rem))*4));
   max-height:calc(100vh - clamp(.7rem,2vw,2rem)); box-sizing:border-box; padding:.72rem .78rem .82rem;
-  border:2px solid var(--pink); border-radius:12px; background:rgba(241,221,221,.7); color:var(--ink);
+  border:2px solid var(--pink); border-radius:12px; background:#f1dddd; color:var(--ink);
   box-shadow:0 12px 36px rgba(24,16,12,.48),inset 0 0 0 4px rgba(217,166,166,.25);
 }
 .loft-dollhouse-title{
@@ -3587,7 +3584,20 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   --storm-flash-weak:0;
   --storm-flash-medium:0;
 }
-.loft-dollhouse-static-preview{pointer-events:none}
+.loft-dollhouse-static-preview,.loft-dollhouse-static-art{pointer-events:none}
+.loft-dollhouse-capture-spinner{
+  display:none;position:absolute;z-index:3;left:50%;top:calc((100% - 1rem)/2);
+  width:clamp(.8rem,2.3vw,1.25rem);height:clamp(.8rem,2.3vw,1.25rem);box-sizing:border-box;
+  border:2px solid rgba(142,58,74,.22);border-top-color:var(--wine);border-radius:50%;
+  translate:-50% -50%;pointer-events:none;animation:dollhouse-capture-spin .8s linear infinite
+}
+.loft-dollhouse-room.capture-pending .loft-dollhouse-capture-spinner{display:block}
+.loft-dollhouse-room.capture-cold svg{background:var(--blue)}
+.loft-dollhouse-room.capture-pending:not(.capture-cold) .loft-dollhouse-capture-spinner{
+  left:auto;right:.28rem;top:.28rem;translate:0 0;width:clamp(.65rem,1.8vw,.95rem);height:clamp(.65rem,1.8vw,.95rem)
+}
+@keyframes dollhouse-capture-spin{to{rotate:1turn}}
+@media (prefers-reduced-motion:reduce){.loft-dollhouse-capture-spinner{animation:none;border-top-color:var(--wine)}}
 #bedroom-room.dollhouse-preview :is(.bedroom-suit,.bedroom-sprinkler-water,.bedroom-bed-wet,#bedroom-party-coats,.bedroom-sleep-zz){opacity:0!important}
 #loft-dollhouse-default-art,#loft-dollhouse-scene-art{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 @media (max-width:520px){
@@ -114998,7 +115008,19 @@ function spawnDustMote(container) {
   var dollhouseWarmMode = "fresh";
   var dollhouseWarmStarted = false;
   var dollhouseRecoveryPreview = null;
-  var DOLLHOUSE_CAPTURE_GAP_MS = 180;
+  var dollhouseOpenRefreshTimer = null;
+  var dollhouseOpenRefreshPass = 0;
+  var DOLLHOUSE_CAPTURE_GAP_MS = 150;
+  var DOLLHOUSE_OPEN_CAPTURE_GAP_MS = 750;
+  var DOLLHOUSE_PARTY_REFRESH_MS = 15000;
+  function dollhouseCaptureGap(job) {
+    var update = !!(job && job.openRefresh);
+    var visible = !!(dollhouse && !dollhouse.hidden);
+    if (window.__frameHealthSlow && window.__frameHealthSlow()) {
+      return update ? 1200 : (visible ? 100 : 300);
+    }
+    return update ? DOLLHOUSE_OPEN_CAPTURE_GAP_MS : (visible ? 50 : DOLLHOUSE_CAPTURE_GAP_MS);
+  }
   function floorText(key) {
     var l = document.documentElement.lang;
     return (T[l] && T[l][key]) || T.en[key] || key;
@@ -115016,6 +115038,18 @@ function spawnDustMote(container) {
     dollhouse.hidden = true;
     var area = document.getElementById("hunt-fullscreen-area");
     if (area) area.classList.remove("dollhouse-open");
+    if (dollhouseOpenRefreshTimer) clearTimeout(dollhouseOpenRefreshTimer);
+    dollhouseOpenRefreshTimer = null;
+    dollhouseOpenRefreshPass++;
+    dollhouseCaptureQueue = dollhouseCaptureQueue.filter(function (job) {
+      if (!job.openRefresh) return true;
+      delete job.spec.captureQueuedKeys[job.variant];
+      return false;
+    });
+    dollhouseRooms.forEach(function (spec) {
+      if (!spec.captureActiveOpenRefresh) return;
+      spec.captureToken++;
+    });
     syncDollhousePresentation();
     dollhouseLockedEnterRoom = "";
     dollhouseLockedEnterAt = 0;
@@ -115122,6 +115156,16 @@ function spawnDustMote(container) {
     svg.appendChild(image);
     var targetId = spec.defaultArt ? "loft-dollhouse-" + spec.defaultArt + "-art" :
       (spec.floor === "main" ? "stage-" + spec.stage : spec.art);
+    var staticUse = null;
+    if (spec.defaultArt && targetId) {
+      staticUse = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      staticUse.setAttribute("class", "loft-dollhouse-static-art");
+      staticUse.setAttribute("href", "#" + targetId);
+      staticUse.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + targetId);
+      staticUse.setAttribute("width", "680");
+      staticUse.setAttribute("height", "340");
+      svg.insertBefore(staticUse, image);
+    }
     if (!targetId) {
       svg.innerHTML = '<rect width="680" height="340" fill="#282128"/>' +
         '<path d="M0 35H680M0 95H680M0 155H680M0 215H680M0 275H680M85 35V95M255 35V95M425 35V95M595 35V95M170 95V155M340 95V155M510 95V155M85 155V215M255 155V215M425 155V215M595 155V215" stroke="#6f5554" stroke-width="8" opacity=".58"/>' +
@@ -115132,8 +115176,11 @@ function spawnDustMote(container) {
     var visited = document.createElement("b");
     visited.className = "loft-dollhouse-visited";
     visited.textContent = "✓";
+    var spinner = document.createElement("i");
+    spinner.className = "loft-dollhouse-capture-spinner";
     var lastTouchAt = 0;
     button.appendChild(svg);
+    button.appendChild(spinner);
     button.appendChild(visited);
     button.appendChild(label);
     button.addEventListener("click", function (event) {
@@ -115163,10 +115210,17 @@ function spawnDustMote(container) {
     spec.button = button;
     spec.svg = svg;
     spec.image = image;
+    spec.use = staticUse;
+    spec.staticArt = !!staticUse;
+    spec.staticReady = false;
+    if (spec.staticArt) button.classList.add("capture-pending", "capture-cold");
+    spec.spinner = spinner;
     spec.label = label;
     spec.targetId = targetId || "";
     spec.captureToken = 0;
     spec.snapshots = Object.create(null);
+    spec.snapshotSignatures = Object.create(null);
+    spec.captureDesiredSignatures = Object.create(null);
     spec.captureQueuedKeys = Object.create(null);
     dollhouseRooms.push(spec);
   }
@@ -115229,7 +115283,7 @@ function spawnDustMote(container) {
     }
   }
   function dollhouseCaptureTarget(spec) {
-    if (!spec || !spec.targetId) return null;
+    if (!spec || spec.staticArt || !spec.targetId) return null;
     return document.getElementById(spec.targetId);
   }
   function dollhouseNight() {
@@ -115238,6 +115292,7 @@ function spawnDustMote(container) {
     return !!(balcony && balcony.classList.contains("dusk"));
   }
   function dollhouseVariantKey(spec) {
+    if (spec && spec.staticArt) return "static";
     if (spec && spec.floor === "main" &&
         (window.__gardenPartyOn || (dollhouseRecoveryPreview && dollhouseRecoveryPreview.party))) return "party";
     return dollhouseNight() ? "night" : "day";
@@ -115309,6 +115364,19 @@ function spawnDustMote(container) {
       clone.removeAttribute("transform");
       clone.style.setProperty("transform", "none", "important");
     }
+    if (variant === "party" && spec.room === "garden") {
+      // Freeze the authored four-pool composition rather than whichever animation frame happened
+      // to be under the encoder. Spotlight motion is not meaningful Dollhouse state.
+      var pools = clone.querySelector("#garden-disco-pools");
+      if (pools) {
+        pools.style.setProperty("opacity", "1", "important");
+        Array.prototype.forEach.call(pools.querySelectorAll(".disco-pool"), function (pool) {
+          pool.removeAttribute("style");
+          pool.style.setProperty("opacity", ".34", "important");
+          pool.style.setProperty("transform", "none", "important");
+        });
+      }
+    }
     roomWrap.appendChild(clone);
     area.appendChild(stripClone);
     viewport.appendChild(area);
@@ -115317,14 +115385,49 @@ function spawnDustMote(container) {
     stripDollhouseCaptureNodes(shell);
     return new XMLSerializer().serializeToString(shell);
   }
-  function setDollhouseSnapshot(spec, variant, data) {
+  function dollhouseStableKeys(value) {
+    if (!value) return [];
+    if (!Array.isArray(value)) value = [value];
+    return value.map(function (person) {
+      if (typeof person === "string") return person;
+      return person && (person.key || person.id || person.name) || "";
+    }).filter(Boolean).sort();
+  }
+  function dollhouseHookKeys(hook) {
+    try { return dollhouseStableKeys(typeof hook === "function" ? hook() : []); }
+    catch (_error) { return []; }
+  }
+  function dollhouseCaptureSignature(spec, variant) {
+    if (!spec || spec.staticArt) return "static";
+    var occupants = [];
+    try {
+      occupants = window.__peopleManager ?
+        dollhouseStableKeys(window.__peopleManager.occupants(spec.room)) : [];
+    } catch (_error) {}
+    var assignment = [];
+    if (spec.room === "kitchen") assignment = dollhouseHookKeys(window.__barCoupleNow);
+    else if (spec.room === "office") assignment = dollhouseHookKeys(window.__officeCoupleNow);
+    else if (spec.room === "cuddly") {
+      assignment = dollhouseHookKeys(window.__cuddlyVisitorsNow)
+        .concat(dollhouseHookKeys(window.__cuddlyAssignedKidNames));
+    } else if (spec.room === "balcony") {
+      assignment = dollhouseHookKeys(window.__balconyHangoutNow)
+        .concat(dollhouseHookKeys(window.__balconyGrillmasterNow))
+        .concat(dollhouseHookKeys(window.__balconyPlayKidsNow));
+    }
+    return JSON.stringify({ room: spec.room, variant: variant,
+      occupants: occupants, assignment: assignment.sort() });
+  }
+  function setDollhouseSnapshot(spec, variant, data, signature) {
     spec.snapshots[variant] = data;
+    spec.snapshotSignatures[variant] = signature;
+    spec.captureDesiredSignatures[variant] = signature;
     spec.snapshotReady = true;
     spec.snapshotBytes = Object.keys(spec.snapshots).reduce(function (total, key) {
       return total + spec.snapshots[key].length;
     }, 0);
   }
-  function captureDollhouseRoom(spec, variant) {
+  function captureDollhouseRoom(spec, variant, signature) {
     if (!spec || !spec.image || !dollhouseCaptureTarget(spec)) return Promise.resolve(false);
     if (dollhouseVariantKey(spec) !== variant) return Promise.resolve(false);
     var token = ++spec.captureToken;
@@ -115354,7 +115457,7 @@ function spawnDustMote(container) {
           resolve(false); return;
         }
         var data = canvas.toDataURL("image/webp", .82);
-        setDollhouseSnapshot(spec, variant, data);
+        setDollhouseSnapshot(spec, variant, data, signature);
         spec.captureMs = performance.now() - started;
         dollhouseCaptureCount++;
         syncDollhousePresentation();
@@ -115381,13 +115484,39 @@ function spawnDustMote(container) {
         scheduleDollhouseCapture();
         return;
       }
-      dollhouseCaptureBusy = true;
-      captureDollhouseRoom(spec, job.variant).finally(function () {
-        dollhouseCaptureBusy = false;
+      job.signature = dollhouseCaptureSignature(spec, job.variant);
+      spec.captureDesiredSignatures[job.variant] = job.signature;
+      if (spec.staticArt) {
+        spec.captureActiveVariant = job.variant;
+        syncDollhousePresentation();
+        spec.staticReady = true;
+        spec.captureActiveVariant = "";
+        syncDollhousePresentation();
         dollhouseCaptureDelay = setTimeout(function () {
           dollhouseCaptureDelay = 0;
           scheduleDollhouseCapture();
-        }, dollhouseCaptureQueue[0] && dollhouseCaptureQueue[0].urgent ? 48 : DOLLHOUSE_CAPTURE_GAP_MS);
+        }, dollhouseCaptureGap(job));
+        return;
+      }
+      if (spec.snapshots[job.variant] &&
+          spec.snapshotSignatures[job.variant] === job.signature) {
+        syncDollhousePresentation();
+        scheduleDollhouseCapture();
+        return;
+      }
+      dollhouseCaptureBusy = true;
+      spec.captureActiveVariant = job.variant;
+      spec.captureActiveOpenRefresh = !!job.openRefresh;
+      syncDollhousePresentation();
+      captureDollhouseRoom(spec, job.variant, job.signature).finally(function () {
+        spec.captureActiveVariant = "";
+        spec.captureActiveOpenRefresh = false;
+        dollhouseCaptureBusy = false;
+        syncDollhousePresentation();
+        dollhouseCaptureDelay = setTimeout(function () {
+          dollhouseCaptureDelay = 0;
+          scheduleDollhouseCapture();
+        }, dollhouseCaptureQueue[0] && dollhouseCaptureQueue[0].urgent ? 48 : dollhouseCaptureGap(job));
       });
     };
     if (dollhouseCaptureQueue[0].urgent) {
@@ -115395,11 +115524,17 @@ function spawnDustMote(container) {
     } else if (window.requestIdleCallback) dollhouseCaptureIdle = window.requestIdleCallback(run, { timeout: 700 });
     else dollhouseCaptureDelay = setTimeout(function () { dollhouseCaptureDelay = 0; run(); }, 40);
   }
-  function queueDollhouseCapture(spec, variant, priority, force, urgent) {
-    if (!spec || !variant || !dollhouseCaptureTarget(spec) ||
-        (!force && spec.snapshots[variant]) || spec.captureQueuedKeys[variant]) return;
+  function queueDollhouseCapture(spec, variant, priority, force, urgent, gap, openRefresh) {
+    if (!spec || !variant || (!spec.staticArt && !dollhouseCaptureTarget(spec))) return;
+    var signature = dollhouseCaptureSignature(spec, variant);
+    spec.captureDesiredSignatures[variant] = signature;
+    if (spec.staticArt && spec.staticReady) return;
+    if (spec.snapshots[variant] && spec.snapshotSignatures[variant] === signature) return;
+    if (spec.captureQueuedKeys[variant] || spec.captureActiveVariant === variant) return;
     spec.captureQueuedKeys[variant] = true;
-    var job = { spec: spec, variant: variant, urgent: !!urgent };
+    var job = { spec: spec, variant: variant, signature: signature,
+      urgent: !!urgent, gap: gap || 0,
+      openRefresh: !!openRefresh };
     if (priority) dollhouseCaptureQueue.unshift(job);
     else dollhouseCaptureQueue.push(job);
     if (urgent && dollhouseCaptureIdle && window.cancelIdleCallback) {
@@ -115410,6 +115545,7 @@ function spawnDustMote(container) {
       clearTimeout(dollhouseCaptureDelay);
       dollhouseCaptureDelay = 0;
     }
+    syncDollhousePresentation();
     scheduleDollhouseCapture();
   }
   function queueDollhouseCaptures(options) {
@@ -115428,21 +115564,36 @@ function spawnDustMote(container) {
       });
       // queueDollhouseCapture prepends urgent work; walk backward so Garden remains first.
       rooms.reverse();
+    } else {
+      // Spend cold-start work where it can help immediately. The current room comes first, then
+      // other available rooms; Phase-1 cards that are still locked/blurred are filled last.
+      rooms.sort(function (a, b) {
+        if (a.room === current && b.room !== current) return -1;
+        if (b.room === current && a.room !== current) return 1;
+        var aLocked = !window.__secondRound && !roomSeen(a.room);
+        var bLocked = !window.__secondRound && !roomSeen(b.room);
+        if (aLocked !== bLocked) return aLocked ? 1 : -1;
+        return dollhouseRooms.indexOf(a) - dollhouseRooms.indexOf(b);
+      });
     }
     rooms.forEach(function (spec) {
       if (options.mainOnly && spec.floor !== "main") return;
       var variant = dollhouseVariantKey(spec);
       queueDollhouseCapture(spec, variant,
-        !!options.partyFirst || spec.room === current, !!options.force, !!options.urgent);
+        !!options.partyFirst || spec.room === current, !!options.force, !!options.urgent,
+        options.gap || 0, !!options.openRefresh);
     });
+    // A room transition can pause an already-populated queue. Re-entering through Continue or
+    // opening the map may add no new jobs, so explicitly restart the existing queue as well.
+    scheduleDollhouseCapture();
   }
   function refreshDollhouseCaptures(reason) {
     // Recovery's preview DOM is deliberately incomplete: it carries the saved lighting and Party
     // shell, but subsystem adapters have not restored the saved people yet. Keep its useful base
     // captures, and defer authoritative invalidation until applyCheckpointNow finishes atomically.
     if (dollhouseRecoveryPreview && reason !== "recovery-applied") return;
-    // Lighting variants are reusable. Party is deliberately recaptured once per ignition so the
-    // five upstairs cards freeze the actual current occupants, not an earlier party's roster.
+    // Lighting variants are reusable. Party keeps its previous bitmap as stale content while its
+    // semantic key is invalidated, so current occupants replace it one card at a time.
     var partyStart = (reason === "party" || reason === "recovery-applied") &&
       !!window.__gardenPartyOn;
     if (reason === "party" || reason === "recovery-applied") {
@@ -115455,7 +115606,7 @@ function spawnDustMote(container) {
     if (partyStart) {
       dollhouseRooms.forEach(function (spec) {
         if (spec.floor !== "main") return;
-        delete spec.snapshots.party;
+        delete spec.snapshotSignatures.party;
         spec.captureToken++;
       });
     }
@@ -115463,9 +115614,25 @@ function spawnDustMote(container) {
       mainOnly: partyStart,
       partyFirst: partyStart,
       force: partyStart,
-      urgent: partyStart
+      urgent: false,
+      // A newly selected Party variant is the visible cold fill, not the periodic roster scan.
+      // Keep it progressive but prompt; only later semantic refreshes use the one-second pace.
+      gap: partyStart ? DOLLHOUSE_CAPTURE_GAP_MS : 0
     });
     syncDollhousePresentation();
+  }
+  function queueOpenPartyRefresh() {
+    if (!dollhouse || dollhouse.hidden || !window.__gardenPartyOn) return;
+    var pass = ++dollhouseOpenRefreshPass;
+    // The retained Party cards are a stale-while-refresh cache. Refresh one upstairs room per
+    // idle slice, at most once a second, while the map is actually visible. That captures the
+    // current roster without keeping five live SVG trees or continuously encoding offscreen art.
+    queueDollhouseCaptures({ mainOnly: true, partyFirst: true, force: true,
+      urgent: false, gap: DOLLHOUSE_OPEN_CAPTURE_GAP_MS, openRefresh: true });
+    dollhouseOpenRefreshTimer = setTimeout(function () {
+      dollhouseOpenRefreshTimer = null;
+      if (pass === dollhouseOpenRefreshPass) queueOpenPartyRefresh();
+    }, DOLLHOUSE_PARTY_REFRESH_MS);
   }
   function cancelDollhouseBackgroundWarm() {
     if (dollhouseCaptureIdle && window.cancelIdleCallback) window.cancelIdleCallback(dollhouseCaptureIdle);
@@ -115512,6 +115679,9 @@ function spawnDustMote(container) {
   else window.addEventListener("load", function () {
     if (!dollhouseWarmStarted) startDollhouseBackgroundWarm("fresh", null);
   }, { once:true });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && dollhouseCaptureQueue.length) scheduleDollhouseCapture();
+  });
   function setDollhouseCursor(index) {
     if (!dollhouseRooms.length) return;
     var next = Math.max(0, Math.min(dollhouseRooms.length - 1, index));
@@ -115544,7 +115714,17 @@ function spawnDustMote(container) {
   function syncDollhousePresentation() {
     dollhouseRooms.forEach(function (spec) {
       var variant = dollhouseVariantKey(spec);
+      if (spec.staticArt) {
+        if (spec.image) spec.image.style.display = "none";
+        if (spec.use) spec.use.style.display = spec.staticReady ? "" : "none";
+        spec.button.classList.remove("live-preview");
+        spec.button.classList.toggle("capture-pending", !spec.staticReady);
+        spec.button.classList.toggle("capture-cold", !spec.staticReady);
+        spec.button.dataset.dollhouseVariant = "static";
+        return;
+      }
       var data = dollhouseFallbackSnapshot(spec, variant);
+      var pending = !!(spec.captureQueuedKeys[variant] || spec.captureActiveVariant === variant);
       if (spec.image && data) {
         if (spec.image.getAttribute("href") !== data) {
           spec.image.setAttribute("href", data);
@@ -115553,12 +115733,10 @@ function spawnDustMote(container) {
         spec.image.style.display = "";
       } else if (spec.image) spec.image.style.display = "none";
       spec.button.classList.remove("live-preview");
+      spec.button.classList.toggle("capture-pending", pending);
+      spec.button.classList.toggle("capture-cold", pending && !data);
       spec.button.dataset.dollhouseVariant = variant;
     });
-    var ready = dollhouseRooms.length && dollhouseRooms.every(function (spec) {
-      return !!spec.snapshots[dollhouseVariantKey(spec)];
-    });
-    if (dollhouse) dollhouse.classList.toggle("dollhouse-preparing", !ready);
     return 0;
   }
   function renderDollhouse() {
@@ -115605,6 +115783,7 @@ function spawnDustMote(container) {
     // Retained captures make reopening immediate. State-specific refreshes are queued by
     // their owners; opening the map must not rebuild all ten rooms on the critical path.
     queueDollhouseCaptures({ priority: true });
+    queueOpenPartyRefresh();
     var selected = dollhouseRooms.findIndex(function (spec) {
       return spec.floor === (activeLowerRoom() ? "lower" : "main") &&
         (spec.floor === "lower" ? activeLowerRoom().id === spec.room : window.__currentStageName === spec.room);
@@ -115732,20 +115911,27 @@ function spawnDustMote(container) {
         projector: dollhouseProjectorWarmed,
         previews: dollhouseCaptureCount,
         complete: dollhouseRooms.length === 10 && dollhouseRooms.every(function (spec) {
-          return !!spec.snapshots[dollhouseVariantKey(spec)];
+          if (spec.staticArt) return !!spec.staticReady;
+          var variant = dollhouseVariantKey(spec);
+          return !!spec.snapshots[variant] &&
+            spec.snapshotSignatures[variant] === spec.captureDesiredSignatures[variant];
         }),
         pending: !!(dollhouseCaptureIdle || dollhouseCaptureDelay || dollhouseCaptureBusy || dollhouseCaptureQueue.length)
       },
-      livePreviews: dollhouseRooms.filter(function (spec) { return !!(spec.use && spec.use.parentNode); })
+      livePreviews: dollhouseRooms.filter(function (spec) {
+        return !spec.staticArt && !!(spec.use && spec.use.parentNode);
+      })
         .map(function (spec) { return spec.room; }),
       controlsUnlocked: dollhouseControlsUnlocked(),
       button: !!(dollhouseBtn && !dollhouseBtn.hidden),
       floorDisabled: !!(floorBtn && floorBtn.disabled),
       rooms: dollhouseRooms.map(function (spec) {
         return { room: spec.room, floor: spec.floor, locked: spec.button.classList.contains("locked"),
-          snapshot: !!spec.snapshotReady, variant: dollhouseVariantKey(spec),
-          variants: Object.keys(spec.snapshots), captureMs: spec.captureMs || 0,
-          bytes: spec.snapshotBytes || 0 };
+          snapshot: spec.staticArt ? !!spec.staticReady : !!spec.snapshotReady, variant: dollhouseVariantKey(spec),
+          variants: spec.staticArt && spec.staticReady ? ["static"] : Object.keys(spec.snapshots), captureMs: spec.captureMs || 0,
+          bytes: spec.snapshotBytes || 0,
+          signature: spec.snapshotSignatures[dollhouseVariantKey(spec)] || "",
+          desiredSignature: spec.captureDesiredSignatures[dollhouseVariantKey(spec)] || "" };
       })
     };
   };

@@ -87551,7 +87551,14 @@ def colormode(mode=None):
     princeFrame = frame;
     princeFrameState = "loading";
     resolvePrinceSrc().then(function (src) {
-      if (princeFrame === frame) frame.src = src;
+      if (princeFrame !== frame) return;
+      // Upstream's hosted CSS combines a full-height root with a .5px top margin,
+      // rounding its document one pixel taller in both Chromium and WebKit. The local
+      // shim owns that intrinsic sizing; the cross-origin fallback cannot be restyled.
+      // Disable only its iframe scroll chrome instead of guessing a viewport rectangle.
+      if (princeRemote) frame.setAttribute("scrolling", "no");
+      else frame.removeAttribute("scrolling");
+      frame.src = src;
     });
   }
   function presentPrinceMonitor() {

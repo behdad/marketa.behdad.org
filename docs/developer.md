@@ -53,7 +53,9 @@ Supporting boundaries are:
   official package repository.
 - `princejs/`: the same kind of pinned runtime, but untracked — `./fetch-princejs.sh` restores it
   from the source and patch recorded in the script header. The app falls back to the pinned upstream
-  build when the directory is absent.
+  build when the directory is absent. That cross-origin fallback keeps iframe scrolling disabled:
+  upstream’s full-height root has a fractional top margin that otherwise creates scroll chrome,
+  while the local shim owns its overflow and intrinsic aspect directly.
 
 The web server exposes the git working tree directly. `.htaccess` is therefore a security boundary,
 not just routing configuration: it blocks developer documents, tests, Worker source/configuration,

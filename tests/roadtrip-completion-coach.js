@@ -61,7 +61,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         card.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         report.cardDismiss = { state: coach(), caption: copy(window.__captionState()) };
 
-        restoreShown(); await sleep(420);
+        restoreShown(); await sleep(1300);
         root.querySelector(".hunt-coach-x").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         report.xDismiss = { state: coach(), caption: copy(window.__captionState()) };
 
@@ -70,7 +70,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         document.dispatchEvent(space);
         report.spaceDismiss = { state: coach(), caption: copy(window.__captionState()), prevented: space.defaultPrevented, saved: saved() };
 
-        restoreShown(); await sleep(420);
+        restoreShown(); await sleep(1300);
         action.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         await sleep(120);
         report.action = { state: coach(), room: window.__currentStageName, entrance: !!window.__entranceRoomOpen };
@@ -116,7 +116,11 @@ function run(name, width, height) {
     g.card.top >= g.area.top - 1 && g.card.bottom <= g.area.bottom + 1 &&
     g.action.left >= g.card.left && g.action.right <= g.card.right && g.action.height >= 36,
     "the responsive card and primary action fit inside the game surface", g);
-  ["cardDismiss", "xDismiss", "spaceDismiss"].forEach(function (kind) {
+  check(result && result.cardDismiss && !result.cardDismiss.state.acknowledged &&
+    result.cardDismiss.state.visible && result.cardDismiss.caption.base &&
+    result.cardDismiss.caption.base.owner === "roadtrip-departure",
+    "clicking the card itself leaves the consequential choice open", result && result.cardDismiss);
+  ["xDismiss", "spaceDismiss"].forEach(function (kind) {
     var row = result && result[kind];
     check(row && row.state.acknowledged && !row.state.visible && row.caption.base &&
       row.caption.base.owner === "roadtrip-departure" && (kind !== "spaceDismiss" || row.prevented),

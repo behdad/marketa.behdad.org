@@ -3517,6 +3517,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   #roadtrip-completion-coach .hunt-coach-card{gap:1rem}
   .roadtrip-completion-action{font-size:18px;padding:.65rem 1.05rem}
 }
+#hunt-fullscreen-area.short-coach-area .hunt-coach-overlay.modal-coach .hunt-coach-card{
+    width:min(720px,calc(100% - 28px));min-height:clamp(130px,32%,210px);
+    padding:1.35rem 4rem 1.35rem 2rem;border-radius:22px;
+    font-size:clamp(24px,3.2vw,36px);
+}
+#hunt-fullscreen-area.short-coach-area .hunt-coach-overlay.modal-coach .hunt-coach-x{
+    right:.55rem;top:.55rem;width:2.5rem;height:2.5rem;font-size:27px;
+}
+#hunt-fullscreen-area.short-coach-area #roadtrip-completion-coach .hunt-coach-card{gap:.8rem}
 @media (prefers-reduced-motion:reduce){.hunt-coach-overlay{transition:none}.hunt-coach-arrow{animation:none}}
 /* Whole-loft picker: two aligned rows of five paired rooms. Live scene previews are used
    where they paint faithfully; stateful lower rooms use stable portrait art instead. */
@@ -116809,6 +116818,47 @@ function spawnDustMote(container) {
   window.__roadtripCompletionCoachActive = function () { return roadtripCompletionCoachVisible; };
   window.__dismissRoadtripCompletionCoach = acknowledgeRoadtripCompletionCoach;
   window.__goToRoadtripCompletionCar = goToRoadtripCompletionCar;
+  // A coach often appears as the click that opened a room finishes bubbling. Give every
+  // pointer-driven lesson one settled second before any of its dismissal surfaces can act;
+  // keyboard acknowledgement remains deliberate and immediate.
+  (function () {
+    var COACH_POINTER_GRACE_MS = 1000;
+    var shownAt = new WeakMap();
+    function now() { return window.performance && performance.now ? performance.now() : Date.now(); }
+    function remember(node) {
+      if (!node || node.nodeType !== 1 || !node.matches(".hunt-coach-overlay")) return;
+      if (node.classList.contains("show")) {
+        if (!shownAt.has(node)) shownAt.set(node, now());
+      } else shownAt.delete(node);
+    }
+    function inspect(node) {
+      if (!node || node.nodeType !== 1) return;
+      remember(node);
+      node.querySelectorAll && node.querySelectorAll(".hunt-coach-overlay.show").forEach(remember);
+    }
+    new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        if (record.type === "attributes") remember(record.target);
+        else Array.prototype.forEach.call(record.addedNodes, inspect);
+      });
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+    document.querySelectorAll(".hunt-coach-overlay.show").forEach(remember);
+    document.addEventListener("click", function (event) {
+      var inside = event.target.closest && event.target.closest(".hunt-coach-overlay.show");
+      var candidates = inside ? [inside] : Array.prototype.filter.call(
+        document.querySelectorAll(".hunt-coach-overlay.show.modal-coach"), function (overlay) {
+          return overlay.classList.contains("target-modal-coach");
+        });
+      var overlays = candidates.filter(function (overlay) {
+        var started = shownAt.get(overlay);
+        if (started == null) { shownAt.set(overlay, now()); return true; }
+        return now() - started < COACH_POINTER_GRACE_MS;
+      });
+      if (!overlays.length) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  })();
   if (roadtripCompletionCoach) {
     var roadtripCompletionCard = roadtripCompletionCoach.querySelector(".hunt-coach-card");
     var roadtripCompletionAction = roadtripCompletionCoach.querySelector(".roadtrip-completion-action");
@@ -116821,7 +116871,6 @@ function spawnDustMote(container) {
       if (event.target === roadtripCompletionAction || event.target === roadtripCompletionDismiss) return;
       event.preventDefault();
       event.stopPropagation();
-      acknowledgeRoadtripCompletionCoach();
     });
     if (roadtripCompletionDismiss) roadtripCompletionDismiss.addEventListener("click", function (event) {
       event.preventDefault();
@@ -119104,6 +119153,10 @@ function spawnDustMote(container) {
       positionCoachTargetScrim(roomMapCoachOverlay, [target]);
     }
     function positionCoaches() { positionRoomMapCoach(); }
+    function syncCoachSurfaceHeight() {
+      if (!coachArea) return;
+      coachArea.classList.toggle("short-coach-area", coachArea.getBoundingClientRect().height <= 700);
+    }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
     function clearRoomMapCoachTimer(resetRemaining) {
       if (roomMapCoachTimer) { clearTimeout(roomMapCoachTimer); roomMapCoachTimer = null; }
@@ -119397,7 +119450,11 @@ function spawnDustMote(container) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }, true);
-    window.addEventListener("resize", positionCoaches);
+    window.addEventListener("resize", function () { syncCoachSurfaceHeight(); positionCoaches(); });
+    if (window.ResizeObserver && coachArea) new ResizeObserver(function () {
+      syncCoachSurfaceHeight(); positionCoaches();
+    }).observe(coachArea);
+    syncCoachSurfaceHeight();
     window.__refreshPartyBridgeCoaches = paint;
     window.__partyRoomMapCoachModalActive = function () { return coachOverlayShowing(roomMapCoachOverlay); };
     window.__partyCoachModalActive = function () {

@@ -23,9 +23,9 @@ var HARNESS = [
   ' ["balcony","balcony-entrance-marker",function(){return window.__entranceRoomState().open;},function(){window.__closeEntranceRoom();}]',
   '];',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__setGardenParty(true,true);',
   ' for(var i=0;i<cases.length;i++){var c=cases[i];window.__goToStage(c[0]);await sleep(30);',
-  '  click(c[1]);await sleep(470);var single=c[2](),singleCaption=document.getElementById("hunt-caption").textContent;',
+  '  click(c[1]);await sleep(700);var single=c[2](),singleCaption=document.getElementById("hunt-caption").textContent;',
   '  var prevented=context(c[1]);await sleep(30);var menu=portalMenu(),menuLabels=labels(),reset=menu&&menu.querySelector(".ctx-loft-reset"),unlock=menu&&menu.querySelector(".ctx-unlock");if(unlock)unlock.click();await sleep(80);var contextOpened=c[2]();c[3]();await sleep(800);',
   '  dblclick(c[1]);await sleep(80);var mouse=c[2]();c[3]();await sleep(800);',
   '  touchup(c[1]);await sleep(100);var firstTouch=c[2]();touchup(c[1]);await sleep(80);var touch=c[2]();',
@@ -84,7 +84,7 @@ check(/id="garden-dungeon-marker"[\s\S]*?<g id="garden-jacket"/.test(source),
   "the tiny dungeon door remains beside the Garden jacket");
 check(!/gardenSkylineHit|enterPrinceBasement/.test(source),
   "the Garden skyline no longer doubles as a dungeon entrance");
-check(/id="office-bedroom-marker"[\s\S]*?<text x="645"[^>]*>Z<\/text>[\s\S]*?<text x="664"[^>]*>z…<\/text>/.test(source),
+check(/id="office-bedroom-marker"[\s\S]*?<rect x="638" y="176" width="40" height="58"[\s\S]*?id="office-bedroom-zzz"/.test(source),
   "the Office marker rises on the white wall right of the stained-glass window");
 check(/id="balcony-entrance-marker"[\s\S]*?<path d="M155\.7 122\.5 H160\.3 V132/.test(source),
   "the Balcony marker keeps its raised key drawing");

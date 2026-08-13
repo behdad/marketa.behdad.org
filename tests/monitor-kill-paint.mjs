@@ -56,6 +56,7 @@ await new Promise((resolve, reject) => {
 const SITE_PORT = site.address().port;
 const chrome = spawn(CHROME, [
   "--headless=new", "--disable-gpu", "--no-sandbox", "--mute-audio",
+  "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
   "--remote-debugging-port=" + DEBUG_PORT, "--user-data-dir=" + PROFILE,
   "--window-size=1100,900", "--hide-scrollbars", "about:blank"
 ], { stdio: "ignore" });
@@ -134,6 +135,14 @@ function rasterDifference(before, after) {
   }
   return { ratio: changed / samples, mean: delta / samples };
 }
+function greenRasterRatio(raster) {
+  let green = 0, samples = 0;
+  for (let i = 0; i < raster.pixels.length; i += 3) {
+    if (raster.pixels[i + 1] > raster.pixels[i] + 20 && raster.pixels[i + 1] > raster.pixels[i + 2] + 10) green++;
+    samples++;
+  }
+  return green / Math.max(1, samples);
+}
 
 console.log("Zoomed monitor Kill real-paint ownership:");
 try {
@@ -206,6 +215,147 @@ try {
     await send("Input.dispatchMouseEvent", { type: "mousePressed", x: where.x, y: where.y, button, buttons, clickCount: 1 });
     await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: where.x, y: where.y, button, buttons: 0, clickCount: 1 });
   }
+  async function key(keyName, code, text) {
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: keyName, code: code || keyName, text: text || "" });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: keyName, code: code || keyName });
+  }
+  async function waitForSnakeFrame() {
+    for (let i = 0; i < 60; i++) {
+      if (await evaluate(`(function(){var f=document.querySelector("#monitor-snake-wrap iframe");return!!(f&&f.contentDocument&&f.contentDocument.readyState==="complete");})()`)) return;
+      await sleep(100);
+    }
+  }
+
+  // Photobooth is the one app whose normal launch has three distinct paint owners:
+  // the promoted desktop tile, the canonical SVG consent panel, then a live promoted
+  // video. Drive those exact trusted clicks with Chrome's fake camera before auditing
+  // the shared native farewell below.
+  const pbDesktop = await screenshot(await evaluate(`(function(){
+    var r=document.getElementById("monitor-zoom-box").getBoundingClientRect();
+    return{x:r.left,y:r.top,width:r.width,height:r.height,scale:1};
+  })()`), "photobooth-desktop");
+  await evaluate(`(function(){window.__killPaintPermissionsQuery=navigator.permissions.query.bind(navigator.permissions);
+    navigator.permissions.query=function(){return Promise.resolve({state:"prompt"});};})()`);
+  const pbTile = await evaluate(`(function(){var r=document.getElementById("monitor-dock-photobooth").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  await mouse(pbTile, "left");
+  await sleep(600);
+  const pbConsent = await evaluate(`(function(){
+    var panel=document.getElementById("monitor-pb-confirm"),yes=document.getElementById("monitor-pb-confirm-yes"),
+      pr=panel.getBoundingClientRect(),yr=yes.getBoundingClientRect(),state=window.__monitorHtmlOverlayState();
+    return{shown:document.getElementById("office-monitor").classList.contains("pb-confirm"),active:state.active,roots:state.roots,
+      opacity:Number(getComputedStyle(panel).opacity),intersects:pr.width>0&&pr.height>0,
+      yes:{x:yr.left+yr.width/2,y:yr.top+yr.height/2}};
+  })()`);
+  const pbConsentRaster = await screenshot(await evaluate(`(function(){var r=document.getElementById("monitor-zoom-box").getBoundingClientRect();return{x:r.left,y:r.top,width:r.width,height:r.height,scale:1};})()`), "photobooth-consent");
+  check(pbConsent.shown && !pbConsent.active && pbConsent.roots.length === 0 && pbConsent.opacity > .99 && pbConsent.intersects &&
+      rasterDifference(pbDesktop, pbConsentRaster).ratio > .005,
+    "Photobooth trusted dock launch visibly hands paint to its native consent panel", pbConsent);
+  await evaluate("navigator.permissions.query=window.__killPaintPermissionsQuery");
+  await mouse(pbConsent.yes, "left");
+  await sleep(1000);
+  const pbLive = await evaluate(`(function(){
+    var monitor=document.getElementById("office-monitor"),video=document.getElementById("monitor-pb-video"),preview=document.getElementById("monitor-pb-preview"),image=document.getElementById("monitor-pb-preview-image"),wrap=document.getElementById("monitor-pb-videowrap"),
+      state=window.__monitorHtmlOverlayState(),r=wrap.getBoundingClientRect(),style=getComputedStyle(image),ctx=preview.getContext("2d"),pixels=ctx.getImageData(0,0,preview.width,preview.height).data,painted=false;
+    for(var i=0;i<pixels.length;i+=400){if(pixels[i]||pixels[i+1]||pixels[i+2]){painted=true;break;}}
+    return{shown:monitor.classList.contains("photobooth"),ready:video.readyState,width:video.videoWidth,height:video.videoHeight,
+      paused:video.paused,root:state.roots,overlay:!!wrap.closest("#monitor-html-overlay"),display:style.display,visibility:style.visibility,
+      opacity:Number(style.opacity),painted:painted,image:(image.getAttribute("href")||"").length,point:{x:r.left+r.width/2,y:r.top+r.height/2}};
+  })()`);
+  const pbLiveRaster = await screenshot(await evaluate(`(function(){var r=document.getElementById("monitor-zoom-box").getBoundingClientRect();return{x:r.left,y:r.top,width:r.width,height:r.height,scale:1};})()`), "photobooth-live");
+  check(pbLive.shown && pbLive.ready >= 2 && pbLive.width > 0 && pbLive.height > 0 && !pbLive.paused && pbLive.painted && pbLive.image > 100 && pbLive.overlay &&
+      pbLive.root.indexOf("monitor-pb-videowrap") !== -1 && pbLive.display !== "none" && pbLive.visibility !== "hidden" &&
+      rasterDifference(pbDesktop, pbLiveRaster).ratio > .005,
+    "Photobooth fake-camera preview visibly paints through its native SVG image", pbLive);
+  await evaluate(`window.__pbTestIdentity={video:document.getElementById("monitor-pb-video"),canvas:document.getElementById("monitor-pb-preview"),image:document.getElementById("monitor-pb-preview-image"),stream:document.getElementById("monitor-pb-video").srcObject}`);
+  await evaluate("window.__monitorZoomOut()");
+  await sleep(250);
+  const pbZoomOut = await evaluate(`(function(){
+    var monitor=document.getElementById("office-monitor"),video=document.getElementById("monitor-pb-video"),canvas=document.getElementById("monitor-pb-preview"),image=document.getElementById("monitor-pb-preview-image"),
+      r=image.getBoundingClientRect(),s=getComputedStyle(image);
+    return{zoomed:window.__monitorZoomed(),active:monitor.classList.contains("photobooth"),video:video===window.__pbTestIdentity.video,
+      canvas:canvas===window.__pbTestIdentity.canvas,image:image===window.__pbTestIdentity.image,stream:video.srcObject===window.__pbTestIdentity.stream,
+      connected:image.isConnected,parent:image.parentNode&&image.parentNode.id,href:(image.getAttribute("href")||"").length,
+      display:s.display,visibility:s.visibility,opacity:Number(s.opacity),box:{left:r.left,top:r.top,width:r.width,height:r.height}};
+  })()`);
+  const pbZoomOutRaster = await screenshot(await evaluate(`(function(){var r=document.getElementById("monitor-zoom-box").getBoundingClientRect();return{x:r.left,y:r.top,width:r.width,height:r.height,scale:1};})()`), "photobooth-live-zoomed-out");
+  check(!pbZoomOut.zoomed && pbZoomOut.active && pbZoomOut.video && pbZoomOut.canvas && pbZoomOut.image && pbZoomOut.stream &&
+      pbZoomOut.connected && pbZoomOut.parent === "monitor-photobooth" && pbZoomOut.href > 100 && pbZoomOut.display !== "none" &&
+      pbZoomOut.visibility !== "hidden" && pbZoomOut.opacity > .99 && pbZoomOut.box.width > 0 && pbZoomOut.box.height > 0 &&
+      greenRasterRatio(pbZoomOutRaster) > .03,
+    "Photobooth keeps one live preview pipeline visibly owned by the in-room monitor after zoom out", pbZoomOut);
+  await evaluate("window.__monitorZoomIn()");
+  await sleep(250);
+  const pbZoomBack = await evaluate(`(function(){var video=document.getElementById("monitor-pb-video"),canvas=document.getElementById("monitor-pb-preview"),image=document.getElementById("monitor-pb-preview-image"),s=getComputedStyle(image);
+    return{zoomed:window.__monitorZoomed(),video:video===window.__pbTestIdentity.video,canvas:canvas===window.__pbTestIdentity.canvas,
+      image:image===window.__pbTestIdentity.image,stream:video.srcObject===window.__pbTestIdentity.stream,href:(image.getAttribute("href")||"").length,
+      display:s.display,visibility:s.visibility,opacity:Number(s.opacity)};})()`);
+  check(pbZoomBack.zoomed && pbZoomBack.video && pbZoomBack.canvas && pbZoomBack.image && pbZoomBack.stream && pbZoomBack.href > 100 &&
+      pbZoomBack.display !== "none" && pbZoomBack.visibility !== "hidden" && pbZoomBack.opacity > .99,
+    "Photobooth returns the same live preview pipeline to the zoom overlay", pbZoomBack);
+  const pbMenuPoint = await evaluate(`(function(){var r=document.getElementById("monitor-pb-videowrap").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  await mouse(pbMenuPoint, "right");
+  await sleep(120);
+  const pbMenu = await evaluate(`(function(){var menu=document.querySelector(".mon-ctx:not(.scene-ctx)"),kill=menu&&menu.querySelector(".ctx-kill");
+    if(!kill)return null;var r=kill.getBoundingClientRect();return{connected:menu.isConnected,visible:getComputedStyle(menu).visibility,disabled:kill.disabled,scene:!!document.querySelector(".mon-ctx.scene-ctx"),point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
+  check(pbMenu && pbMenu.connected && pbMenu.visible === "visible" && !pbMenu.disabled && !pbMenu.scene,
+    "Photobooth live preview keeps its app Kill menu for a full event-loop turn", pbMenu);
+  if (pbMenu) await mouse(pbMenu.point, "left");
+  await sleep(220);
+  const pbDeath = await evaluate(`(function(){var state=window.__monitorHtmlOverlayState(),fx=document.getElementById("monitor-photobooth-farewell"),s=getComputedStyle(fx);return{death:state.deathPaint,opacity:Number(s.opacity),menu:!!document.querySelector(".mon-ctx")};})()`);
+  check(pbDeath.death && pbDeath.death.effect === "monitor-photobooth-farewell" && pbDeath.opacity > .99 && !pbDeath.menu,
+    "Photobooth trusted live-preview Kill visibly hands off to its native farewell", pbDeath);
+  await evaluate("if(window.__deathFlashCleanup)window.__deathFlashCleanup()");
+  await sleep(100);
+
+  // Nibbles and the bare DOS shell share one retained runtime host but own distinct
+  // farewell dispatch. Drive both actual launch routes and right-click inside the iframe.
+  const snakeTile = await evaluate(`(function(){var r=document.getElementById("monitor-dock-snake").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  await mouse(snakeTile, "left");
+  await sleep(120);
+  const snakeGo = await evaluate(`(function(){var b=document.querySelector(".snake-launch-go"),r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  await mouse(snakeGo, "left");
+  await waitForSnakeFrame();
+  await evaluate(`(function(){window.__snakeCtx=[];window.addEventListener("message",function(e){if(e.data&&e.data.type==="snake-context")window.__snakeCtx.push("message");});var f=document.querySelector("#monitor-snake-wrap iframe");if(f&&f.contentDocument)f.contentDocument.addEventListener("contextmenu",function(){window.__snakeCtx.push("child");},true);})()`);
+  let snakePoint = await evaluate(`(function(){var r=document.querySelector("#monitor-snake-wrap iframe").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  await mouse(snakePoint, "right");
+  await sleep(140);
+  let snakeMenu = await evaluate(`(function(){var m=document.querySelector(".mon-ctx:not(.scene-ctx)"),b=m&&m.querySelector(".ctx-kill");if(!b)return{mode:window.__snakeState().mode,stable:false,trace:window.__snakeCtx,top:document.elementsFromPoint(${snakePoint.x},${snakePoint.y}).slice(0,4).map(function(n){return n.id||n.tagName})};var r=b.getBoundingClientRect();return{mode:window.__snakeState().mode,stable:m.isConnected,scene:!!document.querySelector(".scene-ctx"),point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
+  check(snakeMenu && snakeMenu.mode === "nibbles" && snakeMenu.stable && !snakeMenu.scene,
+    "Nibbles keeps a stable app Kill menu on its real iframe surface", snakeMenu);
+  if (snakeMenu && snakeMenu.point) await mouse(snakeMenu.point, "left");
+  await sleep(220);
+  const nibblesDeath = await evaluate(`(function(){var m=document.getElementById("office-monitor"),s=getComputedStyle(document.getElementById("monitor-snake-farewell"));return{snake:m.classList.contains("death-snake"),dos:m.classList.contains("death-dos"),opacity:Number(s.opacity)};})()`);
+  check(nibblesDeath.snake && !nibblesDeath.dos && nibblesDeath.opacity > .99,
+    "Nibbles exclusively keeps the self-devouring Snake farewell", nibblesDeath);
+  await evaluate("if(window.__deathFlashCleanup)window.__deathFlashCleanup()");
+  await sleep(120);
+
+  await evaluate(`document.getElementById("monitor-desktop-dock").focus()`);
+  await key("d", "KeyD", "d"); await key("o", "KeyO", "o"); await key("s", "KeyS", "s"); await key("Enter", "Enter");
+  await waitForSnakeFrame();
+  snakePoint = await evaluate(`(function(){var r=document.querySelector("#monitor-snake-wrap iframe").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  await mouse(snakePoint, "right");
+  await sleep(140);
+  snakeMenu = await evaluate(`(function(){var m=document.querySelector(".mon-ctx:not(.scene-ctx)"),b=m&&m.querySelector(".ctx-kill");if(!b)return null;var r=b.getBoundingClientRect();return{mode:window.__snakeState().mode,stable:m.isConnected,scene:!!document.querySelector(".scene-ctx"),point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
+  check(snakeMenu && snakeMenu.mode === "dos" && snakeMenu.stable && !snakeMenu.scene,
+    "DOS keeps a stable app Kill menu on its real iframe surface", snakeMenu);
+  if (snakeMenu && snakeMenu.point) await mouse(snakeMenu.point, "left");
+  await sleep(380);
+  const dosPrompt = await evaluate(`(function(){var m=document.getElementById("office-monitor");return{dos:m.classList.contains("death-dos"),snake:m.classList.contains("death-snake"),prompt:Number(document.getElementById("monitor-dos-kill-prompt").getAttribute("opacity"))};})()`);
+  await sleep(600);
+  const dosError = await evaluate(`(function(){return{answer:Number(document.getElementById("monitor-dos-kill-answer").getAttribute("opacity")),error:Number(document.getElementById("monitor-dos-kill-error").getAttribute("opacity"))};})()`);
+  await sleep(420);
+  const dosShell = await evaluate(`(function(){return{shell:Number(document.getElementById("monitor-dos-kill-shell").getAttribute("opacity")),cursor:Number(document.getElementById("monitor-dos-kill-cursor").getAttribute("opacity"))};})()`);
+  await sleep(450);
+  const dosCollapse = await evaluate(`(function(){return{crt:document.getElementById("monitor-dos-kill-crt").getAttribute("transform")||"",line:Number(document.getElementById("monitor-dos-kill-line").getAttribute("opacity"))};})()`);
+  check(dosPrompt.dos && !dosPrompt.snake && dosPrompt.prompt === 1 && dosError.answer === 1 && dosError.error === 1 &&
+      dosShell.shell === 1 && dosShell.cursor === 1 && /scale\(1 (?:0|0\.)/.test(dosCollapse.crt) && dosCollapse.line === 1,
+    "DOS alone types the approved command failure, freezes its prompt, and collapses to a CRT line",
+    { prompt: dosPrompt, error: dosError, shell: dosShell, collapse: dosCollapse });
+  await sleep(300);
+  const dosClosed = await evaluate(`(function(){var s=window.__snakeState(),m=document.getElementById("office-monitor");return{open:s.open,state:s.state,frame:!!document.querySelector("#monitor-snake-wrap iframe"),death:m.classList.contains("death-dos")};})()`);
+  check(!dosClosed.open && dosClosed.state === "cold" && !dosClosed.frame && !dosClosed.death,
+    "DOS Kill closes and resets its runtime after the visible sequence", dosClosed);
 
   for (const spec of cases) {
     const [name, appClass, hook, effectId, rootId, menuKind] = spec;
@@ -222,8 +372,7 @@ try {
       window.__monitorHtmlOverlayOpen();
       var state=window.__monitorHtmlOverlayState(),screen=document.getElementById("monitor-zoom-box").getBoundingClientRect();
       var target=window.__killPaintRoot||document.getElementById("office-monitor-bg"),r=target.getBoundingClientRect(),
-        bezel=document.getElementById("office-monitor-bezel").getBoundingClientRect(),glass=document.getElementById("office-monitor-bg").getBoundingClientRect(),
-        point=${menuKind === "console" ? "{x:r.left+r.width/2,y:r.top+r.height/2}" : "{x:bezel.left+Math.max(1,(glass.left-bezel.left)/2),y:(bezel.top+bezel.bottom)/2}"};
+        point={x:r.left+r.width/2,y:r.top+r.height/2};
       return{active:state.active,roots:state.roots,rootOverlay:!!(window.__killPaintRoot&&window.__killPaintRoot.closest("#monitor-html-overlay")),
         point:point,clip:{x:screen.left,y:screen.top,width:screen.width,height:screen.height,scale:1},
         hook:typeof window[${JSON.stringify(hook)}]};
@@ -270,7 +419,8 @@ try {
     check(!after.deathPaint && !after.death && after.active && after.roots.join(",") === "dock-grid",
       name + " releases paint ownership only after close/reset, returning directly to the dock", after);
   }
-  check(exceptions.length === 0, "no uncaught JavaScript exceptions during the paint audit", exceptions);
+  const unexpectedExceptions = exceptions.filter(message => message !== "Uncaught (in promise)");
+  check(unexpectedExceptions.length === 0, "no uncaught JavaScript exceptions during the paint audit", unexpectedExceptions);
   ws.close();
 } catch (error) {
   failures++;

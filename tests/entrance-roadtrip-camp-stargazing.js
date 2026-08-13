@@ -354,7 +354,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                               finish();
                             }, 180);
                           } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
-                        }, 5550);
+                        }, 8550);
                       } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
                     }, 180);
                   } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
@@ -379,7 +379,7 @@ function check(ok, message, detail) {
 }
 
 console.log("loft-day.html campsite stargazing:");
-var result = lib.runPageSync("loft-day.html", HARNESS, 10000, {
+var result = lib.runPageSync("loft-day.html", HARNESS, 13000, {
   forceReduce: true,
   urlSuffix: "?date=2026-07-15&time=23:00",
   chromeFlags: "--window-size=1180,900"
@@ -467,10 +467,10 @@ check(result && result.complete && !result.complete.state.wisdomHandoffReady &&
   "the full-campsite wisdom shield consumes early prop clicks while the exchange reveals",
   { complete: result && result.complete, target: result && result.earlyTarget, after: result && result.earlyClick });
 check(/camp-wisdom-bubble:nth-child\(1\)\{animation-delay:2s\}/.test(source) &&
-  /camp-wisdom-bubble:nth-child\(2\)\{animation-delay:3s\}/.test(source) &&
-  /camp-wisdom-bubble:nth-child\(3\)\{animation-delay:4s\}/.test(source) &&
-  /camp-wisdom-bubble:nth-child\(4\)\{animation-delay:5s\}/.test(source),
-  "the exchange waits two seconds, then reveals its four bubbles one second apart");
+  /camp-wisdom-bubble:nth-child\(2\)\{animation-delay:4s\}/.test(source) &&
+  /camp-wisdom-bubble:nth-child\(3\)\{animation-delay:6s\}/.test(source) &&
+  /camp-wisdom-bubble:nth-child\(4\)\{animation-delay:8s\}/.test(source),
+  "the exchange waits two seconds between each of its four bubbles");
 check(result && same(result.wisdomMurmurs, [0, 1, 2, 3]),
   "each wisdom bubble reveal triggers its alternating quiet speaker murmur", result && result.wisdomMurmurs);
 check(result && result.complete &&
@@ -513,7 +513,7 @@ check(result && result.handoff && result.handoff.state.wisdomHandoffReady &&
   !result.handoff.wisdomContinue.tabindex && result.handoff.wisdomContinue.stroke === "rgb(248, 245, 236)" &&
   result.handoff.wisdomContinue.text === "Continue" &&
   result.englishContinue === "Great wisdom dispensed.",
-  "the persistent handoff clue appears after all four one-second reveals", result && result.handoff);
+  "the persistent handoff clue appears after all four two-second reveals", result && result.handoff);
 check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.builderNames.join("|") === "Kasiopeja|Velká medvědice|Malá medvědice" &&
   result.czech.liveNames === 0 &&

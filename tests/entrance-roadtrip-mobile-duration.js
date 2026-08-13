@@ -43,10 +43,10 @@ function check(ok, message, detail) {
 
 console.log("loft-day.html mobile Road Trip distance:");
 check(desktop && desktop.errors.length === 0 && desktop.scale === 1 &&
-  distancesEqual(desktop.distances, [75, 6, 75, 6, 75], desktop.pace),
+  distancesEqual(desktop.distances, [60, 6, 60, 6, 60], desktop.pace),
   "fine-pointer desktop keeps the authored route lengths", desktop);
 check(mobile && mobile.errors.length === 0 && mobile.scale === .6 &&
-  distancesEqual(mobile.distances, [45, 3.6, 45, 3.6, 45], mobile.pace),
+  distancesEqual(mobile.distances, [36, 3.6, 36, 3.6, 36], mobile.pace),
   "touch-first mobile uses 60% of every route length", mobile);
 
 if (failures) process.exit(1);

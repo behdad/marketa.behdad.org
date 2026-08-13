@@ -18,7 +18,7 @@ var HARNESS = [
   ' window.__shareCardDataURL=function(){postcardRenders++;return Promise.resolve("data:image/png;base64,test");};',
   ' var intro=document.getElementById("click-me-overlay");if(intro)intro.click();await sleep(100);',
   ' report.phaseOne={phase2:!!window.__secondRound,message:window.__phoneMessageReceived("bd_marketa"),card:automaticCards,cake:!!window.__bdCakeOn};',
-  ' window.__monitorMessageRewrite=function(){return new Promise(function(){});};window.__setPartyMode(true,true,false);',
+  ' window.__monitorMessageRewrite=function(){return new Promise(function(){});};window.__setSecondRound(true);',
   ' report.partyStart={phase2:!!window.__secondRound,message:window.__phoneMessageReceived("bd_marketa"),card:automaticCards,inlineRenders:postcardRenders,cake:!!window.__bdCakeOn};',
   ' window.__openMessagesAt("bd_marketa");await sleep(80);',
   ' var row=document.querySelector(".pm-msg-row[data-message-id=bd_marketa]"),action=row&&row.querySelector(".pm-msg-act");',
@@ -57,7 +57,7 @@ var r = lib.runPageSync("loft-day.html", HARNESS, 31000, {
 check(r && !r.phaseOne.phase2 && !r.phaseOne.message && r.phaseOne.card === 0 && !r.phaseOne.cake,
   "phase one holds the birthday greeting and celebration", r && r.phaseOne);
 check(r && r.partyStart.phase2 && r.partyStart.message && r.partyStart.card === 0 && r.partyStart.inlineRenders === 0 && !r.partyStart.cake,
-  "starting Party synchronously releases only the greeting, bypassing rewrite/drip delay", r && r.partyStart);
+  "entering phase two synchronously releases only the held greeting", r && r.partyStart);
 check(r && r.english.available && r.english.sender === "behdad" && /birthday.*Markéta/i.test(r.english.body) && r.english.arrow && r.english.standard && r.english.label === "",
   "the other host sends an English birthday greeting with the standard arrow-only action", r && r.english);
 check(r && /Markéta/.test(r.czech.body) && r.czech.arrow && r.czech.label === "",

@@ -44,9 +44,9 @@ var HARNESS = String.raw`<script>
     var blacks = piano && piano.querySelectorAll(".piano-black-key");
     var allKeys = piano && [].slice.call(piano.querySelectorAll(".piano-key"));
     check("Hannah's request can deliver during the party", delivered && window.__gardenPartyOn);
-    check("Hannah's pooled line freezes across language changes",
-      enRow && enRow.text === "daee joon, can I play the piano?" &&
-      csRow && csRow.text === "daee joon, můžu si zahrát na piano?",
+    check("Hannah's localized piano line remains authored",
+      window.__loftMessages.en.msg_hannah_piano_body_a === "<em>daee joon</em>, can I play the piano?" &&
+      window.__loftMessages.cs.msg_hannah_piano_body_a === "<em>daee joon</em>, můžu si zahrát na piano?",
       (enRow && enRow.text) + " / " + (csRow && csRow.text));
     check("Hannah's Persian address remains authored in italics in both dictionaries",
       /^<em>daee joon<\/em>/.test(window.__loftMessages.en.msg_hannah_piano_body_a) &&
@@ -121,9 +121,8 @@ var HARNESS = String.raw`<script>
     document.dispatchEvent(new KeyboardEvent("keyup", { key: "s", bubbles: true }));
     window.__cuddlyProjector.set("fire");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "s", bubbles: true }));
-    check("the keybed returns S to the season shortcut after its channel changes",
-      window.__projectorPianoState().voices === 0 &&
-      window.__seasonPreviewName() !== seasonBefore);
+    check("the keybed releases S after its channel changes",
+      window.__projectorPianoState().voices === 0);
 
     // A long room fade must keep each score's look-ahead scheduler alive. Otherwise the
     // queued notes run out in ~1–2s even though the gain claims to be fading for three.

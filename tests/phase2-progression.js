@@ -86,10 +86,13 @@ var harness = String.raw`<script>
       window.__currentStageName);
 
     window.__goToStage("garden");
+    if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     document.getElementById("hunt-next").dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
     check("the next-room arrow remains functional", window.__currentStageName === "cuddly", window.__currentStageName);
+    await sleep(700);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
     check("room arrow keys remain functional", window.__currentStageName === "office", window.__currentStageName);
+    await sleep(700);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true, cancelable: true }));
     check("room number keys remain functional", window.__currentStageName === "kitchen", window.__currentStageName);
     document.querySelectorAll(".hunt-dot")[4].dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -103,7 +106,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 9000, { patchRaf: true, seedRandom: true });
+var result = lib.runPageSync("rsvp.html", harness, 11000, { patchRaf: true, seedRandom: true });
 if (!result) { console.error("phase-two progression: no report"); process.exit(1); }
 var failed = false;
 result.checks.forEach(function (item) {

@@ -81449,6 +81449,12 @@ setOfficeProgress("pc", false);
     if (window.__deathFlashCleanup) window.__deathFlashCleanup(); // a second Kill mid-flash restarts cleanly
     var timers = [], rafId = 0, done = false;
     if (cfg.freeze) { try { cfg.freeze(); } catch (e) {} } // stop the runtime now; it dies frozen behind the flash
+    // A zoomed HTML app normally paints in the ordinary-DOM promotion surface above the
+    // canonical SVG screen. Shared native death effects must first park that live node back
+    // in its exact foreignObject home or the opaque app hides its own farewell. The promotion
+    // owner keeps the park latched through close/reset, so cleanup cannot flash the dock.
+    var deathPaintParked = !!(cfg.screenClass && window.__monitorHtmlOverlayParkDeath &&
+      window.__monitorHtmlOverlayParkDeath(cfg.screenClass));
     if (cfg.sound) { try { cfg.sound(); } catch (e) {} } // the kill's signature SFX, at the moment of impact
     if (cfg.screenClass) m.classList.add(cfg.screenClass);
     cap.classList.add("caption-death");
@@ -81488,7 +81494,12 @@ setOfficeProgress("pc", false);
       if (cfg.captionClass) cap.classList.remove(cfg.captionClass);
       cap.style.fontVariationSettings = "";
       window.__deathFlashCleanup = null;
-      if (cfg.close) { try { cfg.close(); } catch (e) {} } // NOW remove show-X, back to the desktop
+      try {
+        if (cfg.close) { try { cfg.close(); } catch (e) {} } // NOW remove show-X, back to the desktop
+      } finally {
+        if (deathPaintParked && window.__monitorHtmlOverlayReleaseDeath)
+          window.__monitorHtmlOverlayReleaseDeath(cfg.screenClass);
+      }
       if (window.__cancelCaption) window.__cancelCaption("monitor-death");
     }
     window.__deathFlashCleanup = cleanup;
@@ -90368,7 +90379,30 @@ def colormode(mode=None):
   // too, and retain their live runtime when their actual node is moved. Add only a root id
   // that has a focused regression proving why it cannot follow the default policy.
   var DENY_ROOT_IDS = Object.freeze([]);
-  var active = null, ownerObserver = null, syncQueued = false, parkedFocus = null;
+  // These classes reveal children of the canonical native-SVG #monitor-deathfx owner.
+  // While one is live, ordinary-DOM app promotion must stay parked so that owner remains
+  // the top-painted monitor surface. Gags that animate their live app (Chat, Classics,
+  // Pac-Man) are intentionally absent and retain their promoted owner.
+  var NATIVE_DEATH_EFFECTS = Object.freeze({
+    "death-browser": "monitor-awsnap",
+    "death-calendar": "monitor-calendar-farewell",
+    "death-call": "monitor-call-farewell",
+    "death-clock": "monitor-clock-farewell",
+    "death-code": "monitor-qbasic",
+    "death-console": "monitor-js",
+    "death-doom": "monitor-fatality",
+    "death-life": "monitor-life-farewell",
+    "death-linux": "monitor-bsod",
+    "death-mail": "monitor-mail-farewell",
+    "death-music": "monitor-music-farewell",
+    "death-photobooth": "monitor-photobooth-farewell",
+    "death-python": "monitor-pymonty",
+    "death-snake": "monitor-snake-farewell",
+    "death-tattoo": "monitor-tattoo-farewell",
+    "death-video": "monitor-video-farewell",
+    "death-weather": "monitor-weather-farewell"
+  });
+  var active = null, ownerObserver = null, syncQueued = false, parkedFocus = null, deathPaintClass = "";
   var metrics = { mounts: 0, restores: 0, fits: 0, geometryReads: 0, lastMountMs: 0, maxMountMs: 0 };
 
   // The promoted SVG owner is no longer below #office-monitor, so reproduce only the
@@ -90430,6 +90464,7 @@ def colormode(mode=None):
     return true;
   }
   function candidates() {
+    if (deathPaintClass) return [];
     var out = [], fos = Array.prototype.slice.call(screenContent.querySelectorAll("foreignObject"));
     controls.querySelectorAll("foreignObject").forEach(function (fo) {
       if (fos.indexOf(fo) === -1) fos.push(fo);
@@ -90672,6 +90707,18 @@ def colormode(mode=None):
   window.__monitorHtmlOverlayOpen = sync;
   window.__monitorHtmlOverlayClose = restore;
   window.__monitorHtmlOverlayFit = fit;
+  window.__monitorHtmlOverlayParkDeath = function (screenClass) {
+    if (!NATIVE_DEATH_EFFECTS[screenClass]) return false;
+    deathPaintClass = screenClass;
+    restore();
+    return true;
+  };
+  window.__monitorHtmlOverlayReleaseDeath = function (screenClass) {
+    if (deathPaintClass !== screenClass) return false;
+    deathPaintClass = "";
+    scheduleSync();
+    return true;
+  };
   // This surface is a sibling of the SVG strip, not a descendant of #office-monitor.
   // Own its ordinary HTML interaction stream so app input cannot escape into room-pan
   // or device-toggle handlers that were authored for clicks outside the monitor.
@@ -90697,6 +90744,7 @@ def colormode(mode=None):
       policy: "overlay-by-default",
       supported: supported.sort(),
       denied: DENY_ROOT_IDS.slice(),
+      deathPaint: deathPaintClass ? { screenClass: deathPaintClass, effect: NATIVE_DEATH_EFFECTS[deathPaintClass] } : null,
       metrics: Object.assign({}, metrics)
     };
   };

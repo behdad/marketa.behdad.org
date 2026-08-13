@@ -187,8 +187,11 @@ physical screen box rather than through ancestor CSS zoom. Establish that host b
 runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
 place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
 canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later
-controls. Keep overlay fitting, stacking, Calendar paint, and runtime identity covered by the
-focused monitor tests.
+controls. A shared native-SVG Kill farewell temporarily parks the promoted live root back in that
+same `foreignObject` before its `death-*` class is applied, keeps promotion suppressed through the
+app's close/reset, then returns directly to the dock. Kill gags that animate the live app itself
+(Chat, Classics, and Pac-Man) retain promotion instead. Keep overlay fitting, stacking, Calendar
+paint, runtime identity, and the clipped Kill raster covered by the focused monitor tests.
 
 ### Morning routine and free exploration
 
@@ -618,7 +621,7 @@ port nor another developer's server process.
 | Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
 | Typed API | Catalogue shape, public Window ownership, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/global-surface.js`, `tests/api-gating.js` |
-| Rendering | Album signatures, monitor HTML/SVG alignment, overlay ownership, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, `tests/monitor-calendar.mjs`, screenshots or real CDP Chrome |
+| Rendering | Album signatures, monitor HTML/SVG alignment, overlay ownership, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, `tests/monitor-calendar.mjs`, `tests/monitor-kill-paint.mjs`, screenshots or real CDP Chrome |
 
 Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Run the
 focused tests closest to the ownership boundary you changed; Enter and menu changes have their named

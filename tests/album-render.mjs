@@ -19,7 +19,8 @@ if (!/window\.__albumPhotoSvg\s*=/.test(html)) {
   html = html.replace('window.__albumAdd = captureAlbumShot;',
     'window.__albumPhotoSvg = albumPhotoSvg;\n  window.__albumAdd = captureAlbumShot;');
 }
-const scratch = path.join(REPO, 'tests', '_album_scratch.html');
+// Keep the scratch beside loft-day.html so relative dictionaries and runtimes resolve.
+const scratch = path.join(REPO, '.album-render-scratch.html');
 fs.writeFileSync(scratch, html);
 
 const PORT = 9333 + Math.floor(Math.random() * 400);
@@ -40,7 +41,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function waitTarget() {
   for (let i = 0; i < 60; i++) {
-    try { const l = await get('/json'); const t = l.find(x => x.type === 'page' && x.url.includes('_album_scratch')); if (t) return t; } catch {}
+    try { const l = await get('/json'); const t = l.find(x => x.type === 'page' && x.url.includes('album-render-scratch')); if (t) return t; } catch {}
     await sleep(250);
   }
   throw new Error('no target');
@@ -290,6 +291,7 @@ const SUBJECTS = [
   console.log(anyOccFail ? '*** BALCONY OCCUPANCY WRONG ***' : 'balcony occupancy ok');
 
   ws.close(); chrome.kill('SIGKILL');
+  try { fs.unlinkSync(scratch); } catch {}
   try { fs.rmSync(PROFILE, { recursive: true, force: true }); } catch {}
   process.exit(anyBadOverlap || anyTopClip || anyOccFail ? 1 : 0);
-})().catch(e => { console.error(e); chrome.kill('SIGKILL'); process.exit(1); });
+})().catch(e => { console.error(e); chrome.kill('SIGKILL'); try { fs.unlinkSync(scratch); } catch {} process.exit(1); });

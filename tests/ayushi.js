@@ -142,7 +142,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 5000, {
+var result = lib.runPageSync("rsvp.html", harness, 2000, {
   forceMotion: true,
   patchRaf: true,
   seedRandom: true

@@ -114,7 +114,7 @@ function pass(m){console.log("  ✓ "+m);}
 function fail(m,d){failures++;console.log("  ✗ "+m); if(d) console.log("      "+String(d).split("\n").join("\n      "));}
 
 console.log("rsvp.html birthday axis:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 13000, { patchRaf: true, forceMotion: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 11000, { patchRaf: true, forceMotion: true });
 if (!r) { fail("harness reported (page error before load, or budget too small)"); }
 else {
   var s = r.steps || {};

@@ -77546,6 +77546,17 @@ setOfficeProgress("pc", false);
   window.__dropTermFpsRunning = function () { return dtFpsRaf != null; };
   window.__revealConsoleTab = revealConsoleTab;
   window.__consoleTabDiscovered = function () { return consoleTabDiscovered; };
+  // A visible coach is the one modal exception to the usual room-level backtick handler:
+  // claim the toggle before its capture listener freezes ordinary lesson input. Once open,
+  // the dropdown's own keyboard owner below keeps all subsequent typing off the coach.
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "`" || e.ctrlKey || e.metaKey || e.altKey ||
+        !document.querySelector(".hunt-coach-overlay.modal-coach.show")) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (window.__revealConsoleTab) window.__revealConsoleTab();
+    toggleDropTerm();
+  }, true);
   document.addEventListener("visibilitychange", function () {
     if (!consoleTabDiscovered) return;
     if (document.hidden) stopDropTermFps(); else startDropTermFps();

@@ -124,7 +124,7 @@ try {
     document.hasFocus=function(){return true;};localStorage.clear();if(window.__removeClickMe)window.__removeClickMe();if(window.__finishOpeningGuide)window.__finishOpeningGuide();if(window.__endAttract)window.__endAttract();
     window.__setDayNight(false,true);window.__goToStage("balcony");await sleep(80);var before=snap(),sw=document.getElementById("balcony-partyswitch");sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(120);var firstOn=snap();
     window.__goToStage("balcony");await sleep(80);sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(160);var off=snap();
-    sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(120);var laterOn=snap();
+    await sleep(1050);sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(120);var laterOn=snap();
     return {before:before,firstOn:firstOn,off:off,laterOn:laterOn,errors:(window.__errs||[]).slice()};
   })()`);
   check(switchContract.errors.length === 0 && !switchContract.before.party && !switchContract.before.phase2 && !switchContract.before.night &&

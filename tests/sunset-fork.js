@@ -28,7 +28,7 @@ var harness = String.raw`<script>
   }
   try {
     window.__secondRound = true;
-    window.__setPartyMode(true, true);
+    window.__gardenPartyOn = true;
     window.__goToStage("office");
     window.__deliverPhoneMessage("sunset_bed");
     window.__deliverPhoneMessage("sunset_irene_code");

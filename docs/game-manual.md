@@ -61,9 +61,12 @@ the DJ for song requests. Dances, toasts, photos, cake ceremonies, sparklers, an
 can interrupt the ordinary Party scene without ending it.
 
 After the Party reveal settles, a large coach points to **The Loft** and invites you to explore while
-the Party keeps running. The Garden wall switch remains a day/night control. In phase two, the roof
-disco ball is the optional Party toggle: lit and spinning while Party is on, dim and still while it is
-off. It hangs at the upper window/wall corner, clear of notifications. The first four seconds belong
+the Party keeps running. The Garden wall switch remains a day/night control. The Balcony switch
+starts a Party night; switching it off ends Party and advances to the next day in daylight. In phase
+two, the roof disco ball is the time-neutral Party toggle: it preserves the current day/night state on
+both edges, bright silver with a tight halo and a smooth spin while Party is on, subdued and still
+while it is off. It
+hangs flush from the ceiling, clear of notifications. The first four seconds belong
 to the Party reveal; waiting texts arrive afterward, behind the exploration lesson. After all ten
 rooms are visited, the caption stays on **“Who wants to go on a Road Trip? Head
 out to the car.”** until you reach Entrance; Party may keep running while you walk there. The message

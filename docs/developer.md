@@ -212,10 +212,16 @@ first start. That latch opens free exploration and remains set even after Party 
 cleared only by a real reset. Do not use the music, lighting, guest population, or
 `__gardenPartyOn` alone as a proxy for story progress.
 
-The Garden wall switch remains the day/night owner in both phases. Phase two reveals the roof disco
-ball at the window/wall ceiling junction, clear of message and roster chrome, as the optional Party
-toggle; Party state alone controls whether its native-SVG mirror facets are lit and rotating or dim
-and still. The first Party coach points to The Loft while Party remains active, and the first
+The Garden wall switch remains the day/night owner in both phases. The Balcony switch routes ON
+through the ordinary user-initiated Party path (including dusk and first-use phase-two unlock); OFF
+routes through `__stopPartyThen`, the canonical `__calStepDay(1)`, and daylight. Phase two reveals
+the roof disco ball flush at the ceiling, clear of message and roster chrome, as the time-neutral
+Party toggle: it passes `userInitiated=false`, so both edges preserve the current sky. Party state
+alone controls whether its one canonical native-SVG curved-facet subtree appears as a bright silver
+rotating sphere with a tight rear halo or as a subdued still fixture. The Party render references
+that same art from an unfiltered scene-overlay sibling; do not replace it with inverse filters, which
+flatten the facet grid in Chrome and do not correct SVG containers in WebKit. The first Party coach
+points to The Loft while Party remains active, and the first
 Messages coach is serialized behind it. Neither progression nor Road Trip requires a Party-off coach.
 
 The first Party transition starts the checkpointed `party-message-reveal` gate. For 4 seconds, every
@@ -556,6 +562,12 @@ Particle systems must have bounded cardinality. Prefer a fixed population that r
 from each particle's animation completion, or cap and remove stale nodes before spawning. An
 unbounded timer plus animation-finish cleanup will accumulate nodes while the tab is throttled and
 can crash after hours.
+
+Frame health uses 1.2-second delivered-frame windows with asymmetric thresholds. Two windows at or
+below 40 fps enter the reduced tier; three windows at or above 48 fps recover ordinarily. During
+Party, recovery waits for six healthy windows and never enables the high-resolution canvas tier.
+This longer retry prevents a reveal-time hitch from pinning Party to stepped effects forever while
+still giving genuinely constrained devices a fast two-window route back to the reduced tier.
 
 All Web Audio uses one shared `AudioContext`. Never suspend or close that context from a feature;
 gate or disconnect that feature's nodes. Read [the audio guide](audio.md) before touching beds,

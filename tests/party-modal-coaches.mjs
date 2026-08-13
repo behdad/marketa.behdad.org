@@ -104,6 +104,38 @@ try {
     "window.__errs=[];window.addEventListener('error',function(e){window.__errs.push(String(e.message));});" +
     "window.addEventListener('unhandledrejection',function(e){window.__errs.push('rejection: '+String(e.reason));});"
   });
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 1100, height: 900, deviceScaleFactor: 1, mobile: false,
+    screenWidth: 1100, screenHeight: 900
+  });
+  await send("Page.navigate", {
+    url: "http://127.0.0.1:" + WEB_PORT + "/loft-day.html?party-switch-contract=" +
+      Date.now() + "&date=2026-08-13&time=12:00"
+  });
+  let switchReady = false;
+  for (let i = 0; i < 80 && !switchReady; i++) {
+    try { switchReady = await evaluate("typeof window.__setPartyMode==='function' && typeof window.__calStepDay==='function' && document.readyState==='complete'"); } catch (_) {}
+    if (!switchReady) await sleep(100);
+  }
+  if (!switchReady) throw new Error("Party-switch contract page did not become ready");
+  const switchContract = await evaluate(`(async function(){
+    var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
+    var snap=function(){var n=window.__now(),s=document.getElementById("balcony-partyswitch");return {date:[n.getFullYear(),n.getMonth()+1,n.getDate()],party:!!window.__gardenPartyOn,phase2:!!window.__secondRound,night:document.getElementById("stage-garden").classList.contains("dusk"),switchOn:s.classList.contains("on")};};
+    document.hasFocus=function(){return true;};localStorage.clear();if(window.__removeClickMe)window.__removeClickMe();if(window.__finishOpeningGuide)window.__finishOpeningGuide();if(window.__endAttract)window.__endAttract();
+    window.__setDayNight(false,true);window.__goToStage("balcony");await sleep(80);var before=snap(),sw=document.getElementById("balcony-partyswitch");sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(120);var firstOn=snap();
+    window.__goToStage("balcony");await sleep(80);sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(160);var off=snap();
+    sw.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(120);var laterOn=snap();
+    return {before:before,firstOn:firstOn,off:off,laterOn:laterOn,errors:(window.__errs||[]).slice()};
+  })()`);
+  check(switchContract.errors.length === 0 && !switchContract.before.party && !switchContract.before.phase2 && !switchContract.before.night &&
+    switchContract.firstOn.party && switchContract.firstOn.phase2 && switchContract.firstOn.night && switchContract.firstOn.switchOn,
+    "Balcony switch first use unlocks phase two and starts a Party night", switchContract);
+  check(!switchContract.off.party && switchContract.off.phase2 && !switchContract.off.night && !switchContract.off.switchOn &&
+    switchContract.off.date.join("-") === "2026-8-14",
+    "Balcony switch off ends Party and uses the canonical next-day daylight step", switchContract);
+  check(switchContract.laterOn.party && switchContract.laterOn.phase2 && switchContract.laterOn.night && switchContract.laterOn.switchOn &&
+    switchContract.laterOn.date.join("-") === "2026-8-14",
+    "Balcony switch remains live and later on throws still start Party at night", switchContract);
   const cases = [
     { label: "desktop", width: 1100, height: 900, mobile: false, fullscreen: false, reduced: false },
     { label: "desktop fullscreen", width: 1100, height: 700, mobile: false, fullscreen: true, reduced: false },
@@ -149,15 +181,23 @@ try {
       var ball=document.getElementById("garden-disco-ball"),spin=document.getElementById("garden-disco-ball-spin"),p=point(ball),hit=document.elementFromPoint(p[0],p[1]);
       var roster=document.querySelector(".roster-toggle"),br=ball.getBoundingClientRect(),rr=roster&&roster.getBoundingClientRect();
       return {phase1:phase1,ball:p,ballRect:ball.getBoundingClientRect().toJSON(),ballHit:hit&&!!hit.closest("#garden-disco-ball"),ballOpacity:getComputedStyle(ball).opacity,
-        spin:getComputedStyle(spin).animationName,party:!!window.__gardenPartyOn,phase2:!!window.__secondRound,
-        facetCount:ball.querySelectorAll(".db-facet").length,hasAttachment:!!ball.querySelector(".db-ceiling-plate"),rosterRect:rr&&rr.toJSON(),rosterClear:!!rr&&(br.right+4<=rr.left||rr.right+4<=br.left||br.bottom+4<=rr.top||rr.bottom+4<=br.top),
+        spin:getComputedStyle(spin).animationName,party:!!window.__gardenPartyOn,daylight:!document.getElementById("stage-garden").classList.contains("dusk"),phase2:!!window.__secondRound,
+        facetCount:ball.querySelectorAll(".db-facet").length,reflectionCount:ball.querySelectorAll(".db-specular").length,
+        partyFaceDecor:ball.querySelectorAll(".db-color-reflection,.db-reflected-glint,.db-specular-secondary,[class*='db-jewel'],.db-twinkle").length,
+        hasAttachment:!!ball.querySelector(".db-ceiling-plate"),hasCurvedFacets:[].some.call(ball.querySelectorAll(".db-facet"),function(facet){return /[QCA]/.test(facet.getAttribute("d")||"");}),
+        lightClip:(document.getElementById("garden-disco-ball-lightfx")||{}).getAttribute&&document.getElementById("garden-disco-ball-lightfx").getAttribute("clip-path"),rayCount:document.querySelectorAll("#garden-disco-ball-lightfx .db-light-shard").length,
+        rosterRect:rr&&rr.toJSON(),rosterClear:!!rr&&(br.right+4<=rr.left||rr.right+4<=br.left||br.bottom+4<=rr.top||rr.bottom+4<=br.top),
         noLegacyEntrance:typeof window.__updateGardenDiscoPeek==="undefined"&&!document.querySelector(".disco-peek")&&ball.getAnimations({subtree:true}).length===0,
         noSwitchCoach:!document.getElementById("party-switch-coach")&&typeof window.__showPartySwitchCoach==="undefined"};
     })()`);
-    await clickPoint(setup.ball);
+    await screenshot(spec.label.replace(/\s+/g, "-") + "-party-off");
+    await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: setup.ball[0], y: setup.ball[1] });
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: setup.ball[0], y: setup.ball[1], button: "left", clickCount: 1 });
+    setup.pressFeedback = await evaluate(`(function(){var ball=document.getElementById("garden-disco-ball"),ring=ball.querySelector(".db-interaction-ring");return {pressed:ball.classList.contains("pressing"),ringOpacity:getComputedStyle(ring).opacity};})()`);
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: setup.ball[0], y: setup.ball[1], button: "left", clickCount: 1 });
     await sleep(700);
     setup.started = await evaluate("window.__gardenPartyOn&&document.getElementById('stage-garden').classList.contains('garden-party')");
-    setup.partyLook = await evaluate(`(function(){var spin=document.getElementById("garden-disco-ball-spin"),ball=document.getElementById("garden-disco-ball"),glint=ball.querySelector(".db-reflected-glint");document.documentElement.classList.remove("frame-rate-low");var normal={opacity:getComputedStyle(ball).opacity,name:getComputedStyle(spin).animationName,duration:getComputedStyle(spin).animationDuration,timing:getComputedStyle(spin).animationTimingFunction,glintName:getComputedStyle(glint).animationName,glintOpacity:getComputedStyle(glint).opacity,rect:ball.getBoundingClientRect().toJSON()};document.documentElement.classList.add("frame-rate-low");var low={name:getComputedStyle(spin).animationName,duration:getComputedStyle(spin).animationDuration,timing:getComputedStyle(spin).animationTimingFunction,opacity:getComputedStyle(ball).opacity,glintName:getComputedStyle(glint).animationName,glintOpacity:getComputedStyle(glint).opacity};document.documentElement.classList.remove("frame-rate-low");return {normal:normal,low:low};})()`);
+    setup.partyLook = await evaluate(`(function(){var spin=document.getElementById("garden-disco-overlay-spin"),overlay=document.getElementById("garden-disco-overlay"),ball=document.getElementById("garden-disco-ball");document.documentElement.classList.remove("frame-rate-low");var normal={opacity:getComputedStyle(ball).opacity,overlayOpacity:getComputedStyle(overlay).opacity,name:getComputedStyle(spin).animationName,duration:getComputedStyle(spin).animationDuration,timing:getComputedStyle(spin).animationTimingFunction,canonicalUse:!!spin.querySelector('use[href="#garden-disco-ball-art"]'),rect:ball.getBoundingClientRect().toJSON(),daylight:!document.getElementById("stage-garden").classList.contains("dusk")};document.documentElement.classList.add("frame-rate-low");var low={name:getComputedStyle(spin).animationName,duration:getComputedStyle(spin).animationDuration,timing:getComputedStyle(spin).animationTimingFunction,opacity:getComputedStyle(ball).opacity};document.documentElement.classList.remove("frame-rate-low");return {normal:normal,low:low};})()`);
     await screenshot(spec.label.replace(/\s+/g, "-") + "-party-reveal");
 
     const blockedMoment = await evaluate(`(async function(){
@@ -217,10 +257,10 @@ try {
       if(window.__resetPartyExitHint)window.__resetPartyExitHint();if(window.__setPartyMode)window.__setPartyMode(true,true,false);window.__goToStage("garden");await sleep(120);
       var ball=document.getElementById("garden-disco-ball"),bp=point(ball),bh=document.elementFromPoint(bp[0],bp[1]);
       return {ball:bp,ballHit:bh&&!!bh.closest("#garden-disco-ball"),beforeNight:document.getElementById("stage-garden").classList.contains("dusk"),
-        relit:{opacity:getComputedStyle(ball).opacity,spin:getComputedStyle(document.getElementById("garden-disco-ball-spin")).animationName,rect:ball.getBoundingClientRect().toJSON(),noEntrance:!document.querySelector(".disco-peek")}};
+        relit:{opacity:getComputedStyle(ball).opacity,overlayOpacity:getComputedStyle(document.getElementById("garden-disco-overlay")).opacity,spin:getComputedStyle(document.getElementById("garden-disco-overlay-spin")).animationName,rect:ball.getBoundingClientRect().toJSON(),noEntrance:!document.querySelector(".disco-peek")}};
     })()`);
     await clickPoint(controls.ball); await sleep(900);
-    const stoppedState = await evaluate("(function(){var ball=document.getElementById('garden-disco-ball'),spin=document.getElementById('garden-disco-ball-spin'),s=window.__partyLifecycleState();return {fallback:!window.__gardenPartyOn&&s.roomMapCoachActive&&!s.roomMapCoachAcknowledged&&document.getElementById('party-room-map-coach').classList.contains('show'),opacity:getComputedStyle(ball).opacity,spin:getComputedStyle(spin).animationName,animations:ball.getAnimations({subtree:true}).map(function(a){return a.animationName||a.transitionProperty||'animation';})};})()");
+    const stoppedState = await evaluate("(function(){var ball=document.getElementById('garden-disco-ball'),spin=document.getElementById('garden-disco-ball-spin'),s=window.__partyLifecycleState();return {fallback:!window.__gardenPartyOn&&s.roomMapCoachActive&&!s.roomMapCoachAcknowledged&&document.getElementById('party-room-map-coach').classList.contains('show'),daylight:!document.getElementById('stage-garden').classList.contains('dusk'),opacity:getComputedStyle(ball).opacity,spin:getComputedStyle(spin).animationName,animations:ball.getAnimations({subtree:true}).map(function(a){return a.animationName||a.transitionProperty||'animation';})};})()");
     controls.fallback = stoppedState.fallback;
     const geometry = await evaluate(`(async function(){
       var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
@@ -247,20 +287,22 @@ try {
     check(result.fullscreen === spec.fullscreen, prefix + "keeps the requested fullscreen state", result.fullscreen);
     check(Number(setup.phase1.opacity) === 0 && setup.phase1.pointer === "none",
       prefix + "phase one keeps the disco control absent and inert", setup.phase1);
-    check(setup.phase2 && !setup.party && setup.ballHit && Number(setup.ballOpacity) > .35 && setup.spin === "none",
-      prefix + "phase two exposes a dim, still, fingertip-sized disco control", setup);
+    check(setup.phase2 && !setup.party && setup.ballHit && Number(setup.ballOpacity) > .9 && setup.spin === "none",
+      prefix + "phase two exposes a fully rendered, still disco control", setup);
     check(setup.noLegacyEntrance, prefix + "phase-two reveal has no delayed fall timer, class, or animation", setup);
-    check(setup.facetCount >= 10 && setup.hasAttachment && setup.rosterClear,
-      prefix + "mirror-ball facets stay physically attached and clear of notification chrome", setup);
+    check(setup.facetCount >= 18 && setup.reflectionCount === 1 && setup.partyFaceDecor === 0 && setup.hasCurvedFacets && setup.hasAttachment && setup.rosterClear && setup.lightClip === "url(#loft-stage-room-clip)" && setup.rayCount === 0,
+      prefix + "canonical curved mirror-ball art stays free of Party face patches and clear of notification chrome", setup);
     check(setup.noSwitchCoach, prefix + "wall-switch onboarding is absent", setup);
+    check(setup.pressFeedback.pressed && Number(setup.pressFeedback.ringOpacity) > .6,
+      prefix + "pointer-down gives immediate feedback before the Party transition", setup.pressFeedback);
     check(setup.started, prefix + "trusted disco-ball click starts Party", setup);
-    check(Number(setup.partyLook.normal.opacity) > .9 &&
-      (spec.reduced ? setup.partyLook.normal.name === "none" && setup.partyLook.normal.glintName === "none" && Number(setup.partyLook.normal.glintOpacity) >= .5 :
-        setup.partyLook.normal.name === "disco-ball-spin" && setup.partyLook.normal.glintName === "db-reflected-glint"),
+    check(setup.daylight === setup.partyLook.normal.daylight && setup.daylight === stoppedState.daylight,
+      prefix + "Garden disco-ball on and off preserve the current day/night state", { setup: setup.daylight, on: setup.partyLook.normal.daylight, off: stoppedState.daylight });
+    check(Number(setup.partyLook.normal.opacity) > .9 && Number(setup.partyLook.normal.overlayOpacity) > .9 && setup.partyLook.normal.canonicalUse &&
+      (spec.reduced ? setup.partyLook.normal.name === "none" : setup.partyLook.normal.name === "disco-ball-spin"),
       prefix + "Party lights the disco ball and honors reduced motion", setup.partyLook);
     if (!spec.reduced) check(setup.partyLook.normal.duration === "9s" && setup.partyLook.normal.timing === "linear" &&
-      setup.partyLook.low.name === "disco-ball-spin" && setup.partyLook.low.duration === "30s" && /^steps\(30/.test(setup.partyLook.low.timing) && Number(setup.partyLook.low.opacity) > .9 &&
-      setup.partyLook.low.glintName === "none" && Number(setup.partyLook.low.glintOpacity) >= .5,
+      setup.partyLook.low.name === "disco-ball-spin" && setup.partyLook.low.duration === "30s" && /^steps\(30/.test(setup.partyLook.low.timing) && Number(setup.partyLook.low.opacity) > .9,
       prefix + "low-frame mode slows the disco spin instead of dropping its state", setup.partyLook);
     check(blockedMoment.activated && blockedMoment.hidden && blockedMoment.shown && blockedMoment.party,
       prefix + "exploration waits behind an authored Party moment, then appears while Party stays on", blockedMoment);
@@ -282,10 +324,10 @@ try {
       prefix + "Messages holds behind the reveal and exploration lesson, then releases once clear of the ball", map);
     check(controls.ballHit && controls.fallback,
       prefix + "trusted disco-ball stop preserves the early post-Party exploration fallback", controls);
-    check(Number(controls.relit.opacity) > .9 && controls.relit.noEntrance &&
+    check(Number(controls.relit.opacity) > .9 && Number(controls.relit.overlayOpacity) > .9 && controls.relit.noEntrance &&
       (spec.reduced ? controls.relit.spin === "none" : controls.relit.spin === "disco-ball-spin") &&
-      Number(stoppedState.opacity) > .35 && Number(stoppedState.opacity) < .6 && stoppedState.spin === "none" && stoppedState.animations.length === 0,
-      prefix + "Party off is dim and completely still; Party on relights without an entrance", { relit: controls.relit, stopped: stoppedState });
+      Number(stoppedState.opacity) > .9 && stoppedState.spin === "none" && stoppedState.animations.length === 0,
+      prefix + "Party off keeps the physical mirror ball visible and still; Party on relights without an entrance", { relit: controls.relit, stopped: stoppedState });
     check(geometry.noClass && geometry.noHook && controls.stableGeometry,
       prefix + "disco geometry stays fixed across Party, day/night, and room transitions", { setup: setup.ballRect, party: setup.partyLook.normal.rect, geometry });
     check(wallData.target && controls.wallOnly, prefix + "Garden wall switch changes only day/night in phase two", { wallData, beforeWall, afterWall });

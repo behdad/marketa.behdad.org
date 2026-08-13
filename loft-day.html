@@ -3820,8 +3820,8 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (prefers-reduced-motion: reduce){#balcony-ashtray.spinning{animation:none}}
 #balcony-minisplit-fan, #balcony-minisplit-blades{transform-box:fill-box; transform-origin:center}
 #balcony-minisplit.on #balcony-minisplit-blades{animation:ac-fan-spin .6s linear infinite}
-/* Balcony junction-box Act Two latch: rocker up before phase 2 / down afterward; LED + box halo
-   glow UV-violet once the second round is open. The rocker travel is a CSS transform on a node
+/* Balcony junction-box Party/night switch: rocker up when Party rests / down while it runs; LED +
+   box halo glow UV-violet with the Party. The rocker travel is a CSS transform on a node
    with no static transform= attr, so it can't clobber a baked placement (CLAUDE.md trap);
    short transitions all round. */
 #balcony-partyswitch-rocker{transform-box:fill-box; transform-origin:center; transition:transform .25s ease; transform:translateY(-2.5px)} /* off: rocker up */
@@ -3830,7 +3830,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #balcony-partyswitch.on #balcony-partyswitch-led{fill:#e070ff; filter:drop-shadow(0 0 2.5px #e070ff)}
 #balcony-partyswitch-glow{opacity:0; transition:opacity .3s ease; pointer-events:none}
 #balcony-partyswitch.on #balcony-partyswitch-glow{opacity:1}
-#loft-game-strip.second-round #balcony-partyswitch{pointer-events:none;cursor:default!important}
 @media (prefers-reduced-motion: reduce){#balcony-partyswitch-rocker{transition:none}#balcony-partyswitch-glow{transition:none}}
 /* The second act's "head out — kill the lights" beat points here with the kitchen's
    step-arrow pattern: the same .invite-pulse ~ arrow shape, so the beat sequencer toggles
@@ -4175,12 +4174,16 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
    Everything here is inert until #stage-garden.garden-party, and it is designed to
    be seen THROUGH #loft-game-strip.uv-mode's filter, so the source colors are the
    UV neon palette (they glow rather than muddy under brightness .5 + hue-rotate). */
-/* The partyfx wrapper is always live. The disco ball stays dimly present once phase two opens,
-   independently of the Party-only colour pools, so it reads as the persistent Party control. */
+/* The partyfx wrapper is always live. The disco ball stays fully rendered once phase two opens,
+   independently of the Party-only colour pools, so Party-off still reads as a physical mirror
+   ball rather than a faded overlay. Party leaves the approved sphere art unchanged: only its
+   rotation and the separately clipped neutral halo carry the fixture's on state. */
 #garden-disco-pools{opacity:0; transition:opacity .5s ease}
 #stage-garden.garden-party #garden-disco-pools{opacity:1}
+#garden-disco-ball-lightfx{opacity:0;pointer-events:none}
+#stage-garden.garden-party #garden-disco-ball-lightfx{opacity:1}
 #garden-disco-ball{opacity:0}
-#loft-game-strip.second-round #garden-disco-ball{opacity:.64}
+#loft-game-strip.second-round #garden-disco-ball{opacity:1}
 #stage-garden.garden-party #garden-disco-ball{opacity:1}
 /* roving colored light pools — screen-blended so they wash light over the room. Healthy frame
    delivery keeps the smooth continuous CSS sweep. Low-frame mode instead drives position/opacity
@@ -4199,14 +4202,36 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   75%{opacity:.5}
   100%{opacity:0; transform:translate(-46px,-14px) scale(0.8)}
 }
-/* The mirror ball rotates as one cheap native-SVG layer. Facet/glint opacity changes are small
-   and paint-local; low-frame mode keeps the existing deliberately stepped turn. */
+/* The mirror ball rotates as one cheap native-SVG layer. Ordinary delivery stays continuously
+   linear; low-frame mode preserves its deliberately stepped turn rather than spending scarce
+   frames on an ornamental fixture. Reduced motion remains still below. */
 #garden-disco-ball-spin{transform-box:fill-box; transform-origin:center}
-#stage-garden.garden-party #garden-disco-ball-spin{animation:disco-ball-spin 9s linear infinite}
-#stage-garden.garden-party #garden-disco-ball-spin .db-shell{fill:#d8e5ef;stroke:#eefaff;stroke-width:1.5}
-#stage-garden.garden-party #garden-disco-ball-spin .db-specular{opacity:1}
+#stage-garden.garden-party #garden-disco-ball-spin{animation:disco-ball-spin 9s linear infinite;will-change:transform}
+#garden-disco-ball-spin .db-shell{fill:url(#garden-disco-ball-shell-off);stroke:#3e4b5a;stroke-width:1.25}
+#garden-disco-ball-spin .db-facet{stroke:#f7fbff;stroke-opacity:.5;stroke-width:.48}
+#garden-disco-ball-spin .db-specular{opacity:.72}
+/* Literal visual-state swap: at rest, run the approved sphere primitives through the same
+   blacklight colour transform that formerly subdued them during Party. Party renders a <use> of
+   the exact same vector art in the scene overlay, outside the strip's UV compositor. This is the
+   only way to preserve the pale facet contrast: inverse filters clip those near-whites and collapse
+   the sphere into a flat disk in Chrome, while CSS filter functions are no-ops in WebKit. */
+#stage-garden:not(.garden-party) #garden-disco-ball-pop :is(.db-sphere-shadow,.db-shell,.db-facet,.db-vignette,.db-specular){
+  filter:url(#garden-disco-ball-uv-dim)
+}
+#stage-garden.garden-party #garden-disco-ball-pop :is(.db-sphere-shadow,.db-shell,.db-facet,.db-vignette,.db-specular){filter:none}
+html.mir-party #stage-garden.garden-party #garden-disco-ball-spin{animation:none;opacity:0}
+html.mir-party #stage-garden.garden-party .db-sphere-shadow{opacity:0}
 html.frame-rate-low #stage-garden.garden-party #garden-disco-ball-spin{animation-duration:30s; animation-timing-function:steps(30,end)}
 @keyframes disco-ball-spin{to{transform:rotate(360deg)}}
+/* The anti-UV rendering is a pointer-transparent sibling of the filtered strip. Its room viewport
+   provides the hard scene clip, and the referenced art remains one canonical subtree. */
+#garden-disco-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:0;overflow:hidden}
+html.mir-party .hunt-viewport.viewing-garden>#loft-game-strip.second-round~#garden-disco-overlay{opacity:1}
+html.mir-party #garden-disco-ball-lightfx{opacity:0}
+#garden-disco-overlay-spin{transform-box:fill-box;transform-origin:center}
+html.mir-party .hunt-viewport.viewing-garden #garden-disco-overlay-spin{animation:disco-ball-spin 9s linear infinite;will-change:transform}
+html.frame-rate-low.mir-party .hunt-viewport.viewing-garden #garden-disco-overlay-spin{animation-duration:30s;animation-timing-function:steps(30,end)}
+@media(max-width:519px){#garden-disco-overlay-position{transform:translate(-230px,-89px)}}
 /* DISCO UV pulse: on the disco song only (garden data-partydance) AND while the blacklight's on, a
    soft violet wash blinks over the scene — a gentle periodic pulse, deliberately NOT a fast strobe. */
 #garden-uv-pulse{opacity:0}
@@ -4223,16 +4248,6 @@ html.frame-rate-low #loft-game-strip.uv-mode #stage-garden[data-partydance="tech
 @keyframes garden-uv-pulse{0%,55%,100%{opacity:0} 68%{opacity:.34} 82%{opacity:.09}}
 @media (prefers-reduced-motion: reduce){#loft-game-strip.uv-mode #stage-garden[data-partydance="disco"] #garden-uv-pulse,
   #loft-game-strip.uv-mode #stage-garden[data-partydance="techno"] #garden-uv-pulse{animation:none; opacity:0}}
-#stage-garden.garden-party .db-facet{animation:db-twinkle 1.5s ease-in-out infinite}
-#stage-garden.garden-party .db-facet.f2{animation-delay:-.5s; animation-duration:1.2s}
-#stage-garden.garden-party .db-facet.f3{animation-delay:-.9s; animation-duration:1.7s}
-#stage-garden.garden-party .db-facet.f4{animation-delay:-.3s; animation-duration:1.35s}
-@keyframes db-twinkle{0%,100%{opacity:.22}50%{opacity:.95}}
-#garden-disco-ball .db-reflected-glint{opacity:0}
-#stage-garden.garden-party #garden-disco-ball .db-reflected-glint{animation:db-reflected-glint 2.8s ease-in-out infinite}
-#stage-garden.garden-party #garden-disco-ball .db-reflected-glint.g2{animation-delay:-1.35s}
-@keyframes db-reflected-glint{0%,68%,100%{opacity:.18}78%{opacity:1}}
-html.frame-rate-low #stage-garden.garden-party #garden-disco-ball .db-reflected-glint{animation:none;opacity:.52}
 /* a quiet party guest at the front-left edge with a camera; fades in with the rest of the
    partyfx layer. The camera pops a soft, infrequent flash (gardenFlashTick, ~5-9s jittered,
    gated on gardenPartyActive). The bloom is a bare <circle> (cx/cy, no transform attribute),
@@ -4692,26 +4707,37 @@ html.party-foreground-suspended #loft-game-strip.party-on :is(#stage-kitchen,#st
   #kitchen-bar-mixer .shaking{animation:none}
   #kitchen-bar-mixer .mx-glasswrap, #kitchen-bar-mixer .mx-glasswrap.served{transition:none; transform:none}
 }
-/* tapping the glitter ball toggles Party and pops it: a quick scale-bounce on a dedicated wrapper plus a
-   white light-flash halo. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
-   the -spin group, so the party spin's rotate is never clobbered (parent/child transforms
-   compose). It is hidden and inert before phase two, then remains reachable whether Party is
-   running or resting. */
+/* Tapping the mirror ball toggles Party and gives immediate press feedback before a compact
+   scale-bounce/light bloom. The bounce lives on #garden-disco-ball-pop, a node DISTINCT from
+   the -spin group, so the Party rotation is never clobbered. The outer assembly owns only its
+   fixed ceiling placement; narrow viewports move that whole assembly left of Who's here. */
 #garden-disco-ball{pointer-events:none}
 #loft-game-strip.second-round #garden-disco-ball{pointer-events:auto;cursor:pointer}
+@media(max-width:519px){
+  #garden-disco-ball{transform:translate(-230px,-89px)}
+  #garden-disco-ball-lightfx{transform:translateX(-149px)}
+}
 #garden-disco-ball-pop{transform-box:fill-box; transform-origin:center}
-#garden-disco-ball-pop.popping{animation:disco-ball-pop .5s ease-out}
-@keyframes disco-ball-pop{0%{transform:scale(1)}30%{transform:scale(1.24)}58%{transform:scale(.9)}100%{transform:scale(1)}}
+#loft-game-strip.second-round #garden-disco-ball.pressing #garden-disco-ball-pop{transform:scale(.94)}
+#garden-disco-ball-pop.popping{animation:disco-ball-pop .46s ease-out}
+@keyframes disco-ball-pop{0%{transform:scale(.94)}28%{transform:scale(1.13)}62%{transform:scale(.98)}100%{transform:scale(1)}}
 #garden-disco-ball-glow{opacity:0; mix-blend-mode:screen}
-#garden-disco-ball-pop.popping #garden-disco-ball-glow{animation:disco-ball-flash .5s ease-out}
-@keyframes disco-ball-flash{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+#garden-disco-ball-pop.popping #garden-disco-ball-glow{animation:disco-ball-flash .46s ease-out}
+@keyframes disco-ball-flash{0%{opacity:0}22%{opacity:.62}100%{opacity:0}}
+#garden-disco-ball .db-interaction-ring{opacity:0;transition:opacity .12s ease}
+#loft-game-strip.second-round #garden-disco-ball.pressing .db-interaction-ring{opacity:.72;transition:none}
+@media(hover:hover) and (pointer:fine){
+  #loft-game-strip.second-round #garden-disco-ball:hover .db-interaction-ring{opacity:.48}
+  #loft-game-strip.second-round #garden-disco-ball:hover .db-shell{stroke:#fff;stroke-width:1.7}
+}
 /* reduced motion: no sweep, no spin, no strobe — hold a gentle static neon wash. The tap
    pop/flash is disabled too; the shimmer chime alone still answers the click. */
 @media (prefers-reduced-motion: reduce){
   #stage-garden.garden-party .disco-pool{animation:none; opacity:.2}
   #stage-garden.garden-party #garden-disco-ball-spin{animation:none}
-  #stage-garden.garden-party .db-facet{animation:none; opacity:.6}
-  #stage-garden.garden-party #garden-disco-ball .db-reflected-glint{animation:none;opacity:.52}
+  html.mir-party .hunt-viewport.viewing-garden #garden-disco-overlay-spin{animation:none}
+  #garden-disco-ball.pressing #garden-disco-ball-pop{transform:none}
+  #garden-disco-ball .db-interaction-ring{transition:none}
   #garden-disco-ball-pop.popping{animation:none}
   #garden-disco-ball-pop.popping #garden-disco-ball-glow{animation:none}
 }
@@ -9770,6 +9796,9 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .msg-thumb-x{position:absolute; top:-8px; right:-8px; width:27px; height:27px; border-radius:50%; background:var(--muted); color:var(--paper); display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 7px rgba(0,0,0,.32)}
 .msg-thumb-x:hover,.msg-thumb-x:focus-visible{background:var(--wine); outline:none}
 @keyframes msg-thumb-pulse{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(142,58,74,.5), inset 0 0 0 1px var(--rule)}}
+/* In the narrow scene, leave the ceiling controls above the transient card instead of stacking
+   the card over the disco ball and Who's here. Its width and copy treatment remain unchanged. */
+@media(max-width:519px){.msg-thumb{top:66px}}
 @media (prefers-reduced-motion: reduce){.msg-thumb.show{animation:none}}
 /* the WEDDING ALBUM app: Aspen's captured party polaroids, newest-first. Each card is a white-
    framed polaroid — a stylized generative SVG "photo" (present figures in signature colours over
@@ -19242,37 +19271,86 @@ section{margin:1.9rem 0}
 <ellipse class="disco-pool dp3" cx="545" cy="165" rx="170" ry="150" fill="#1ab2ff"/>
 <ellipse class="disco-pool dp4" cx="300" cy="205" rx="160" ry="140" fill="#f7a01f"/>
 </g>
-<g id="garden-disco-ball" class="hunt-hit" transform="translate(-73,-89)">
-<circle cx="652" cy="130" r="29" fill="transparent"/>
-<!-- Ceiling plate + short physical drop beside the upper window frame. The whole assembly's
-     static placement lives on this outer group; the inner group alone owns the Party spin. -->
-<path class="db-ceiling-plate" d="M644 89 H660 L658 93 H646 Z" fill="#555d68" stroke="#2f3742" stroke-width="1"/>
-<rect x="649.6" y="92" width="4.8" height="4" rx="1.2" fill="#7f8792" stroke="#3f4752" stroke-width=".7"/>
-<line x1="652" y1="96" x2="652" y2="115" stroke="#555d68" stroke-width="1.7"/>
-<circle cx="652" cy="116" r="2.5" fill="#68717e" stroke="#303844" stroke-width=".8"/>
+<!-- Contained optical response behind the physical ball: one tight neutral halo. This layer—not
+     the interactive fixture—is room-clipped, so no light residue can paint beyond the Garden
+     boundary. No filters or blend modes: the sphere keeps its native facets in Chrome and WebKit.
+     Coordinates are the ball's final stage position after its outer translate. -->
+<g id="garden-disco-ball-lightfx" clip-path="url(#loft-stage-room-clip)" pointer-events="none">
+<defs>
+<radialGradient id="garden-disco-ball-halo" gradientUnits="userSpaceOnUse" cx="571" cy="41" r="29">
+<stop offset="0" stop-color="#ffffff" stop-opacity=".82"/><stop offset=".46" stop-color="#ffffff" stop-opacity=".3"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<circle cx="571" cy="41" r="29" fill="url(#garden-disco-ball-halo)"/>
+</g>
+<g id="garden-disco-ball" class="hunt-hit" transform="translate(-81,-89)">
+<!-- One stable, transparent target surrounds the fixture. It grows slightly from the old target,
+     but remains clear of the neighbouring wall art and the responsive Who's here position. -->
+<circle class="db-hit-target" cx="652" cy="130" r="32" fill="transparent"/>
+<!-- A flush canopy, motor collar and short stem make the ball belong to the ceiling rather than
+     float in front of the scene. The outer group owns placement; only the sphere below rotates. -->
+<defs>
+<linearGradient id="garden-disco-ball-stem" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#303845"/><stop offset=".42" stop-color="#9aa5af"/><stop offset=".68" stop-color="#5d6875"/><stop offset="1" stop-color="#28313c"/>
+</linearGradient>
+<radialGradient id="garden-disco-ball-shell-off" gradientUnits="userSpaceOnUse" cx="645" cy="121" r="28">
+<stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#dbe4eb"/><stop offset=".68" stop-color="#9eafbd"/><stop offset="1" stop-color="#485766"/>
+</radialGradient>
+<radialGradient id="garden-disco-ball-vignette">
+<stop offset=".56" stop-color="#1f2f40" stop-opacity="0"/><stop offset="1" stop-color="#172432" stop-opacity=".5"/>
+</radialGradient>
+<filter id="garden-disco-ball-uv-dim" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+<feComponentTransfer><feFuncR type="linear" slope=".5"/><feFuncG type="linear" slope=".5"/><feFuncB type="linear" slope=".5"/></feComponentTransfer>
+<feColorMatrix type="saturate" values="2.6"/><feColorMatrix type="hueRotate" values="220"/>
+<feComponentTransfer><feFuncR type="linear" slope="1.3" intercept="-.15"/><feFuncG type="linear" slope="1.3" intercept="-.15"/><feFuncB type="linear" slope="1.3" intercept="-.15"/></feComponentTransfer>
+</filter>
+<clipPath id="garden-disco-ball-clip"><circle cx="652" cy="130" r="18"/></clipPath>
+</defs>
+<path class="db-ceiling-plate" d="M642 89 H662 V91.8 Q662 94 659.5 94.5 H644.5 Q642 94 642 91.8 Z" fill="#424c58" stroke="#252e38" stroke-width="1"/>
+<path d="M644 90.2 H660" stroke="#a9b1ba" stroke-width=".85" stroke-linecap="round" opacity=".72"/>
+<rect x="648.5" y="93.2" width="7" height="5.2" rx="1.8" fill="url(#garden-disco-ball-stem)" stroke="#303944" stroke-width=".7"/>
+<!-- A dark cable with a narrow metal catchlight survives both the brick wall and Party UV. The
+     previous object-bounding-box gradient sat on a zero-width line and could disappear entirely. -->
+<path d="M652 97.5 V113.2" fill="none" stroke="#202a35" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M651.45 98 V112.8" fill="none" stroke="#d6dde3" stroke-width=".8" stroke-linecap="round" opacity=".78"/>
+<circle cx="652" cy="112.2" r="3" fill="#737f8c" stroke="#303944" stroke-width=".8"/>
 <g id="garden-disco-ball-pop">
-<circle id="garden-disco-ball-glow" cx="652" cy="130" r="24" fill="#fff" pointer-events="none"/>
+<circle id="garden-disco-ball-glow" cx="652" cy="130" r="27" fill="#fff" pointer-events="none"/>
+<circle class="db-interaction-ring" cx="652" cy="130" r="22" fill="none" stroke="#eefaff" stroke-width="1.4" pointer-events="none"/>
+<circle class="db-sphere-shadow" cx="653.2" cy="131.5" r="18.8" fill="#17212d" opacity=".28" pointer-events="none"/>
 <g id="garden-disco-ball-spin">
-<defs><clipPath id="garden-disco-ball-clip"><circle cx="652" cy="130" r="14"/></clipPath></defs>
-<circle class="db-shell" cx="652" cy="130" r="14" fill="#aeb9c8" stroke="#394552" stroke-width="1.2"/>
-<g clip-path="url(#garden-disco-ball-clip)" stroke="#f5f8fb" stroke-opacity=".42" stroke-width=".55">
-<path class="db-facet f1" d="M638 123 H645 V129 H638 Z" fill="#d6dce5"/>
-<path class="db-facet f2" d="M645 122 H652 V129 H645 Z" fill="#f2f5f8"/>
-<path class="db-facet f3" d="M652 122 H659 V129 H652 Z" fill="#93b8d1"/>
-<path class="db-facet f4" d="M659 123 H666 V129 H659 Z" fill="#d5b8dc"/>
-<path class="db-facet f3" d="M638 129 H645 V136 H638 Z" fill="#9cb3c8"/>
-<path class="db-facet f4" d="M645 129 H652 V136 H645 Z" fill="#d8c3e1"/>
-<path class="db-facet f1" d="M652 129 H659 V136 H652 Z" fill="#edf4f8"/>
-<path class="db-facet f2" d="M659 129 H666 V136 H659 Z" fill="#9eced1"/>
-<path class="db-facet f2" d="M641 136 H648 V142 H641 Z" fill="#b7c8d8"/>
-<path class="db-facet f3" d="M648 136 H655 V144 H648 Z" fill="#f4f7fa"/>
-<path class="db-facet f4" d="M655 136 H663 V142 H655 Z" fill="#bca7d3"/>
+<g id="garden-disco-ball-art">
+<circle class="db-shell" cx="652" cy="130" r="18" fill="url(#garden-disco-ball-shell-off)" stroke="#3e4b5a" stroke-width="1.25"/>
+<g clip-path="url(#garden-disco-ball-clip)">
+<!-- Curved rows taper toward the poles, so the mirrors describe a sphere instead of a clipped
+     checkerboard. Cool and warm tiles catch the Garden even before Party lights them. -->
+<g opacity=".78" stroke="#f7fbff" stroke-opacity=".5" stroke-width=".48">
+<path class="db-facet f1" d="M646 113.2 Q649 112 652 112 L652 117 Q648.4 117 645 118 Z" fill="#f5f8fa"/>
+<path class="db-facet f3" d="M652 112 Q655 112 658 113.2 L659 118 Q655.6 117 652 117 Z" fill="#b4cfde"/>
+<path class="db-facet f2" d="M640.2 118.4 Q643 117.2 646 116.6 L647 123 Q642.8 123.5 638.7 125 Z" fill="#b5c3ce"/>
+<path class="db-facet f1" d="M646 116.6 Q649 116 652 116 L652 122.5 Q649.5 122.5 647 123 Z" fill="#eef4f7"/>
+<path class="db-facet f4" d="M652 116 Q655 116 658 116.6 L657 123 Q654.5 122.5 652 122.5 Z" fill="#c9b8d2"/>
+<path class="db-facet f2" d="M658 116.6 Q661 117.2 663.8 118.4 L665.3 125 Q661.2 123.5 657 123 Z" fill="#dce9ed"/>
+<path class="db-facet f3" d="M636.5 124.2 Q640.2 122.8 644.2 122.2 L645 129.7 Q639.6 130 634 131 Z" fill="#8eaabb"/>
+<path class="db-facet f4" d="M644.2 122.2 Q648 121.6 652 121.6 V129.5 Q648.5 129.4 645 129.7 Z" fill="#d7c5dd"/>
+<path class="db-facet f1" d="M652 121.6 Q656 121.6 659.8 122.2 L659 129.7 Q655.5 129.4 652 129.5 Z" fill="#f8fbfc"/>
+<path class="db-facet f2" d="M659.8 122.2 Q663.8 122.8 667.5 124.2 L670 131 Q664.4 130 659 129.7 Z" fill="#91c7cd"/>
+<path class="db-facet f2" d="M634 130 Q639.5 130.8 645 130.5 L644.5 138 Q640.2 137.5 636.2 136 Z" fill="#a8bdca"/>
+<path class="db-facet f3" d="M645 130.5 Q648.5 130.2 652 130.3 V138.4 Q648 138.3 644.5 138 Z" fill="#d6e5ec"/>
+<path class="db-facet f4" d="M652 130.3 Q655.5 130.2 659 130.5 L659.5 138 Q656 138.3 652 138.4 Z" fill="#d8bcd8"/>
+<path class="db-facet f1" d="M659 130.5 Q664.5 130.8 670 130 L667.8 136 Q663.8 137.5 659.5 138 Z" fill="#edf5f7"/>
+<path class="db-facet f4" d="M637.5 136 Q641 137.4 645 138 L646.5 143.6 Q643.2 143 640.5 141.4 Z" fill="#b4a5c5"/>
+<path class="db-facet f2" d="M645 138 Q648.5 138.5 652 138.5 V145 Q649 145 646.5 143.6 Z" fill="#c6d8e1"/>
+<path class="db-facet f1" d="M652 138.5 Q655.5 138.5 659 138 L657.5 143.6 Q655 145 652 145 Z" fill="#f4f8f9"/>
+<path class="db-facet f3" d="M659 138 Q663 137.4 666.5 136 L663.5 141.4 Q660.8 143 657.5 143.6 Z" fill="#98b8ca"/>
+<path class="db-facet f3" d="M646.5 143.2 Q649.2 144.7 652 144.7 V148 Q648.8 147.3 646.5 145.6 Z" fill="#9eb7c7"/>
+<path class="db-facet f4" d="M652 144.7 Q654.8 144.7 657.5 143.2 V145.6 Q655.2 147.3 652 148 Z" fill="#ccb9d2"/>
 </g>
-<ellipse class="db-specular" cx="647.5" cy="124.5" rx="4" ry="2.4" fill="#ffffff" opacity=".78"/>
-<path d="M640 130 Q652 126 664 130 M641 136 Q652 139 663 136" fill="none" stroke="#65788a" stroke-width=".7" opacity=".7"/>
+<circle class="db-vignette" cx="652" cy="130" r="18" fill="url(#garden-disco-ball-vignette)" pointer-events="none"/>
+<path class="db-specular" d="M641.5 122.7 Q645 117.4 650 116.8" fill="none" stroke="#fff" stroke-width="2.25" stroke-linecap="round" opacity=".72"/>
 </g>
-<path class="db-reflected-glint g1" d="M645 120 l2 4 l4 2 l-4 2 l-2 4 l-2-4 l-4-2 l4-2 Z" fill="#f8fbff" pointer-events="none"/>
-<path class="db-reflected-glint g2" d="M659 130 l1.4 2.8 l2.8 1.4 l-2.8 1.4 l-1.4 2.8 l-1.4-2.8 l-2.8-1.4 l2.8-1.4 Z" fill="#bfefff" pointer-events="none"/>
+</g>
+</g>
 </g>
 </g>
 <g id="garden-confettifx"></g>
@@ -29693,11 +29771,12 @@ section{margin:1.9rem 0}
 <rect x="152" y="264" width="8" height="8" fill="#c4c0b8"/>
 <rect x="226" y="264" width="8" height="8" fill="#c4c0b8"/>
 </g>
-<!-- The one-time Act Two rocker on the junction box (drawn as its own group AFTER the minisplit
-     so it sits on top of the box, without restructuring it). Rocker up=phase one / down=phase two; the
+<!-- The Party/night rocker on the junction box (drawn as its own group AFTER the minisplit
+     so it sits on top of the box, without restructuring it). Rocker up=Party off / down=Party on; the
      travel is a CSS transform on a node with no static transform= (per CLAUDE.md's clobber
      rule), position baked into x/y. LED + a soft radial halo round the box glow UV-violet
-     once Act Two is open. Click-only, no keyboard (game-SVG a11y rule). -->
+     while Party runs. Its first use opens Act Two; later throws remain live. Click-only, no
+     keyboard (game-SVG a11y rule). -->
 <g id="balcony-partyswitch" class="hunt-hit" style="cursor:pointer">
 <defs>
 <radialGradient id="balcony-partyswitch-glow-grad">
@@ -32746,6 +32825,24 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <text class="mol-street" data-i="mol_street_ethanol" x="75" y="74" text-anchor="middle">booze</text>
 <text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
 </g>
+    </svg>
+    <!-- Party anti-UV: a pointer-transparent scene overlay references the canonical sphere
+         art instead of restyling or duplicating its facets. It sits outside the filtered strip,
+         while its own viewport and clip keep the tight neutral halo inside the room. -->
+    <svg id="garden-disco-overlay" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <clipPath id="garden-disco-overlay-room-clip"><rect width="680" height="340"/></clipPath>
+        <radialGradient id="garden-disco-overlay-halo" gradientUnits="userSpaceOnUse" cx="652" cy="130" r="29">
+          <stop offset="0" stop-color="#fff" stop-opacity=".82"/><stop offset=".46" stop-color="#fff" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g clip-path="url(#garden-disco-overlay-room-clip)">
+        <g id="garden-disco-overlay-position" transform="translate(-81,-89)">
+          <circle cx="652" cy="130" r="29" fill="url(#garden-disco-overlay-halo)"/>
+          <circle cx="653.2" cy="131.5" r="18.8" fill="#17212d" opacity=".28"/>
+          <g id="garden-disco-overlay-spin"><use href="#garden-disco-ball-art"/></g>
+        </g>
+      </g>
     </svg>
     <div id="monitor-html-overlay">
       <div id="monitor-html-overlay-scale">
@@ -66995,19 +67092,29 @@ function quickReversalGesture(action) {
   var pop = document.getElementById("garden-disco-ball-pop");
   if (!ball || !pop) return;
   pop.addEventListener("animationend", function () { pop.classList.remove("popping"); });
+  pop.addEventListener("animationcancel", function () { pop.classList.remove("popping"); });
+  ball.addEventListener("pointerdown", function () {
+    if (window.__secondRound) ball.classList.add("pressing");
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (type) {
+    ball.addEventListener(type, function () { ball.classList.remove("pressing"); });
+  });
   ball.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
     if (!window.__secondRound) return;
+    ball.classList.remove("pressing");
     pop.classList.remove("popping");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { pop.classList.add("popping"); });
     });
     playLampShimmerSound("garden-disco-ball");
     if (window.__gardenPartyOn) {
-      if (window.__setPartyMode) window.__setPartyMode(false); // party lit -> one last pop, then it ends (night stays)
+      if (window.__setPartyMode) window.__setPartyMode(false); // party lit -> one last pop, then it ends (time stays)
     } else {
-      if (window.__setPartyMode) window.__setPartyMode(true);
-      else if (window.__setGardenParty) window.__setGardenParty(true, true);
+      // Unlike the Balcony's authored ignition switch, this phase-two fixture owns only Party:
+      // keep the Garden's current day/night state on both edges of the toggle.
+      if (window.__setPartyMode) window.__setPartyMode(true, false, false);
+      else if (window.__setGardenParty) window.__setGardenParty(true, false);
     }
   });
 })();
@@ -90121,8 +90228,8 @@ def colormode(mode=None):
 // with asymmetric hysteresis: sustained poor delivery opts expensive transitions out
 // quickly, while recovery must remain healthy long enough to avoid mode-flapping.
 (function () {
-  var SAMPLE_MS = 1200, LOW_FPS = 40, RECOVER_FPS = 50;
-  var LOW_WINDOWS = 2, RECOVER_WINDOWS = 3;
+  var SAMPLE_MS = 1200, LOW_FPS = 40, RECOVER_FPS = 48;
+  var LOW_WINDOWS = 2, RECOVER_WINDOWS = 3, PARTY_RECOVER_WINDOWS = 6;
   var raf = 0, started = 0, frames = 0, lowWindows = 0, recoverWindows = 0;
   var slow = false, high = false, fps = null;
   function usable() {
@@ -90153,9 +90260,14 @@ def colormode(mode=None):
       var strip = document.getElementById("loft-game-strip");
       var partyActive = strip && strip.classList.contains("party-on");
       if (partyActive) publishHigh(false);
-      if (recoverWindows >= RECOVER_WINDOWS && !partyActive) {
+      /* Party used to make slow mode irreversible until Party-off. A reveal-time hitch could
+         therefore pin even a healthy machine to stepped lighting and rotation for the whole
+         night. Six healthy windows under the cheaper tier are enough to make one conservative
+         full-effects retry; if that workload truly cannot hold, two low windows opt it back out. */
+      var recoveryTarget = partyActive ? PARTY_RECOVER_WINDOWS : RECOVER_WINDOWS;
+      if (recoverWindows >= recoveryTarget) {
         publish(false);
-        publishHigh(true);
+        if (!partyActive) publishHigh(true); // high-resolution canvases remain off during Party
       }
     } else {
       publishHigh(false);
@@ -101067,9 +101179,20 @@ def colormode(mode=None):
       return !!partyWindDownTimer || partyWindDownRemaining > 0;
     }; // private test hook
     partyswitch.addEventListener("click", function () {
-      // The story breaker ignites phase two once. The newly revealed Garden disco ball owns
-      // subsequent Party toggles, leaving this solved hinge latched on.
-      if (!window.__secondRound) setPartyMode(true);
+      if (!window.__gardenPartyOn) {
+        // The first throw still ignites phase two; every later ON throw remains the authored
+        // Party-night entrance, so unlike the Garden ball it deliberately brings dusk.
+        setPartyMode(true);
+        return;
+      }
+      // This wall control closes the Party night and turns the calendar to the next morning.
+      // Reuse the Calendar owner's day step so date dressing, pills and special-day routing stay
+      // coherent instead of duplicating date arithmetic here. The Garden ball is the time-neutral
+      // Party control and never takes this path.
+      window.__stopPartyThen(function () {
+        if (window.__calStepDay) window.__calStepDay(1);
+        if (window.__setDayNight) window.__setDayNight(false);
+      });
     });
   }
   var doormat = document.getElementById("balcony-doormat");
@@ -116749,6 +116872,7 @@ function spawnDustMote(container) {
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     strip.classList.toggle("viewing-balcony", name === "balcony");
+    strip.parentElement.classList.toggle("viewing-garden", name === "garden"); // the optional anti-UV sphere is an unfiltered scene-overlay sibling, never a child of the strip
     window.__currentStageIndex = idx;
     window.__currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
     if (window.__refreshPartyBridgeCoaches) window.__refreshPartyBridgeCoaches();
@@ -119522,8 +119646,6 @@ function spawnDustMote(container) {
     window.__secondRound = !!on;
     var gameStrip = document.getElementById("loft-game-strip");
     if (gameStrip) gameStrip.classList.toggle("second-round", window.__secondRound);
-    var storySwitch = document.getElementById("balcony-partyswitch");
-    if (storySwitch) storySwitch.classList.toggle("on", window.__secondRound);
     if (window.__secondRound) {
       if (window.__unlockAllRooms) window.__unlockAllRooms();
       STAGES.forEach(function (name) { setRoomSolved(name, true); });
@@ -123343,6 +123465,8 @@ function spawnDustMote(container) {
     if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     var gs = document.getElementById("stage-garden");
     if (gs) gs.classList.toggle("garden-party", on);
+    var storySwitch = document.getElementById("balcony-partyswitch");
+    if (storySwitch) storySwitch.classList.toggle("on", on);
     // strip-wide party flag: swaps the espresso KITCHEN for a cocktail BAR (all the
     // bar CSS gates on this). Every party entry point routes through here, so the
     // whole loft agrees. Idempotent — storm-safe under play.js's repeated calls.

@@ -67,6 +67,26 @@ var FRAME_HEALTH_HARNESS = [
   '})();</script>'
 ].join("\n");
 
+var PARTY_HEALTH_RECOVERY_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var report={errors:[]};',
+  'window.addEventListener("load",function(){setTimeout(function(){try{',
+  'window.__goToStage("garden");window.loft.garden.set(true);',
+  'var spin=document.getElementById("garden-disco-overlay-spin"),pool=document.querySelector("#garden-disco-pools .disco-pool");',
+  'window.__frameHealthFeed(40);window.__frameHealthFeed(40);',
+  'report.entered={health:window.__frameHealthState(),spin:getComputedStyle(spin).animationTimingFunction,pools:pool.getAnimations().length};',
+  'for(var i=0;i<5;i++)window.__frameHealthFeed(49);',
+  'report.held={health:window.__frameHealthState(),spin:getComputedStyle(spin).animationTimingFunction,pools:pool.getAnimations().length};',
+  'window.__frameHealthFeed(49);',
+  'report.recovered={health:window.__frameHealthState(),spin:getComputedStyle(spin).animationTimingFunction,pools:pool.getAnimations().length};',
+  'window.__frameHealthFeed(40);window.__frameHealthFeed(40);',
+  'report.reentered={health:window.__frameHealthState(),spin:getComputedStyle(spin).animationTimingFunction,pools:pool.getAnimations().length};',
+  '}catch(e){report.errors.push(String(e&&e.stack||e));}',
+  'report.errors=report.errors.concat(window.__errs||[]);document.getElementById("__report").textContent=JSON.stringify(report);',
+  '},250);});})();</script>'
+].join("\n");
+
 var CANVAS_QUALITY_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
@@ -136,8 +156,18 @@ var h = health.steps.health;
 check(health.errors.length === 0 && h.slowTransitions === 0 && h.healthyTransitions === 0, "device zoom never runs the whole-strip transform transition", h);
 check(!h.first.slow && h.second.slow && h.slowState.slow && h.recovering.slow && !h.recovered.slow, "frame-health mode enters and recovers with asymmetric hysteresis", h);
 check(h.slowStars === 0 && h.slowSky.running && h.recoveredStars > 0 && !h.recoveredSky.running, "constellations step once per second only in low-FPS mode", h);
-check(h.healthyPoolAnimations > 0 && h.slowPool.animations === 0 && !!h.slowPool.inlineTransform && h.partyHeldPool.animations === 0 && h.partyHeldPool.health.slow && h.recoveredPool.animations > 0 && !h.recoveredPool.inlineTransform, "party spotlights stay in low-FPS steps until the party ends, then recover", h);
+check(h.healthyPoolAnimations > 0 && h.slowPool.animations === 0 && !!h.slowPool.inlineTransform && h.partyHeldPool.animations === 0 && h.partyHeldPool.health.slow && h.recoveredPool.animations > 0 && !h.recoveredPool.inlineTransform, "party spotlights keep their conservative three-window hold, then recover after Party-off", h);
 console.log("  frame-health metric: " + JSON.stringify(h));
+
+var partyRecovery = lib.runPageSync("rsvp.html", PARTY_HEALTH_RECOVERY_HARNESS, 1400, { patchRaf: true, forceMotion: true, seedRandom: true });
+check(partyRecovery && partyRecovery.errors.length === 0 && partyRecovery.entered.health.slow &&
+  /^steps\(30/.test(partyRecovery.entered.spin) && partyRecovery.entered.pools === 0 &&
+  partyRecovery.held.health.slow && partyRecovery.held.health.recoverWindows === 5 &&
+  !partyRecovery.recovered.health.slow && !partyRecovery.recovered.health.high &&
+  partyRecovery.recovered.spin === "linear" && partyRecovery.recovered.pools > 0 &&
+  partyRecovery.reentered.health.slow && /^steps\(30/.test(partyRecovery.reentered.spin) &&
+  partyRecovery.reentered.pools === 0,
+  "Party retries full effects after six 49-fps windows and quickly falls back again if they overload the device", partyRecovery);
 
 var quality = lib.runPageSync("rsvp.html", CANVAS_QUALITY_HARNESS, 1800, { patchRaf: true, forceMotion: true, seedRandom: true });
 var q = quality && quality.steps;

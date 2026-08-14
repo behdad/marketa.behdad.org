@@ -33,6 +33,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     if (window.__endAttract) window.__endAttract();
     if (window.__removeClickMe) window.__removeClickMe();
     if (window.__finishOpeningGuide) window.__finishOpeningGuide();
+    window.__dollhouseCapturesReady = function () { return true; };
     window.__setSecondRound(true, { releaseHeld: false });
     window.__setGardenParty(true, false);window.__goToStage("garden");
     window.__deliverPhoneMessage("cue_mail");await sleep(40);

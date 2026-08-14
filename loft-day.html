@@ -115020,6 +115020,8 @@ function spawnDustMote(container) {
   var dollhouseCaptureDelay = 0;
   var dollhouseCaptureBusy = false;
   var dollhouseCaptureStyles = "";
+  var dollhouseCaptureDecoder = null;
+  var dollhouseCaptureCanvas = null;
   var dollhouseCaptureCount = 0;
   var dollhouseWarmMode = "fresh";
   var dollhouseWarmStarted = false;
@@ -115222,6 +115224,7 @@ function spawnDustMote(container) {
     spec.snapshotSignatures = Object.create(null);
     spec.captureDesiredSignatures = Object.create(null);
     spec.captureQueuedKeys = Object.create(null);
+    spec.captureRetries = Object.create(null);
     dollhouseRooms.push(spec);
   }
   function buildDollhouse() {
@@ -115473,33 +115476,46 @@ function spawnDustMote(container) {
     }
     var sourceUrl = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
     return new Promise(function (resolve) {
-      var bitmap = new Image();
+      var bitmap = dollhouseCaptureDecoder || (dollhouseCaptureDecoder = new Image());
       bitmap.decoding = "async";
+      var settled = false;
+      function finish(ok) {
+        if (settled) return;
+        settled = true;
+        URL.revokeObjectURL(sourceUrl);
+        bitmap.onload = null;
+        bitmap.onerror = null;
+        // Replace the large decoded SVG immediately. Chrome otherwise retains each decoder's
+        // native image/style graph until a later renderer-wide collection.
+        bitmap.src = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+        releaseCaptureHealth();
+        resolve(ok);
+      }
       bitmap.onload = function () {
-        var canvas = document.createElement("canvas");
-        canvas.width = 680;
-        canvas.height = 340;
+        var canvas = dollhouseCaptureCanvas ||
+          (dollhouseCaptureCanvas = document.createElement("canvas"));
+        if (canvas.width !== 680) canvas.width = 680;
+        if (canvas.height !== 340) canvas.height = 340;
         var context = canvas.getContext("2d");
-        context.drawImage(bitmap, 0, 0, 680, 340);
-        URL.revokeObjectURL(sourceUrl);
-        bitmap.removeAttribute("src");
-        if (token !== spec.captureToken || dollhouseVariantKey(spec) !== variant) {
-          releaseCaptureHealth();
-          resolve(false); return;
+        try {
+          context.clearRect(0, 0, 680, 340);
+          context.drawImage(bitmap, 0, 0, 680, 340);
+          if (token !== spec.captureToken || dollhouseVariantKey(spec) !== variant) {
+            finish(false); return;
+          }
+          var data = canvas.toDataURL("image/webp", .82);
+          setDollhouseSnapshot(spec, variant, data, signature);
+          spec.captureMs = performance.now() - started;
+          dollhouseCaptureCount++;
+          syncDollhousePresentation();
+          context.clearRect(0, 0, 680, 340);
+          finish(true);
+        } catch (_error) {
+          context.clearRect(0, 0, 680, 340);
+          finish(false);
         }
-        var data = canvas.toDataURL("image/webp", .82);
-        setDollhouseSnapshot(spec, variant, data, signature);
-        spec.captureMs = performance.now() - started;
-        dollhouseCaptureCount++;
-        syncDollhousePresentation();
-        releaseCaptureHealth();
-        resolve(true);
       };
-      bitmap.onerror = function () {
-        URL.revokeObjectURL(sourceUrl);
-        releaseCaptureHealth();
-        resolve(false);
-      };
+      bitmap.onerror = function () { finish(false); };
       bitmap.src = sourceUrl;
     });
   }
@@ -115541,13 +115557,22 @@ function spawnDustMote(container) {
       dollhouseCaptureBusy = true;
       spec.captureActiveVariant = job.variant;
       syncDollhousePresentation();
-      captureDollhouseRoom(spec, job.variant, job.signature).finally(function () {
+      var retryCapture = false;
+      captureDollhouseRoom(spec, job.variant, job.signature).then(function (published) {
+        if (published) spec.captureRetries[job.variant] = 0;
+        else if (dollhouseVariantKey(spec) === job.variant &&
+            (spec.captureRetries[job.variant] || 0) < 1) {
+          spec.captureRetries[job.variant] = (spec.captureRetries[job.variant] || 0) + 1;
+          retryCapture = true;
+        }
+      }).finally(function () {
         spec.captureActiveVariant = "";
         dollhouseCaptureBusy = false;
         syncDollhousePresentation();
         publishDollhouseCaptureReadiness();
         dollhouseCaptureDelay = setTimeout(function () {
           dollhouseCaptureDelay = 0;
+          if (retryCapture) queueDollhouseCapture(spec, job.variant, true, true, true);
           scheduleDollhouseCapture();
         }, dollhouseCaptureQueue[0] && dollhouseCaptureQueue[0].urgent ? 48 : dollhouseCaptureGap(job));
       });

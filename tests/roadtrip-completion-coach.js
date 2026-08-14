@@ -59,6 +59,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.shown.cs = { copy: root.querySelector(".hunt-coach-copy").textContent, action: action.textContent };
         window.__setLang("en");
         card.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        report.cardGrace = { state: coach(), caption: copy(window.__captionState()) };
+        await sleep(1050);
+        card.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         report.cardDismiss = { state: coach(), caption: copy(window.__captionState()) };
 
         restoreShown(); await sleep(1300);
@@ -87,7 +90,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + (detail == null ? "" : "   [" + JSON.stringify(detail) + "]")); }
 }
 function run(name, width, height) {
-  var result = lib.runPageSync("loft-day.html", HARNESS, 7500, {
+  var result = lib.runPageSync("loft-day.html", HARNESS, 8500, {
     patchRaf: true, forceMotion: true,
     urlSuffix: "?fresh=roadtrip-completion-coach-" + name + "-" + Date.now(),
     chromeFlags: "--window-size=" + width + "," + height
@@ -109,17 +112,21 @@ function run(name, width, height) {
     shown.caption.base && shown.caption.base.owner === "roadtrip-departure",
     "the card appears once attention clears and checkpoints its shown state without replacing the caption", shown);
   check(shown && shown.en.copy === "You’ve seen the whole Loft. Let’s go on a Road Trip." &&
-    shown.en.action === "Go to the car →" && shown.cs.copy === "Prošli jste celý Loft. Vyrazme na výlet." &&
+    shown.en.action === "Go to the car →" && shown.cs.copy === "Prošl(a) jsi celý Loft. Co takhle vyrazit na výlet?" &&
     shown.cs.action === "Jít k autu →", "English and Czech coach copy/actions stay paired", shown && { en:shown.en, cs:shown.cs });
   var g = shown && shown.geometry;
   check(g && g.card.left >= g.area.left - 1 && g.card.right <= g.area.right + 1 &&
     g.card.top >= g.area.top - 1 && g.card.bottom <= g.area.bottom + 1 &&
     g.action.left >= g.card.left && g.action.right <= g.card.right && g.action.height >= 36,
     "the responsive card and primary action fit inside the game surface", g);
-  check(result && result.cardDismiss && !result.cardDismiss.state.acknowledged &&
-    result.cardDismiss.state.visible && result.cardDismiss.caption.base &&
+  check(result && result.cardGrace && !result.cardGrace.state.acknowledged &&
+    result.cardGrace.state.visible && result.cardGrace.caption.base &&
+    result.cardGrace.caption.base.owner === "roadtrip-departure",
+    "the card body ignores an accidental click during its pointer grace", result && result.cardGrace);
+  check(result && result.cardDismiss && result.cardDismiss.state.acknowledged &&
+    !result.cardDismiss.state.visible && result.cardDismiss.caption.base &&
     result.cardDismiss.caption.base.owner === "roadtrip-departure",
-    "clicking the card itself leaves the consequential choice open", result && result.cardDismiss);
+    "the card body dismisses after its pointer grace", result && result.cardDismiss);
   ["xDismiss", "spaceDismiss"].forEach(function (kind) {
     var row = result && result[kind];
     check(row && row.state.acknowledged && !row.state.visible && row.caption.base &&

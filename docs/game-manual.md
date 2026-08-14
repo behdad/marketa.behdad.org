@@ -90,7 +90,9 @@ The bottom caption carries the Morning clue trail, later feedback, and progressi
 feedback yields to important story or outcome text, then returns to the latest instruction rather
 than replaying an old line.
 
-Coaches explain easy-to-miss controls. Their × dismisses the lesson, not its activity. The large
+Coaches explain easy-to-miss controls. After a one-second settling pause, select the coach card or
+its × to dismiss the lesson, not its activity. A real action button inside a card keeps its labelled
+action. The large
 opening coach is modal: Reset remains available, but the room stays inert until it is dismissed.
 The first Party's exploration and first-unread Messages lessons are modal too. Each highlighted
 target stays live: using the map or unread message performs its normal action and retires that coach;

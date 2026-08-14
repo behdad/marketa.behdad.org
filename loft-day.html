@@ -3643,7 +3643,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #hunt-fullscreen-area.opening-guide-active #hunt-restart-btn{z-index:65}
 #hunt-caption.intro-guide{color:var(--wine);z-index:65}
 #opening-guide-coach{overflow:hidden}
-#opening-guide-coach .hunt-coach-card{cursor:default;flex-direction:column;font-size:clamp(22px,3.8vw,44px)}
+#opening-guide-coach .hunt-coach-card{flex-direction:column;font-size:clamp(22px,3.8vw,44px)}
 #opening-guide-coach .opening-guide-copy{display:flex;flex-direction:column;gap:.7em}
 #opening-guide-coach .opening-guide-line{display:block;white-space:nowrap}
 #opening-guide-coach .opening-guide-arrow-caption{animation-delay:-.45s}
@@ -9924,10 +9924,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .msg-badge.idle{padding:0;background:#6d8ba3;box-shadow:0 2px 6px rgba(0,0,0,.24)}
 .msg-badge-idle-icon{display:block;width:22px;height:22px;margin:6px auto}
 /* First unread only: the third focused Party-onboarding coach. Four blocking scrim pieces leave
-   its unread target as the sole live island; ×/keyboard acknowledgement may also retire it. */
+   its unread target as the sole live island; card or keyboard acknowledgement may also retire it. */
 .msg-badge.coached,.msg-thumb.coached{z-index:65}
 .msg-badge.coached{animation:msg-badge-coach-pulse .9s ease-in-out infinite}
-.msg-badge-coach .hunt-coach-card{z-index:2;cursor:default}
+.msg-badge-coach .hunt-coach-card{z-index:2}
 .msg-badge-coach-dismiss{position:absolute;right:.55rem;top:.55rem;display:grid;place-items:center;width:2.2rem;height:2.2rem;padding:0;border:0;border-radius:50%;background:var(--wine);color:#fff;font:800 25px/1 sans-serif;box-shadow:0 2px 7px rgba(0,0,0,.28);cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent}
 @keyframes msg-badge-coach-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14); box-shadow:0 3px 12px rgba(192,57,43,.55)}}
 @media (max-width:520px){.msg-badge-coach-dismiss{right:.55rem;top:.55rem;width:2.5rem;height:2.5rem;font-size:27px}}
@@ -98415,6 +98415,9 @@ def colormode(mode=None):
         var dismiss = msgBadgeCoachEl.querySelector(".msg-badge-coach-dismiss");
         dismiss.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
         dismiss.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); acknowledgeMsgBadgeCoach("dismissed"); });
+        if (window.__bindHuntCoachBodyDismiss) window.__bindHuntCoachBodyDismiss(msgBadgeCoachEl, function () {
+          acknowledgeMsgBadgeCoach("dismissed");
+        });
       }
       var copy = msgBadgeCoachEl.querySelector(".msg-badge-coach-copy");
       if (copy) copy.textContent = tr("msg_badge_coach");
@@ -117118,19 +117121,28 @@ function spawnDustMote(container) {
       event.stopImmediatePropagation();
     }, true);
   })();
+  function bindHuntCoachBodyDismiss(overlay, dismiss) {
+    if (!overlay || typeof dismiss !== "function" || overlay.dataset.coachBodyDismiss === "bound") return;
+    var card = overlay.querySelector(".hunt-coach-card");
+    if (!card) return;
+    overlay.dataset.coachBodyDismiss = "bound";
+    card.addEventListener("click", function (event) {
+      var control = event.target.closest && event.target.closest("button,a,input,select,textarea,[role='button']");
+      if (control && card.contains(control)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      dismiss();
+    });
+  }
+  window.__bindHuntCoachBodyDismiss = bindHuntCoachBodyDismiss;
   if (roadtripCompletionCoach) {
-    var roadtripCompletionCard = roadtripCompletionCoach.querySelector(".hunt-coach-card");
     var roadtripCompletionAction = roadtripCompletionCoach.querySelector(".roadtrip-completion-action");
     var roadtripCompletionDismiss = roadtripCompletionCoach.querySelector(".hunt-coach-x");
     roadtripCompletionCoach.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
     });
-    if (roadtripCompletionCard) roadtripCompletionCard.addEventListener("click", function (event) {
-      if (event.target === roadtripCompletionAction || event.target === roadtripCompletionDismiss) return;
-      event.preventDefault();
-      event.stopPropagation();
-    });
+    bindHuntCoachBodyDismiss(roadtripCompletionCoach, acknowledgeRoadtripCompletionCoach);
     if (roadtripCompletionDismiss) roadtripCompletionDismiss.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -119717,11 +119729,7 @@ function spawnDustMote(container) {
       popup.addEventListener("pointerdown", function (event) {
         event.preventDefault(); event.stopPropagation();
       });
-      popup.addEventListener("click", function (event) {
-        event.preventDefault(); event.stopPropagation();
-        if (!event.target.closest || !event.target.closest(".hunt-coach-x")) return;
-        retireRoomMapCoach();
-      });
+      bindHuntCoachBodyDismiss(overlay, retireRoomMapCoach);
     });
     document.addEventListener("keydown", function (event) {
       if (!(activePartyCoachOverlay() || (window.__msgBadgeCoachModalActive && window.__msgBadgeCoachModalActive())) ||
@@ -131894,6 +131902,7 @@ function spawnDustMote(container) {
   });
   var openingOverlay = openingGuideOverlay();
   if (openingOverlay) {
+    bindHuntCoachBodyDismiss(openingOverlay, advanceOpeningGuide);
     openingOverlay.addEventListener("pointerdown", function (event) {
       event.preventDefault(); event.stopPropagation();
     });
@@ -131902,7 +131911,7 @@ function spawnDustMote(container) {
       var captionRect = caption && caption.getBoundingClientRect();
       var onCaption = captionRect && event.clientX >= captionRect.left && event.clientX <= captionRect.right &&
         event.clientY >= captionRect.top && event.clientY <= captionRect.bottom;
-      if ((event.target.closest && event.target.closest(".hunt-coach-card")) || onCaption) advanceOpeningGuide();
+      if (onCaption) advanceOpeningGuide();
     });
   }
   window.addEventListener("resize", positionOpeningGuide);

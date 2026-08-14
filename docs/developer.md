@@ -359,6 +359,11 @@ points at a moving room control must be hidden during the pan and placed only af
 settles. Keep coach focus/tab behavior consistent with the global input contract; decorative SVG
 groups should never become accidental tab stops.
 
+Shared `.hunt-coach-overlay` cards use `bindHuntCoachBodyDismiss`: after the capture-phase one-second
+pointer grace, the card body and × dismiss, while nested buttons and links retain their own actions.
+Target islands remain live, and modal scrims/backgrounds keep blocking without becoming dismissal
+surfaces.
+
 The opening coach and three Party onboarding coaches are modal. Their highlighted target remains live
 and performs its normal action; unrelated input stays blocked until the lesson is acknowledged. The
 Party controller owns onboarding order and the notification/call hold across its lessons. Compact

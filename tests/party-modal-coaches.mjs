@@ -218,7 +218,7 @@ try {
       var overlay=document.getElementById("party-room-map-coach"),target=document.getElementById("hunt-dollhouse-btn"),area=document.getElementById("hunt-fullscreen-area"),card=overlay.querySelector(".hunt-coach-card");
       var delivered=window.__deliverPhoneMessage("cue_calendar");await sleep(80);window.__hideMessageThumb(true);window.__updateMsgBadge();var repeated=window.__repeatMsgBadgeCoach();
       var p=point(target),hit=document.elementFromPoint(p[0],p[1]),scrimEls=[].slice.call(overlay.querySelectorAll(".modal-coach-scrim"));
-      var bg=scrimEls.map(function(el){var r=el.getBoundingClientRect();return {r:r,area:r.width*r.height};}).sort(function(a,b){return b.area-a.area;})[0],np=[bg.r.left+bg.r.width/2,bg.r.top+bg.r.height/2],nh=document.elementFromPoint(np[0],np[1]);
+      var bg=scrimEls.map(function(el){var r=el.getBoundingClientRect();return {r:r,area:r.width*r.height};}).sort(function(a,b){return b.area-a.area;})[0],np=[bg.r.left+Math.min(2,bg.r.width/2),bg.r.top+Math.min(2,bg.r.height/2)],nh=document.elementFromPoint(np[0],np[1]);
       return {kind:window.__partyCoachModalKind(),card:card.getBoundingClientRect().toJSON(),area:area.getBoundingClientRect().toJSON(),target:p,unrelated:np,
         targetHit:hit&&!!hit.closest("#hunt-dollhouse-btn"),unrelatedHit:nh&&String(nh.className),delivered:delivered,repeated:repeated,
         messageQueued:window.__partyMessageRevealGateState().queued.indexOf("cue_calendar")!==-1&&!window.__phoneMessageThread().includes("cue_calendar")&&!document.querySelector(".msg-badge-coach.show"),copy:overlay.querySelector(".party-bridge-room-copy").textContent,
@@ -240,7 +240,7 @@ try {
       var overlay=document.querySelector(".msg-badge-coach"),target=document.querySelector(".msg-badge"),area=document.getElementById("hunt-fullscreen-area"),card=overlay&&overlay.querySelector(".hunt-coach-card");
       if(!overlay||!overlay.classList.contains("show"))return {missing:true};
       var p=point(target),hit=document.elementFromPoint(p[0],p[1]),scrimEls=[].slice.call(overlay.querySelectorAll(".modal-coach-scrim"));
-      var bg=scrimEls.map(function(el){var r=el.getBoundingClientRect();return {r:r,area:r.width*r.height};}).sort(function(a,b){return b.area-a.area;})[0],np=[bg.r.left+bg.r.width/2,bg.r.top+bg.r.height/2],nh=document.elementFromPoint(np[0],np[1]);
+      var bg=scrimEls.map(function(el){var r=el.getBoundingClientRect();return {r:r,area:r.width*r.height};}).sort(function(a,b){return b.area-a.area;})[0],np=[bg.r.left+Math.min(2,bg.r.width/2),bg.r.top+Math.min(2,bg.r.height/2)],nh=document.elementFromPoint(np[0],np[1]);
       window.__messageCoachChanges=0;window.addEventListener("loft:statechange",function(event){if(event.detail&&event.detail.id==="messages.coach")window.__messageCoachChanges++;});
       return {kind:window.__partyCoachModalKind(),card:card.getBoundingClientRect().toJSON(),area:area.getBoundingClientRect().toJSON(),target:p,unrelated:np,
         targetHit:hit&&!!hit.closest(".msg-badge"),unrelatedHit:nh&&String(nh.className),
@@ -253,6 +253,24 @@ try {
       await clickPoint(message.target); await sleep(120);
       message.acted = await evaluate("(function(){var p=window.__chatPhoneState();return p.open&&p.app==='messages'&&!window.__msgBadgeCoachModalActive()&&window.__messageCoachChanges===1;})()");
     }
+
+    const bodyDismiss = await evaluate(`(async function(){
+      var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
+      var click=function(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));};
+      if(window.__closePhoneModal)window.__closePhoneModal(true);await sleep(120);
+      window.__resetPartyExitHint();window.__showPartyExplorationCoach();await sleep(30);
+      var map=document.getElementById("party-room-map-coach"),mapCard=map.querySelector(".hunt-coach-copy"),mapScrim=map.querySelector(".modal-coach-scrim-top");
+      click(mapCard);var mapGrace=window.__partyRoomMapCoachActive();await sleep(1050);click(mapScrim);
+      var mapScrimBlocked=window.__partyRoomMapCoachActive();click(mapCard);var mapBody=!window.__partyRoomMapCoachActive();
+      if(window.__setPartyMode)window.__setPartyMode(false,true,false);if(window.__resetPhoneApps)window.__resetPhoneApps();
+      window.__deliverPhoneMessage("cue_calendar");await sleep(80);window.__hideMessageThumb(true);window.__updateMsgBadge();window.__repeatMsgBadgeCoach();await sleep(30);
+      var msg=document.querySelector(".msg-badge-coach"),msgCard=msg&&msg.querySelector(".msg-badge-coach-copy"),msgScrim=msg&&msg.querySelector(".modal-coach-scrim-top");
+      if(!msg||!msg.classList.contains("show"))return {mapGrace:mapGrace,mapScrimBlocked:mapScrimBlocked,mapBody:mapBody,messageMissing:true};
+      click(msgCard);var messageGrace=window.__msgBadgeCoachModalActive();await sleep(1050);click(msgScrim);
+      var messageScrimBlocked=window.__msgBadgeCoachModalActive();click(msgCard);var messageBody=!window.__msgBadgeCoachModalActive();
+      return {mapGrace:mapGrace,mapScrimBlocked:mapScrimBlocked,mapBody:mapBody,messageGrace:messageGrace,
+        messageScrimBlocked:messageScrimBlocked,messageBody:messageBody};
+    })()`);
 
     const controls = await evaluate(`(async function(){
       var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
@@ -327,6 +345,9 @@ try {
     check(map.messageQueued && map.release.complete && map.release.preview && map.release.previewClear &&
       map.release.thread.filter(id => id === "cue_calendar").length === 1 && /All rooms are open/.test(map.copy),
       prefix + "Messages holds behind the reveal and exploration lesson, then releases once clear of the ball", map);
+    check(bodyDismiss.mapGrace && bodyDismiss.mapScrimBlocked && bodyDismiss.mapBody &&
+      bodyDismiss.messageGrace && bodyDismiss.messageScrimBlocked && bodyDismiss.messageBody,
+      prefix + "coach cards reject grace-period clicks, dismiss afterward, and keep scrims inert", bodyDismiss);
     check(controls.ballHit && controls.fallback,
       prefix + "trusted disco-ball stop preserves the early post-Party exploration fallback", controls);
     check(Number(controls.relit.opacity) > .9 && Number(controls.relit.overlayOpacity) > .9 && controls.relit.noEntrance &&

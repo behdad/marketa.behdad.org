@@ -14,6 +14,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 #entrance-roadtrip-camp-wisdom-continue{transition:none!important}
 </style>
 <script>
+// This long virtual-time probe does not exercise Dollhouse thumbnails; keep their idle encoder out of --dump-dom.
+window.requestIdleCallback = function () { return 1; };
+window.cancelIdleCallback = function () {};
 (function () {
   var report = { errors: [] };
   function click(node) {

@@ -572,10 +572,12 @@ Use those owners for ambient loops, autonomous sound, timer-spawned effects, and
 animation frames are throttled. Autonomous one-shot sounds must also require
 `document.hasFocus()`; direct user-triggered sounds may rely on the triggering interaction.
 
-Particle systems must have bounded cardinality. Prefer a fixed population that replenishes itself
-from each particle's animation completion, or cap and remove stale nodes before spawning. An
-unbounded timer plus animation-finish cleanup will accumulate nodes while the tab is throttled and
-can crash after hours.
+Particle systems must have bounded cardinality. For a continuously visible ambient effect, prefer
+retained nodes with looping timelines and clear the pool when its room loses attended ownership;
+recreating SVG and WAAPI objects every cycle can build substantial native-browser garbage even
+when the live node count stays fixed. One-shot particles may replenish from animation completion or
+cap and remove stale nodes before spawning. An unbounded timer plus animation-finish cleanup will
+accumulate nodes while the tab is throttled and can crash after hours.
 
 Frame health uses 1.2-second delivered-frame windows with asymmetric thresholds. Two windows at or
 below 40 fps enter the reduced tier; three windows at or above 48 fps recover ordinarily. During

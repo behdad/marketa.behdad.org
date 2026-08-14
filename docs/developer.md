@@ -599,8 +599,9 @@ rate (about 4 MB per tick in current pointer-compressed Chrome); the rate and ho
 load-bearing (see the block comment, which also records the
 measured dead ends: brief animation holds, `playbackRate:0`, `will-change` promotion, ArrayBuffer
 ballast, and weaker rates). It is gated to Chromium-family Blink/V8 browsers; iOS Chrome/Edge/Opera
-are WebKit and deliberately excluded with Safari and Firefox. Keep `tests/check.js`'s wiring check
-green when touching the Party lifecycle.
+are WebKit and deliberately excluded with Safari and Firefox. The exact query switch
+`?pacemaker=off` disables this workaround for comparisons without changing Party effects. Keep
+`tests/check.js`'s wiring check green when touching the Party lifecycle.
 
 All Web Audio uses one shared `AudioContext`. Never suspend or close that context from a feature;
 gate or disconnect that feature's nodes. Read [the audio guide](audio.md) before touching beds,

@@ -1645,6 +1645,7 @@ function checkPartyGcPacerWiring(file, script) {
     block.indexOf("pacerHold.shift()") !== -1;
   var gated = block.indexOf("document.hidden") !== -1 && block.indexOf("__frameHealthSlow") !== -1 &&
     block.indexOf("partyGcPacerSupported") !== -1 &&
+    block.indexOf('get("pacemaker") === "off"') !== -1 &&
     block.indexOf("CriOS|EdgiOS|OPiOS") !== -1 &&
     block.indexOf("Chrome|Chromium|Edg|OPR|SamsungBrowser") !== -1;
   var startCalls = (script.match(/startPartyGcPacer\(\);/g) || []).length;

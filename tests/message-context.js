@@ -89,15 +89,15 @@ check(s.message_api.result && s.message_api.result.ok && s.message_api.result.va
 check(s.dj_song_suggested.action && s.dj_song_suggested.room === "office" && s.dj_song_suggested.phone && s.dj_song_accepted.room === "garden" && !s.dj_song_accepted.phone && s.dj_song_accepted.calls === 1, "accepting a DJ song offer closes Messages, pans to the party room, and advances the music", { suggested: s.dj_song_suggested, accepted: s.dj_song_accepted });
 check(s.coffee_suggested.action && s.coffee_suggested.room === "garden" && s.coffee_suggested.party && s.coffee_suggested.night && s.coffee_suggested.phone, "a coffee reply suggests an action without changing the current party scene", s.coffee_suggested);
 check(s.coffee_accepted.room === "garden" && !s.coffee_accepted.party && !s.coffee_accepted.night && !s.coffee_accepted.phone, "accepting the coffee reply ends the party and restores day without forcing a room change", s.coffee_accepted);
-check(s.crew_action_failed.phone && s.crew_action_failed.messages && !s.crew_action_failed.error && s.crew_action_failed.retry, "an unavailable crew suggestion remains visible and retryable without inventing an error", s.crew_action_failed);
-check(s.fishu_action.room === "balcony" && s.fishu_action.phone && s.fishu_action.calls === 0, "an unavailable Fishu suggestion leaves Messages and the current room intact", s.fishu_action);
+check(s.crew_action_failed.phone && s.crew_action_failed.messages && /couldn.t do/.test(s.crew_action_failed.error) && s.crew_action_failed.retry, "a failed crew suggestion keeps Messages open, explains the failure, and remains retryable", s.crew_action_failed);
+check(s.fishu_action.room === "balcony" && !s.fishu_action.phone && s.fishu_action.calls === 1, "a Fishu suggestion speaks in the current room and closes Messages", s.fishu_action);
 check(!s.kids_sleep_info.asleep && !s.kids_sleep_info.late && !s.kids_sleep_info.action, "the kids-asleep announcement stays informational when its occasion is inactive", s.kids_sleep_info);
 check(!s.kids_wake_info.asleep && !s.kids_wake_info.action, "the kids-awake announcement applies its state on arrival and remains informational", s.kids_wake_info);
 check(s.czech.labels.join("|") === "Odpovědět…|Kopírovat|Označit jako nepřečtené." && /svatební partě/.test(s.czech.placeholder), "context actions and composer follow the Czech UI language", s.czech);
 check(s.calendar_search.active === "calx-search-input" && s.calendar_search.on, "/ enters and focuses Calendar search even before its field exists", s.calendar_search);
 check(s.icon_drag.ghost && s.icon_drag.selectionBlocked && s.icon_drag.userSelect === "none", "dragging a phone app icon cannot start native text selection", s.icon_drag);
 check(s.icon_touch_scroll.scrollTop > 0 && !s.icon_touch_scroll.ghost, "a quick touch-drag beginning on an app icon scrolls the launcher instead of rearranging it", s.icon_touch_scroll);
-check(!s.slash_open.messages && !s.slash_in_messages.phone && !s.slash_close.phone, "/ stays inert after the phone overlay closes", {open:s.slash_open,inApp:s.slash_in_messages,close:s.slash_close});
+check(s.slash_open.messages && s.slash_in_messages.phone && s.slash_in_messages.active === "pm-ms-input" && !s.slash_close.phone, "/ opens Messages globally, focuses search in-app, then closes it from an empty search field", {open:s.slash_open,inApp:s.slash_in_messages,close:s.slash_close});
 check(s.cocktail_link.cocktails && s.cocktail_back.messages && !s.cocktail_back.home && !s.cocktail_back_close.phone, "a message-linked phone app returns to Messages first, then preserves the overlay's direct-close behavior", {link:s.cocktail_link,back:s.cocktail_back,close:s.cocktail_back_close});
 
 console.log("");

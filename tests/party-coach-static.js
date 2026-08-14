@@ -19,6 +19,8 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         if (window.__endAttract) window.__endAttract();
         if (window.__shareCloseModal) window.__shareCloseModal();
         if (window.__resetPartyExitHint) window.__resetPartyExitHint();
+        window.__dollhouseCapturesReady = function () { return true; };
+        if (window.__setSeenRooms) window.__setSeenRooms(["kitchen", "garden", "cuddly"]);
         await sleep(40);
         if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
         if (window.__setGardenParty) window.__setGardenParty(true, false);

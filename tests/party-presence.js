@@ -12,6 +12,7 @@ window.addEventListener("load",function(){setTimeout(function(){
     window.__gardenPartyOn=true;
     stage.classList.add("garden-party","photog-empty");
     guests.classList.add("guests-in","trickle");
+    guests.classList.remove("mouses-visiting");
     var nativeStyle=window.getComputedStyle;
     window.getComputedStyle=function(){report.styleReads++;return nativeStyle.apply(this,arguments);};
     function names(){return window.__whoIsHere("garden").map(function(p){return p.key;});}

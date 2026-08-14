@@ -533,6 +533,10 @@ An adapter should persist **intent**, not runtime mechanics:
 - Do not persist an open modal, active pointer drag, pending call, camera stream, raw timeout,
   animation frame, autonomous particle, or currently ringing sound.
 
+The monitor adapter treats tower power and the selected desk surface as authoritative intent.
+Illumination is derived from them during recovery, so an interrupted checkpoint cannot restore a
+powered, visible monitor with a dark screen and no remaining boot transition.
+
 For a modern checkpoint, a missing row in the `systems` map means that subsystem starts from its
 fresh default. A record with no `systems` property is an older compact checkpoint and follows the
 legacy restore path. Keep that distinction when adding an adapter; otherwise a new subsystem may

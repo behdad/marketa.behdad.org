@@ -90350,6 +90350,7 @@ def colormode(mode=None):
       };
     },
     restore: function (state, phase) {
+      var saved = !!state;
       state = state || {};
       if (phase === "beforeStage") {
         arrangeDockCells(state.dockOrder || desktopDefaultOrder());
@@ -90358,8 +90359,10 @@ def colormode(mode=None):
         monitor.classList.toggle("here", toMonitor);
         typewriter.classList.toggle("away", toMonitor);
         clearMonitorRunningApps();
-        if (!state.screenOn || !toMonitor || !pcTower || !pcTower.classList.contains("on") || window.__monitorShorted) return;
+        if (!saved || !toMonitor || !pcTower || !pcTower.classList.contains("on") || window.__monitorShorted) return;
         // A checkpoint restores the computer shell, never an app/session snapshot.
+        // PC power owns illumination; tolerate an interrupted/legacy screenOn snapshot
+        // instead of restoring a powered tower with no live path back to the desktop.
         // Legacy foreground/running fields are deliberately ignored.
         monitor.classList.add("screen-on", "show-caps");
         monitorUrl = CAPS_URL;

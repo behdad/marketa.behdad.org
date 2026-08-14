@@ -20,20 +20,16 @@ var harness = String.raw`<script>
   try {
     window.__unlockSolvedRoom("balcony");
     window.__goToStage("garden");
+    window.__goToStage("cuddly");
+    check("second rapid leg retains the first origin",
+      visibleRooms().join("|") === "kitchen|garden|cuddly", visibleRooms().join(","));
+    window.__goToStage("office");
+    check("third rapid leg retains every still-crossed room",
+      visibleRooms().join("|") === "kitchen|garden|cuddly|office", visibleRooms().join(","));
     setTimeout(function () {
-      window.__goToStage("cuddly");
-      check("second rapid leg retains the first origin",
-        visibleRooms().join("|") === "kitchen|garden|cuddly", visibleRooms().join(","));
-      setTimeout(function () {
-        window.__goToStage("office");
-        check("third rapid leg retains every still-crossed room",
-          visibleRooms().join("|") === "cuddly|office", visibleRooms().join(","));
-        setTimeout(function () {
-          check("settling parks every intermediate room", visibleRooms().join("|") === "office", visibleRooms().join(","));
-          report();
-        }, 900);
-      }, 40);
-    }, 40);
+      check("settling parks every intermediate room", visibleRooms().join("|") === "office", visibleRooms().join(","));
+      report();
+    }, 900);
   } catch (error) {
     out.errors.push("setup: " + (error && error.stack || error));
     report();

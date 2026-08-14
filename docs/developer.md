@@ -593,8 +593,9 @@ those majors with a rolling hold of plain-array ballast, tenured past the nurser
 rate (about 4 MB per tick in current pointer-compressed Chrome); the rate and hold length are
 load-bearing (see the block comment, which also records the
 measured dead ends: brief animation holds, `playbackRate:0`, `will-change` promotion, ArrayBuffer
-ballast, and weaker rates). Keep `tests/check.js`'s wiring check green when touching the Party
-lifecycle.
+ballast, and weaker rates). It is gated to Chromium-family Blink/V8 browsers; iOS Chrome/Edge/Opera
+are WebKit and deliberately excluded with Safari and Firefox. Keep `tests/check.js`'s wiring check
+green when touching the Party lifecycle.
 
 All Web Audio uses one shared `AudioContext`. Never suspend or close that context from a feature;
 gate or disconnect that feature's nodes. Read [the audio guide](audio.md) before touching beds,

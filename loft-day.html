@@ -123053,6 +123053,13 @@ function spawnDustMote(container) {
   // pacer isn't earning its keep.
   var pacerTimer = null, pacerHold = [];
   var PACER_TICK_MS = 500, PACER_HOLD_TICKS = 4;
+  function partyGcPacerSupported() {
+    // This works around Blink/Oilpan collection behavior by deliberately exercising V8.
+    // Chrome-family names on iOS are WebKit, so do not make those engines pay for it.
+    var ua = navigator.userAgent || "";
+    return !/(?:CriOS|EdgiOS|OPiOS)\//.test(ua) &&
+      /(?:Chrome|Chromium|Edg|OPR|SamsungBrowser)\//.test(ua);
+  }
   function pacerTick() {
     pacerTimer = null;
     if (!window.__gardenPartyOn ||
@@ -123069,6 +123076,7 @@ function spawnDustMote(container) {
     pacerTimer = setTimeout(pacerTick, PACER_TICK_MS);
   }
   function startPartyGcPacer() {
+    if (!partyGcPacerSupported()) return;
     if (pacerTimer) return; // one pacer only — idempotent under storm-clicks
     if (!window.__gardenPartyOn ||
         (window.__partyForegroundActive && !window.__partyForegroundActive())) return;

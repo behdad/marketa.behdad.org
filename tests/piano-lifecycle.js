@@ -145,7 +145,9 @@ var COARSE_HARNESS = String.raw`<script>
 </script>`;
 
 function run(label, harness, opts) {
-  var report = lib.runPageSync("loft-day.html", harness, 1800, Object.assign({ patchRaf: true, forceMotion: true, seedRandom: true }, opts || {}));
+  // These lifecycle checks are motion-independent; full motion plus timer-backed rAF can keep
+  // the page's animation work alive until the dump-dom transport times out.
+  var report = lib.runPageSync("loft-day.html", harness, 1800, Object.assign({ forceReduce: true, seedRandom: true }, opts || {}));
   if (!report) { console.error("piano-lifecycle: no " + label + " report"); return 1; }
   var failed = false;
   report.checks.forEach(function (check) {

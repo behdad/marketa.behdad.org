@@ -94,6 +94,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         function mealShown() { return meals.length === 2 && meals.every(shown); }
         var game = document.getElementById("entrance-roadtrip-stew-game");
         var cook = document.getElementById("entrance-roadtrip-stew-cook");
+        var cookBg = cook.querySelector(".stew-button-bg");
+        var cookLabel = cook.querySelector("text");
         var close = document.getElementById("entrance-roadtrip-stew-close");
         window.__entranceRoadtripCampFireStart();
         lightFire(function () {
@@ -126,11 +128,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               chooseText: /choose one/i.test(game.textContent),
               title: /camping stew/i.test(game.textContent),
               cookAboveCards: cook.getBoundingClientRect().bottom < document.querySelector('[data-stew-item="beef"]').getBoundingClientRect().top,
+              cookControl: {
+                width: Number(cookBg.getAttribute("width")), height: Number(cookBg.getAttribute("height")),
+                fill: getComputedStyle(cookBg).fill, label: cookLabel.textContent,
+                labelSize: getComputedStyle(cookLabel).fontSize
+              },
               lambPieces: game.querySelectorAll('[data-stew-pot-item="lamb"] .entrance-roadtrip-stew-lamb-piece').length,
               sceneLambPieces: pot.querySelectorAll('[data-stew-scene-item="lamb"] .entrance-roadtrip-stew-lamb-piece').length
             };
             window.__setLang("cs");
             report.builder.czech = {
+              cook: cookLabel.textContent,
               headings: Array.from(game.querySelectorAll('[data-i="entrance_roadtrip_stew_protein"],[data-i="entrance_roadtrip_stew_starch"]')).map(function (node) { return node.textContent; }),
               onion: document.querySelector('[data-i="entrance_roadtrip_stew_onion"]').textContent,
               garlic: document.querySelector('[data-i="entrance_roadtrip_stew_garlic"]').textContent,
@@ -147,10 +155,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             var baseMulti = stew();
             choose("chicken"); choose("beef");
             click(cook);
-            report.missing = {
-              state: stew(), crate: shown(crate),
-              available: camp.classList.contains("stew-crate-available"), overlay: game.classList.contains("open")
-            };
+            report.baseOnly = stew();
+            window.__entranceRoadtripCampStewReset();
+            choose("chicken");
+            click(cook);
+            report.proteinOnly = stew();
+            window.__entranceRoadtripCampStewReset();
+            choose("onion");
+            click(cook);
+            report.addInOnly = stew();
+            var addInOnlyCheckpoint = window.__captureCheckpointSystems().entrance;
+            window.__restoreCheckpointSystems({ entrance: addInOnlyCheckpoint }, "afterStage");
+            report.addInOnlyRestored = stew();
+            window.__entranceRoadtripCampStewReset();
             click(close);
             report.closedDraft = { state: stew(), crate: shown(crate), available: camp.classList.contains("stew-crate-available") };
             click(crate);
@@ -371,21 +388,33 @@ check(result && result.cratePoints && result.cratePoints.sign.open && result.cra
 var exactItems = ["barley", "beans", "beef", "carrots", "celery", "chicken", "chilies", "coriander", "curry", "garlic", "ginger", "lamb", "mushrooms", "onion", "pasta", "pepper", "pork", "potatoes", "rice", "salt", "tofu", "tomato"];
 check(result && result.builder && result.builder.open && JSON.stringify(result.builder.items) === JSON.stringify(exactItems) &&
   JSON.stringify(result.builder.headings) === JSON.stringify(["PROTEIN", "BASE"]) && !result.builder.chooseText &&
-  !result.builder.title && result.builder.cookAboveCards && result.builder.czech &&
+  !result.builder.title && result.builder.cookAboveCards && result.builder.cookControl &&
+  result.builder.cookControl.width === 160 && result.builder.cookControl.height === 36 &&
+  result.builder.cookControl.fill === "rgb(142, 58, 74)" && result.builder.cookControl.label === "Cook" &&
+  result.builder.cookControl.labelSize === "15px" && result.builder.czech && result.builder.czech.cook === "Vařit" &&
   result.builder.lambPieces === 2 && result.builder.sceneLambPieces === 2 &&
   JSON.stringify(result.builder.czech.headings) === JSON.stringify(["PROTEIN", "ZÁKLAD"]) &&
   JSON.stringify([result.builder.czech.onion, result.builder.czech.garlic, result.builder.czech.ginger,
     result.builder.czech.carrots, result.builder.czech.celery, result.builder.czech.mushrooms,
     result.builder.czech.coriander]) ===
     JSON.stringify(["Cibule", "Česnek", "Zázvor", "Mrkev", "Celer", "Houby", "Koriandr"]),
-  "the compact builder has the exact 22-card bilingual palette, final headings, and top Cook action", result && result.builder);
+  "the compact builder has the exact 22-card bilingual palette and a prominent top Cook action", result && result.builder);
 check(result && result.multi &&
   JSON.stringify(result.multi.proteins.proteins) === JSON.stringify(["chicken", "beef"]) &&
   JSON.stringify(result.multi.bases.bases) === JSON.stringify(["barley", "pasta"]),
   "proteins and bases toggle independently without replacing earlier selections", result && result.multi);
-check(result && result.missing && result.missing.state.status === "assembling" && !result.missing.state.recipeComplete &&
-  result.missing.crate && result.missing.available && result.missing.overlay,
-  "the real Cook button refuses only a missing required item without hiding the crate", result && result.missing);
+check(result && result.baseOnly && result.baseOnly.status === "cooking" && result.baseOnly.recipeComplete &&
+  result.baseOnly.proteins.length === 0 && JSON.stringify(result.baseOnly.bases) === JSON.stringify(["barley", "pasta"]) &&
+  result.proteinOnly && result.proteinOnly.status === "cooking" && result.proteinOnly.recipeComplete &&
+  JSON.stringify(result.proteinOnly.proteins) === JSON.stringify(["chicken"]) && result.proteinOnly.bases.length === 0 &&
+  result.addInOnly && result.addInOnly.status === "cooking" && result.addInOnly.recipeComplete &&
+  result.addInOnly.proteins.length === 0 && result.addInOnly.bases.length === 0 && result.addInOnly.onion &&
+  result.addInOnlyRestored && result.addInOnlyRestored.status === "cooking" &&
+  result.addInOnlyRestored.proteins.length === 0 && result.addInOnlyRestored.bases.length === 0 &&
+  result.addInOnlyRestored.onion,
+  "Cook accepts base-only, protein-only, and add-in-only selections and restores the add-in-only batch",
+  result && { baseOnly: result.baseOnly, proteinOnly: result.proteinOnly,
+    addInOnly: result.addInOnly, addInOnlyRestored: result.addInOnlyRestored });
 check(result && result.closedDraft && !result.closedDraft.state.open && result.closedDraft.state.phase === "cold" &&
   result.closedDraft.crate && result.reopenedDraft && result.reopenedDraft.open && !result.reopenedDraft.recipeComplete,
   "closing and reopening keeps the crate but starts an empty draft", result && { closed: result.closedDraft, reopened: result.reopenedDraft });

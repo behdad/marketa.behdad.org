@@ -99,7 +99,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__finishLoftAttendedTime();
         window.__showLoftAttendedTimeCaption();
         report.camp.terminal = { en: snap() };
-        report.camp.terminal.incidentalAccepted = !!window.__captionOverlay("entrance_roadtrip_stew_missing", {
+        report.camp.terminal.incidentalAccepted = !!window.__captionOverlay("entrance_roadtrip_stew_cooking_feedback", {
           owner: "camp-progress", scope: "lower:entrance", priority: 80,
           duration: 500, clock: "attended"
         });

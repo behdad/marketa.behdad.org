@@ -123030,6 +123030,54 @@ function spawnDustMote(container) {
   function pauseDiscoStepper() {
     if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }
   }
+  // ── PARTY GC PACER ───────────────────────────────────────────────────────────
+  // A full-fat party keeps ~150+ infinite main-thread SVG animations restyling every frame,
+  // shedding megabytes per second of Blink-side (Oilpan) style/paint garbage. That heap is
+  // swept only by V8 MAJOR collections — and V8 never schedules one, because it watches the
+  // JS heap (~20MB, quiet) while the Oilpan heap balloons unbounded: multi-GB renderers on a
+  // long party, ~7GB observed on a Retina Mac. A DevTools-forced collection reclaims ~70% on
+  // the spot, so it is garbage, not live state. Nothing a page does can request a GC, but it
+  // can earn one: this pacer allocates a rolling hold of plain arrays each tick, retained a
+  // couple of seconds so the ballast is tenured out of the nursery, which keeps V8's own
+  // major-GC machinery engaged — and every major sweeps the Oilpan garbage along with it.
+  // Measured under a full-fat party: stock climbs ~5.7MB/s indefinitely (1.9GB+ Blink heap
+  // in five minutes); at this allocation rate and hold the Blink heap sits flat at a few
+  // hundred MB from the first minute on. THE NUMBERS ARE LOAD-BEARING: halving the rate or
+  // shortening the hold (4MB/tick, 3-tick hold) measurably degrades back into a GB-range
+  // staircase, as does swapping the arrays for ArrayBuffers (external-memory accounting
+  // alone does not trip majors in this engine build). Also measured worse, don't revisit:
+  // brief animation holds (250ms every 6s — GC idle heuristics need seconds of sustained
+  // idle), playbackRate=0 freezes (a rate-frozen animation still ticks every frame), and
+  // will-change promotion (these SVG animations never reach the compositor). Gated off
+  // while hidden/degraded states already still the churn; the hold is dropped whenever the
+  // pacer isn't earning its keep.
+  var pacerTimer = null, pacerHold = [];
+  var PACER_TICK_MS = 500, PACER_HOLD_TICKS = 4;
+  function pacerTick() {
+    pacerTimer = null;
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) { pacerHold = []; return; }
+    if (!document.hidden && !(window.__frameHealthSlow && window.__frameHealthSlow())) {
+      var chunk = [];
+      // About 4 MB/tick in current pointer-compressed Chrome (one million tagged Smi slots).
+      for (var i = 0; i < 2000; i++) chunk.push(new Array(512).fill(i & 255));
+      pacerHold.push(chunk);
+      if (pacerHold.length > PACER_HOLD_TICKS) pacerHold.shift();
+    } else if (pacerHold.length) {
+      pacerHold = []; // hidden tab / degraded mode: no churn to pace, keep nothing tenured
+    }
+    pacerTimer = setTimeout(pacerTick, PACER_TICK_MS);
+  }
+  function startPartyGcPacer() {
+    if (pacerTimer) return; // one pacer only — idempotent under storm-clicks
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    pacerTimer = setTimeout(pacerTick, PACER_TICK_MS);
+  }
+  function stopPartyGcPacer() {
+    if (pacerTimer) { clearTimeout(pacerTimer); pacerTimer = null; }
+    pacerHold = [];
+  }
   // ── PARTY MODE camera flash (garden) — the front-left guest's camera pops a soft, silent,
   // infrequent flash. SAME background-safety idiom as the disco stepper: ONE self-rescheduling
   // timer, started on party-on and cleared on party-off, that stops (doesn't reschedule) once
@@ -124329,6 +124377,7 @@ function spawnDustMote(container) {
       if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse();
       startPartyConfetti(); // kick it off now; the bounded seed loop keeps it topped
       startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
+      startPartyGcPacer(); // earn periodic major GCs so a long party can't grow the renderer unbounded
       startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
       if (window.__startPhotoMoment) window.__startPhotoMoment(); // schedule the occasional short photo-pose moments
       if (window.__startAlbumSnaps) window.__startAlbumSnaps(); // Aspen grabs album keepsakes often (~14-22s), no freeze
@@ -124373,6 +124422,7 @@ function spawnDustMote(container) {
       if (window.__resetBartenderPosition) window.__resetBartenderPosition(); // bar's gone — send him back to his spot
       stopPartyConfetti();
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
+      stopPartyGcPacer();              // party over — the churn stops, so stop paying for pacing too
       stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
       if (window.__stopPhotoMoment) window.__stopPhotoMoment(); // party over — end any photo-freeze + its timer
       if (window.__stopAlbumSnaps) window.__stopAlbumSnaps(); // party over — stop Aspen's auto-snaps
@@ -124444,6 +124494,7 @@ function spawnDustMote(container) {
     stopPartyConfetti();
     pauseWaltzAlternation();
     pauseDiscoStepper();
+    stopPartyGcPacer();
     stopGardenFlash();
     if (window.__stopPhotoMoment) window.__stopPhotoMoment();
     if (window.__stopAlbumSnaps) window.__stopAlbumSnaps();
@@ -124487,6 +124538,7 @@ function spawnDustMote(container) {
     startPartyConfetti();
     resumeWaltzAlternation();
     startDiscoStepper();
+    startPartyGcPacer();
     startGardenFlash();
     if (window.__startPhotoMoment) window.__startPhotoMoment();
     if (window.__startAlbumSnaps) window.__startAlbumSnaps();

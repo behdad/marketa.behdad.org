@@ -1629,6 +1629,31 @@ function checkNoUnicodeEscapes() {
 // Plus the hit-testing hazard: both overlapping rows must be pointer-transparent, with their
 // own controls taking pointer events back, or the half covering the scene eats ordinary room input.
 
+// The party GC pacer keeps a long party from growing the renderer unbounded: the Oilpan
+// style/paint garbage of ~150 ticking SVG animations is only swept by V8 MAJOR GCs, which the
+// pacer earns by tenuring a small rolling allocation. A refactor could silently defang it, so
+// pin the load-bearing pieces: wired to all four party lifecycle edges (on/off + foreground
+// suspend/resume), the rolling hold stays bounded (tenure-then-drop is what trips the GC), and
+// the hidden/degraded gate keeps it from burning CPU when the churn machinery is off anyway.
+function checkPartyGcPacerWiring(file, script) {
+  if (file !== "loft-day.html") return;
+  var label = file + ": party GC pacer stays lifecycle-wired, retention-bounded, and gated";
+  var blockStart = script.indexOf("PARTY GC PACER");
+  var blockEnd = script.indexOf("function startPartyGcPacer");
+  var block = blockStart !== -1 && blockEnd > blockStart ? script.slice(blockStart, blockEnd) : "";
+  var bounded = block.indexOf("pacerHold.length > PACER_HOLD_TICKS") !== -1 &&
+    block.indexOf("pacerHold.shift()") !== -1;
+  var gated = block.indexOf("document.hidden") !== -1 && block.indexOf("__frameHealthSlow") !== -1;
+  var startCalls = (script.match(/startPartyGcPacer\(\);/g) || []).length;
+  var stopCalls = (script.match(/stopPartyGcPacer\(\);/g) || []).length;
+  if (bounded && gated && startCalls >= 2 && stopCalls >= 2) {
+    pass(label);
+  } else {
+    fail(label, "bounded=" + bounded + " gated=" + gated +
+      " startCalls=" + startCalls + " stopCalls=" + stopCalls);
+  }
+}
+
 checkNoUnicodeEscapes();
 checkTrackedSymlinks();
 checkLoftAliases();
@@ -1663,6 +1688,7 @@ FILES.forEach(function (file) {
     checkSharedStateOwners(file, script);
     checkLaptopUpdateSoundGate(file, script);
     checkCaptionDomOwnership(file, script);
+    checkPartyGcPacerWiring(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

@@ -585,6 +585,17 @@ Party, recovery waits for six healthy windows and never enables the high-resolut
 This longer retry prevents a reveal-time hitch from pinning Party to stepped effects forever while
 still giving genuinely constrained devices a fast two-window route back to the reduced tier.
 
+A full-fat Party additionally runs the GC pacer (`startPartyGcPacer`): the floor's ~150 infinite
+main-thread SVG animations shed megabytes per second of Blink-side style/paint garbage that only V8
+*major* collections sweep, and V8 never schedules one on its own because it watches the small JS
+heap while the Oilpan heap balloons (multi-gigabyte renderers on long parties). The pacer earns
+those majors with a rolling hold of plain-array ballast, tenured past the nursery at a measured
+rate (about 4 MB per tick in current pointer-compressed Chrome); the rate and hold length are
+load-bearing (see the block comment, which also records the
+measured dead ends: brief animation holds, `playbackRate:0`, `will-change` promotion, ArrayBuffer
+ballast, and weaker rates). Keep `tests/check.js`'s wiring check green when touching the Party
+lifecycle.
+
 All Web Audio uses one shared `AudioContext`. Never suspend or close that context from a feature;
 gate or disconnect that feature's nodes. Read [the audio guide](audio.md) before touching beds,
 weather, Party, cabin exposure, media capture, or route/Camping sound. It is the authoritative graph

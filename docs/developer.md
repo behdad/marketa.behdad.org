@@ -176,7 +176,9 @@ return to the paired upper room only when the user explicitly asks to go up; Bac
 dismisses the active game, projector, or overlay owned by that lower room.
 
 The dollhouse is a retained static compositor, not ten live room clones. It serializes one canonical
-room tree per idle slice into a bounded WebP capture; the map displays only those images, so opening it
+room tree per idle slice into a bounded WebP capture; the detached capture shell clears both horizontal
+stage transforms and the viewport's vertical floor-pan translate, so captures are independent of the
+floor currently being viewed. The map displays only those images, so opening it
 does not wake parked room timelines. **CLICK ME** warms fresh day/night defaults, while **Continue**
 warms the checkpoint's saved lighting and Party shell. Day/night variants are reusable. Each Party
 ignition invalidates and recaptures only the five upper rooms after Party population settles, freezing

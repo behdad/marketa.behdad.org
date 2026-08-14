@@ -21,9 +21,11 @@ var harness = String.raw`<script>
       names.indexOf("Farhang") !== -1 && names.indexOf("Spencer") !== -1, names.join(", "));
     check("Ayushi appears in the language-neutral tester roster",
       names.indexOf("Ayushi") !== -1, names.join(", "));
+    check("Jay appears in the language-neutral tester roster",
+      names.indexOf("Jay") !== -1, names.join(", "));
     check("new testers remain appended in source order",
-      names.slice(-10).join(",") ===
-        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash",
+      names.slice(-11).join(",") ===
+        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash,Jay",
       names.join(", "));
     var marketa = window.__loftCredits.people.find(function (person) { return person.name === "Markéta"; });
     check("Markéta is credited for co-design and Czech translation",

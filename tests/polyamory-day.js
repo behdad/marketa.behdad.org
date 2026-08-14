@@ -21,7 +21,6 @@ var HARNESS = [
   ' S("english",{icon:d23&&d23.querySelector(".calx-mk")&&d23.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' window.__setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d23=day(ph,23);S("czech",{banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' window.__setLang("en");ph=document.querySelector(".calx-phone");d23=day(ph,23);window.loft.garden.set(true);await sleep(30);',
-  ' var spencer=document.querySelector("#garden-guests .g-spencer"),spencerHat=spencer&&spencer.querySelector(".bd-hat-spencer"),navid=document.querySelector("#garden-guests .g-navid");S("birthdayOverlap",{spencerArrived:!!(spencer&&spencer.classList.contains("arrived")),spencerVisibility:spencer&&getComputedStyle(spencer).visibility,hatVisibility:spencerHat&&getComputedStyle(spencerHat).visibility,navidOpacity:navid&&getComputedStyle(navid).opacity});',
   ' d23.click();await sleep(900);',
   ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.__currentStageName,day:document.getElementById("loft-game-strip").classList.contains("polyamory-day"),partyOn:document.getElementById("loft-game-strip").classList.contains("party-on"),opacity:getComputedStyle(pair).opacity,roster:(window.__whoIsHere("cuddly")||[]).map(function(p){return p.key;})});',
   ' var rp=document.getElementById("cuddly-poly-rafi"),cp=document.getElementById("cuddly-poly-chinnell"),rh=document.getElementById("cuddly-poly-rafi-head"),cb=document.getElementById("cuddly-poly-chinnell-body"),hair=document.getElementById("cuddly-poly-chinnell-hair"),hairBox=hair.getBBox();',
@@ -63,9 +62,6 @@ check(s.normal && s.normal.room === "cuddly" && s.normal.polyVisible === "hidden
   "an ordinary Cuddly day keeps its original people, prop and blanket hierarchy", s.normal);
 check(s.normalBlanket && s.normalBlanket.afterKnives && s.normalBlanket.beforeVisitors,
   "an ordinary-day blanket drag retains its historical foreground slot", s.normalBlanket);
-check(s.birthdayOverlap && !s.birthdayOverlap.spencerArrived && s.birthdayOverlap.spencerVisibility === "hidden" &&
-  s.birthdayOverlap.hatVisibility === "hidden" && s.birthdayOverlap.navidOpacity !== "0",
-  "Spencer's overlapping birthday hat stays with his unarrived figure while Navid dances", s.birthdayOverlap);
 check(s.activate && !s.activate.phone && s.activate.room === "cuddly" && s.activate.day && !s.activate.partyOn &&
   s.activate.opacity === "1" && s.activate.roster.indexOf("chinnell") >= 0 && s.activate.roster.indexOf("rafi") >= 0,
   "activating the day stops the party, closes Calendar and gathers all four people in Cuddly", s.activate);

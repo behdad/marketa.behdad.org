@@ -57,7 +57,7 @@
 //      The first attended unread badge also carries the one-time message coach mark.
 //    - Party controls: the Garden wall switch stays day/night in both phases; the roof
 //      disco ball is hidden before phase two, then toggles Party without replaying the first cue.
-//    - opening guide: its explicit × dismisses the caption lesson before the normal
+//    - opening guide: its explicit × dismisses the combined chrome-landmarks lesson before the normal
 //      kitchen instruction and espresso-machine arrow take over; background clicks
 //      stay inert and Enter mirrors the ×.
 //
@@ -511,17 +511,17 @@ var PROBE_HARNESS = [
   "    snap.set(strip, strip.getAttribute('class') || '');",
   "    strip.querySelectorAll('*').forEach(function (e) { snap.set(e, e.getAttribute('class') || ''); });",
   "",
-  "    // The opening coach teaches the bottom caption before any object cue.",
+  "    // The opening coach teaches the top navigation and bottom instructions before any object cue.",
   "    // the load snapshot: resetHunt intentionally restores the untouched intro state captured above.",
   "    var introOverlay = el('click-me-overlay'), introMachine = el('kitchen-lamarzocco'), introCabinet = el('kitchen-cabinet-2');",
   "    if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: first scene click is consumed before La Maz', !el('click-me-overlay') && introMachine && !introMachine.classList.contains('powered-on'));",
-  "    ok('opening guide: first scene click points to the bottom caption', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: first scene click points to both chrome landmarks', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideStep() === 'landmarks' && has('hunt-caption', 'intro-guide') && el('opening-guide-coach').querySelectorAll('.hunt-coach-arrow').length === 2);",
   "    ok('opening guide: espresso-machine cue waits', !has('kitchen-lamarzocco', 'invite-pulse'));",
   "    await sleep(30);",
   "    var captionBlockedTarget = el('opening-guide-coach');",
   "    if (captionBlockedTarget) captionBlockedTarget.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 4, clientY: 4 }));",
-  "    ok('opening guide: a background click neither dismisses nor operates the room', captionBlockedTarget && window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
+  "    ok('opening guide: a background click neither dismisses nor operates the room', captionBlockedTarget && window.__openingGuideShowing() && window.__openingGuideStep() === 'landmarks' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
   "    clickOpeningGuideX();",
   "    ok('opening guide: an immediate pointer dismissal is ignored', window.__openingGuideShowing() && !has('kitchen-lamarzocco', 'invite-pulse'));",
   "    await sleep(1050); clickOpeningGuideX();",
@@ -534,9 +534,9 @@ var PROBE_HARNESS = [
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: ordinary entry has no auto-dismiss timeout', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideDuration && window.__openingGuideDuration() === 0);",
   "    await sleep(4200);",
-  "    ok('opening guide: caption step remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: landmarks lesson remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'landmarks' && has('hunt-caption', 'intro-guide'));",
   "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    ok('opening guide: scene-wide clicks do not acknowledge the caption card', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption');",
+  "    ok('opening guide: scene-wide clicks do not acknowledge the landmarks card', window.__openingGuideShowing() && window.__openingGuideStep() === 'landmarks');",
   "    clickOpeningGuideX();",
   "    ok('opening guide: ordinary entry clears after acknowledgement', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
@@ -544,13 +544,13 @@ var PROBE_HARNESS = [
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    ok('opening guide: fullscreen entry also has no auto-dismiss timeout', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideDuration && window.__openingGuideDuration() === 0);",
   "    await sleep(5200);",
-  "    ok('opening guide: caption remains after fullscreen browser chrome clears', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: landmarks remain after fullscreen browser chrome clears', window.__openingGuideShowing() && window.__openingGuideStep() === 'landmarks' && has('hunt-caption', 'intro-guide'));",
   "    await sleep(3000);",
-  "    ok('opening guide: fullscreen caption still waits for acknowledgement', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption');",
+  "    ok('opening guide: fullscreen landmarks still wait for acknowledgement', window.__openingGuideShowing() && window.__openingGuideStep() === 'landmarks');",
   "    clickOpeningGuideX();",
-  "    ok('opening guide: fullscreen caption ends on acknowledgement', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
+  "    ok('opening guide: fullscreen landmarks end on acknowledgement', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
   "    ok('opening guide: normal kitchen instruction returns', window.__captionKey && window.__captionKey() === 'kitchen', 'caption=' + (window.__captionKey && window.__captionKey()));",
-  "    ok('opening guide: espresso-machine cue follows the caption tutorial', has('kitchen-lamarzocco', 'invite-pulse'));",
+  "    ok('opening guide: espresso-machine cue follows the landmarks tutorial', has('kitchen-lamarzocco', 'invite-pulse'));",
   "    if (el('hunt-fullscreen-area') && el('hunt-fullscreen-area').classList.contains('is-fullscreen') && window.__toggleFullscreen) window.__toggleFullscreen();",
   "",
   "    // instruments + shared four-song catalog -> cross-room grooving",

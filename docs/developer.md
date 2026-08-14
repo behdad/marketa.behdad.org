@@ -167,7 +167,8 @@ current upper room to its pair, and `__navigateLowerRoom` owns entering and leav
 dollhouse, number keys, arrows, and direct scene controls must converge on these owners rather than
 inventing parallel navigation.
 
-The opening caption coach blocks scene input while leaving the explicit whole-loft Reset available.
+The combined opening landmarks coach blocks scene input while leaving the explicit whole-loft Reset
+available. Its two arrows share one card and point to the top navigation and bottom instruction plate.
 
 Opening the dollhouse can pause a live subsystem such as Road Trip. Returning to a room must restore the same
 settled room or paused drive state, not initialize a second instance. Lower-room navigation should

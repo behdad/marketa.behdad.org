@@ -17,9 +17,10 @@ required.
 
 ## Start here
 
-Select **CLICK ME**. The opening coach points out the top room navigation and bottom caption; dismiss
-each step with its visible ×. Follow the caption when you want direction. The required path is short,
-and most objects, games, apps, conversations, and surprises are optional.
+Select **CLICK ME**. The opening coach points out the top room navigation and bottom instructions
+together. Select its card, bottom prompt, or visible × to dismiss it. Follow the bottom instructions
+when you want direction. The required path is short, and most objects, games, apps, conversations,
+and surprises are optional.
 
 ## Finding your way
 

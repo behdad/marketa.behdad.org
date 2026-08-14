@@ -48,11 +48,16 @@ var harness = String.raw`<script>
   var overlay = document.getElementById("opening-guide-coach");
   var card = overlay.querySelector(".hunt-coach-card");
   var copy = overlay.querySelector(".hunt-coach-copy");
+  var navCopy = overlay.querySelector('[data-i="intro_guide_nav"]');
+  var captionCopy = overlay.querySelector('[data-i="intro_guide"]');
   var x = overlay.querySelector(".hunt-coach-x");
-  var arrow = overlay.querySelector(".hunt-coach-arrow");
-  check("English caption coach uses the shared readable card and explicit dismiss control",
-    overlay.classList.contains("show") && window.__openingGuideStep() === "caption" &&
-      copy.textContent === "Clues and instructions appear here." && x.textContent === "×" &&
+  var navArrow = overlay.querySelector(".opening-guide-arrow-nav");
+  var captionArrow = overlay.querySelector(".opening-guide-arrow-caption");
+  check("English landmarks coach uses the shared readable card and explicit dismiss control",
+    overlay.classList.contains("show") && window.__openingGuideStep() === "landmarks" &&
+      navCopy.textContent === "Navigation at the top." &&
+      captionCopy.textContent === "Instructions at the bottom." && x.textContent === "×" &&
+      document.getElementById("hunt-caption").textContent === "Click to dismiss." &&
       card.querySelectorAll(":scope > .hunt-coach-x").length === 1);
   var cardRect = card.getBoundingClientRect(), xRect = x.getBoundingClientRect();
   var areaRect = area.getBoundingClientRect();
@@ -65,17 +70,33 @@ var harness = String.raw`<script>
   check("the coach dismiss control stays in the true upper-right corner",
     xRect.top - cardRect.top < 16 && cardRect.right - xRect.right < 16,
     JSON.stringify({ card: cardRect.toJSON(), dismiss: xRect.toJSON() }));
-  check("caption coach stays inside the game shell above its target",
+  check("landmarks coach stays inside the game shell between its targets",
     inside(card.getBoundingClientRect(), area.getBoundingClientRect()) &&
+      card.getBoundingClientRect().top > document.getElementById("hunt-bottom-nav").getBoundingClientRect().bottom &&
       card.getBoundingClientRect().bottom < document.getElementById("hunt-caption").getBoundingClientRect().top,
     JSON.stringify({ card: card.getBoundingClientRect().toJSON(), area: area.getBoundingClientRect().toJSON() }));
-  check("opening coach has one canonical arrow with the requested motion policy",
-    overlay.querySelectorAll("svg > path.hunt-coach-arrow").length === 1 &&
-      !overlay.querySelector("svg polygon,svg rect") && !!arrow.getAttribute("d") &&
-      getComputedStyle(arrow).fill === "rgb(239, 23, 23)" &&
-      getComputedStyle(arrow).animationName ===
-        (matchMedia("(prefers-reduced-motion: reduce)").matches ? "none" : "kitchen-arrow-bounce"),
-    getComputedStyle(arrow).animationName);
+  var navArrowBox = navArrow.getBBox(), captionArrowBox = captionArrow.getBBox();
+  var navRect = document.getElementById("hunt-bottom-nav").getBoundingClientRect();
+  var captionRect = document.getElementById("hunt-caption").getBoundingClientRect();
+  check("opening coach has one arrow for each landmark with the requested motion policy",
+    overlay.querySelectorAll("svg > path.hunt-coach-arrow").length === 2 &&
+      !overlay.querySelector("svg polygon,svg rect") && !!navArrow.getAttribute("d") &&
+      !!captionArrow.getAttribute("d") && getComputedStyle(navArrow).fill === "rgb(239, 23, 23)" &&
+      [navArrow, captionArrow].every(function (arrow) {
+        return getComputedStyle(arrow).animationName ===
+          (matchMedia("(prefers-reduced-motion: reduce)").matches ? "none" : "kitchen-arrow-bounce");
+      }),
+    [getComputedStyle(navArrow).animationName, getComputedStyle(captionArrow).animationName].join(", "));
+  check("the two opening arrows occupy opposite sides of the card and reach their chrome targets",
+    navArrowBox.y <= navRect.bottom - areaRect.top + 8 &&
+      navArrowBox.y + navArrowBox.height <= cardRect.top - areaRect.top + 14 &&
+      captionArrowBox.y >= cardRect.bottom - areaRect.top - 14 &&
+      captionArrowBox.y + captionArrowBox.height >= captionRect.top - areaRect.top - 20,
+    JSON.stringify({ navArrow: navArrowBox, captionArrow: captionArrowBox,
+      nav: navRect.toJSON(), caption: captionRect.toJSON(), card: cardRect.toJSON() }));
+  check("both landmark labels stay on one line",
+    [navCopy, captionCopy].every(function (line) { return getComputedStyle(line).whiteSpace === "nowrap"; }),
+    JSON.stringify([navCopy.getBoundingClientRect().toJSON(), captionCopy.getBoundingClientRect().toJSON()]));
   check("the opening coach clips animated arrow paint to the embedded game shell",
     getComputedStyle(overlay).overflow === "hidden", getComputedStyle(overlay).overflow);
 
@@ -99,7 +120,7 @@ var harness = String.raw`<script>
   }
   click(hit, hitX, hitY);
   check("background input is swallowed without advancing or operating Kitchen",
-    hit && hit.closest("#opening-guide-coach") && window.__openingGuideStep() === "caption" &&
+    hit && hit.closest("#opening-guide-coach") && window.__openingGuideStep() === "landmarks" &&
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
@@ -143,7 +164,10 @@ var harness = String.raw`<script>
 
   window.__goToStage("kitchen");
   await showGuide("cs");
-  check("Czech caption coach is concise and localized", copy.textContent === "Nápovědy a pokyny se objevují tady." && !/pokračuj/i.test(copy.textContent));
+  check("Czech landmarks coach is concise and localized",
+    navCopy.textContent === "Navigace nahoře." && captionCopy.textContent === "Pokyny dole." &&
+      document.getElementById("hunt-caption").textContent === "Klikni pro zavření." &&
+      !/pokračuj/i.test(copy.textContent));
   var partyCards = Array.prototype.slice.call(document.querySelectorAll("#party-room-map-coach .hunt-coach-card"));
   check("opening and Party onboarding coaches share the approved responsive-card structure",
     partyCards.length === 1 &&

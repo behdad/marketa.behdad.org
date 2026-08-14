@@ -3643,7 +3643,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #hunt-fullscreen-area.opening-guide-active #hunt-restart-btn{z-index:65}
 #hunt-caption.intro-guide{color:var(--wine);z-index:65}
 #opening-guide-coach{overflow:hidden}
-#opening-guide-coach .hunt-coach-card{cursor:default}
+#opening-guide-coach .hunt-coach-card{cursor:default;flex-direction:column;font-size:clamp(22px,3.8vw,44px)}
+#opening-guide-coach .opening-guide-copy{display:flex;flex-direction:column;gap:.7em}
+#opening-guide-coach .opening-guide-line{display:block;white-space:nowrap}
+#opening-guide-coach .opening-guide-arrow-caption{animation-delay:-.45s}
 .scene-caption a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block; font-style:normal}
 .scene-caption.rsvp-nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @keyframes rsvp-nudge-float{
@@ -37788,8 +37791,17 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <div class="hunt-coach-card"><span class="hunt-coach-copy party-bridge-room-copy"></span><span class="hunt-coach-x">×</span></div>
   </div>
   <div id="opening-guide-coach" class="hunt-coach-overlay modal-coach">
-    <svg><path class="hunt-coach-arrow"/></svg>
-    <div class="hunt-coach-card"><span class="hunt-coach-copy"></span><span class="hunt-coach-x">×</span></div>
+    <svg>
+      <path class="hunt-coach-arrow opening-guide-arrow-nav"/>
+      <path class="hunt-coach-arrow opening-guide-arrow-caption"/>
+    </svg>
+    <div class="hunt-coach-card">
+      <span class="hunt-coach-copy opening-guide-copy">
+        <span class="opening-guide-line" data-i="intro_guide_nav">Navigation at the top.</span>
+        <span class="opening-guide-line" data-i="intro_guide">Instructions at the bottom.</span>
+      </span>
+      <span class="hunt-coach-x">×</span>
+    </div>
   </div>
   <div id="roadtrip-completion-coach" class="hunt-coach-overlay modal-coach">
     <div class="hunt-coach-card">
@@ -37938,8 +37950,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-644dfa583471"></script>
-<script src="loft-day.cs.js?v=dict-4e485baa340d"></script>
+<script src="loft-day.en.js?v=dict-a689b661bd54"></script>
+<script src="loft-day.cs.js?v=dict-efe95bbbf157"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -119350,11 +119362,13 @@ function spawnDustMote(container) {
     var coachArea = document.getElementById("hunt-fullscreen-area");
     var roomMapCoachOverlay = document.getElementById("party-room-map-coach");
     function coachPopup(overlay) { return overlay && overlay.querySelector(".hunt-coach-card"); }
-    function setCoachArrow(overlay, host, x, lineStart, lineEnd, tip, direction) {
+    function setCoachArrow(overlay, host, x, lineStart, lineEnd, tip, direction, arrow) {
       if (!overlay || !host) return;
       var width = host.clientWidth, height = host.clientHeight;
       var svg = overlay.querySelector("svg");
       if (!width || !height || !svg) return;
+      arrow = arrow || overlay.querySelector(".hunt-coach-arrow");
+      if (!arrow) return;
       svg.setAttribute("viewBox", "0 0 " + width + " " + height);
       var shaft = 13, head = 29, headBase, path;
       if (direction === "up") {
@@ -119368,7 +119382,7 @@ function spawnDustMote(container) {
           "H" + (x + head) + "L" + x + " " + tip + "L" + (x - head) + " " + headBase +
           "H" + (x - shaft) + "Z";
       }
-      overlay.querySelector(".hunt-coach-arrow").setAttribute("d", path);
+      arrow.setAttribute("d", path);
     }
     window.__setHuntCoachArrow = setCoachArrow;
     function positionCoachTargetScrim(overlay, targets) {
@@ -131791,30 +131805,44 @@ function spawnDustMote(container) {
   };
 
   var hintBlinkTimer = null;
+  function openingGuideNav() { return document.getElementById("hunt-bottom-nav"); }
   function openingGuideOverlay() { return document.getElementById("opening-guide-coach"); }
   function positionOpeningGuide() {
     if (!openingGuideShowing) return;
     var overlay = openingGuideOverlay(), area = document.getElementById("hunt-fullscreen-area");
     var card = overlay && overlay.querySelector(".hunt-coach-card");
-    var target = caption;
-    if (!overlay || !area || !card || !target || !window.__setHuntCoachArrow) return;
-    var ar = area.getBoundingClientRect(), tr = target.getBoundingClientRect();
-    var x = Math.max(42, Math.min(ar.width - 42, tr.left + tr.width / 2 - ar.left));
-    var cardLeft = Math.max(12, Math.min(ar.width - card.offsetWidth - 12, x - card.offsetWidth / 2));
+    var nav = openingGuideNav();
+    var navArrow = overlay && overlay.querySelector(".opening-guide-arrow-nav");
+    var captionArrow = overlay && overlay.querySelector(".opening-guide-arrow-caption");
+    if (!overlay || !area || !card || !nav || !caption || !navArrow || !captionArrow ||
+        !window.__setHuntCoachArrow) return;
+    var ar = area.getBoundingClientRect(), nr = nav.getBoundingClientRect(), cr = caption.getBoundingClientRect();
+    var navX = Math.max(42, Math.min(ar.width - 42, nr.left + nr.width / 2 - ar.left));
+    var captionX = Math.max(42, Math.min(ar.width - 42, cr.left + cr.width / 2 - ar.left));
+    var cardX = (navX + captionX) / 2;
+    var cardLeft = Math.max(12, Math.min(ar.width - card.offsetWidth - 12, cardX - card.offsetWidth / 2));
     card.style.left = cardLeft + "px";
-    var downTip = Math.min(ar.height - 14, tr.top - ar.top - 14);
-    var cardTop = Math.max(12, downTip - card.offsetHeight - Math.max(72, ar.height * .16));
+    var upTip = Math.max(3, nr.bottom - ar.top + 3);
+    var downTip = Math.min(ar.height - 14, cr.top - ar.top - 14);
+    var centeredTop = (upTip + downTip - card.offsetHeight) / 2;
+    var arrowGap = Math.max(58, ar.height * .08);
+    var minTop = upTip + arrowGap, maxTop = downTip - card.offsetHeight - arrowGap;
+    var cardTop = minTop <= maxTop ? Math.max(minTop, Math.min(maxTop, centeredTop)) :
+      Math.max(12, Math.min(ar.height - card.offsetHeight - 12, centeredTop));
     card.style.top = cardTop + "px";
-    var arrowStart = cardTop + card.offsetHeight + 10;
-    window.__setHuntCoachArrow(overlay, area, x, arrowStart, downTip - 38, downTip, "down");
+    window.__setHuntCoachArrow(overlay, area, navX, cardTop - 10, upTip + 38, upTip, "up", navArrow);
+    window.__setHuntCoachArrow(overlay, area, captionX, cardTop + card.offsetHeight + 10,
+      downTip - 38, downTip, "down", captionArrow);
   }
   function paintOpeningGuide() {
     var overlay = openingGuideOverlay(), area = document.getElementById("hunt-fullscreen-area");
     if (!overlay) return;
     if (area) area.classList.toggle("opening-guide-active", !!openingGuideShowing);
     overlay.classList.toggle("show", !!openingGuideShowing);
-    var copy = overlay.querySelector(".hunt-coach-copy");
-    if (copy && openingGuideShowing) copy.textContent = huntText("intro_guide");
+    var navCopy = overlay.querySelector('[data-i="intro_guide_nav"]');
+    var captionCopy = overlay.querySelector('[data-i="intro_guide"]');
+    if (navCopy && openingGuideShowing) navCopy.textContent = huntText("intro_guide_nav");
+    if (captionCopy && openingGuideShowing) captionCopy.textContent = huntText("intro_guide");
     if (openingGuideShowing) requestAnimationFrame(positionOpeningGuide);
   }
   function armOpeningGuide() {
@@ -131851,9 +131879,9 @@ function spawnDustMote(container) {
     clearOpeningGuide();
     if (window.__cinematic || window.__currentStageName !== "kitchen") return;
     openingGuideShowing = true;
-    openingGuideStep = "caption";
+    openingGuideStep = "landmarks";
     setCaption(kitchenPowered ? kitchenCurrentCaption() : "kitchen", true);
-    captionArbiter.exclusive({ key: "intro_guide", owner: "opening", scope: "global",
+    captionArbiter.exclusive({ key: "intro_guide_dismiss", owner: "opening", scope: "global",
       priority: CAPTION_PRIORITY.exclusive });
     caption.classList.add("intro-guide");
     updateKitchenInvite();
@@ -131899,7 +131927,7 @@ function spawnDustMote(container) {
     strip.removeEventListener("click", stopHintBlink);
     if (huntIntroShowing) { // hand the opening prompt off to the brief caption-location guide
       endHuntIntro();
-      showOpeningGuide(); // first teach where instructions live; the espresso-machine arrow follows eight seconds later
+      showOpeningGuide(); // first teach the navigation and instruction landmarks; the espresso-machine arrow follows later
     }
   }
   window.__stopHintBlink = stopHintBlink; // the cinematic (Watch is outside the strip) settles it too

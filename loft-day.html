@@ -91625,28 +91625,27 @@ def colormode(mode=None):
     if (open) { setTimeout(function () { zoomIn(laptop); }, 520); } // after the lid's .5s hinge transition, so the box measures full height
     else if (zoomEl === laptop) zoomOut();
   };
-  // Esc backs out of the zoom — window capture runs before the document-level
-  // music-stop Esc handler, and stopPropagation keeps the song going; open dialogs
-  // (photobooth polaroid, shortcuts card) keep their own Esc priority
+  // Esc backs out of the focused device — window capture runs before document-level
+  // handlers, so app/call handling must stay scoped to the device that is actually zoomed.
   window.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
     if (document.querySelector(".pb-dialog-backdrop")) return; // dialogs own Esc while up
     if (document.querySelector(".mon-ctx") || document.querySelector(".console-ctx.show")) return; // an open right-click menu owns Esc (its own handler closes it)
     // This capture listener runs before the native finder input's own key handler.
     // Close search here first so the same Escape cannot also back out of monitor zoom.
-    if (window.__closeMonitorDockSearch && window.__currentStageName === "office" && window.__closeMonitorDockSearch()) {
+    if (zoomEl === monitor && window.__closeMonitorDockSearch && window.__closeMonitorDockSearch()) {
       e.preventDefault();
       e.stopImmediatePropagation();
       return;
     }
     // first Esc closes/ends whatever app or call owns the screen, the next backs the zoom out
-    if (window.__closeTopMonitorApp && window.__currentStageName === "office" && window.__closeTopMonitorApp(true)) {
+    if (zoomEl === monitor && window.__closeTopMonitorApp && window.__closeTopMonitorApp(true)) {
       var t0 = e.target;
       if (t0 && t0.blur && (/^(INPUT|TEXTAREA|SELECT)$/.test(t0.tagName) || t0.isContentEditable)) t0.blur();
       e.stopPropagation();
       return;
     }
-    if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) { // a live laptop call is "the app" on screen — hang up first, like closing any app
+    if (zoomEl === laptop && window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) { // a live laptop call is "the app" on screen — hang up first, like closing any app
       window.__endLaptopCall();
       e.stopPropagation();
       return;

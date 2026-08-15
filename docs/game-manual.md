@@ -57,26 +57,17 @@ exploration.
 ### Party
 
 Start the Party in the Garden, then visit all ten rooms. Introductions and the map keep count;
-visiting is enough, and lower-room games remain optional. Guests stay active while you explore. Tap
-the DJ for song requests. Until its downstairs neighbour has been visited, each main room's portal
-prop gives a small periodic wobble; reduced-motion and low-frame-rate modes keep it still. Dances,
-toasts, photos, cake ceremonies, sparklers, and the bouquet toss
-can interrupt the ordinary Party scene without ending it.
+visiting is enough, and lower-room games remain optional. Guests stay active while you explore, and
+the DJ takes song requests. Dances, toasts, photos, cake, sparklers, and the bouquet toss may
+interrupt the ordinary scene without ending the Party.
 
 The Balcony window grid hides **Block Party**. With a keyboard, use `←` / `→` to move, `↑` to
 rotate, and `Space` to drop; touch-only devices show tap-and-swipe instructions instead.
 
-After the Party reveal settles, a large coach points to **The Loft** and invites you to explore while
-the Party keeps running. The Garden wall switch remains a day/night control. The Balcony switch
-starts a Party night; switching it off ends Party and advances to the next day in daylight. In phase
-two, the roof disco ball is the time-neutral Party toggle: it preserves the current day/night state on
-both edges, bright silver with a tight halo and a smooth spin while Party is on, subdued and still
-while it is off. It
-hangs flush from the ceiling, clear of notifications. The first four seconds belong
-to the Party reveal; waiting texts arrive afterward, behind the exploration lesson. After all ten
-rooms are visited, the caption stays on **“Who wants to go on a Road Trip? Head
-out to the car.”** until you reach Entrance; Party may keep running while you walk there. The message
-action also takes you to Entrance.
+The Party coach points to **The Loft** and invites you to explore. The Garden wall switch still
+controls day and night; the Balcony switch starts a Party night, while its roof disco ball toggles the
+Party without changing the light. After all ten rooms are visited, the caption sends you to the
+Entrance car for a Road Trip.
 
 ### Road Trip
 
@@ -86,25 +77,13 @@ road's Camping turnoff for the fire, dinner, stargazing, sleep, and `~ fin ~`.
 
 ## Captions, coaches, and messages
 
-The bottom caption carries the Morning clue trail, later feedback, and progression help. Brief
-feedback yields to important story or outcome text, then returns to the latest instruction rather
-than replaying an old line.
+The bottom caption carries the Morning clues, feedback, and progression help. Coaches explain
+easy-to-miss controls; select a card or its × to dismiss it. The opening, Party-exploration, and first
+unread-message lessons pause unrelated room actions, but their highlighted controls remain usable.
 
-Coaches explain easy-to-miss controls. After a one-second settling pause, select the coach card or
-its × to dismiss the lesson, not its activity. A real action button inside a card keeps its labelled
-action. The large
-opening coach is modal: Reset remains available, but the room stays inert until it is dismissed.
-The first Party's exploration and first-unread Messages lessons are modal too. Each highlighted
-target stays live: using the map or unread message performs its normal action and retires that coach;
-unrelated controls remain blocked. Party lessons hold new notifications and calls until they leave;
-other coach bubbles remain compact and non-modal. Opening a message never performs its suggested
-activity: use the separate activity arrow. Old messages remain readable after their activity expires,
-and previews wait while a device or focused Office screen is open. Irene and Hannah may invite you to
-a game; its activity arrow takes you there.
-On a birthday, Behdad or Markéta's greeting arrives as Party begins with the usual activity arrow.
-Tapping it starts that person's ceremony and postcard, and remains available for an encore. The
-birthday ribbon is a shortcut that starts the Party and the same celebration. Birthday hats,
-crowns, and call decorations appear only on that birthday's calendar day.
+Opening a message never performs its suggested activity; use its activity arrow. Old messages remain
+readable after an invitation expires. Irene and Hannah may invite you to a game. Birthday greetings
+can start a ceremony and postcard, and the birthday ribbon is a shortcut to the same celebration.
 
 If you are unsure what comes next:
 
@@ -123,13 +102,8 @@ If you are unsure what comes next:
 - Use × or Back to close a layer. From an idle lower room, use Up to return to its main room.
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
 - At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
-  after it fills the view. **Who’s here?** steps out while either screen is zoomed and returns when
-  you zoom back to the room.
-- The monitor Video app opens on three film cards. Its player adds Back, Fullscreen, and Dismiss in
-  the top-right; moving over the film reveals those buttons and the bottom playback strip again.
-- Phone and tablet apps leave text fields unfocused; tap the exact field to type.
-- Phone Mines fills the space above its bottom toolbar. Tap a cell to reveal it, press and hold to
-  flag it, and use `↻` to restart. The ring count and timer remain in that toolbar.
+  after it fills the view.
+- Phone and tablet apps leave text fields unfocused; tap a field to type.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
   of the pedal slider holds speed; its outer zones accelerate or brake.
 
@@ -156,13 +130,9 @@ a typing field, `?` opens the complete shortcut card.
 
 ### Actions and tools
 
-- `Enter`: perform the next guided action. After the Morning routine it uses the room's main
-  activity: the daytime Kitchen repeats the espresso steps, the visible Bar starts Flair Catch,
-  and the Garden / Party toggles the roof disco ball's Party state.
-- `Space`: dismiss an open modal lesson; choose the highlighted Continue/Restart entry action; or
-  play, pause, or act in the current game or media surface. It stays quiet during the initial
-  Kitchen visit. While driving, it sets cruise control to the current speed; pressing it again
-  resets the held speed rather than cancelling it.
+- `Enter`: perform the next guided action or the room's main activity.
+- `Space`: dismiss a modal lesson, choose the highlighted entry action, or play/pause the current
+  game or media. While driving, it sets or resets cruise control at the current speed.
 - `C`: open or close the phone.
 - `/`: open or close Messages.
 - `M`: open the Office monitor.
@@ -172,23 +142,11 @@ a typing field, `?` opens the complete shortcut card.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 
-An open, idle Office laptop runs its screensaver until activity wakes it. Its unmarked top-left bezel
-corner starts or advances the reel, like the matching monitor control.
-
-The JavaScript console, Code, and Python share the typed `loft` scripting API. Use `help loft` or
-`loft.help()` to browse it, and `loft.api.capabilities()` for the complete catalogue. Controls use
-explicit reads and writes such as `loft.party.status()` and `loft.party.set(true)`; `null` restores
-automatic ownership for weather and similar environment controls. Room-bound actions bring their
-surface into view, but active controller and prerequisite gates still apply. Typed help and
-`loft.api.describe(...)` explain why an action is unavailable.
-
-Code keeps edits to default files as local overrides. Right-click an edited default to restore that
-file, or use **Reset files…** to clear all Code files and the draft. Code resets do not affect the
-game checkpoint.
-
-Watch Trailer and Code use the same locally editable `trailer.js`. The Trailer preserves your
-captured visit. For apps, `loft.app.close(...)` preserves a session while `loft.app.kill(...)`
-resets it.
+The JavaScript console, Code, and Python share the typed `loft` scripting API. Use `help loft`,
+`loft.help()`, or `loft.api.capabilities()` to browse it. Code keeps edits as local overrides;
+right-click a default file to restore it or use **Reset files…**. Code resets do not affect the game
+checkpoint. Watch Trailer and Code share `trailer.js`; closing an app preserves its session, while
+killing it resets the app.
 
 ### Fast-forward shortcuts
 
@@ -214,9 +172,8 @@ await loft.room.go("garden") # wait for a finite action to finish
 ```
 
 Queries return ordinary Python values. Actions start when called and may be awaited; failures raise
-`loft.LoftError`; availability failures expose `.reason` and an optional `.remedy`. Use `None`, not
-`"auto"`, to restore automatic environment control. `loft.help()` and
-`loft.help(loft.weather)` browse Loft; normal Python `help(str)` remains unchanged.
+`loft.LoftError`. Use `None` to restore automatic environment control. `loft.help()` and
+`loft.help(loft.weather)` browse Loft.
 
 ### Driving
 
@@ -227,8 +184,7 @@ Queries return ordinary Python values. Actions start when called and may be awai
 - `Shift` + `↑` / `↓`: change gear or move the automatic selector toward P/D.
 On a Road Trip, `Enter` toggles pause/resume; `Space`, steering, or a pedal also resumes. Escape or
 Backspace pauses first and exits on the next press. Fields, open devices, and Camping activities
-keep their keys. The coach adapts to the transmission and input device; during its automatic lesson,
-finish the current step before another selector or driving input can act.
+keep their keys.
 
 ## Road Trip and Camping
 
@@ -238,15 +194,10 @@ shoulder and keeps the selected transmission; the caption points out when the en
 gear is the immediate blocker.
 
 Routes progress west through Calgary, Banff, and Abraham Lake; choose a later segment for a shorter
-drive. The three-part HUD ribbon tracks the legs and hatches skipped ones. A missed Camping turnoff
-returns later.
+drive. A missed Camping turnoff returns later.
 
 Unfocusing pauses the highway. Reloading while it is visible restores that view paused; leaving
 Entrance instead offers **Continue**, **New**, or, once reached, **Camping**.
-
-After all ten rooms have been visited, a one-time card offers **Go to the car →**. Choose it to
-open Entrance, or dismiss the card to keep exploring; the Road Trip invitation remains in the
-caption until the car is opened.
 
 At Camping, follow the caption through fire, stew, stargazing, and sleep. Choose any combination of
 ingredients for the stew, then use the central **Cook** button. Stew can burn; Markéta’s open
@@ -259,12 +210,8 @@ Checkpointing begins after Kitchen is solved or deliberately left. **Continue** 
 floor, story progress, durable discoveries, Album, and Messages. Games, calls, cameras, and media
 return stopped; an interrupted highway returns paused.
 
-The finale clock counts only while the started game is visible, focused, and not paused, and carries
-across Continue. Game **Start over** clears the checkpoint and clock and returns the car to automatic
-in park; it is separate from Code's **Reset files…**.
-
-The **Trailer** is separate from the checkpoint and clock. Its scenes never solve or reward the
-player's game.
+Game **Start over** clears the checkpoint and finale clock; it is separate from Code's
+**Reset files…**. The **Trailer** does not alter game progress.
 
 - English and Czech are available, and the choice persists when storage is allowed.
 - Reduced-motion preferences simplify animation without removing activities.

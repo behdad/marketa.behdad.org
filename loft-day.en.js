@@ -1470,6 +1470,7 @@ window.__loftMessages["en"] = {
   "typewriter_patience_line": "Still here? That's the whole vow, honestly.",
   "video_absent": "the film isn’t loaded yet — come back soon",
   "video_butterfly": "Rainbow Butterfly",
+  "video_choose": "Choose a film",
   "video_downtown": "Downtown dance",
   "video_rose": "Mon amie la rose",
   "watch_loft": "▷ Trailer",

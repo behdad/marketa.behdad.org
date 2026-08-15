@@ -1470,6 +1470,7 @@ window.__loftMessages["cs"] = {
   "typewriter_patience_line": "Pořád tu jsi? To je celý slib, popravdě.",
   "video_absent": "film ještě není nahraný — vrať se brzy",
   "video_butterfly": "Rainbow Butterfly",
+  "video_choose": "Vyber film",
   "video_downtown": "Downtown dance",
   "video_rose": "Mon amie la rose",
   "watch_loft": "▷ Upoutávka",

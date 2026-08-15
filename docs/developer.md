@@ -205,8 +205,11 @@ physical screen box rather than through ancestor CSS zoom. Establish that host b
 runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
 place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
 canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later
-controls. Replaced media gets the final physical screen box; the Video app multiplies its authored
-HTML chrome by the live monitor scale so the controls retain their ordinary-app size. A shared
+controls. Replaced media gets the final physical screen box. Video's card chooser stays on the
+ordinary logical overlay; entering its player refits the same root to the physical screen before the
+media source loads, and its HTML playback chrome multiplies authored sizes by the live scale. The
+SVG Back, Fullscreen, and Dismiss controls mirror the player's idle class so all chrome hides as one.
+A shared
 native-SVG Kill farewell temporarily parks the promoted live root back in that
 same `foreignObject` before its `death-*` class is applied, keeps promotion suppressed through the
 app's close/reset, then returns directly to the dock. The Shoot iframe is the exception: reparenting

@@ -104,22 +104,17 @@ function check(ok, message, detail) {
     awaitPromise: true, userGesture: true
   });
   await sleep(150);
-  const state = await evaluate(`(function(){
-    var seek=document.querySelector(".vid-ctrl-bar").getBoundingClientRect();
-    var vol=document.querySelector(".vid-ctrl-vol").getBoundingClientRect();
+  const chooserState = await evaluate(`(function(){
     var rose=document.querySelector("[data-video-track=rose]").getBoundingClientRect();
-    document.querySelector(".vid-ctrl-bar").style.pointerEvents="none";
-    document.querySelector(".vid-ctrl-vol").style.pointerEvents="none";
-    document.querySelectorAll(".vid-pick").forEach(function(el){el.style.pointerEvents="none";});
+    document.querySelectorAll(".vid-choice").forEach(function(el){el.style.pointerEvents="none";});
     return{
       fullscreen:document.fullscreenElement&&document.fullscreenElement.id,
-      seek:{left:seek.left,right:seek.right,y:seek.top+seek.height/2,width:seek.width},
-      vol:{left:vol.left,right:vol.right,y:vol.top+vol.height/2,width:vol.width},
+      view:document.getElementById("monitor-video-wrap").getAttribute("data-video-view"),
       rose:{x:rose.left+rose.width/2,y:rose.top+rose.height/2,width:rose.width}
     };
   })()`);
-  check(state.fullscreen === "hunt-fullscreen-area", "touch probe runs in browser fullscreen", state);
-  check(state.seek.width > 0 && state.vol.width > 0, "both slider tracks are visible", state);
+  check(chooserState.fullscreen === "hunt-fullscreen-area", "touch probe runs in browser fullscreen", chooserState);
+  check(chooserState.view === "chooser" && chooserState.rose.width > 0, "three-card chooser is visible before selection", chooserState);
 
   async function tap(point) {
     await send("Input.dispatchTouchEvent", {
@@ -140,11 +135,27 @@ function check(ok, message, detail) {
     await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await sleep(50);
   }
-  await tap(state.rose);
-  const picked = await evaluate("window.__monitorVideoTrack()");
-  check(picked === "rose", "trusted touch selects a visible chooser button despite foreignObject mis-targeting", picked);
-  await drag(state.seek);
-  await drag(state.vol);
+  await tap(chooserState.rose);
+  const picked = await evaluate(`(function(){
+    return{track:window.__monitorVideoTrack(),view:document.getElementById("monitor-video-wrap").getAttribute("data-video-view")};
+  })()`);
+  check(picked.track === "rose" && picked.view === "player", "trusted touch selects a visible chooser card despite foreignObject mis-targeting", picked);
+  await sleep(100);
+  const playerState = await evaluate(`(function(){
+    var wrap=document.getElementById("monitor-video-wrap");wrap.classList.remove("absent");
+    if(window.__monitorHtmlOverlayFit)window.__monitorHtmlOverlayFit();
+    var seek=document.querySelector(".vid-ctrl-bar").getBoundingClientRect();
+    var vol=document.querySelector(".vid-ctrl-vol").getBoundingClientRect();
+    document.querySelector(".vid-ctrl-bar").style.pointerEvents="none";
+    document.querySelector(".vid-ctrl-vol").style.pointerEvents="none";
+    return{
+      seek:{left:seek.left,right:seek.right,y:seek.top+seek.height/2,width:seek.width},
+      vol:{left:vol.left,right:vol.right,y:vol.top+vol.height/2,width:vol.width}
+    };
+  })()`);
+  check(playerState.seek.width > 0 && playerState.vol.width > 0, "both player slider tracks are visible after selection", playerState);
+  await drag(playerState.seek);
+  await drag(playerState.vol);
   const result = await evaluate(`(function(){
     return{time:document.getElementById("monitor-video-el").currentTime,volume:window.__vidCtrlVolume()};
   })()`);

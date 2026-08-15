@@ -122,6 +122,8 @@ If you are unsure what comes next:
   actions need one selection.
 - Use × or Back to close a layer. From an idle lower room, use Up to return to its main room.
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
+- At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
+  after it fills the view.
 - Phone and tablet apps leave text fields unfocused; tap the exact field to type.
 - Phone Mines fills the space above its bottom toolbar. Tap a cell to reveal it, press and hold to
   flag it, and use `↻` to restart. The ring count and timer remain in that toolbar.

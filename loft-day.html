@@ -91345,6 +91345,10 @@ def colormode(mode=None):
     if (suppressTimer) { clearTimeout(suppressTimer); suppressTimer = null; }
     e.stopPropagation(); e.stopImmediatePropagation(); e.preventDefault();
   }
+  // Touch browsers can re-hit-test the compatibility click after zoom promotes the
+  // desktop into #monitor-html-overlay. Capture at Window so the one-shot guard still
+  // wins when that click no longer has #office-monitor in its ancestor chain.
+  window.addEventListener("click", swallowZoomClick, true);
   function monitorChromePointer(e) {
     if (!e || !e.target || (e.target.closest && e.target.closest(".bezel-nav,.bezel-close,.monitor-saver-cycle-control,[tabindex],button,input,textarea,select"))) return false;
     var screen = document.getElementById("monitor-zoom-box");
@@ -91370,13 +91374,11 @@ def colormode(mode=None):
       if (zoomEl === monitor) armZoomClickSuppress();
     } // only swallow if it actually zoomed — an OFF monitor must still receive the click that boots the PC
   });
-  monitor.addEventListener("click", swallowZoomClick, true);
   if (laptop) {
     laptop.addEventListener("pointerdown", function (e) {
       if (e.button != null && e.button !== 0) return;
       if (!zoomEl && laptop.classList.contains("open")) { zoomIn(laptop); if (zoomEl === laptop) armZoomClickSuppress(); }
     });
-    laptop.addEventListener("click", swallowZoomClick, true);
   }
   // the lid drives the laptop zoom: opening glides in, closing hands the room back
   window.__laptopLidZoom = function (open) {

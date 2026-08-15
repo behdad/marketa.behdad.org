@@ -211,8 +211,10 @@ native-SVG Kill farewell temporarily parks the promoted live root back in that
 same `foreignObject` before its `death-*` class is applied, keeps promotion suppressed through the
 app's close/reset, then returns directly to the dock. Kill gags that animate the live app itself
 (Chat, Classics, and Pac-Man) retain promotion instead. Keep overlay fitting, stacking, Calendar
-paint, runtime identity, and the clipped Kill raster covered by the focused monitor tests. A monitor
-summoned from another upper or lower room must finish the lower-floor return, when present, and then
+paint, runtime identity, the clipped Kill raster, and the mobile zoom handoff covered by the focused
+monitor tests. The click completing a zoom gesture may be re-hit-tested onto the newly promoted
+overlay, so its one-shot guard belongs at Window capture rather than on the pre-zoom SVG device. A
+monitor summoned from another upper or lower room must finish the lower-floor return, when present, and then
 the upper-room pan before zoom takes ownership of the strip transform and promotes HTML;
 `--floor-pan`'s transition end followed by `__afterRoomPan` is the serialization boundary.
 
@@ -677,7 +679,7 @@ port nor another developer's server process.
 | --- | --- | --- |
 | Structural/static | Inline-script syntax, translation parity, SVG balance, typed autocomplete, source invariants | `node tests/check.js`, `node tests/state.js` |
 | Full solve | End-to-end first-run solve and interaction storm | `node tests/play.js` |
-| Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
+| Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, `tests/monitor-zoom-touch.mjs`, focused tests |
 | State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
 | Typed API | Catalogue shape, public Window ownership, Phase 1 access, active-surface and lifecycle gates | `tests/api-v4.js`, `tests/global-surface.js`, `tests/api-gating.js` |
 | Rendering | Album signatures, monitor HTML/SVG alignment, overlay ownership, and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, `tests/party-disco-pan.js`, `tests/monitor-html-overlay.js`, `tests/monitor-overlay-compat.js`, `tests/monitor-calendar.mjs`, `tests/monitor-kill-paint.mjs`, `tests/monitor-cross-room-summon.mjs`, screenshots or real CDP Chrome |

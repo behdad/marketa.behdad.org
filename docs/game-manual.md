@@ -123,7 +123,8 @@ If you are unsure what comes next:
 - Use × or Back to close a layer. From an idle lower room, use Up to return to its main room.
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
 - At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
-  after it fills the view.
+  after it fills the view. **Who’s here?** steps out while either screen is zoomed and returns when
+  you zoom back to the room.
 - The monitor Video app opens on three film cards. Its player adds Back, Fullscreen, and Dismiss in
   the top-right; moving over the film reveals those buttons and the bottom playback strip again.
 - Phone and tablet apps leave text fields unfocused; tap the exact field to type.

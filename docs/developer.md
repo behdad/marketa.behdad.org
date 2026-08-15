@@ -200,7 +200,9 @@ The Office monitor retains app DOM and runtime state across zoom and room change
 HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,
 into the ordinary-DOM `#monitor-html-overlay`, then restores it before the SVG moves. Native SVG apps
 stay in the SVG path. This identity-preserving promotion is the default for HTML monitor apps and is
-the WebKit-safe boundary for focused interaction; iframe-owned game canvases must be sized from the
+the WebKit-safe boundary for focused interaction. The viewport’s shared `device-zoomed` state hides
+all three roster surfaces (chip, panel, and modal backdrop), preserving their state so they return
+when either device releases the view. Iframe-owned game canvases must be sized from the
 physical screen box rather than through ancestor CSS zoom. Establish that host before creating a
 runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
 place and must never reparent a live browsing context. While ordinary DOM owns paint, park the

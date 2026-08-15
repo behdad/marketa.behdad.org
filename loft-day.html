@@ -590,8 +590,11 @@ html.mir-uv-live #entrance-home-uv{opacity:.72}
 }
 #cinema-room.cinema-photobooth #cinema-photobooth-surface{display:block}
 #cinema-room.photobooth #monitor-photobooth,
+#cinema-room.pb-error #monitor-photobooth,
 #cinema-room.pb-confirm #monitor-pb-confirm,
 #cinema-room.pb-error #monitor-pb-error{opacity:1;pointer-events:auto}
+#cinema-room.pb-error #monitor-photobooth{pointer-events:none}
+#cinema-room.pb-error :is(#monitor-pb-error,#monitor-pb-close){pointer-events:auto}
 #cinema-room.photobooth.death-photobooth #monitor-photobooth{opacity:0;pointer-events:none}
 #cinema-room.picking #monitor-pb-picker{opacity:1;pointer-events:auto}
 #cinema-room.picking #monitor-pb-shutter{opacity:0;pointer-events:none}
@@ -6677,7 +6680,7 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 #office-monitor.show-python #office-monitor-bg{fill:#0e1520}
 #office-monitor.show-linux #office-monitor-bg{fill:#15120e}
 #office-monitor.show-browser #office-monitor-bg{fill:#d8d2c4}
-#office-monitor:is(.photobooth,.picking) #office-monitor-bg{fill:#0a0d12}
+#office-monitor:is(.photobooth,.picking,.pb-error) #office-monitor-bg{fill:#0a0d12}
 #office-monitor.death-linux #office-monitor-bg{fill:#0d63c4}
 #office-monitor.show-harfbuzz #office-monitor-bg{fill:#3a2416}
 #office-monitor.show-behdad #office-monitor-bg{fill:#8e3a4a}
@@ -6724,7 +6727,7 @@ foreignObject.monitor-overlay-parked,
 #office-monitor.show-browser #monitor-browser,
 #office-monitor.death-doom #monitor-fatality,
 #office-monitor.death-linux #monitor-bsod,
-#office-monitor:is(.photobooth,.picking) #monitor-photobooth{display:inline}
+#office-monitor:is(.photobooth,.picking,.pb-error) #monitor-photobooth{display:inline}
 /* The Dollhouse supplies its own native-SVG caps thumbnail over this screen. Keeping the
    live screen tree out of the nested <use> also prevents its desktop from escaping the card. */
 #office-monitor.dollhouse-preview #office-monitor-screen-content{display:none}
@@ -9122,20 +9125,25 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* ── loft photobooth (the visitor's own camera, live in the monitor) ──
    Three class-gated screen states on #office-monitor: .pb-confirm (the on-screen
    "Open the photobooth?" ask, shown BEFORE any getUserMedia call), .pb-error (the
-   friendly no-camera/denied panel), and .photobooth (a live session: video letterboxed
+   friendly no-camera/denied dialog), and .photobooth (a live session: video letterboxed
    at true aspect in the screen's left zone, wordmark + shutter in the right zone).
    Only .photobooth means the camera is live — it drives the red LED, and every teardown
    path (close, re-click, leave-room, hidden, pagehide, PC-off, reset) removes it AND
-   stops the stream, so the LED and the video die together. The confirm/error panels
-   draw their own opaque card OVER whatever the screen shows, so dismissing them
-   restores the previous screen for free. */
+   stops the stream, so the LED and the video die together. The confirm panel covers
+   the current screen; the error dialog dims a camera-free Photobooth surface. */
 #office-webcam{cursor:pointer}
 #office-webcam-led{transition:fill .3s ease, filter .3s ease}
 #office-monitor.photobooth #office-webcam-led, #office-monitor.tile-cam #office-webcam-led{fill:#ff3b30; filter:drop-shadow(0 0 1.7px #ff3b30)}
 #monitor-photobooth, #monitor-pb-confirm, #monitor-pb-error{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.photobooth #monitor-photobooth,
+#office-monitor.pb-error #monitor-photobooth,
 #office-monitor.pb-confirm #monitor-pb-confirm,
 #office-monitor.pb-error #monitor-pb-error{opacity:1; pointer-events:auto}
+#office-monitor.pb-error #monitor-photobooth{pointer-events:none}
+#office-monitor.pb-error :is(#monitor-pb-error,#monitor-pb-close){pointer-events:auto}
+/* No camera is available in this state, so keep the foreignObject out of the zoom
+   promotion layer. The native app shell remains behind the native SVG dialog. */
+#office-monitor.pb-error #monitor-pb-fo{visibility:hidden}
 #office-monitor.photobooth.death-photobooth #monitor-photobooth{opacity:0; pointer-events:none}
 /* while live, the booth owns the whole screen — hide every boot/site/transport layer under it */
 #office-monitor.photobooth .boot-logo,
@@ -28677,14 +28685,6 @@ section{margin:1.9rem 0}
 </g>
 <!-- big 3-2-1 countdown before the capture, centered over the video zone -->
 <text id="monitor-pb-count" x="285" y="184" text-anchor="middle" style="font-size:26px; fill:#fffdf8; paint-order:stroke; stroke:rgba(0,0,0,0.55); stroke-width:2.4px; stroke-linejoin:round"></text>
-<!-- close (x), top-right -->
-<g id="monitor-pb-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d3822f" stroke="#a56525" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7f4e1c" opacity="0"/>
-<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
-</g>
 <!-- retake (re-run the countdown), top-left; shown only in .picking -->
 <g id="monitor-pb-retake" class="pb-ctrl">
 <circle cx="260" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
@@ -28707,6 +28707,26 @@ section{margin:1.9rem 0}
 </g>
 <!-- white snap flash (topmost, click-through) -->
 <rect id="monitor-pb-flash" x="254" y="154" width="124" height="42" fill="#ffffff" opacity="0" pointer-events="none"/>
+<!-- camera-denied dialog: nested in the real booth so its one existing close control can
+     remain above it. OK or the backdrop returns to the previous screen. -->
+<g id="monitor-pb-error">
+<rect id="monitor-pb-error-bg" x="254" y="154" width="124" height="42" fill="#05070a" fill-opacity="0.62"/>
+<rect id="monitor-pb-error-card" x="272" y="158" width="88" height="34" rx="3.5" fill="#171c23" stroke="#d3822f" stroke-width="0.7"/>
+<text id="monitor-pb-error-1" x="316" y="169" text-anchor="middle" style="fill:#f6f2ea; font-family:sans-serif; font-size:5.4px"></text>
+<text id="monitor-pb-error-2" x="316" y="176" text-anchor="middle" style="fill:#bfb7a8; font-size:4.6px; font-family:sans-serif"></text>
+<g id="monitor-pb-error-ok" class="pb-ctrl">
+<rect x="301" y="180" width="30" height="9" rx="4.5" fill="#d3822f" stroke="#a56525" stroke-width="0.6"/>
+<text id="monitor-pb-error-ok-text" x="316" y="186" text-anchor="middle" style="fill:#f8f5ec; font-size:4.4px; font-family:sans-serif"></text>
+</g>
+</g>
+<!-- one close (x), top-right, shared by the live app and its error dialog -->
+<g id="monitor-pb-close" transform="translate(76.0,29.3) scale(0.8)">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d3822f" stroke="#a56525" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7f4e1c" opacity="0"/>
+<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
+</g>
 </g>
 <!-- photobooth pre-permission confirm: an ON-SCREEN ask (no popup, no getUserMedia yet) —
      only the "Open camera" button click calls getUserMedia, inside that user gesture.
@@ -28721,17 +28741,6 @@ section{margin:1.9rem 0}
 <g id="monitor-pb-confirm-no" class="pb-ctrl">
 <rect x="332" y="173.5" width="30" height="12" rx="6" fill="#262b33" stroke="#3a4049" stroke-width="0.8"/>
 <text id="monitor-pb-confirm-no-text" x="347" y="181.5" text-anchor="middle" style="fill:#d8d3c8; font-size:4.6px; font-family:sans-serif"></text>
-</g>
-</g>
-<!-- photobooth no-camera/denied panel: a friendly ON-SCREEN note (no bubble, no throw).
-     Shown via .pb-error on #office-monitor; OK returns the previous screen. -->
-<g id="monitor-pb-error">
-<rect id="monitor-pb-error-bg" x="254" y="154" width="124" height="42" fill="#10141b" fill-opacity="0.94"/>
-<text id="monitor-pb-error-1" x="316" y="165" text-anchor="middle" style="fill:#f6f2ea; font-family:sans-serif; font-size:5.4px"></text>
-<text id="monitor-pb-error-2" x="316" y="172" text-anchor="middle" style="fill:#bfb7a8; font-size:4.6px; font-family:sans-serif"></text>
-<g id="monitor-pb-error-ok" class="pb-ctrl">
-<rect x="303" y="177" width="26" height="11" rx="5.5" fill="#262b33" stroke="#3a4049" stroke-width="0.8"/>
-<text id="monitor-pb-error-ok-text" x="316" y="184.3" text-anchor="middle" style="fill:#d8d3c8; font-size:4.6px; font-family:sans-serif"></text>
 </g>
 </g>
 </g>
@@ -39049,7 +39058,7 @@ window.__cinemaVideoLoaded = false;
   var chooserIndex = 0;
   var cinemaPhotobooth = false;
   var cinemaPhotoboothStateSeen = false;
-  var photoboothGroups = ["monitor-photobooth", "monitor-pb-confirm", "monitor-pb-error"].map(function (id) {
+  var photoboothGroups = ["monitor-photobooth", "monitor-pb-confirm"].map(function (id) {
     return document.getElementById(id);
   });
   var photoboothHomeAnchor = document.getElementById("monitor-shoot-coach");

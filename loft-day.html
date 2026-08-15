@@ -83867,18 +83867,54 @@ setOfficeProgress("pc", false);
     if (chatTurnstileWait) settleChatTurnstile(new Error("verification cancelled"));
     if (chatTurnstileLoadAttempt) chatTurnstileLoadAttempt.cancel("Turnstile load cancelled");
   }
+  function takeChatTurnstileGlobal() {
+    if (!Object.prototype.hasOwnProperty.call(window, "turnstile")) return null;
+    var api = window["turnstile"];
+    var descriptor = Object.getOwnPropertyDescriptor(window, "turnstile");
+    if (descriptor && descriptor.configurable) delete window["turnstile"];
+    return api;
+  }
+  // Turnstile checks whether its Window API already exists while booting. The shared
+  // lazy-script accessor therefore looks like a duplicate import to Turnstile itself;
+  // let this vendor create its ordinary global, then move the API into private state.
+  function chatTurnstileScriptAttempt() {
+    var script = document.createElement("script");
+    var attempt = { script: script, timer: null, settled: false, cancel: null, promise: null };
+    script.src = CHAT_TURNSTILE_SCRIPT;
+    script.id = "loft-chat-turnstile-script";
+    script.async = true;
+    script.defer = true;
+    attempt.promise = new Promise(function (resolve, reject) {
+      function settle(error) {
+        if (attempt.settled) return;
+        attempt.settled = true;
+        if (attempt.timer) { clearTimeout(attempt.timer); attempt.timer = null; }
+        script.removeEventListener("load", loaded);
+        script.removeEventListener("error", failed);
+        var api = takeChatTurnstileGlobal();
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (error) reject(error); else resolve(api);
+      }
+      function loaded() { settle(null); }
+      function failed() { settle(new Error("Turnstile failed to load")); }
+      attempt.cancel = function (reason) { settle(new Error(reason || "Turnstile load cancelled")); };
+      script.addEventListener("load", loaded, { once: true });
+      script.addEventListener("error", failed, { once: true });
+      attempt.timer = setTimeout(function () { attempt.cancel("Turnstile load timed out"); }, CHAT_TOTAL_TIMEOUT_MS);
+      try { document.head.appendChild(script); }
+      catch (error) { settle(error); }
+    });
+    return attempt;
+  }
   function loadChatTurnstile() {
     if (!chatTurnstileApi && Object.prototype.hasOwnProperty.call(window, "turnstile")) {
-      chatTurnstileApi = captureLazyScriptGlobal("turnstile").release();
+      chatTurnstileApi = takeChatTurnstileGlobal();
     }
     if (chatTurnstileApi && typeof chatTurnstileApi.render === "function") return Promise.resolve(chatTurnstileApi);
     if (chatTurnstileApiPromise) return chatTurnstileApiPromise;
     var stale = document.getElementById("loft-chat-turnstile-script");
     if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
-    var attempt = chatTurnstileLoadAttempt = lazyScriptAttempt("turnstile", CHAT_TURNSTILE_SCRIPT, {
-      id: "loft-chat-turnstile-script", defer: true, timeout: CHAT_TOTAL_TIMEOUT_MS,
-      error: "Turnstile failed to load", timeoutError: "Turnstile load timed out"
-    });
+    var attempt = chatTurnstileLoadAttempt = chatTurnstileScriptAttempt();
     var promise = attempt.promise.then(function (api) {
       if (chatTurnstileLoadAttempt !== attempt) throw new Error("Turnstile load superseded");
       chatTurnstileApi = api;
@@ -84566,7 +84602,6 @@ setOfficeProgress("pc", false);
     if (chatActiveMessage) cancelled.unshift(chatActiveMessage);
     cancelled.forEach(function (message) { settleChatMessage(message, new Error("chat request cancelled")); });
     cancelChatTurnstile();
-    chatTurnstileApi = null;
     if (chatAbort) { try { chatAbort.abort(); } catch (e) {} chatAbort = null; }
     chatPending = false; chatError = ""; chatHistory = []; chatQueue = []; chatActiveMessage = null; chatRetryMessage = null;
     if (chatInput) chatInput.value = "";

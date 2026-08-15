@@ -232,7 +232,7 @@ check(staticWrites.length === 0, "authored sources contain no explicit public Wi
 }).join("\n"));
 var html = files.find(function (file) { return file.name === "loft-day.html"; }).text;
 var lazyVendorCaptures = {
-  turnstile: 'lazyScriptAttempt("turnstile"',
+  turnstile: "chatTurnstileScriptAttempt()",
   loadPyodide: 'lazyScriptAttempt("loadPyodide"',
   V86: 'lazyScriptAttempt("V86"',
   createHarfBuzz: 'hbLoadScript("harfbuzzjs/hb.js", "createHarfBuzz")',

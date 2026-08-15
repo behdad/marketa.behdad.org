@@ -39253,9 +39253,12 @@ window.__cinemaVideoLoaded = false;
   function cinemaVolumeForSiteLevel(level) {
     var siteLevel = Math.max(0, Math.min(1, Number(level) || 0));
     if (siteLevel === 0) return 0;
-    // Vimeo is perceptually quieter than the loft mix at low gain. This smooth,
-    // monotonic lift preserves hard mute and unity while seating .15≈.35 and .4≈.55.
-    return Math.min(1, siteLevel / (.2 + 1.67 * siteLevel - .87 * siteLevel * siteLevel));
+    if (siteLevel === 1) return 1;
+    // Foreground films are perceptually quieter than the loft mix at low gain. Keep the
+    // shared site steps exact (⅓, ⅔, unity) and interpolate continuously between them.
+    if (siteLevel <= .15) return (siteLevel / .15) / 3;
+    if (siteLevel <= .4) return 1 / 3 + ((siteLevel - .15) / .25) / 3;
+    return 2 / 3 + ((siteLevel - .4) / .6) / 3;
   }
   window.__cinemaVolumeForSiteLevel = cinemaVolumeForSiteLevel;
   function currentCinemaVolume() {

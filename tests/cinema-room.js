@@ -232,10 +232,10 @@ check(s.vimeoControls && s.vimeoControls.ready &&
   "the ready player receives real-protocol Play, Pause, volume-sync, and completion-status commands",
   s.vimeoControls);
 check(s.vimeoControls && s.vimeoControls.mapped[0] === 0 && s.vimeoControls.mapped[3] === 1 &&
-  Math.abs(s.vimeoControls.mapped[1] - .35) < .015 &&
-  Math.abs(s.vimeoControls.mapped[2] - .55) < .015 &&
+  Math.abs(s.vimeoControls.mapped[1] - 1 / 3) < 1e-12 &&
+  Math.abs(s.vimeoControls.mapped[2] - 2 / 3) < 1e-12 &&
   s.vimeoControls.curve.every(function(value,index,curve){return index === 0 || value > curve[index - 1];}),
-  "Cinema's perceptual volume curve preserves mute/unity and smoothly lifts quiet site levels",
+  "Cinema's perceptual volume curve maps the shared site steps to exact thirds",
   s.vimeoControls && s.vimeoControls.mapped);
 check(s.vimeoForged && s.vimeoForged.state.playing && s.vimeoForged.state.video === "927763091" &&
   s.vimeoForged.frame && s.vimeoForged.chooser,
@@ -342,7 +342,9 @@ check((source.match(/data-vimeo-hash=""/g) || []).length === 3,
 check(/\["play", "pause", "ended", "timeupdate"\]\.forEach/.test(source) &&
   /event\.source !== frame\.contentWindow/.test(source) && /tellVimeo\("getEnded"\)/.test(source) &&
   /tellVimeo\("setVolume", currentCinemaVolume\(\)\)/.test(source) &&
-  /siteLevel \/ \(\.2 \+ 1\.67 \* siteLevel - \.87 \* siteLevel \* siteLevel\)/.test(source),
+  /if \(siteLevel <= \.15\) return \(siteLevel \/ \.15\) \/ 3;/.test(source) &&
+  /if \(siteLevel <= \.4\) return 1 \/ 3/.test(source) &&
+  /return 2 \/ 3/.test(source),
   "the Cinema scopes Vimeo events, polls true completion, and follows the shared volume");
 check(/id="cinema-brick" width="60" height="32"[\s\S]*?M0 1H60M0 16H60M0 31H60[\s\S]*?M30 0V16M0 16V32M60 16V32/.test(source),
   "cinema brickwork uses the established 60×32 loft running bond");

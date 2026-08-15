@@ -39,7 +39,7 @@ var HARNESS = String.raw`
     rose.click();video.dispatchEvent(new Event("loadedmetadata"));report.steps.rose={view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),src:video.src,time:fakeTime};video.play();fakeTime=7.25;video.dispatchEvent(new Event("timeupdate"));activate(back);
     butterfly.click();video.dispatchEvent(new Event("loadedmetadata"));report.steps.butterfly={track:window.__monitorVideoTrack(),src:video.src,time:fakeTime};activate(back);
     rose.click();video.dispatchEvent(new Event("loadedmetadata"));report.steps.roseReturned={track:window.__monitorVideoTrack(),src:video.src,time:fakeTime};
-    activate(close);monitor.classList.add("show-caps");window.__openMonitorApp("video");report.steps.reopened={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),active:rose.classList.contains("active")};
+    activate(close);monitor.classList.add("show-caps");window.__openMonitorApp("video");report.steps.reopened={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),active:rose.classList.contains("active"),time:fakeTime,paused:fakePaused,src:video.src};
     rose.click();video.dispatchEvent(new Event("loadedmetadata"));window.__closeTopMonitorApp(true);var escapedBack={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view")};window.__closeTopMonitorApp(true);report.steps.escape={back:escapedBack,closed:!monitor.classList.contains("show-video")};
     monitor.classList.add("show-caps");window.__openMonitorApp("video");butterfly.click();video.dispatchEvent(new Event("loadedmetadata"));window.__resetMonitorAppState("video");video.dispatchEvent(new Event("loadedmetadata"));report.steps.reset={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),src:video.src,time:fakeTime,active:[downtown.classList.contains("active"),rose.classList.contains("active"),butterfly.classList.contains("active")]};
     monitor.classList.add("show-caps");window.__openMonitorApp("video");downtown.click();document.getElementById("tumbala-song-audio").dispatchEvent(new Event("play"));report.steps.song={closed:!monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view")};
@@ -88,14 +88,15 @@ check(s.butterfly && s.butterfly.track === "butterfly" && /art\/rainbow-butterfl
   "the butterfly card opens its own player at the beginning", s.butterfly);
 check(s.roseReturned && s.roseReturned.track === "rose" && /art\/monamielarose\.mp4$/.test(s.roseReturned.src) && s.roseReturned.time === 7.25,
   "returning through the chooser restores each film's independent playhead", s.roseReturned);
-check(s.reopened && s.reopened.open && s.reopened.view === "chooser" && s.reopened.track === "rose" && s.reopened.active,
-  "Dismiss/reopen returns to the chooser while retaining the selected film", s.reopened);
+check(s.reopened && s.reopened.open && s.reopened.view === "player" && s.reopened.track === "rose" && s.reopened.active &&
+  s.reopened.paused && s.reopened.time === 7.25 && /art\/monamielarose\.mp4$/.test(s.reopened.src),
+  "Dismiss/reopen restores the paused player at its retained playhead", s.reopened);
 check(s.escape && s.escape.back.open && s.escape.back.view === "chooser" && s.escape.closed,
   "Escape follows player Back first, then closes Video from the chooser", s.escape);
 check(s.reset && !s.reset.open && s.reset.view === "chooser" && s.reset.track === "downtown" && /art\/downtown-dance\.mp4$/.test(s.reset.src) && s.reset.time > 0 && s.reset.time < .01 && JSON.stringify(s.reset.active) === JSON.stringify([true,false,false]),
   "Kill/reset closes Video, restores the chooser, selects Downtown, and rewinds every film", s.reset);
-check(s.song && s.song.closed && s.song.view === "chooser",
-  "starting a song closes the player fully rather than taking its Back path", s.song);
+check(s.song && s.song.closed && s.song.view === "player",
+  "starting a song backgrounds the retained player without taking its Back path", s.song);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

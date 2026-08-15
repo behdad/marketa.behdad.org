@@ -81285,6 +81285,9 @@ setOfficeProgress("pc", false);
     }
   }
   function videoPlaying() { return !!(vidEl && !vidEl.paused && !vidEl.ended); }
+  function videoMasterVolume(level) {
+    return window.__cinemaVolumeForSiteLevel ? window.__cinemaVolumeForSiteLevel(level) : level;
+  }
   function syncVideoPlayback(reason, source) {
     var playing = videoPlaying();
     if (playing === lastVideoPlaying) return false;
@@ -82181,7 +82184,8 @@ setOfficeProgress("pc", false);
       if (vidEl.paused) {
         for (var i = 0; i < songAudios.length; i++) { var a = songAudios[i]; if (a && !a.paused) a.pause(); } // the film takes the speakers
         var ctrlVol = window.__vidCtrlVolume ? window.__vidCtrlVolume() : null; // control-strip override once the visitor touches its slider
-        vidEl.volume = (ctrlVol != null) ? ctrlVol : (window.__songVolume ? window.__songVolume() : 0.5); // otherwise app-owned level, same defensive reapply as every other play trigger
+        var masterVol = window.__songVolume ? window.__songVolume() : 0.5;
+        vidEl.volume = (ctrlVol != null) ? ctrlVol : videoMasterVolume(masterVol); // foreground films share Cinema's perceptual lift; a touched local slider stays direct
         var p = vidEl.play(); if (p && p.catch) p.catch(function (e) { console.warn("[video-app] play() rejected:", e); });
       } else vidEl.pause();
     } catch (e) {}
@@ -83378,7 +83382,8 @@ setOfficeProgress("pc", false);
       // the page/monitor volume button cycled: the film follows and the master rules
       // again — the slider only overrides until the next master cycle
       userVol = null;
-      try { vidEl.volume = level; vidEl.muted = (level === 0); } catch (err) {}
+      var mapped = videoMasterVolume(level);
+      try { vidEl.volume = mapped; vidEl.muted = (mapped === 0); } catch (err) {}
       paintVol();
     };
     // nothing on the strip reaches the wrap (its tap toggles play/pause) or the room (pan)

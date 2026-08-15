@@ -74,10 +74,12 @@ their volume controls never double-scale:
 **Volume model (by design):** the in-scene volume **button** controls music/beds and the
 active cross-origin Cinema film (`__songVolume`), so you can turn program audio down to
 hear SFX. The public **`loft.volume.set()`** master (`__audioMaster`) is the god-knob over
-everything (SFX master + folded into `__songVolume`, including Vimeo). Vimeo alone gets
-a smooth perceptual lift after that shared level: mute remains exactly 0, site 0.15 maps
-to about 0.35, site 0.4 to about 0.55, and full remains 1. Other sources keep their
-existing linear levels. Overall level is otherwise the device's job. The headphone-mode
+everything (SFX master + folded into `__songVolume`, including foreground films). Cinema's
+Vimeo player and the monitor Video app get the same smooth perceptual lift after that shared
+level: mute remains exactly 0, site 0.15 maps to about 0.35, site 0.4 to about 0.55, and full
+remains 1. Video's local continuous slider stays direct; using a shared volume button takes
+control back and reapplies the lifted site level. Other sources keep their existing linear
+levels. Overall level is otherwise the device's job. The headphone-mode
 filter (bass shelf + lowpass) lives only in the song pipeline — music-only, deliberately
 not applied to SFX/beds or Vimeo.
 

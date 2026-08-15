@@ -24,7 +24,7 @@ var HARNESS = String.raw`
     report.steps.initial={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.getAttribute("src")||"",title:chooserTitle,titleCs:chooserTitleCs,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,titles:[downtown,rose,butterfly].map(function(card){return card.querySelector(".vid-choice-label").textContent;}),art:[downtown,rose,butterfly].map(function(card){var svg=card.querySelector("svg.vid-choice-art");return{svg:!!svg,viewBox:svg&&svg.getAttribute("viewBox"),marks:svg&&svg.querySelectorAll("path,circle,rect,ellipse").length};}),active:[downtown.classList.contains("active"),rose.classList.contains("active"),butterfly.classList.contains("active")],back:controlState(back),fullscreen:controlState(fullscreen),close:controlState(close)};
     downtown.click();video.dispatchEvent(new Event("loadedmetadata"));await sleep(30);
     var bs=controlState(back),fs=controlState(fullscreen),xs=controlState(close),stageRect=stage.getBoundingClientRect();
-    report.steps.player={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.src,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,stageSize:[stageRect.width,stageRect.height],controls:{back:bs,fullscreen:fs,close:xs},ordered:bs.left<fs.left&&fs.left<xs.left,distinct:bs.path!==fs.path&&fs.path!==xs.path};
+    report.steps.player={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.src,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,stageSize:[stageRect.width,stageRect.height],videoPointer:getComputedStyle(video).pointerEvents,controls:{back:bs,fullscreen:fs,close:xs},ordered:bs.left<fs.left&&fs.left<xs.left,distinct:bs.path!==fs.path&&fs.path!==xs.path};
     fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(20);report.steps.fullscreen={requested:fullscreenRequested};
     video.play();await sleep(2700);
     report.steps.idle={wrap:wrap.classList.contains("ctrl-idle"),root:root.classList.contains("video-controls-idle"),strip:getComputedStyle(wrap.querySelector(".vid-ctrl")).pointerEvents,back:controlState(back).pointer,fullscreen:controlState(fullscreen).pointer,close:controlState(close).pointer};
@@ -69,6 +69,7 @@ check(s.initial && s.initial.back.pointer === "none" && s.initial.fullscreen.poi
   "chooser exposes only Dismiss", s.initial);
 check(s.player && s.player.view === "player" && s.player.rootView === "player" && /art\/downtown-dance\.mp4$/.test(s.player.src) &&
   s.player.chooser === "none" && s.player.stage !== "none" && s.player.stageSize[0] > 0 && s.player.stageSize[1] > 0 &&
+  s.player.videoPointer === "none" &&
   s.player.controls.back.pointer !== "none" && s.player.controls.fullscreen.pointer !== "none" && s.player.controls.close.pointer !== "none" &&
   s.player.ordered && s.player.distinct,
   "selecting a card opens a player with ordered Back, Fullscreen, and Dismiss controls", s.player);

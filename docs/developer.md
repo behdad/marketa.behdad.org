@@ -209,7 +209,10 @@ controls. Replaced media gets the final physical screen box; the Video app multi
 HTML chrome by the live monitor scale so the controls retain their ordinary-app size. A shared
 native-SVG Kill farewell temporarily parks the promoted live root back in that
 same `foreignObject` before its `death-*` class is applied, keeps promotion suppressed through the
-app's close/reset, then returns directly to the dock. Kill gags that animate the live app itself
+app's close/reset, then returns directly to the dock. The Shoot iframe is the exception: reparenting
+would reload Doom, Duke, or Quake, so its frozen browsing context stays mounted while the same native
+farewell is promoted into a separately scaled SVG above it; teardown happens only after the gag.
+Kill gags that animate the live app itself
 (Chat, Classics, and Pac-Man) retain promotion instead. Keep overlay fitting, stacking, Calendar
 paint, runtime identity, the clipped Kill raster, and the mobile zoom handoff covered by the focused
 monitor tests. The click completing a zoom gesture may be re-hit-tested onto the newly promoted

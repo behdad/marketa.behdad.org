@@ -17,6 +17,8 @@ const DEBUG_PORT = 11000 + Math.floor(Math.random() * 500);
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), "monitor-kill-paint-"));
 const CHROME = process.env.CHROME_BIN || "google-chrome";
 const CAPTURE_DIR = process.env.WEDDING_KILL_CAPTURE_DIR || "";
+const VIEWPORT_WIDTH = Number(process.env.WEDDING_KILL_WIDTH) || 1100;
+const VIEWPORT_HEIGHT = Number(process.env.WEDDING_KILL_HEIGHT) || 900;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 if (CAPTURE_DIR) fs.mkdirSync(CAPTURE_DIR, { recursive: true });
 
@@ -58,7 +60,7 @@ const chrome = spawn(CHROME, [
   "--headless=new", "--disable-gpu", "--no-sandbox", "--mute-audio",
   "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
   "--remote-debugging-port=" + DEBUG_PORT, "--user-data-dir=" + PROFILE,
-  "--window-size=1100,900", "--hide-scrollbars", "about:blank"
+  "--window-size=" + VIEWPORT_WIDTH + "," + VIEWPORT_HEIGHT, "--hide-scrollbars", "about:blank"
 ], { stdio: "ignore" });
 
 const get = pathname => new Promise((resolve, reject) => {
@@ -172,7 +174,7 @@ try {
   };
   await send("Page.enable");
   await send("Runtime.enable");
-  await send("Emulation.setDeviceMetricsOverride", { width: 1100, height: 900, deviceScaleFactor: 1, mobile: false });
+  if (VIEWPORT_WIDTH >= 760) await send("Emulation.setDeviceMetricsOverride", { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT, deviceScaleFactor: 1, mobile: false });
   await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
   const url = "http://127.0.0.1:" + SITE_PORT + "/loft-day.html?monitor-kill-paint=" + Date.now();
   await send("Page.navigate", { url });
@@ -200,12 +202,14 @@ try {
     window.__lxRunning=function(){return true;};window.__killPaintTrusted=[];
     document.addEventListener("contextmenu",function(event){window.__killPaintTrusted.push(["contextmenu",event.isTrusted]);},true);
     document.addEventListener("click",function(event){if(event.target&&event.target.closest&&event.target.closest(".ctx-kill,.cc-kill"))window.__killPaintTrusted.push(["kill",event.isTrusted]);},true);
-    window.__monitorZoomIn();
   })()`);
-  await sleep(180);
+  await sleep(850);
+  await evaluate("window.__monitorZoomIn()");
+  await sleep(800);
 
   async function screenshot(clip, label) {
-    const shot = await send("Page.captureScreenshot", { format: "png", clip, captureBeyondViewport: false });
+    const shot = await send("Page.captureScreenshot", { format: "png", clip, captureBeyondViewport: true });
+    if (!shot.data) throw new Error("screenshot failed: " + JSON.stringify({ clip, shot }));
     if (CAPTURE_DIR && label) fs.writeFileSync(path.join(CAPTURE_DIR, label + ".png"), Buffer.from(shot.data, "base64"));
     return decodePng(shot.data);
   }
@@ -225,6 +229,63 @@ try {
       await sleep(100);
     }
   }
+
+  async function auditLiveShooterKill(name, route, q3Mode) {
+    await evaluate(`(function(){
+      window.__openMonitorApp(${JSON.stringify(route)});
+      var frame=document.querySelector("#monitor-shoot-host iframe");
+      if(frame&&${JSON.stringify(!q3Mode)})frame.srcdoc="<!doctype html><style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#14253a;color:#fff;font:700 8vw sans-serif;display:grid;place-items:center}</style><div>${name} runtime</div>";
+    })()`);
+    for (let i = 0; i < 60; i++) {
+      const ready = await evaluate(`(function(){var f=document.querySelector("#monitor-shoot-host iframe");return!!(f&&f.contentDocument&&f.contentDocument.body&&(${JSON.stringify(!q3Mode)}||f.contentDocument.getElementById("arena-picker")));})()`);
+      if (ready) break;
+      await sleep(50);
+    }
+    if (q3Mode === "running") await evaluate(`(function(){var d=document.querySelector("#monitor-shoot-host iframe").contentDocument,p=d.getElementById("arena-picker"),c=d.getElementById("canvas");p.hidden=true;c.style.background="linear-gradient(135deg,#19375d,#711f1f)";})()`);
+    const before = await evaluate(`(function(){
+      var frame=document.querySelector("#monitor-shoot-host iframe"),screen=document.getElementById("monitor-zoom-box").getBoundingClientRect(),r=frame.getBoundingClientRect();
+      window.__shootKillFrame=frame;window.__shootKillDocument=frame.contentDocument;frame.contentWindow.__shootKillMarker=${JSON.stringify(name + ":" + (q3Mode || "runtime"))};
+      return{frame:{left:r.left,top:r.top,width:r.width,height:r.height},clip:{x:screen.left,y:screen.top,width:screen.width,height:screen.height,scale:1},
+        picker:${JSON.stringify(!!q3Mode)}?{hidden:frame.contentDocument.getElementById("arena-picker").hidden,text:frame.contentDocument.getElementById("arena-picker").textContent.trim().slice(0,12)}:null};
+    })()`);
+    if (!before.clip.width || !before.clip.height) throw new Error("monitor screen has no mobile paint box: " + JSON.stringify(before));
+    const beforeRaster = await screenshot(before.clip, "shoot-" + name.toLowerCase().replaceAll(" ", "-") + "-" + (q3Mode || "runtime") + "-before");
+    await evaluate("window.__killMonitorDoom()");
+    await sleep(220);
+    const during = await evaluate(`(function(){
+      var frame=document.querySelector("#monitor-shoot-host iframe"),state=window.__monitorHtmlOverlayState(),r=frame&&frame.getBoundingClientRect(),
+        screen=document.getElementById("monitor-zoom-box").getBoundingClientRect(),fx=document.getElementById("monitor-fatality"),word=document.getElementById("monitor-fatality-word"),wr=word.getBoundingClientRect();
+      return{sameFrame:frame===window.__shootKillFrame,sameDocument:!!frame&&frame.contentDocument===window.__shootKillDocument,
+        marker:frame&&frame.contentWindow.__shootKillMarker,active:state.active,roots:state.roots,death:state.deathPaint,
+        rootOverlay:!!document.getElementById("monitor-doom-wrap").closest("#monitor-html-overlay"),deathParent:document.getElementById("monitor-deathfx").parentNode.id,
+        opacity:Number(getComputedStyle(fx).opacity),frame:r&&{left:r.left,top:r.top,width:r.width,height:r.height},
+        word:{width:wr.width,height:wr.height},screen:{width:screen.width,height:screen.height},
+        picker:${JSON.stringify(!!q3Mode)}&&frame?{hidden:frame.contentDocument.getElementById("arena-picker").hidden,text:frame.contentDocument.getElementById("arena-picker").textContent.trim().slice(0,12)}:null};
+    })()`);
+    const duringRaster = await screenshot(before.clip, "shoot-" + name.toLowerCase().replaceAll(" ", "-") + "-" + (q3Mode || "runtime") + "-kill");
+    const geometryDelta = during.frame ? Math.max(Math.abs(during.frame.left - before.frame.left), Math.abs(during.frame.top - before.frame.top),
+      Math.abs(during.frame.width - before.frame.width), Math.abs(during.frame.height - before.frame.height)) : 999;
+    const raster = rasterDifference(beforeRaster, duringRaster);
+    check(during.sameFrame && during.sameDocument && during.marker === name + ":" + (q3Mode || "runtime") &&
+        during.active && during.roots.includes("monitor-doom-wrap") && during.rootOverlay && geometryDelta <= 0.75,
+      name + " Kill freezes the exact live browsing context without reloading or rescaling it", { before, during, geometryDelta });
+    check(during.death && during.death.effect === "monitor-fatality" && during.death.promoted &&
+        during.deathParent === "monitor-html-overlay-death" && during.opacity > .99 &&
+        during.word.width > during.screen.width * .25 && during.word.width < during.screen.width * .95 && raster.ratio > .02,
+      name + " Kill paints the authored Fatality above the retained runtime", { during, raster });
+    if (q3Mode) check(during.picker && before.picker && during.picker.hidden === before.picker.hidden && during.picker.text === before.picker.text,
+      "Quake III " + q3Mode + " view stays behind Fatality instead of resetting to a scaled chooser", { before: before.picker, during: during.picker });
+    await evaluate("if(window.__deathFlashCleanup)window.__deathFlashCleanup()");
+    await sleep(100);
+    const after = await evaluate(`(function(){var s=window.__shootState(),o=window.__monitorHtmlOverlayState();return{open:s.open,iframe:s.iframe,death:o.deathPaint,roots:o.roots,parent:document.getElementById("monitor-deathfx").parentNode.id};})()`);
+    check(!after.open && !after.iframe && !after.death && after.roots.join(",") === "dock-grid" && after.parent === "office-monitor-screen-content",
+      name + " tears down only after Fatality and returns directly to the dock", after);
+  }
+
+  await auditLiveShooterKill("Doom", "doom", "");
+  await auditLiveShooterKill("Duke", "duke", "");
+  await auditLiveShooterKill("Quake III selector", "quake", "selector");
+  await auditLiveShooterKill("Quake III running", "quake", "running");
 
   // Photobooth is the one app whose normal launch has three distinct paint owners:
   // the promoted desktop tile, the canonical SVG consent panel, then a live promoted

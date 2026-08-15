@@ -2924,6 +2924,8 @@ html.mir-party .hunt-viewport.bedroom-room-open #bedroom-party-coats{pointer-eve
 .monitor-html-layer{position:absolute;box-sizing:border-box;overflow:hidden}
 .monitor-html-layer > *{display:block}
 .monitor-html-layer.monitor-html-layer-physical > *{width:100%!important;height:100%!important}
+#monitor-html-overlay-death-scale{position:absolute;left:0;top:0;width:124px;height:42px;overflow:visible;pointer-events:none;transform-origin:0 0}
+#monitor-html-overlay-death{display:block;width:124px;height:42px;overflow:visible;pointer-events:none}
 #monitor-html-overlay .console-caret{width:calc(1px * var(--monitor-overlay-inv-scale))}
 #monitor-html-overlay-controls{position:absolute;inset:0;width:124px;height:42px;overflow:visible;pointer-events:none}
 #monitor-html-overlay-controls > g{pointer-events:auto}
@@ -8778,8 +8780,7 @@ html.mir-uv #prince-dungeon-set.gate-secret-peek #prince-dungeon-secret-light{
    flash. 2 classes beat the 1-class show rules, order-independently; auto-restores when death-browser clears. */
 #office-monitor.show-browser.death-browser #monitor-browser,
 #office-monitor.show-browser.death-browser .bezel-nav{opacity:0; pointer-events:none}
-.fatality-wrap{width:124px; height:42px; display:flex; align-items:center; justify-content:center; overflow:hidden}
-.fatality-word{font-family:"Climate Crisis",Impact,sans-serif; color:#e11414; font-size:12.5px; line-height:1; letter-spacing:.2px; white-space:nowrap; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
+.fatality-word{font-family:"Climate Crisis",Impact,sans-serif; fill:#e11414; font-size:12.5px; letter-spacing:.2px; text-shadow:0 0 3px rgba(255,44,44,.55); font-variation-settings:"YEAR" 1979} /* YEAR animated inline 1979→2050 = the melt; this is the fallback */
 /* Intro "CLICK ME!" — a big melting invitation overlaid on the game scene while the opening
    prompt shows. It is an interaction shield, matching the saved-game gate's translucent paper:
    the first scene tap dismisses the invitation without reaching an object underneath. YEAR is
@@ -28069,9 +28070,7 @@ section{margin:1.9rem 0}
      its YEAR axis driven 1979→2050 so the word erodes away; a red wash lets the kill read through. -->
 <g id="monitor-fatality">
 <rect x="254" y="154" width="124" height="42" fill="#1a0000" fill-opacity="0.7"/>
-<foreignObject x="254" y="154" width="124" height="42">
-<div xmlns="http://www.w3.org/1999/xhtml" class="fatality-wrap"><span class="fatality-word" id="monitor-fatality-word">FATALITY</span></div>
-</foreignObject>
+<text class="fatality-word" id="monitor-fatality-word" x="316" y="175" text-anchor="middle" dominant-baseline="central">FATALITY</text>
 </g>
 <g id="monitor-snake-farewell">
 <rect x="254" y="154" width="124" height="42" fill="#172d96"/>
@@ -32954,6 +32953,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <div id="monitor-html-overlay">
       <div id="monitor-html-overlay-scale">
         <svg id="monitor-html-overlay-controls" viewBox="254 154 124 42" preserveAspectRatio="none"></svg>
+      </div>
+      <div id="monitor-html-overlay-death-scale">
+        <svg id="monitor-html-overlay-death" viewBox="254 154 124 42" preserveAspectRatio="none"></svg>
       </div>
     </div>
     <div id="bathroom-room" hidden>
@@ -90629,7 +90631,9 @@ def colormode(mode=None):
   var host = document.getElementById("monitor-html-overlay");
   var scaleRoot = document.getElementById("monitor-html-overlay-scale");
   var controls = document.getElementById("monitor-html-overlay-controls");
-  if (!monitor || !screenContent || !screenBox || !viewport || !host || !scaleRoot || !controls) return;
+  var deathScale = document.getElementById("monitor-html-overlay-death-scale");
+  var deathControls = document.getElementById("monitor-html-overlay-death");
+  if (!monitor || !screenContent || !screenBox || !viewport || !host || !scaleRoot || !controls || !deathScale || !deathControls) return;
 
   // Empty by design at launch: canvas, video and iframe roots are safer in ordinary DOM
   // too, and retain their live runtime when their actual node is moved. Add only a root id
@@ -90659,7 +90663,7 @@ def colormode(mode=None):
     "death-video": "monitor-video-farewell",
     "death-weather": "monitor-weather-farewell"
   });
-  var active = null, ownerObserver = null, syncQueued = false, parkedFocus = null, deathPaintClass = "";
+  var active = null, ownerObserver = null, syncQueued = false, parkedFocus = null, deathPaintClass = "", deathPaintPromotion = null;
   var metrics = { mounts: 0, restores: 0, fits: 0, geometryReads: 0, lastMountMs: 0, maxMountMs: 0 };
 
   // The promoted SVG owner is no longer below #office-monitor, so reproduce only the
@@ -90724,7 +90728,7 @@ def colormode(mode=None):
     // Lock, Sleep, Reboot, and Shutdown are native, screen-sized system takeovers.
     // No promoted app/dock/toolbar owner may composite above them; the mutation observer
     // restores the exact live nodes here and remounts them only after takeover recovery.
-    if (deathPaintClass || monitor.matches(".monitor-locked,.monitor-sleeping,.power-rebooting,.power-shutting-down")) return [];
+    if ((deathPaintClass && !deathPaintPromotion) || monitor.matches(".monitor-locked,.monitor-sleeping,.power-rebooting,.power-shutting-down")) return [];
     var out = [], fos = Array.prototype.slice.call(screenContent.querySelectorAll("foreignObject"));
     controls.querySelectorAll("foreignObject").forEach(function (fo) {
       if (fos.indexOf(fo) === -1) fos.push(fo);
@@ -90834,6 +90838,7 @@ def colormode(mode=None):
     scaleRoot.style.height = (physicalSurface ? r.height : 42) + "px";
     controls.style.width = (physicalSurface ? r.width : 124) + "px";
     controls.style.height = (physicalSurface ? r.height : 42) + "px";
+    deathScale.style.zoom = scale;
     active.entries.forEach(function (entry) {
       var unit = physicalSurface ? scale : 1;
       entry.layer.classList.toggle("monitor-html-layer-physical", physicalMedia &&
@@ -90853,8 +90858,15 @@ def colormode(mode=None):
     };
     return true;
   }
+  function restorePromotedDeathEffect() {
+    if (!deathPaintPromotion) return;
+    var promotion = deathPaintPromotion;
+    deathPaintPromotion = null;
+    if (promotion.placeholder.parentNode) promotion.placeholder.parentNode.replaceChild(promotion.effect, promotion.placeholder);
+  }
   function restore() {
     if (!active) return;
+    restorePromotedDeathEffect();
     var snapshot = focusSnapshot(), previous = active;
     if (focusOwned(snapshot, previous.entries)) parkedFocus = snapshot;
     host.classList.remove("active");
@@ -90981,11 +90993,27 @@ def colormode(mode=None):
   window.__monitorHtmlOverlayParkDeath = function (screenClass) {
     if (!NATIVE_DEATH_EFFECTS[screenClass]) return false;
     deathPaintClass = screenClass;
+    // A shooter iframe reloads when its live root crosses the foreignObject boundary.
+    // Keep Doom, Duke, and Quake mounted and frozen; scale the existing native farewell
+    // in a sibling SVG above the physical runtime until close removes the iframe.
+    var liveShooter = screenClass === "death-doom" && active && active.entries.some(function (entry) {
+      return entry.root.id === "monitor-doom-wrap" && !!entry.root.querySelector("iframe");
+    });
+    var effect = document.getElementById("monitor-deathfx");
+    if (liveShooter && effect && effect.parentNode) {
+      var placeholder = document.createComment("monitor-deathfx-home");
+      effect.parentNode.replaceChild(placeholder, effect);
+      deathControls.appendChild(effect);
+      deathPaintPromotion = { effect: effect, placeholder: placeholder };
+      fit();
+      return true;
+    }
     restore();
     return true;
   };
   window.__monitorHtmlOverlayReleaseDeath = function (screenClass) {
     if (deathPaintClass !== screenClass) return false;
+    restorePromotedDeathEffect();
     deathPaintClass = "";
     scheduleSync();
     return true;
@@ -91015,7 +91043,7 @@ def colormode(mode=None):
       policy: "overlay-by-default",
       supported: supported.sort(),
       denied: DENY_ROOT_IDS.slice(),
-      deathPaint: deathPaintClass ? { screenClass: deathPaintClass, effect: NATIVE_DEATH_EFFECTS[deathPaintClass] } : null,
+      deathPaint: deathPaintClass ? { screenClass: deathPaintClass, effect: NATIVE_DEATH_EFFECTS[deathPaintClass], promoted: !!deathPaintPromotion } : null,
       metrics: Object.assign({}, metrics)
     };
   };

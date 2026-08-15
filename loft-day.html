@@ -3075,9 +3075,6 @@ html.is-webkit #monitor-html-overlay .dock-app:active .dock-tile{transform:scale
 }
 /* the media controls (volume/play/next) sit at the BOTTOM of the right rail now */
 #hunt-side{top:auto; bottom:0}
-/* The focused monitor player is the attended transport. Hide the page-level duplicate
-   rail without changing its retained playback state or the rail's reserved geometry. */
-#hunt-fullscreen-area.monitor-music-focused #hunt-side{visibility:hidden;pointer-events:none}
 .hunt-fullscreen-btn{
   flex:0 0 auto; font:inherit; font-size:1rem; line-height:1;
   width:1.9rem; height:1.9rem; padding:0; border-radius:50%; border:1.5px solid var(--wine);
@@ -91292,13 +91289,6 @@ def colormode(mode=None):
   var monitorContentFullscreen = false;
   var monitorIntentUntil = 0; // a dark-screen tap declares attention before boot makes zoom eligible
   var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
-  function syncMonitorMusicFocus() {
-    if (fullscreenArea) fullscreenArea.classList.toggle("monitor-music-focused",
-      zoomEl === monitor && monitor.classList.contains("show-nowplaying"));
-  }
-  if (window.MutationObserver) new MutationObserver(syncMonitorMusicFocus).observe(monitor, {
-    attributes: true, attributeFilter: ["class"]
-  });
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
   // "not zoomed enough, not centered"); laptop zoom is lid-driven: only while open
@@ -91342,7 +91332,6 @@ def colormode(mode=None):
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
     if (zoomEl === monitor && el !== monitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     zoomEl = el;
-    syncMonitorMusicFocus();
     if (el === monitor) monitorIntentUntil = 0;
     lastZoomPose = "";
     vp.classList.add("device-zoomed");
@@ -91365,7 +91354,6 @@ def colormode(mode=None):
     if (zoomEl === monitor) monitorIntentUntil = 0;
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
-    syncMonitorMusicFocus();
     monitorContentFullscreen = false;
     monitor.classList.remove("monitor-content-fullscreen");
     if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");
@@ -91401,7 +91389,6 @@ def colormode(mode=None):
     if (monitor) monitor.classList.remove("dev-zoomed");
     if (laptop) laptop.classList.remove("dev-zoomed");
     zoomEl = null; lastZoomPose = "";
-    syncMonitorMusicFocus();
     monitorContentFullscreen = false;
     monitor.classList.remove("monitor-content-fullscreen");
     if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");

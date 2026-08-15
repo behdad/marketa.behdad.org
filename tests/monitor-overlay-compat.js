@@ -62,9 +62,9 @@ if (result) {
       result.photobooth.error.card.width > 0 && result.photobooth.error.card.closeWidth > 0 &&
       result.photobooth.error.nested && result.photobooth.error.dismissed,
     "photobooth error is a dismissible dialog over its inert app surface", result.photobooth);
-  check(result.music.rail === "hidden" && result.music.transports === 3 && result.music.eqCount === 1 &&
+  check(result.music.rail === "visible" && result.music.transports === 3 && result.music.eqCount === 1 &&
       result.music.marquee !== "none" && result.music.retained,
-    "Music shows one transport/EQ owner and retains its player state across zoom cycles", result.music);
+    "Music keeps the shared page transport and retains its player state across zoom cycles", result.music);
   check(result.focus.classics.shift <= 0.1 && result.focus.classics.outline === "none" &&
       result.focus.shoot.backShift <= 0.1 && result.focus.shoot.backOutline === "none" &&
       result.focus.shoot.fullShift <= 0.1 && result.focus.shoot.fullOutline === "none",

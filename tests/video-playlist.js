@@ -14,17 +14,18 @@ var HARNESS = String.raw`
   function activate(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}
   function controlState(el){var s=getComputedStyle(el),r=el.getBoundingClientRect();return{opacity:Number(s.opacity),pointer:s.pointerEvents,left:r.left,right:r.right,path:el.querySelector("path").getAttribute("d")};}
   addEventListener("load",function(){setTimeout(async function(){try{
-    var monitor=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio"),video=document.getElementById("monitor-video-el"),wrap=document.getElementById("monitor-video-wrap"),root=document.getElementById("monitor-video"),stage=wrap.querySelector(".vid-stage"),chooser=wrap.querySelector(".vid-chooser"),downtown=wrap.querySelector("[data-video-track=downtown]"),rose=wrap.querySelector("[data-video-track=rose]"),butterfly=wrap.querySelector("[data-video-track=butterfly]"),back=document.getElementById("monitor-video-back"),fullscreen=document.getElementById("monitor-video-fullscreen"),close=document.getElementById("monitor-video-close");
-    tower.classList.add("on");monitor.classList.add("here","screen-on","show-caps");window.__openMonitorApp("video");
+    var monitor=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio"),video=document.getElementById("monitor-video-el"),wrap=document.getElementById("monitor-video-wrap"),root=document.getElementById("monitor-video"),stage=wrap.querySelector(".vid-stage"),chooser=wrap.querySelector(".vid-chooser"),downtown=wrap.querySelector("[data-video-track=downtown]"),rose=wrap.querySelector("[data-video-track=rose]"),butterfly=wrap.querySelector("[data-video-track=butterfly]"),back=document.getElementById("monitor-video-back"),fullscreen=document.getElementById("monitor-video-fullscreen"),close=document.getElementById("monitor-video-close"),pagePlay=document.getElementById("hunt-playpause-btn"),pageVolume=document.getElementById("hunt-volume-btn"),pageSkip=document.getElementById("hunt-skip-btn");
+    window.__currentStageName="office";tower.classList.add("on");monitor.classList.add("here","screen-on","show-caps");window.__openMonitorApp("video");
     var fakePaused=true,fakeEnded=false,fakeTime=0,playCalls=0,pauseCalls=0,fullscreenRequested=false;
     Object.defineProperty(video,"paused",{configurable:true,get:function(){return fakePaused;}});Object.defineProperty(video,"ended",{configurable:true,get:function(){return fakeEnded;}});Object.defineProperty(video,"duration",{configurable:true,get:function(){return 100;}});Object.defineProperty(video,"currentTime",{configurable:true,get:function(){return fakeTime;},set:function(v){fakeTime=Number(v)||0;}});
     video.play=function(){playCalls++;fakePaused=false;video.dispatchEvent(new Event("play"));return Promise.resolve();};video.pause=function(){pauseCalls++;fakePaused=true;video.dispatchEvent(new Event("pause"));};
     stage.requestFullscreen=function(){fullscreenRequested=true;return Promise.resolve();};
     var chooserTitle=wrap.querySelector(".vid-chooser-title").textContent;window.__setLang("cs");var chooserTitleCs=wrap.querySelector(".vid-chooser-title").textContent;window.__setLang("en");
     report.steps.initial={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.getAttribute("src")||"",title:chooserTitle,titleCs:chooserTitleCs,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,titles:[downtown,rose,butterfly].map(function(card){return card.querySelector(".vid-choice-label").textContent;}),art:[downtown,rose,butterfly].map(function(card){var svg=card.querySelector("svg.vid-choice-art");return{svg:!!svg,viewBox:svg&&svg.getAttribute("viewBox"),marks:svg&&svg.querySelectorAll("path,circle,rect,ellipse").length};}),active:[downtown.classList.contains("active"),rose.classList.contains("active"),butterfly.classList.contains("active")],back:controlState(back),fullscreen:controlState(fullscreen),close:controlState(close)};
-    downtown.click();video.dispatchEvent(new Event("loadedmetadata"));await sleep(30);
+    downtown.click();video.dispatchEvent(new Event("loadedmetadata"));await sleep(30);wrap.classList.remove("absent");window.__updatePlayPauseBtn();
     var bs=controlState(back),fs=controlState(fullscreen),xs=controlState(close),stageRect=stage.getBoundingClientRect();
     report.steps.player={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.src,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,stageSize:[stageRect.width,stageRect.height],videoPointer:getComputedStyle(video).pointerEvents,controls:{back:bs,fullscreen:fs,close:xs},ordered:bs.left<fs.left&&fs.left<xs.left,distinct:bs.path!==fs.path&&fs.path!==xs.path};
+    var volumeBefore=window.__songVolume();activate(pagePlay);await sleep(20);var pagePlaying={active:window.__videoTransportActive(),playing:window.__videoPlaying(),shown:pagePlay.classList.contains("shown"),paused:pagePlay.classList.contains("paused"),volumeShown:pageVolume.classList.contains("shown"),skipShown:pageSkip.classList.contains("shown")};activate(pageVolume);var volumeAfter=window.__songVolume();activate(pagePlay);await sleep(20);activate(pageSkip);var manualNext={track:window.__monitorVideoTrack(),paused:fakePaused};video.dispatchEvent(new Event("loadedmetadata"));window.__selectMonitorVideoTrack("downtown");video.dispatchEvent(new Event("loadedmetadata"));fakeEnded=true;video.dispatchEvent(new Event("ended"));var endedTrack=window.__monitorVideoTrack();fakeEnded=false;window.__currentStageName="kitchen";var hiddenTransport=window.__videoTransportActive();window.__currentStageName="office";window.__updatePlayPauseBtn();report.steps.pageChrome={playing:pagePlaying,paused:fakePaused,pausedIcon:pagePlay.classList.contains("paused"),volumeBefore:volumeBefore,volumeAfter:volumeAfter,videoVolume:video.volume,manualNext:manualNext,endedTrack:endedTrack,hiddenTransport:hiddenTransport};
     fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(20);report.steps.fullscreen={requested:fullscreenRequested};
     video.play();await sleep(2700);
     report.steps.idle={wrap:wrap.classList.contains("ctrl-idle"),root:root.classList.contains("video-controls-idle"),strip:getComputedStyle(wrap.querySelector(".vid-ctrl")).pointerEvents,back:controlState(back).pointer,fullscreen:controlState(fullscreen).pointer,close:controlState(close).pointer};
@@ -35,11 +36,11 @@ var HARNESS = String.raw`
     volume.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:802,pointerType:"mouse",isPrimary:true,button:0,buttons:1,clientX:vr.left+1,clientY:vr.top+vr.height/2}));window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:802,pointerType:"mouse",isPrimary:true,button:0,buttons:1,clientX:vr.right-1,clientY:vr.top+vr.height/2}));window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:802,pointerType:"mouse",isPrimary:true,button:0,clientX:vr.right-1,clientY:vr.top+vr.height/2}));
     report.steps.sliders={time:fakeTime,volume:window.__vidCtrlVolume(),seekWidth:sr.width,volumeWidth:vr.width};
     fakeTime=12.5;video.dispatchEvent(new Event("timeupdate"));back.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));
-    report.steps.back={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),paused:fakePaused,src:video.src};
+    report.steps.back={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),paused:fakePaused,src:video.src,transport:window.__videoTransportActive()};
     rose.click();video.dispatchEvent(new Event("loadedmetadata"));report.steps.rose={view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),src:video.src,time:fakeTime};video.play();fakeTime=7.25;video.dispatchEvent(new Event("timeupdate"));activate(back);
     butterfly.click();video.dispatchEvent(new Event("loadedmetadata"));report.steps.butterfly={track:window.__monitorVideoTrack(),src:video.src,time:fakeTime};activate(back);
     rose.click();video.dispatchEvent(new Event("loadedmetadata"));report.steps.roseReturned={track:window.__monitorVideoTrack(),src:video.src,time:fakeTime};
-    activate(close);monitor.classList.add("show-caps");window.__openMonitorApp("video");report.steps.reopened={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),active:rose.classList.contains("active"),time:fakeTime,paused:fakePaused,src:video.src};
+    activate(close);monitor.classList.add("show-caps");window.__openMonitorApp("video");report.steps.reopened={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),active:rose.classList.contains("active"),time:fakeTime,paused:fakePaused,src:video.src,transport:window.__videoTransportActive()};
     rose.click();video.dispatchEvent(new Event("loadedmetadata"));window.__closeTopMonitorApp(true);var escapedBack={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view")};window.__closeTopMonitorApp(true);report.steps.escape={back:escapedBack,closed:!monitor.classList.contains("show-video")};
     monitor.classList.add("show-caps");window.__openMonitorApp("video");butterfly.click();video.dispatchEvent(new Event("loadedmetadata"));window.__resetMonitorAppState("video");video.dispatchEvent(new Event("loadedmetadata"));report.steps.reset={open:monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view"),track:window.__monitorVideoTrack(),src:video.src,time:fakeTime,active:[downtown.classList.contains("active"),rose.classList.contains("active"),butterfly.classList.contains("active")]};
     monitor.classList.add("show-caps");window.__openMonitorApp("video");downtown.click();document.getElementById("tumbala-song-audio").dispatchEvent(new Event("play"));report.steps.song={closed:!monitor.classList.contains("show-video"),view:wrap.getAttribute("data-video-view")};
@@ -73,6 +74,13 @@ check(s.player && s.player.view === "player" && s.player.rootView === "player" &
   s.player.controls.back.pointer !== "none" && s.player.controls.fullscreen.pointer !== "none" && s.player.controls.close.pointer !== "none" &&
   s.player.ordered && s.player.distinct,
   "selecting a card opens a player with ordered Back, Fullscreen, and Dismiss controls", s.player);
+check(s.pageChrome && s.pageChrome.playing.active && s.pageChrome.playing.playing && s.pageChrome.playing.shown &&
+  !s.pageChrome.playing.paused && s.pageChrome.playing.volumeShown && s.pageChrome.playing.skipShown &&
+  s.pageChrome.paused && s.pageChrome.pausedIcon && s.pageChrome.volumeAfter !== s.pageChrome.volumeBefore &&
+  Math.abs(s.pageChrome.videoVolume - s.pageChrome.volumeAfter) < .001 &&
+  s.pageChrome.manualNext.track === "rose" && s.pageChrome.manualNext.paused && s.pageChrome.endedTrack === "downtown" &&
+  !s.pageChrome.hiddenTransport,
+  "page-side Play/Pause, Volume, and manual looping Next own the active Video player without auto-advance", s.pageChrome);
 check(s.fullscreen && s.fullscreen.requested, "Fullscreen targets the video player surface", s.fullscreen);
 check(s.idle && s.idle.wrap && s.idle.root && s.idle.strip === "none" && s.idle.back === "none" && s.idle.fullscreen === "none" && s.idle.close === "none",
   "playing idle hides the bottom strip and all three corner controls together", s.idle);
@@ -80,7 +88,7 @@ check(s.wake && !s.wake.wrap && !s.wake.root && s.wake.strip !== "none" && s.wak
   "pointer activity wakes the entire player chrome together", s.wake);
 check(s.sliders && s.sliders.seekWidth > 0 && s.sliders.volumeWidth > 0 && s.sliders.time > 80 && s.sliders.volume > .8,
   "mouse drags update seek and volume when pointer capture is unavailable", s.sliders);
-check(s.back && s.back.open && s.back.view === "chooser" && s.back.paused,
+check(s.back && s.back.open && s.back.view === "chooser" && s.back.paused && !s.back.transport,
   "Back pauses the film and returns to the chooser without closing Video", s.back);
 check(s.rose && s.rose.view === "player" && s.rose.track === "rose" && /art\/monamielarose\.mp4$/.test(s.rose.src) && s.rose.time > 0 && s.rose.time < .01,
   "the rose card opens its own player at the beginning", s.rose);
@@ -89,7 +97,7 @@ check(s.butterfly && s.butterfly.track === "butterfly" && /art\/rainbow-butterfl
 check(s.roseReturned && s.roseReturned.track === "rose" && /art\/monamielarose\.mp4$/.test(s.roseReturned.src) && s.roseReturned.time === 7.25,
   "returning through the chooser restores each film's independent playhead", s.roseReturned);
 check(s.reopened && s.reopened.open && s.reopened.view === "player" && s.reopened.track === "rose" && s.reopened.active &&
-  s.reopened.paused && s.reopened.time === 7.25 && /art\/monamielarose\.mp4$/.test(s.reopened.src),
+  s.reopened.paused && s.reopened.time === 7.25 && s.reopened.transport && /art\/monamielarose\.mp4$/.test(s.reopened.src),
   "Dismiss/reopen restores the paused player at its retained playhead", s.reopened);
 check(s.escape && s.escape.back.open && s.escape.back.view === "chooser" && s.escape.closed,
   "Escape follows player Back first, then closes Video from the chooser", s.escape);

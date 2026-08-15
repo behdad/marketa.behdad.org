@@ -81223,12 +81223,20 @@ setOfficeProgress("pc", false);
     if (vidWrap) vidWrap.classList.toggle("ctrl-idle", !!idle);
     if (vidRoot) vidRoot.classList.toggle("video-controls-idle", !!idle);
   }
+  function videoOwnsPageTransport() {
+    return !!(window.__currentStageName === "office" && monitor && monitor.classList.contains("show-video") && vidView === "player" &&
+      vidWrap && !vidWrap.classList.contains("absent"));
+  }
+  function syncVideoPageChrome() {
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
   function setVideoView(view) {
     vidView = view === "player" ? "player" : "chooser";
     if (vidRoot) vidRoot.setAttribute("data-video-view", vidView);
     if (vidWrap) vidWrap.setAttribute("data-video-view", vidView);
     setVideoControlsIdle(false);
     if (window.__monitorHtmlOverlayFit) window.__monitorHtmlOverlayFit();
+    syncVideoPageChrome();
   }
   function paintVideoPicker() {
     if (!vidWrap) return;
@@ -81340,6 +81348,7 @@ setOfficeProgress("pc", false);
     exitVideoFullscreen();
     setVideoControlsIdle(false);
     monitor.classList.remove("show-video");
+    syncVideoPageChrome();
     scheduleSaver();
   }
   window.__closeMonitorVideo = closeVideoApp; // other monitor apps close the film before taking the screen
@@ -81609,6 +81618,18 @@ setOfficeProgress("pc", false);
   window.__pauseMonitorVideo = pauseVideoApp; // room-leave hook: pause playback without closing the app view
   window.__toggleMonitorVideo = toggleVideoApp; // the space key drives the film while its app is up
   window.__videoPlaying = videoPlaying;
+  window.__videoTransportActive = videoOwnsPageTransport;
+  window.__toggleMonitorVideoPlayback = function () {
+    if (!videoOwnsPageTransport()) return false;
+    toggleVideoApp();
+    return true;
+  };
+  window.__skipMonitorVideo = function (step) {
+    if (!videoOwnsPageTransport()) return false;
+    var direction = Number(step) < 0 ? -1 : 1;
+    var next = (vidTrackIndex + direction + VIDEO_TRACKS.length) % VIDEO_TRACKS.length;
+    return selectVideoTrack(VIDEO_TRACKS[next].id);
+  };
   window.__selectMonitorVideoTrack = selectVideoTrack;
   window.__monitorVideoTrack = function () { return currentVideoTrack().id; };
   window.__syncLoftVideoState = syncVideoPlayback;
@@ -82166,19 +82187,21 @@ setOfficeProgress("pc", false);
     } catch (e) {}
   }
   if (vidEl && vidWrap) {
-    vidEl.addEventListener("error", function () { vidWrap.classList.add("absent"); }); // 404/undecodable → the note takes the screen
+    vidEl.addEventListener("error", function () { vidWrap.classList.add("absent"); syncVideoPageChrome(); }); // 404/undecodable → the note takes the screen
     vidEl.addEventListener("loadedmetadata", function () {
       vidWrap.classList.remove("absent");
       try { vidEl.currentTime = vidTrackTimes[vidTrackIndex] || 0.001; } catch (e) {} // restore this film's playhead; nudge zero so its first frame paints
+      syncVideoPageChrome();
     });
     vidEl.addEventListener("timeupdate", rememberVideoTime);
     vidEl.addEventListener("play", function () {
       vidWrap.classList.remove("paused");
       syncVideoPlayback("play", "ui");
+      syncVideoPageChrome();
       try { if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: currentVideoTrack().title, artist: "markéta" }); } catch (e) {}
     });
-    vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); syncVideoPlayback("pause", "ui"); });
-    vidEl.addEventListener("ended", function () { vidWrap.classList.add("paused"); syncVideoPlayback("ended", "internal"); });
+    vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); syncVideoPlayback("pause", "ui"); syncVideoPageChrome(); });
+    vidEl.addEventListener("ended", function () { vidWrap.classList.add("paused"); syncVideoPlayback("ended", "internal"); syncVideoPageChrome(); });
     // a song starting (spacebar, headphones, garden instruments…) takes the screen for the
     // player — close the film so it never keeps playing (or lingering) underneath
     songAudios.forEach(function (a) { if (a) a.addEventListener("play", function () { closeVideoApp(false); }); });
@@ -88478,6 +88501,8 @@ def colormode(mode=None):
   function toggleMusicPlayback() {
     if (!(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) &&
         window.__toggleEntranceRoadtripTransport && window.__toggleEntranceRoadtripTransport()) return;
+    if (window.__videoTransportActive && window.__videoTransportActive() &&
+        window.__toggleMonitorVideoPlayback && window.__toggleMonitorVideoPlayback()) return;
     var sources = transportSources();
     var playing = sources.filter(function (s) { return s.isPlaying(); });
     if (playing.length) {
@@ -88612,6 +88637,15 @@ def colormode(mode=None):
       btn.classList.toggle("paused", !!roadtripTransport.paused);
       return;
     }
+    if (window.__videoTransportActive && window.__videoTransportActive()) {
+      btn.classList.add("shown");
+      btn.classList.toggle("paused", !(window.__videoPlaying && window.__videoPlaying()));
+      var videoVolumeBtn = document.getElementById("hunt-volume-btn");
+      if (videoVolumeBtn) videoVolumeBtn.classList.add("shown");
+      var videoSkipBtn = document.getElementById("hunt-skip-btn");
+      if (videoSkipBtn) videoSkipBtn.classList.add("shown");
+      return;
+    }
     var ws = document.getElementById("cuddly-wallscreen");
     var bedGatedOn = (ws && (ws.classList.contains("chan-coffee") || ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") || ws.classList.contains("chan-totoro") || ws.classList.contains("chan-aqua"))) || !!window.__gardenPartyOn;
     var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress
@@ -88638,6 +88672,8 @@ def colormode(mode=None):
   // screen's own cycle still includes off, but a media-next wraps past off to the first
   // seasonal program.
   window.__skipCurrentMusic = function () {
+    if (window.__videoTransportActive && window.__videoTransportActive() &&
+        window.__skipMonitorVideo && window.__skipMonitorVideo(1)) return true;
     var projectorChannel = window.__cuddlyProjector && window.__cuddlyProjector.channel && window.__cuddlyProjector.channel();
     if (projectorChannel === "stars" && window.__starsPlaying && window.__starsPlaying() && window.__skipStarsPiece) {
       window.__skipStarsPiece();

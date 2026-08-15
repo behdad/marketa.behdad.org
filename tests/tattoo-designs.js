@@ -38,7 +38,7 @@ var harness = [
   'async function run(){',
   ' window.__setLang("en");var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");window.__goToStage("office");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__openMonitorApp("tattoo");await sleep(100);',
   ' var cells=[].slice.call(document.querySelectorAll(".tattoo-cell")),thumbs=[].slice.call(document.querySelectorAll(".tattoo-thumb"));function designId(img){return (img.src||"").split("/").pop().split(".")[0];}var thumb=document.querySelector(\'.tattoo-thumb[src$="ayushi.svg"]\'),fresh=document.querySelector(".tattoo-new");out.gallery={cells:cells.length,found:!!thumb,credit:thumb&&thumb.parentNode.querySelector(".tattoo-cap").textContent,order:thumbs.map(designId),newBackground:fresh&&getComputedStyle(fresh).backgroundColor,skins:thumbs.map(function(img){return {id:designId(img),className:img.className,background:getComputedStyle(img).backgroundColor,hasAlt:img.hasAttribute("alt")};})};',
-  ' if(thumb)thumb.parentNode.click();await sleep(50);var preview=document.querySelector(".tattoo-preview img");out.en={src:preview&&preview.getAttribute("src"),hasAlt:preview&&preview.hasAttribute("alt"),credit:(document.querySelector(".tattoo-credit")||{}).textContent,portrait:!!document.querySelector(".tattoo-artist-svg"),className:preview&&preview.className,background:preview&&getComputedStyle(preview).backgroundColor};',
+  ' if(thumb)thumb.parentNode.click();await sleep(50);var preview=document.querySelector(".tattoo-preview img"),portrait=document.querySelector(".tattoo-artist-svg"),wrap=document.getElementById("monitor-tattoo-wrap"),portraitRect=portrait&&portrait.getBoundingClientRect(),wrapRect=wrap&&wrap.getBoundingClientRect(),unit=wrapRect&&wrapRect.width/124;out.en={src:preview&&preview.getAttribute("src"),hasAlt:preview&&preview.hasAttribute("alt"),credit:(document.querySelector(".tattoo-credit")||{}).textContent,portrait:!!portrait,className:preview&&preview.className,background:preview&&getComputedStyle(preview).backgroundColor,portraitBottomGap:portraitRect&&wrapRect?(wrapRect.bottom-portraitRect.bottom)/unit:null};',
   ' window.__setLang("cs");await sleep(40);preview=document.querySelector(".tattoo-preview img");out.cs={hasAlt:preview&&preview.hasAttribute("alt"),credit:(document.querySelector(".tattoo-credit")||{}).textContent};',
   ' document.getElementById("monitor-tattoo-back").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(30);var elephant=document.querySelector(\'.tattoo-thumb[src$="elephant.svg"]\');if(elephant)elephant.parentNode.click();await sleep(30);preview=document.querySelector(".tattoo-preview img");out.marketaPreview={className:preview&&preview.className,background:preview&&getComputedStyle(preview).backgroundColor};',
   '}',
@@ -66,6 +66,8 @@ if (state && !state.error) {
         state.en.credit === "by Ayushi, diva" && state.en.portrait &&
         state.en.className === "tattoo-skin-behdad" && state.en.background === "rgb(230, 180, 137)",
     "Ayushi's English detail view keeps its vector, credit, portrait, and Behdad skin backdrop", state.en);
+  check(state.en.portraitBottomGap >= 0 && state.en.portraitBottomGap <= 1.25,
+    "the artist portrait stands on the app's lower bezel", state.en.portraitBottomGap);
   check(!state.cs.hasAlt && state.cs.credit === "od Ayushi, diva",
     "the Czech detail view mirrors the localized credit without naming the image", state.cs);
   check(state.marketaPreview.className === "tattoo-skin-marketa" &&

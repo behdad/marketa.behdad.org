@@ -287,6 +287,51 @@ try {
   await auditLiveShooterKill("Quake III selector", "quake", "selector");
   await auditLiveShooterKill("Quake III running", "quake", "running");
 
+  // Prince owns its farewell inside the promoted live HTML surface instead of using
+  // #monitor-deathfx. Keep the exact iframe mounted under that card until the gag ends,
+  // then prove the normal destroy path returns paint ownership to the dock.
+  await evaluate('window.__openMonitorApp("prince")');
+  for (let i = 0; i < 60; i++) {
+    if (await evaluate('!!document.querySelector("#monitor-prince-host iframe")')) break;
+    await sleep(50);
+  }
+  const princeBefore = await evaluate(`(function(){
+    var frame=document.querySelector("#monitor-prince-host iframe"),screen=document.getElementById("monitor-zoom-box").getBoundingClientRect(),
+      root=document.querySelector(".prince-monitor-wrap"),state=window.__monitorHtmlOverlayState();
+    window.__princeKillFrame=frame;window.__princeKillDocument=frame&&frame.contentDocument;
+    if(frame&&frame.contentWindow)frame.contentWindow.__princeKillMarker="retained";
+    return{frame:!!frame,open:window.__princeState().open,active:state.active,roots:state.roots,
+      rootOverlay:!!(root&&root.closest("#monitor-html-overlay")),clip:{x:screen.left,y:screen.top,width:screen.width,height:screen.height,scale:1}};
+  })()`);
+  const princeBeforeRaster = await screenshot(princeBefore.clip, "prince-before");
+  await evaluate("window.__killMonitorPrince()");
+  await sleep(260);
+  const princeDuring = await evaluate(`(function(){
+    var frame=document.querySelector("#monitor-prince-host iframe"),root=document.querySelector(".prince-monitor-wrap"),
+      card=document.getElementById("prince-monitor-kill"),style=getComputedStyle(card),r=card.getBoundingClientRect(),
+      screen=document.getElementById("monitor-zoom-box").getBoundingClientRect(),state=window.__monitorHtmlOverlayState(),prince=window.__princeState();
+    return{sameFrame:frame===window.__princeKillFrame,sameDocument:!!frame&&frame.contentDocument===window.__princeKillDocument,
+      marker:frame&&frame.contentWindow.__princeKillMarker,open:prince.open,iframe:prince.iframe,killing:document.getElementById("monitor-prince").classList.contains("prince-killing"),
+      liveKilling:!!(root&&root.classList.contains("prince-killing")),
+      active:state.active,roots:state.roots,rootOverlay:!!(root&&root.closest("#monitor-html-overlay")),visibility:style.visibility,
+      opacity:Number(style.opacity),intersects:r.right>screen.left&&r.left<screen.right&&r.bottom>screen.top&&r.top<screen.bottom};
+  })()`);
+  const princeDuringRaster = await screenshot(princeBefore.clip, "prince-kill");
+  const princeRaster = rasterDifference(princeBeforeRaster, princeDuringRaster);
+  check(princeBefore.frame && princeBefore.open && princeBefore.active && princeBefore.roots.includes("prince-monitor-wrap") && princeBefore.rootOverlay &&
+      princeDuring.sameFrame && princeDuring.sameDocument && princeDuring.marker === "retained" && princeDuring.open && princeDuring.iframe &&
+      princeDuring.active && princeDuring.roots.includes("prince-monitor-wrap") && princeDuring.rootOverlay,
+    "Prince Kill keeps the exact live browsing context mounted behind its farewell", { before: princeBefore, during: princeDuring });
+  check(princeDuring.killing && princeDuring.liveKilling && princeDuring.visibility === "visible" && princeDuring.opacity > .8 && princeDuring.intersects &&
+      princeRaster.ratio > .02 && princeRaster.mean > 1,
+    "Prince Kill visibly paints JAFFAR WINS across the promoted monitor surface", { during: princeDuring, raster: princeRaster });
+  await sleep(1450);
+  const princeAfter = await evaluate(`(function(){var prince=window.__princeState(),state=window.__monitorHtmlOverlayState();return{
+    open:prince.open,iframe:prince.iframe,killing:document.getElementById("monitor-prince").classList.contains("prince-killing"),
+    active:state.active,roots:state.roots};})()`);
+  check(!princeAfter.open && !princeAfter.iframe && !princeAfter.killing && princeAfter.active && princeAfter.roots.join(",") === "dock-grid",
+    "Prince destroys its runtime only after the farewell and returns directly to the dock", princeAfter);
+
   // Photobooth is the one app whose normal launch has three distinct paint owners:
   // the promoted desktop tile, the canonical SVG consent panel, then a live promoted
   // video. Drive those exact trusted clicks with Chrome's fake camera before auditing

@@ -8,9 +8,9 @@ var harness = [
   '<script>(async function(){',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function space(){var event=new KeyboardEvent("keydown",{key:" ",code:"Space",bubbles:true,cancelable:true});document.dispatchEvent(event);return event;}',
-  'var out={errors:window.__errs};if(window.__removeClickMe)window.__removeClickMe();if(window.__finishOpeningGuide)window.__finishOpeningGuide();var openingSpace=space();await sleep(80);out.opening={prevented:openingSpace.defaultPrevented,resumable:window.__checkpointWorthSavingNow(),playing:window.__anyMusicPlaying()};window.__goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
-  'space();await sleep(180);out.desktop={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
-  'space();await sleep(80);out.paused={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
+  'var out={errors:window.__errs};if(window.__removeClickMe)window.__removeClickMe();if(window.__finishOpeningGuide)window.__finishOpeningGuide();var openingSpace=space();await sleep(80);out.opening={prevented:openingSpace.defaultPrevented,resumable:window.__checkpointWorthSavingNow(),playing:window.__anyMusicPlaying()};window.__goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(80);',
+  'space();await sleep(180);var miniBars=[].slice.call(document.querySelectorAll(".dock-mini-eq .eq-bar"));out.desktop={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying(),zoomed:window.__monitorZoomed(),overlay:miniBars.every(function(bar){return !!bar.closest("#monitor-html-overlay");}),bars:miniBars.map(function(bar){return bar.style.transform;})};',
+  'space();await sleep(80);out.paused={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying(),bars:miniBars.map(function(bar){return bar.style.transform;})};',
   'mon.classList.remove("show-caps");mon.classList.add("show-weather");space();await sleep(180);out.app={weather:mon.classList.contains("show-weather"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'window.__monitorZoomIn();var before=window.__phoneMusicId();window.__monitorSkip(1);await sleep(760);out.track={focused:window.__monitorAttention(),weather:mon.classList.contains("show-weather"),music:mon.classList.contains("show-nowplaying"),before:before,after:window.__phoneMusicId(),playing:window.__anyMusicPlaying()};',
   'mon.classList.remove("show-weather");mon.classList.add("show-caps");document.getElementById("monitor-dock-music").click();await sleep(40);out.launch={focused:window.__monitorAttention(),music:mon.classList.contains("show-nowplaying")};',
@@ -38,9 +38,12 @@ if (result && !result.error) {
   check(result.errors.length === 0, "no uncaught page errors", result.errors);
   check(result.opening.prevented && !result.opening.resumable && !result.opening.playing,
     "Space stays quiet at the checkpoint owner's untouched-Kitchen boundary", result.opening);
-  check(result.desktop.playing && result.desktop.caps && !result.desktop.music,
+  check(result.desktop.playing && result.desktop.caps && !result.desktop.music && result.desktop.zoomed &&
+      result.desktop.overlay && result.desktop.bars.length === 3 &&
+      result.desktop.bars.every(function (value) { return /^scaleY\(/.test(value); }),
     "Space starts music on the desktop without opening Music", result.desktop);
-  check(!result.paused.playing && result.paused.caps && !result.paused.music,
+  check(!result.paused.playing && result.paused.caps && !result.paused.music &&
+      result.paused.bars.every(function (value) { return value === "scaleY(0)"; }),
     "Space pauses music without leaving the desktop", result.paused);
   check(result.app.playing && result.app.weather && !result.app.music,
     "Space resumes music without leaving the active monitor app", result.app);

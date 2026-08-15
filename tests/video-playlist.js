@@ -21,7 +21,7 @@ var HARNESS = String.raw`
     video.play=function(){playCalls++;fakePaused=false;video.dispatchEvent(new Event("play"));return Promise.resolve();};video.pause=function(){pauseCalls++;fakePaused=true;video.dispatchEvent(new Event("pause"));};
     stage.requestFullscreen=function(){fullscreenRequested=true;return Promise.resolve();};
     var chooserTitle=wrap.querySelector(".vid-chooser-title").textContent;window.__setLang("cs");var chooserTitleCs=wrap.querySelector(".vid-chooser-title").textContent;window.__setLang("en");
-    report.steps.initial={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.getAttribute("src")||"",title:chooserTitle,titleCs:chooserTitleCs,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,titles:[downtown.textContent,rose.textContent,butterfly.textContent],active:[downtown.classList.contains("active"),rose.classList.contains("active"),butterfly.classList.contains("active")],back:controlState(back),fullscreen:controlState(fullscreen),close:controlState(close)};
+    report.steps.initial={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.getAttribute("src")||"",title:chooserTitle,titleCs:chooserTitleCs,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,titles:[downtown,rose,butterfly].map(function(card){return card.querySelector(".vid-choice-label").textContent;}),art:[downtown,rose,butterfly].map(function(card){var svg=card.querySelector("svg.vid-choice-art");return{svg:!!svg,viewBox:svg&&svg.getAttribute("viewBox"),marks:svg&&svg.querySelectorAll("path,circle,rect,ellipse").length};}),active:[downtown.classList.contains("active"),rose.classList.contains("active"),butterfly.classList.contains("active")],back:controlState(back),fullscreen:controlState(fullscreen),close:controlState(close)};
     downtown.click();video.dispatchEvent(new Event("loadedmetadata"));await sleep(30);
     var bs=controlState(back),fs=controlState(fullscreen),xs=controlState(close),stageRect=stage.getBoundingClientRect();
     report.steps.player={view:wrap.getAttribute("data-video-view"),rootView:root.getAttribute("data-video-view"),src:video.src,chooser:getComputedStyle(chooser).display,stage:getComputedStyle(stage).display,stageSize:[stageRect.width,stageRect.height],controls:{back:bs,fullscreen:fs,close:xs},ordered:bs.left<fs.left&&fs.left<xs.left,distinct:bs.path!==fs.path&&fs.path!==xs.path};
@@ -62,8 +62,9 @@ check(s.initial && s.initial.view === "chooser" && s.initial.rootView === "choos
   s.initial.title === "Choose a film" && s.initial.titleCs === "Vyber film" &&
   s.initial.chooser !== "none" && s.initial.stage === "none" &&
   JSON.stringify(s.initial.titles) === JSON.stringify(["Downtown dance","Mon amie la rose","Rainbow Butterfly"]) &&
+  s.initial.art.every(function(art){return art.svg&&art.viewBox==="0 0 36 28"&&art.marks>=12;}) &&
   JSON.stringify(s.initial.active) === JSON.stringify([true,false,false]),
-  "opens on the bilingual three-card chooser without fetching a film", s.initial);
+  "opens on the bilingual three-card illustrated chooser without fetching a film", s.initial);
 check(s.initial && s.initial.back.pointer === "none" && s.initial.fullscreen.pointer === "none" && s.initial.close.pointer !== "none",
   "chooser exposes only Dismiss", s.initial);
 check(s.player && s.player.view === "player" && s.player.rootView === "player" && /art\/downtown-dance\.mp4$/.test(s.player.src) &&

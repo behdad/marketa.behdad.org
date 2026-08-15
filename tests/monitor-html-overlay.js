@@ -29,7 +29,7 @@ var HARNESS = [
   ' ["fatality",["death-doom"],["fatality-wrap"]],["bsod",["death-linux"],["bsod-wrap"]],["photobooth",["photobooth"],["monitor-pb-videowrap"]],["photobooth-picker",["photobooth","picking"],["monitor-pb-videowrap","monitor-pb-picker-grid"]]',
   ' ];',
   ' function setSurface(spec){Array.from(monitor.classList).forEach(function(c){if(/^(show-|death-|photobooth$|picking$|pb-)/.test(c))monitor.classList.remove(c);});var classics=document.getElementById("monitor-mines");if(spec[3]&&classics)classics.setAttribute("data-view",spec[3]);spec[1].forEach(function(c){monitor.classList.add(c);});}',
-  ' for(var sc=0;sc<stateCases.length;sc++){var stateSpec=stateCases[sc];setSurface(stateSpec);await sleep(25);report.surfaces[stateSpec[0]]=window.__monitorHtmlOverlayState().roots.slice().sort();}',
+  ' for(var sc=0;sc<stateCases.length;sc++){var stateSpec=stateCases[sc];setSurface(stateSpec);await sleep(25);var surfaceState=window.__monitorHtmlOverlayState();report.surfaces[stateSpec[0]]=surfaceState.roots.slice().sort();if(stateSpec[0]==="video"){var videoWrap=document.getElementById("monitor-video-wrap"),videoPicker=videoWrap.querySelector(".vid-picker"),videoScale=surfaceState.geometry.scale;videoPicker.style.transition="none";report.videoControls={scale:videoScale,ctrlHeight:rect(videoWrap.querySelector(".vid-ctrl")).height,pickerHeight:rect(videoPicker).height,playFont:parseFloat(getComputedStyle(videoWrap.querySelector(".vid-play")).fontSize),pickFont:parseFloat(getComputedStyle(videoWrap.querySelector(".vid-pick")).fontSize),muteWidth:rect(videoWrap.querySelector(".vid-ctrl-mute svg")).width};}}',
   ' setSurface(["desktop",["show-caps"]]);await sleep(25);',
   ' var specs=[ ["code","monitor-code-wrap"], ["console","monitor-console-wrap"], ["python","monitor-py-wrap"], ["linux","monitor-linux-wrap"], ["mail","monitor-mail-wrap"], ["chat","monitor-chat-wrap"], ["chrome","monitor-browser-wrap"] ];',
   ' for(var i=0;i<specs.length;i++){var spec=specs[i],result=window.__openMonitorApp(spec[0]);await sleep(spec[0]==="chrome"?900:45);var state=window.__monitorHtmlOverlayState(),root=document.getElementById(spec[1]),layer=root&&root.closest(".monitor-html-layer");report.apps[spec[0]]={result:result,active:state.active,roots:state.roots.slice(),parent:root&&root.parentNode&&root.parentNode.className,ownerInControls:state.owners.length===1&&document.getElementById(state.owners[0]).parentNode===controls,aligned:delta(rect(host),rect(box)),fills:layer?delta(rect(layer),rect(box)):999,rootSame:root===document.getElementById(spec[1])};}',
@@ -78,6 +78,13 @@ function run(label, chromeFlags) {
     check(JSON.stringify(result.surfaces[name]) === JSON.stringify(expectedSurfaces[name]),
       name + " follows the default overlay policy", result.surfaces[name]);
   });
+  var video = result.videoControls;
+  check(video && video.scale > 1 && Math.abs(video.ctrlHeight / video.scale - 6) <= 0.1 &&
+      Math.abs(video.pickerHeight / video.scale - 7) <= 0.1 &&
+      Math.abs(video.playFont / video.scale - 13) <= 0.1 &&
+      Math.abs(video.pickFont / video.scale - 2.8) <= 0.1 &&
+      Math.abs(video.muteWidth / video.scale - 3.4) <= 0.1,
+    "physical Video media retains the authored control scale", video);
   Object.keys(result.apps).forEach(function (id) {
     var app = result.apps[id];
     check(app.active && app.roots.length === 1 && app.ownerInControls && app.rootSame,

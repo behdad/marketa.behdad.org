@@ -7594,6 +7594,56 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .vid-ctrl-time{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:3px; line-height:1; min-width:7.5px; text-align:right}
 .vid-ctrl-mute{cursor:pointer; display:flex; align-items:center}
 .vid-ctrl-mute svg{width:3.4px; height:3.4px; display:block}
+/* A promoted live video gets the monitor's final physical box so Chromium composites the
+   replaced surface reliably. Its HTML chrome must still grow by the same screen scale
+   that CSS zoom gives ordinary apps; otherwise these authored 124×42 sizes stay literal
+   device pixels and collapse to the tiny controls seen after physical-media promotion. */
+#monitor-html-overlay .monitor-html-layer-physical .vid-note{
+  padding-inline:calc(12px * var(--monitor-overlay-scale));
+  font-size:calc(4.6px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-play{
+  font-size:calc(13px * var(--monitor-overlay-scale));
+  text-shadow:0 0 calc(3px * var(--monitor-overlay-scale)) rgba(0,0,0,0.8)
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-picker{
+  height:calc(7px * var(--monitor-overlay-scale));
+  gap:calc(.5px * var(--monitor-overlay-scale));
+  padding:calc(.7px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-wrap:not(.paused) .vid-picker{
+  height:0;
+  padding-block:0
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-pick{
+  border-radius:calc(1px * var(--monitor-overlay-scale));
+  padding:calc(.7px * var(--monitor-overlay-scale)) calc(1.8px * var(--monitor-overlay-scale));
+  font-size:calc(2.8px * var(--monitor-overlay-scale));
+  letter-spacing:calc(.02px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl{
+  height:calc(6px * var(--monitor-overlay-scale));
+  gap:calc(1.6px * var(--monitor-overlay-scale));
+  padding-inline:calc(1.6px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl-pp{
+  width:calc(4px * var(--monitor-overlay-scale));
+  font-size:calc(3.6px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl-vol{width:calc(14px * var(--monitor-overlay-scale))}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl-track{
+  height:calc(1.6px * var(--monitor-overlay-scale));
+  border-radius:calc(.8px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl-fill{border-radius:calc(.8px * var(--monitor-overlay-scale))}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl-time{
+  min-width:calc(7.5px * var(--monitor-overlay-scale));
+  font-size:calc(3px * var(--monitor-overlay-scale))
+}
+#monitor-html-overlay .monitor-html-layer-physical .vid-ctrl-mute svg{
+  width:calc(3.4px * var(--monitor-overlay-scale));
+  height:calc(3.4px * var(--monitor-overlay-scale))
+}
 /* ── video control strip (end) ── */
 /* calendar app: the wedding date cards + .ics download over the screen */
 #monitor-calendar{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
@@ -90793,6 +90843,7 @@ def colormode(mode=None):
       entry.layer.style.width = entry.box.width * unit + "px";
       entry.layer.style.height = entry.box.height * unit + "px";
     });
+    host.style.setProperty("--monitor-overlay-scale", String(scale));
     host.style.setProperty("--monitor-overlay-inv-scale", String(1 / scale));
     metrics.fits++;
     active.geometry = {

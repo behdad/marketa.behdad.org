@@ -205,7 +205,9 @@ physical screen box rather than through ancestor CSS zoom. Establish that host b
 runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
 place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
 canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later
-controls. A shared native-SVG Kill farewell temporarily parks the promoted live root back in that
+controls. Replaced media gets the final physical screen box; the Video app multiplies its authored
+HTML chrome by the live monitor scale so the controls retain their ordinary-app size. A shared
+native-SVG Kill farewell temporarily parks the promoted live root back in that
 same `foreignObject` before its `death-*` class is applied, keeps promotion suppressed through the
 app's close/reset, then returns directly to the dock. Kill gags that animate the live app itself
 (Chat, Classics, and Pac-Man) retain promotion instead. Keep overlay fitting, stacking, Calendar

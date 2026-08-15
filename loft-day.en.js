@@ -389,6 +389,7 @@ window.__loftMessages["en"] = {
     "df_system_quip": "System killed. The bugs survived.",
     "df_tattoo_quip": "No regrets.",
     "df_video_butterfly_quip": "The colour ran. The butterfly stayed.",
+    "df_video_chooser_quip": "He shot every film. The camera shot back.",
     "df_video_quip": "Dance like the whole world is watching.",
     "df_video_rose_quip": "The rose falls. The song stays.",
     "df_weather_quip": "Under the weather.",

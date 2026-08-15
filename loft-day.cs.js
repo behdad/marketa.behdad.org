@@ -389,6 +389,7 @@ window.__loftMessages["cs"] = {
     "df_system_quip": "Systém ukončen. Chyby přežily.",
     "df_tattoo_quip": "Bez výčitek.",
     "df_video_butterfly_quip": "Barvy stekly. Motýl zůstal.",
+    "df_video_chooser_quip": "Všechny filmy natočil on. Kamera mu to oplatila.",
     "df_video_quip": "Tancuj, jako by se díval celý svět.",
     "df_video_rose_quip": "Růže opadá. Píseň zůstává.",
     "df_weather_quip": "Počasí pod psa.",

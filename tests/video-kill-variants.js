@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Focused monitor Video Kill regression: the selected film owns its SVG/caption even
-// while paused or ended, and teardown cannot leak that choice into the next Kill.
+// Focused monitor Video Kill regression: the chooser and each selected film own their
+// SVG/caption, and teardown cannot leak one variant into the next Kill.
 "use strict";
 
 var lib = require("./lib");
@@ -17,7 +17,8 @@ var HARNESS = [
   ' window.__runMonitorDeathFlash=function(cfg){killCfg=cfg;monitor.classList.add(cfg.screenClass);if(cfg.freeze)cfg.freeze();if(cfg.tick)cfg.tick(.08);};',
   ' function open(){tower.classList.add("on");monitor.classList.add("here","screen-on","show-caps");window.__openMonitorApp("video");}',
   ' function finish(){monitor.classList.remove("death-video");killCfg.close();return {visual:window.__monitorVideoKillState(),track:window.__monitorVideoTrack(),open:monitor.classList.contains("show-video")};}',
-  ' open();window.__killMonitorVideo();report.steps.downtownEarly={visual:window.__monitorVideoKillState(),key:killCfg.beats[0].key,paused:fakePaused,ended:fakeEnded};killCfg.tick(.62);report.steps.downtownMid=window.__monitorVideoKillState();report.steps.downtownReset=finish();',
+  ' open();window.__killMonitorVideo();report.steps.chooserEarly={visual:window.__monitorVideoKillState(),key:killCfg.beats[0].key};killCfg.tick(.62);report.steps.chooserMid=window.__monitorVideoKillState();killCfg.tick(1);report.steps.chooserFinal=window.__monitorVideoKillState();report.steps.chooserReset=finish();',
+  ' open();window.__selectMonitorVideoTrack("downtown");window.__killMonitorVideo();report.steps.downtownEarly={visual:window.__monitorVideoKillState(),key:killCfg.beats[0].key,paused:fakePaused,ended:fakeEnded};killCfg.tick(.62);report.steps.downtownMid=window.__monitorVideoKillState();report.steps.downtownReset=finish();',
   ' open();window.__selectMonitorVideoTrack("rose");fakePaused=true;fakeEnded=false;window.__killMonitorVideo();report.steps.roseEarly={visual:window.__monitorVideoKillState(),key:killCfg.beats[0].key,paused:fakePaused,ended:fakeEnded};killCfg.tick(.62);report.steps.roseMid=window.__monitorVideoKillState();report.steps.roseReset=finish();',
   ' open();window.__selectMonitorVideoTrack("butterfly");fakePaused=true;fakeEnded=true;window.__killMonitorVideo();report.steps.butterflyEarly={visual:window.__monitorVideoKillState(),key:killCfg.beats[0].key,paused:fakePaused,ended:fakeEnded};killCfg.tick(.62);report.steps.butterflyMid=window.__monitorVideoKillState();killCfg.tick(1);report.steps.butterflyFinal=window.__monitorVideoKillState();report.steps.butterflyReset=finish();',
   ' report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);',
@@ -34,7 +35,8 @@ function resetClean(step) {
   return step && !step.open && step.track === "downtown" && step.visual &&
     !step.visual.active && step.visual.track === "" && step.visual.stage === "" &&
     step.visual.dancers === 0 && step.visual.petals === 0 && step.visual.notes === 0 &&
-    step.visual.drips === 0 && step.visual.paintOpacity === 1 &&
+    step.visual.drips === 0 && step.visual.frames === 0 && step.visual.flashOpacity === 0 &&
+    !step.visual.behdadTransform && step.visual.paintOpacity === 1 &&
     Math.abs(step.visual.outlineOpacity - .18) < .001;
 }
 
@@ -43,6 +45,15 @@ var r = lib.runPageSync("loft-day.html", HARNESS, 1800, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
+check(s.chooserEarly && s.chooserEarly.visual.track === "chooser" &&
+  s.chooserEarly.visual.stage === "framing" && s.chooserEarly.key === "df_video_chooser_quip",
+  "the chooser opens on Behdad framing the shot with its own caption", s.chooserEarly);
+check(s.chooserMid && s.chooserMid.track === "chooser" && s.chooserMid.stage === "flash" &&
+  s.chooserMid.frames === 8 && s.chooserMid.flashOpacity > .7 && /translate\(/.test(s.chooserMid.behdadTransform),
+  "the camera shoots back in a flash and scatters all eight film frames", s.chooserMid);
+check(s.chooserFinal && s.chooserFinal.stage === "cut" && s.chooserFinal.flashOpacity === 0,
+  "the selector gag lands on its final cut", s.chooserFinal);
+check(resetClean(s.chooserReset), "chooser teardown clears its camera gag state", s.chooserReset);
 check(s.downtownEarly && s.downtownEarly.visual.track === "downtown" &&
   s.downtownEarly.visual.stage === "alone" && s.downtownEarly.visual.dancers === 1 &&
   s.downtownEarly.key === "df_video_quip",

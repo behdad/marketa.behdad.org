@@ -63318,6 +63318,7 @@ setMusicPausedState(false);
   // delivery itself (window.__deliverPhoneMessage) fires the top-centre toast (attended-only,
   // handled there); the visit only happens when the player TAPS the text (runMsgAction visit:).
   var dripTimer = null, lastDripId = null;
+  var MAX_PENDING_VISITOR_TEXTS = 2;
   function undelivered() {
     return DUO_IDS.filter(function (id) {
       return window.__phoneMessageReceived ? !window.__phoneMessageReceived("visit_" + id) : true;
@@ -63325,21 +63326,24 @@ setMusicPausedState(false);
   }
   function drip() {
     dripTimer = null;
+    var delivered = false;
     // crickets rule (attended) AND daytime AND !meal-on. A text can arrive from ANY room (you're not
     // required to be in the nook to get it); it only WAITS in the app if unattended — the visit itself
     // is day+meal-gated again at tap time by __cuddlyVisit. Pick an undelivered duo, avoiding the last one.
-    if (!document.hidden && document.hasFocus() && isDay() && !mealOn() && !openBBQDay() && (!window.__gameStarted || window.__gameStarted())) { // ...and not over the attract prompt; the duo stays undelivered, so the next attempt re-rolls it
+    var pending = window.__pendingCuddlyVisitorTexts ? window.__pendingCuddlyVisitorTexts() : 0;
+    if (pending < MAX_PENDING_VISITOR_TEXTS && !document.hidden && document.hasFocus() && isDay() && !mealOn() && !openBBQDay() && (!window.__gameStarted || window.__gameStarted())) { // ...and not over the attract prompt; the duo stays undelivered, so the next attempt re-rolls it
       var rem = undelivered();
       if (rem.length && window.__deliverPhoneMessage) {
         var pick = null, guard = 0; // draw the next duo from the shuffled rotation, skipping any already texted
         do { pick = nextInRotation(); guard++; } while (rem.indexOf(pick) < 0 && guard < visitQueue.length * 2);
         if (rem.indexOf(pick) < 0) pick = rem[0];
         lastDripId = pick;
-        if (window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("visit_" + pick);
-        else window.__deliverPhoneMessage("visit_" + pick);
+        if (window.__deliverAutonomousPhoneMessage) delivered = !!window.__deliverAutonomousPhoneMessage("visit_" + pick);
+        else delivered = !!window.__deliverPhoneMessage("visit_" + pick);
       }
     }
     schedule();
+    return delivered;
   }
   function schedule() {
     if (dripTimer) clearTimeout(dripTimer);
@@ -63347,6 +63351,10 @@ setMusicPausedState(false);
     dripTimer = setTimeout(drip, 40000 + Math.random() * 50000); // ~40–90s between attempts
   }
   window.__startCuddlyVisitorDrip = function () { schedule(); };
+  window.__cuddlyVisitorDripTick = function () {
+    if (dripTimer) { clearTimeout(dripTimer); dripTimer = null; }
+    return drip();
+  };
   // Private test hooks: deliver a specific duo's text, or trigger its visit on demand.
   window.__cuddlyVisitorText = function (id) { if (CUDDLY_DUOS[id] && window.__deliverPhoneMessage) { window.__deliverPhoneMessage("visit_" + id); return true; } return false; };
   window.__cuddlyVisit = function (id, forced) { return visit(id, forced); };
@@ -99309,10 +99317,20 @@ def colormode(mode=None):
       return "📱 You: " + t;
     };
     // has this message already arrived (is it in the thread)? — the cuddly-visitor drip uses this
-    // to avoid re-sending a duo's "are you home?" text and to stop its timer once all four are in.
+    // to avoid re-sending a group's "are you home?" text and to stop once every group has texted.
     window.__phoneMessageReceived = function (id) {
       return messagesThread.indexOf(id) !== -1 || !!pendingAuthoredRewrites[id] ||
         partyMessageRevealQueue.some(function (row) { return row.id === id; });
+    };
+    window.__pendingCuddlyVisitorTexts = function () {
+      var pending = Object.create(null);
+      messagesThread.forEach(function (id) {
+        if (/^visit_/.test(id) && !messagesRead[id]) pending[id] = true;
+      });
+      Object.keys(pendingAuthoredRewrites).forEach(function (id) { if (/^visit_/.test(id)) pending[id] = true; });
+      partyMessageRevealQueue.forEach(function (row) { if (row && /^visit_/.test(row.id)) pending[row.id] = true; });
+      deferredAutonomousMessages.forEach(function (id) { if (/^visit_/.test(id)) pending[id] = true; });
+      return Object.keys(pending).length;
     };
     function charlieIntroEligible() {
       return !charlieIntroOffered && messagesThread.length > 0 &&

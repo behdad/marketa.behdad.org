@@ -23,7 +23,8 @@ function run(width, height, standalone, fullPage, entryFile) {
     var langs = document.querySelector(".game-langs").getBoundingClientRect();
     var frame = document.querySelector(".hunt-frame").getBoundingClientRect();
     var viewport = document.querySelector(".hunt-viewport").getBoundingClientRect();
-    var utilityIds = ["hunt-feedback-btn","hunt-bugs-btn","hunt-github-btn"];
+    var github = document.getElementById("hunt-github-btn").getBoundingClientRect();
+    var utilityIds = ["hunt-github-btn"];
     if (${(!fullPage || standalone) ? "true" : "false"}) {
       if (${standalone ? "true" : "false"}) {
         check("installed mode is detected", document.documentElement.classList.contains("installed-app"));
@@ -110,9 +111,10 @@ function run(width, height, standalone, fullPage, entryFile) {
       parseFloat(getComputedStyle(document.querySelector(".loft-entry-brand")).fontSize) <= viewport.width * .13 &&
       parseFloat(getComputedStyle(document.querySelector(".click-me-word")).fontSize) <= viewport.width * .09,
       JSON.stringify({ viewportWidth: viewport.width, brandFont: getComputedStyle(document.querySelector(".loft-entry-brand")).fontSize, clickFont: getComputedStyle(document.querySelector(".click-me-word")).fontSize }));
-    check("entry keeps left utility links and fullscreen available",
+    check("entry keeps its repository link and fullscreen available",
       utilityIds.every(function(id){var e=document.getElementById(id);return getComputedStyle(e).visibility==="visible"&&e.getBoundingClientRect().width>0;}) &&
-      getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility === "visible");
+      getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility === "visible" &&
+      github.left >= area.left && github.left <= area.left + 24 && github.bottom <= area.bottom && github.bottom >= area.bottom - 24);
     check("entry hides room navigation and media transport",
       ["hunt-prev","hunt-next","hunt-volume-btn","hunt-playpause-btn","hunt-skip-btn"].every(function(id){
         return getComputedStyle(document.getElementById(id)).visibility === "hidden";

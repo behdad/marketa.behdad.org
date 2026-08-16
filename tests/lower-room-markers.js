@@ -84,8 +84,8 @@ check(/id="garden-dungeon-marker"[\s\S]*?<g id="garden-jacket"/.test(source),
   "the tiny dungeon door remains beside the Garden jacket");
 check(!/gardenSkylineHit|enterPrinceBasement/.test(source),
   "the Garden skyline no longer doubles as a dungeon entrance");
-check(/id="office-bedroom-marker"[\s\S]*?<rect x="638" y="176" width="40" height="58"[\s\S]*?id="office-bedroom-zzz"/.test(source),
-  "the Office marker rises on the white wall right of the stained-glass window");
+check(/id="office-bedroom-marker"[\s\S]*?<rect x="638" y="233" width="40" height="58"[\s\S]*?id="office-bedroom-zzz"[\s\S]*?M642 268H656L643 282H658/.test(source),
+  "the Office marker uses crisp Zs at the foot of the white wall");
 check(/id="balcony-entrance-marker"[\s\S]*?<path d="M155\.7 122\.5 H160\.3 V132/.test(source),
   "the Balcony marker keeps its raised key drawing");
 

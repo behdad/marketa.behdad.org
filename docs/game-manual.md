@@ -17,10 +17,11 @@ required.
 
 ## Start here
 
-Select **CLICK ME**. The opening coach points out the top room navigation and bottom instructions
-together. Select its card, bottom prompt, or visible × to dismiss it. Follow the bottom instructions
-when you want direction. The required path is short, and most objects, games, apps, conversations,
-and surprises are optional.
+The opening promise is the shape of the day: **Explore → Party → Road Trip**. Select **CLICK ME**.
+The opening coach points out the top room navigation and bottom instructions together. Select its
+card, bottom prompt, or visible × to dismiss it. Follow the bottom instructions when you want
+direction. The required path is short, and most objects, games, apps, conversations, and surprises
+are optional.
 
 ## Finding your way
 
@@ -67,13 +68,13 @@ rotate, and `Space` to drop; touch-only devices show tap-and-swipe instructions 
 The Party coach points to **The Loft** and invites you to explore. The Garden wall switch still
 controls day and night; the Balcony switch starts a Party night, while its roof disco ball toggles the
 Party without changing the light. After all ten rooms are visited, the caption sends you to the
-Entrance car for a Road Trip.
+Entrance car for a Road Trip; starting the Party is encouraged, but is not required to unlock it.
 
 ### Road Trip
 
-The Entrance car allows local driving at any time. The longer journey follows the milestone above:
-finish or dismiss the first-drive coach, choose a **Road Trip** starting point, and take the final
-road's Camping turnoff for the fire, dinner, stargazing, sleep, and `~ fin ~`.
+The Entrance car allows local driving at any time. After visiting all ten rooms, finish or dismiss
+the first-drive coach, choose a **Road Trip** starting point, and take the final road's Camping
+turnoff for the fire, dinner, stargazing, sleep, and `~ fin ~`.
 
 ## Captions, coaches, and messages
 
@@ -90,7 +91,7 @@ If you are unsure what comes next:
 1. Read the bottom caption.
 2. Open **The Loft** and look for a blurred room.
 3. Check Messages for an activity arrow.
-4. If the Party has started and all ten rooms are clear, visit the Entrance road.
+4. When all ten rooms are clear, visit the Entrance road.
 
 ## Pointer and mobile controls
 
@@ -188,8 +189,8 @@ keep their keys.
 
 ## Road Trip and Camping
 
-Street laps are optional and do not unlock the journey. After starting the Party and visiting all
-ten rooms, finish or dismiss the car coach and choose **Road Trip**. A route starts stopped on the
+Street laps are optional and do not unlock the journey. After visiting all ten rooms, finish or
+dismiss the car coach and choose **Road Trip**. A route starts stopped on the
 shoulder and keeps the selected transmission; the caption points out when the engine or driving
 gear is the immediate blocker.
 
@@ -221,5 +222,5 @@ Game **Start over** clears the checkpoint and finale clock; it is separate from 
   connection for the matching pinned build.
 - If audio is silent, interact with the page once so the browser can enable sound.
 
-The simplest path is also the whole shape of the day: finish the Morning routine, start the Party,
-visit all ten rooms, then take the Road Trip.
+The simplest path is also the whole shape of the day: **Explore → Party → Road Trip**. Visiting all
+ten rooms unlocks the Road Trip whether or not the optional Party has begun.

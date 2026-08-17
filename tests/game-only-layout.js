@@ -20,6 +20,7 @@ function run(width, height, standalone, fullPage, entryFile) {
     var watch = document.querySelector(".watch-controls").getBoundingClientRect();
     var brand = document.querySelector(".loft-entry-brand").getBoundingClientRect();
     var clickWord = document.querySelector(".click-me-word").getBoundingClientRect();
+    var promise = document.querySelector(".click-me-promise").getBoundingClientRect();
     var langs = document.querySelector(".game-langs").getBoundingClientRect();
     var frame = document.querySelector(".hunt-frame").getBoundingClientRect();
     var viewport = document.querySelector(".hunt-viewport").getBoundingClientRect();
@@ -111,6 +112,9 @@ function run(width, height, standalone, fullPage, entryFile) {
       parseFloat(getComputedStyle(document.querySelector(".loft-entry-brand")).fontSize) <= viewport.width * .13 &&
       parseFloat(getComputedStyle(document.querySelector(".click-me-word")).fontSize) <= viewport.width * .09,
       JSON.stringify({ viewportWidth: viewport.width, brandFont: getComputedStyle(document.querySelector(".loft-entry-brand")).fontSize, clickFont: getComputedStyle(document.querySelector(".click-me-word")).fontSize }));
+    check("entry promises the full room-party-roadtrip arc",
+      document.querySelector(".click-me-promise").textContent === "Explore → Party → Road Trip" &&
+      promise.left >= viewport.left && promise.right <= viewport.right && promise.bottom <= viewport.bottom);
     check("entry keeps its repository link and fullscreen available",
       utilityIds.every(function(id){var e=document.getElementById(id);return getComputedStyle(e).visibility==="visible"&&e.getBoundingClientRect().width>0;}) &&
       getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility === "visible" &&

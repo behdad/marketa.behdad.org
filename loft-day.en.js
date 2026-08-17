@@ -629,6 +629,7 @@ window.__loftMessages["en"] = {
     "intro_guide": "Instructions at the bottom.",
     "intro_guide_dismiss": "Click to dismiss.",
     "intro_guide_nav": "Navigation at the top.",
+    "intro_promise": "Explore → Party → Road Trip",
     "kitchen": "Turn on La Maz → run El Maz → brew.",
     "kitchen_again": "Go ahead—make another espresso. ☕",
     "kitchen_bar": "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",

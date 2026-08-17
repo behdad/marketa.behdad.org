@@ -629,6 +629,7 @@ window.__loftMessages["cs"] = {
     "intro_guide": "Pokyny dole.",
     "intro_guide_dismiss": "Klikni pro zavření.",
     "intro_guide_nav": "Navigace nahoře.",
+    "intro_promise": "Zkoumej → Párty → Výlet",
     "kitchen": "Zapni La Maz → spusť El Maz → uvař kafe.",
     "kitchen_again": "Jen do toho — udělej si další espresso. ☕",
     "kitchen_bar": "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",

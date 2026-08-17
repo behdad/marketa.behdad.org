@@ -33,8 +33,19 @@ check(/loft-world[^>]+loft-game-strip\.svg/.test(renderer) &&
 check(/egg-scene loft[^>]+loft-scene\.svg/.test(renderer) &&
   /egg-scene garden[^>]+garden-scene\.svg/.test(renderer),
   "Egg Hunt card pairs the two authored scene illustrations");
+check(/hub-caps[^>]+caps\.svg/.test(renderer) &&
+  /hub-title[^>]*>markéta/.test(renderer) && /Invitations &amp; updates/.test(renderer),
+  "hub card keeps the root preview generic");
 
 [
+  {
+    file: "index.html",
+    title: "markéta &amp; behdad",
+    description: "Invitations, updates, and interactive drops.",
+    url: "https://marketa.behdad.org/",
+    image: "https://marketa.behdad.org/art/og-hub.png",
+    asset: "art/og-hub.png"
+  },
   {
     file: "egg-hunt.html",
     title: "Egg Hunt",

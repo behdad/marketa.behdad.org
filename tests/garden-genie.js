@@ -30,13 +30,18 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         click(genie);
         await sleep(80);
         var presentation = window.__pacmanPresentation && window.__pacmanPresentation();
+        var wish = document.querySelector(".genie-wish-backdrop");
         report.entered = {
           shown: lamp.classList.contains("genie-out"),
           tabindex: genie.getAttribute("tabindex"),
           presentation: presentation,
-          overlay: !document.getElementById("pacman-room-overlay").hidden
+          overlay: !document.getElementById("pacman-room-overlay").hidden,
+          wish: !!wish,
+          title: wish && wish.querySelector(".genie-wish-title").textContent,
+          choices: wish && [].slice.call(wish.querySelectorAll(".genie-wish-choice")).map(function (button) { return button.textContent; }),
+          focused: wish && document.activeElement === wish.querySelector(".genie-wish-choice")
         };
-        document.getElementById("pacman-room-close").click();
+        if (wish) wish.querySelector(".pb-dlg-x").click();
         click(lamp);
         await sleep(60);
         report.resummoned = lamp.classList.contains("genie-out");
@@ -70,10 +75,11 @@ if (result) {
     result.summoned.pointerEvents === "auto",
     "the first lamp click summons a pointer-active, non-Tab genie", result.summoned);
   check(result.entered && !result.entered.shown &&
-    result.entered.tabindex === "-1" && result.entered.overlay &&
-    result.entered.presentation && result.entered.presentation.mode === "room" &&
-    result.entered.presentation.room === "garden",
-    "activating the genie opens Pac-Man in the garden and dismisses the target", result.entered);
+    result.entered.tabindex === "-1" && !result.entered.overlay && result.entered.wish &&
+    result.entered.presentation && result.entered.presentation.mode === null &&
+    result.entered.title === "Make a wish." && result.entered.focused &&
+    result.entered.choices.join("|") === "Love|Money|More wishes",
+    "activating the genie opens the focused three-wish modal without touching Pac-Man", result.entered);
   check(result.resummoned, "one later lamp click summons the genie again", result.resummoned);
 }
 

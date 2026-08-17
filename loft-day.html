@@ -12906,6 +12906,16 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
   100%{opacity:0; transform:scale(1.8) translateY(-15px)}
 }
 @media (prefers-reduced-motion: reduce){#garden-lamp.genie-out #garden-genie{opacity:1; transform:scale(2); animation:none}}
+.genie-wish-backdrop{z-index:85;background:rgba(31,18,42,.58)}
+.genie-wish-dialog{width:min(390px,90vw);overflow:hidden;border:2px solid #d4ad58;background:linear-gradient(145deg,#452a58,#27182f);color:#fff9e9;box-shadow:0 16px 48px rgba(25,11,33,.62),inset 0 0 0 1px rgba(255,249,233,.13)}
+.genie-wish-title{margin:.2rem 2rem .9rem;font:700 clamp(1.25rem,5vw,1.8rem)/1.1 Fraunces,Georgia,serif;color:#f4d784}
+.genie-wish-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem}
+.genie-wish-choice{min-height:52px;border:1px solid #d4ad58;border-radius:12px;background:#fff9e9;color:#452a58;font:700 .86rem/1.1 "Source Serif 4",serif;cursor:pointer;padding:.5rem .35rem}
+.genie-wish-choice:hover,.genie-wish-choice:focus-visible{background:#f4d784;outline:2px solid #fff9e9;outline-offset:2px}
+.genie-wish-result{min-height:52px;display:grid;place-items:center;margin:.2rem 1.7rem;font:700 clamp(1.05rem,4vw,1.35rem)/1.2 Fraunces,Georgia,serif;color:#f4d784}
+.genie-wish-result[hidden],.genie-wish-choices[hidden]{display:none}
+@media(max-width:420px){.genie-wish-choices{grid-template-columns:1fr}.genie-wish-choice{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.genie-wish-choice{transition:none}}
 #balcony-dustpan{transform-box:fill-box; transform-origin:50% 3%}
 #balcony-dustpan.wiggling{animation:dustpan-swing .7s ease-in-out}
 @keyframes dustpan-swing{
@@ -26930,7 +26940,7 @@ section{margin:1.9rem 0}
 <path d="M375.4 157.9 L373.5 159.25 L375.4 160.6" fill="none" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </g>
-<!-- PAC-MAN: unlocked by catching Behdad's drifting ketamine ghost. The board is
+<!-- PAC-MAN: unlocked by the kitchen cabinet critter or Behdad's drifting ketamine ghost. The board is
      DOM/CSS-grid based so it remains playable in WebKit's scaled foreignObject. -->
 <g id="monitor-pacman">
 <foreignObject x="254" y="154" width="124" height="42">
@@ -38046,8 +38056,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-991aa04f2c25"></script>
-<script src="loft-day.cs.js?v=dict-09aa5c28c722"></script>
+<script src="loft-day.en.js?v=dict-509a0781aa91"></script>
+<script src="loft-day.cs.js?v=dict-098cc79ac32d"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -65850,6 +65860,8 @@ function quickReversalGesture(action) {
       if (candidate !== critter) return;
       wobbleCritter();
       playSurpriseSound();
+      if (window.__unlockPacman) window.__unlockPacman(false);
+      if (window.__openRoomPacman) window.__openRoomPacman();
       if (surpriseWrap && Math.random() < 0.5) jumpCabinet(); // half the time it hops away
     });
   });
@@ -72940,7 +72952,7 @@ setOfficeProgress("pc", false);
     { id: "classics", icon: "classics", labelKey: "app_classics", glyph: "♠", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", activities: ["Mines", "Solitaire"], open: function () { openClassicsApp(); } },
     { id: "mines", labelKey: "classics_mines", searchOnly: true, catalogOnly: true, game: { id: "mines", name: "Mines", how_to_open: "Open Classics or search for mines on the monitor." }, open: function () { openClassicsApp("mines"); } },
     { id: "solitaire", labelKey: "classics_solitaire", searchOnly: true, catalogOnly: true, game: { id: "solitaire", name: "Solitaire", how_to_open: "Open Classics or search for solitaire on the monitor." }, open: function () { openClassicsApp("solitaire"); } },
-    { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true, game: { id: "hack-man", name: "Hack-Man", highScoreState: "__pacmanState", how_to_open: "Search for hackman on the monitor; the ketamine ghost can reveal it too." },
+    { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true, game: { id: "hack-man", name: "Hack-Man", highScoreState: "__pacmanState", how_to_open: "Search for hackman on the monitor; the kitchen cabinet critter or ketamine ghost can reveal it too." },
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
     { id: "prince", labelKey: "app_prince", glyph: "♛", tile: "#17130f", color: "#d7b34c", glyphSize: "5.2", searchOnly: true,
       game: { id: "prince", name: "Prince of Persia", how_to_open: "Search for prince on the monitor, or run loft.app.open(\"prince\") in Console." },
@@ -80394,7 +80406,7 @@ setOfficeProgress("pc", false);
     return end;
   }
 
-  // Pac-Man is the ketamine ghost's hidden game. Monitor/search launches stay contained
+  // Pac-Man is the cabinet critter's hidden game (the ketamine ghost remains a second route). Monitor/search launches stay contained
   // in the office display; catching the ghost reparents the same retained board into a
   // room overlay without moving the player. One bounded timeout owns the simulation;
   // closing either presentation or hiding/blurring the page clears it immediately.
@@ -104891,16 +104903,118 @@ def colormode(mode=None):
     spawnSteamWisps(strip, 1337, 228, 0.5, 1, -1, 5, 0.5);
     summonGenie(focusGenie);
   }
+  var wishModal = null, wishResult = null, wishTimer = null, genieCoinShowers = 0;
+  function genieText(key) {
+    var lang = document.documentElement.lang || "en";
+    return (T[lang] && T[lang][key]) || T.en[key] || key;
+  }
+  function spawnGenieCoins() {
+    genieCoinShowers++;
+    var old = strip.querySelectorAll(".genie-coin");
+    for (var oi = 0; oi < old.length; oi++) old[oi].remove();
+    for (var i = 0; i < 14; i++) {
+      var coin = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      coin.setAttribute("class", "genie-coin");
+      coin.setAttribute("cx", String(1230 + Math.random() * 130));
+      coin.setAttribute("cy", String(55 + Math.random() * 30));
+      coin.setAttribute("r", String(3.5 + Math.random() * 2.4));
+      coin.setAttribute("fill", i % 2 ? "#f4d784" : "#d4ad58");
+      coin.setAttribute("stroke", "#8a6420");
+      coin.setAttribute("stroke-width", ".8");
+      coin.setAttribute("pointer-events", "none");
+      coin.style.transformBox = "fill-box";
+      coin.style.transformOrigin = "center";
+      strip.appendChild(coin);
+      if (coin.animate) {
+        var animation = coin.animate([
+          { transform: "translateY(0) rotate(0deg)", opacity: 0 },
+          { transform: "translateY(18px) rotate(90deg)", opacity: 1, offset: .16 },
+          { transform: "translateY(190px) rotate(540deg)", opacity: 0 }
+        ], { duration: 1050 + Math.random() * 450, delay: i * 45, easing: "cubic-bezier(.3,.65,.4,1)" });
+        (function (node, anim) { anim.onfinish = function () { if (node.parentNode) node.remove(); }; })(coin, animation);
+      } else {
+        (function (node, delay) { setTimeout(function () { if (node.parentNode) node.remove(); }, delay); })(coin, 1700 + i * 45);
+      }
+    }
+    playMetalClinkSound(null, "garden-lamp");
+  }
+  function closeWishModal(restoreFocus) {
+    clearTimeout(wishTimer);
+    wishTimer = null;
+    if (!wishModal) return false;
+    var modal = wishModal;
+    wishModal = null;
+    wishResult = null;
+    modal.classList.remove("show");
+    setTimeout(function () { if (modal.parentNode) modal.remove(); }, 220);
+    if (restoreFocus && lamp) {
+      requestAnimationFrame(function () { try { lamp.focus({ preventScroll: true }); } catch (_error) { lamp.focus(); } });
+    }
+    return true;
+  }
+  function chooseWish(kind) {
+    if (!wishModal || wishResult) return false;
+    var replyKey = kind === "love" ? "genie_wish_love_reply" :
+      kind === "money" ? "genie_wish_money_reply" : "genie_wish_more_reply";
+    wishResult = kind;
+    wishModal.setAttribute("data-wish-result", kind);
+    var choices = wishModal.querySelector(".genie-wish-choices");
+    var result = wishModal.querySelector(".genie-wish-result");
+    if (choices) choices.hidden = true;
+    if (result) { result.hidden = false; result.textContent = genieText(replyKey); }
+    if (kind === "love") {
+      spawnHearts(strip, 1315, 150);
+      spawnHearts(strip, 1265, 115);
+      playHeartsSound("garden-lamp");
+    } else if (kind === "money") spawnGenieCoins();
+    playGeniePoofSound(true, "garden-lamp");
+    wishTimer = setTimeout(function () { closeWishModal(true); }, 1150);
+    return true;
+  }
+  function openWishModal() {
+    closeWishModal(false);
+    var bd = document.createElement("div");
+    bd.className = "pb-dialog-backdrop genie-wish-backdrop";
+    bd.innerHTML =
+      '<div class="pb-dialog genie-wish-dialog" dir="auto">' +
+        '<button type="button" class="pb-dlg-x">✕</button>' +
+        '<div class="genie-wish-title">' + genieText("genie_wish_title") + '</div>' +
+        '<div class="genie-wish-choices">' +
+          '<button type="button" class="genie-wish-choice" data-wish="love">' + genieText("genie_wish_love") + '</button>' +
+          '<button type="button" class="genie-wish-choice" data-wish="money">' + genieText("genie_wish_money") + '</button>' +
+          '<button type="button" class="genie-wish-choice" data-wish="more">' + genieText("genie_wish_more") + '</button>' +
+        '</div>' +
+        '<div class="genie-wish-result" hidden></div>' +
+      '</div>';
+    var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+      document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    fsHost.appendChild(bd);
+    wishModal = bd;
+    requestAnimationFrame(function () { bd.classList.add("show"); });
+    bd.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (e.target === bd) closeWishModal(true);
+    });
+    bd.querySelector(".pb-dlg-x").addEventListener("click", function () { closeWishModal(true); });
+    var choices = bd.querySelectorAll(".genie-wish-choice");
+    for (var i = 0; i < choices.length; i++) choices[i].addEventListener("click", function () {
+      chooseWish(this.getAttribute("data-wish"));
+    });
+    choices[0].focus();
+    return true;
+  }
   function enterGenie(e) {
     if (e) {
       e.preventDefault();
       e.stopPropagation(); // the genie lives inside the lamp; do not count this as another rub
     }
-    var restoreFocus = !!(e && e.type === "keydown");
-    dismissGenie(restoreFocus);
-    if (window.__unlockPacman) window.__unlockPacman(false);
-    if (window.__openRoomPacman) window.__openRoomPacman();
+    dismissGenie(false);
+    openWishModal();
   }
+  window.__dismissGenieWish = function () { return closeWishModal(false); };
+  window.__genieWishState = function () {
+    return { open: !!wishModal, result: wishResult, coins: strip.querySelectorAll(".genie-coin").length, coinShowers: genieCoinShowers };
+  };
   if (lamp) {
     lamp.addEventListener("click", function () { rubLamp(false); });
     lamp.addEventListener("keydown", function (e) {
@@ -104916,6 +105030,23 @@ def colormode(mode=None):
       if (e.animationName === "genie-pop") dismissGenie(document.activeElement === genie);
     });
   }
+  document.addEventListener("keydown", function (e) {
+    if (!wishModal) return;
+    if (e.key === "Escape" || e.key === "Esc") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeWishModal(true);
+      return;
+    }
+    if (e.key !== "Tab") return;
+    var controls = [].slice.call(wishModal.querySelectorAll("button:not([disabled])")).filter(function (button) {
+      return !button.closest("[hidden]");
+    });
+    if (!controls.length) return;
+    var at = controls.indexOf(document.activeElement);
+    if (e.shiftKey && at <= 0) { e.preventDefault(); controls[controls.length - 1].focus(); }
+    else if (!e.shiftKey && at === controls.length - 1) { e.preventDefault(); controls[0].focus(); }
+  }, true);
   var mask = document.getElementById("garden-mask");
   function hearts() { spawnHearts(strip, 1260, 120); playHeartsSound("garden-mask"); } // hearts rise from the mask
   // The mirror keeps the hidden party start, but now requires three deliberate rapid clicks.
@@ -118129,6 +118260,7 @@ function spawnDustMote(container) {
     if (window.__closePhoneModal) window.__closePhoneModal(true); // leaving the balcony (or the extinguisher reset) closes the pocket phone, tearing down its call/board
     if (name !== "garden" && window.__closeDjPicker) window.__closeDjPicker(); // leaving the garden tears down the request-a-song picker
     if (name !== "garden" && window.__closeTripPicker) window.__closeTripPicker();
+    if (name !== "garden" && window.__dismissGenieWish) window.__dismissGenieWish();
     if (name !== "office" && window.__pauseMonitorVideo) window.__pauseMonitorVideo(); // ...and pauses the home movie (the app view stays for the return)
     if (name !== "office" && window.__pauseMonitorLife) window.__pauseMonitorLife(); // ...and stops the Game-of-Life loop off-screen (the board stays for the return)
     if (window.__syncMonitorDoom) window.__syncMonitorDoom(); // pause DOOM's run loop off-screen; resume it on return (the gate is show-doom && visible && office)

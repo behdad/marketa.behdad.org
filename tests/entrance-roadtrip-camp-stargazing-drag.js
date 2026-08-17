@@ -103,10 +103,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       progress: state().progress.cassiopeia
     };
 
-    var second = begin("cassiopeia", 3, 43, "touch");
-    var secondPrevented = [second.prevented, move(second, "cassiopeia", 4), finish(second, "pointerup", "cassiopeia", 4)];
+    var second = begin("cassiopeia", 2, 43, "touch");
+    var secondPrevented = [second.prevented, move(second, "cassiopeia", 3), move(second, "cassiopeia", 4), finish(second, "pointerup", "cassiopeia", 4)];
     first.node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    report.touchComplete = { prevented: secondPrevented, progress: state().progress.cassiopeia };
+    report.previousOrigin = { prevented: secondPrevented, progress: state().progress.cassiopeia };
 
     report.mouseMajor = dragConstellation("ursa-major", 7, 44, "mouse");
     report.mouseMinor = dragConstellation("ursa-minor", 7, 45, "mouse");
@@ -149,8 +149,9 @@ check(result && result.cancelled.prevented.every(Boolean) && result.cancelled.pa
   "touch drag advances in order, consumes page-pan, and cancels cleanly", result && result.cancelled);
 check(result && !result.cancelledMove.prevented && result.cancelledMove.progress === 3,
   "a cancelled pointer cannot keep drawing", result && result.cancelledMove);
-check(result && result.touchComplete.prevented.every(Boolean) && result.touchComplete.progress === 5,
-  "a fresh touch completes the constellation without a synthetic-click duplicate", result && result.touchComplete);
+check(result && result.previousOrigin.prevented.every(Boolean) && result.previousOrigin.progress === 5,
+  "a fresh touch can resume from the previously connected star without a synthetic-click duplicate",
+  result && result.previousOrigin);
 check(result && result.mouseMajor.every(Boolean) && result.mouseMinor.slice(0, -1).every(Boolean) &&
   result.mouseMinor[result.mouseMinor.length - 1] === false,
   "held mouse drags consume the trace and release immediately on completion",

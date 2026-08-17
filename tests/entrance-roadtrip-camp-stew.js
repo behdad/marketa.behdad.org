@@ -93,6 +93,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var meals = Array.from(document.querySelectorAll(".entrance-roadtrip-camp-meal"));
         function mealShown() { return meals.length === 2 && meals.every(shown); }
         var game = document.getElementById("entrance-roadtrip-stew-game");
+        var panel = game.querySelector(".entrance-roadtrip-stew-panel");
         var cook = document.getElementById("entrance-roadtrip-stew-cook");
         var cookBg = cook.querySelector(".stew-button-bg");
         var cookLabel = cook.querySelector("text");
@@ -121,13 +122,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             click(crate);
             var itemIds = Array.from(game.querySelectorAll("[data-stew-item]"))
               .map(function (node) { return node.getAttribute("data-stew-item"); }).sort();
+            var cookRect = cook.getBoundingClientRect();
+            var cookClearOfCards = Array.from(game.querySelectorAll("[data-stew-item]")).every(function (node) {
+              var cardRect = node.getBoundingClientRect();
+              return cookRect.right <= cardRect.left || cookRect.left >= cardRect.right ||
+                cookRect.bottom <= cardRect.top || cookRect.top >= cardRect.bottom;
+            });
             report.builder = {
               open: stew().open,
               items: itemIds,
               headings: Array.from(game.querySelectorAll('[data-i="entrance_roadtrip_stew_protein"],[data-i="entrance_roadtrip_stew_starch"]')).map(function (node) { return node.textContent; }),
               chooseText: /choose one/i.test(game.textContent),
               title: /camping stew/i.test(game.textContent),
-              cookAboveCards: cook.getBoundingClientRect().bottom < document.querySelector('[data-stew-item="beef"]').getBoundingClientRect().top,
+              cookClearOfCards: cookClearOfCards,
+              cookPanelInset: cook.getBoundingClientRect().top - panel.getBoundingClientRect().top,
               cookControl: {
                 width: Number(cookBg.getAttribute("width")), height: Number(cookBg.getAttribute("height")),
                 fill: getComputedStyle(cookBg).fill, label: cookLabel.textContent,
@@ -388,7 +396,7 @@ check(result && result.cratePoints && result.cratePoints.sign.open && result.cra
 var exactItems = ["barley", "beans", "beef", "carrots", "celery", "chicken", "chilies", "coriander", "curry", "garlic", "ginger", "lamb", "mushrooms", "onion", "pasta", "pepper", "pork", "potatoes", "rice", "salt", "tofu", "tomato"];
 check(result && result.builder && result.builder.open && JSON.stringify(result.builder.items) === JSON.stringify(exactItems) &&
   JSON.stringify(result.builder.headings) === JSON.stringify(["PROTEIN", "BASE"]) && !result.builder.chooseText &&
-  !result.builder.title && result.builder.cookAboveCards && result.builder.cookControl &&
+  !result.builder.title && result.builder.cookClearOfCards && result.builder.cookPanelInset >= 7 && result.builder.cookControl &&
   result.builder.cookControl.width === 160 && result.builder.cookControl.height === 36 &&
   result.builder.cookControl.fill === "rgb(142, 58, 74)" && result.builder.cookControl.label === "Cook" &&
   result.builder.cookControl.labelSize === "15px" && result.builder.czech && result.builder.czech.cook === "Vařit" &&

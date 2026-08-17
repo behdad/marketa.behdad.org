@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Zero-dependency sanity checks for egg-hunt.html and loft-day.html.
+// Zero-dependency sanity checks for the landing page, Egg Hunt, and Loft Day.
 // Run with: node tests/check.js
 "use strict";
 
@@ -10,7 +10,7 @@ var crypto = require("crypto");
 var execSync = require("child_process").execSync;
 
 var ROOT = path.join(__dirname, "..");
-var FILES = ["egg-hunt.html", "loft-day.html"];
+var FILES = ["index.html", "egg-hunt.html", "loft-day.html"];
 var failures = 0;
 
 function pass(label) {

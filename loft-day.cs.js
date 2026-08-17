@@ -202,6 +202,8 @@ window.__loftMessages["cs"] = {
   "dial_pick_title": "komu voláme?",
   "dj_pick_title": "vyber si písničku",
   "dollhouse_locked": "?",
+  "dollhouse_progress": "Navštíveno {count} z 10 pokojů",
+  "dollhouse_roadtrip_unlocked": "Výlet odemčen",
   "dollhouse_title": "Loft 🗺️",
   "du_bouquet": "kytice",
   "du_copy": "Kopírovat",

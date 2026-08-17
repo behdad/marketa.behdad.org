@@ -202,6 +202,8 @@ window.__loftMessages["en"] = {
   "dial_pick_title": "who are we calling?",
   "dj_pick_title": "request a song",
   "dollhouse_locked": "?",
+  "dollhouse_progress": "{count} of 10 rooms visited",
+  "dollhouse_roadtrip_unlocked": "Road Trip unlocked",
   "dollhouse_title": "The Loft 🗺️",
   "du_bouquet": "bouquet",
   "du_copy": "Copy",

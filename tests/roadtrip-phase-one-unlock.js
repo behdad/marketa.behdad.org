@@ -30,7 +30,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.nine = {
           phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
           locked: lockedRooms(), roadtrip: roadtrip(), caption: window.__captionKey(),
-          coach: copy(window.__roadtripCompletionCoachState())
+          coach: copy(window.__roadtripCompletionCoachState()),
+          dollhouseTitle: document.getElementById("loft-dollhouse-title").textContent
         };
 
         window.__markRoomSeen("entrance");
@@ -39,7 +40,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.ten = {
           phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
           locked: lockedRooms(), roadtrip: roadtrip(), caption: window.__captionKey(),
-          coach: copy(window.__roadtripCompletionCoachState())
+          coach: copy(window.__roadtripCompletionCoachState()),
+          dollhouseTitle: document.getElementById("loft-dollhouse-title").textContent
         };
 
         var entrance = document.querySelector('.loft-dollhouse-room[data-dollhouse-room="entrance"]');
@@ -75,12 +77,13 @@ check(result && result.errors.length === 0, "the dollhouse-to-roadtrip path has 
 check(result && result.nine && !result.nine.phase2 && !result.nine.party &&
   result.nine.locked.length === 1 && result.nine.locked[0] === "entrance" &&
   !result.nine.roadtrip.explorationComplete && !result.nine.roadtrip.authorized &&
-  !result.nine.roadtrip.unlocked && !result.nine.coach.pending,
+  !result.nine.roadtrip.unlocked && !result.nine.coach.pending &&
+  result.nine.dollhouseTitle === "The Loft 🗺️ · 9 of 10 rooms visited",
   "nine visited rooms preserve the existing lock and offer no Road Trip", result && result.nine);
 check(result && result.ten && !result.ten.phase2 && !result.ten.party && result.ten.locked.length === 0 &&
   result.ten.roadtrip.explorationComplete && result.ten.roadtrip.authorized && result.ten.roadtrip.unlocked &&
   result.ten.roadtrip.invitationReady && result.ten.caption === "roadtrip_departure_caption" &&
-  result.ten.coach.pending,
+  result.ten.coach.pending && result.ten.dollhouseTitle === "The Loft 🗺️ · Road Trip unlocked",
   "the tenth visit unlocks every dollhouse room and advertises Road Trip during Phase 1", result && result.ten);
 check(result && result.started && result.started.fromDollhouse && result.started.started &&
   !result.started.phase2 && !result.started.party && result.started.roadtrip.active &&

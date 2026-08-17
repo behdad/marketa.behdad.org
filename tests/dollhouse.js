@@ -254,7 +254,7 @@ var harness = String.raw`<script>
 
     window.__setLang("cs");
     check("the open overview follows Czech live",
-      document.getElementById("loft-dollhouse-title").textContent === "Loft 🗺️" &&
+      document.getElementById("loft-dollhouse-title").textContent === "Loft 🗺️ · Navštíveno 2 z 10 pokojů" &&
       roomButton("kitchen").textContent.indexOf("Kuchyň") !== -1 &&
       roomButton("garden").textContent.indexOf("Zahrada / Párty") !== -1,
       document.getElementById("loft-dollhouse-title").textContent);

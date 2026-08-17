@@ -59,7 +59,6 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     report.steps.push({ label: "phase-one-ten",
-      start: window.__entranceRoadtripStart(), chooser: window.__entranceRoadtripOpenChooser(),
       roadtrip: copy(window.__entranceRoomState().drive.roadtrip) });
     window.__hideEntrancePorscheDriveHud();
     window.__closeEntranceRoom();
@@ -196,10 +195,10 @@ console.log("loft-day.html room exploration → Road Trip bridge:");
 check(result && result.errors.length === 0, "the multi-reload probe has no page errors", result && result.errors);
 var nine = step("nine"), partyOff = step("party-off-nine"), first = step("party-on-ten-first-beat");
 var phaseOneTen = step("phase-one-ten");
-check(phaseOneTen && !phaseOneTen.start && !phaseOneTen.chooser &&
-  !phaseOneTen.roadtrip.explorationComplete && !phaseOneTen.roadtrip.unlocked &&
-  !phaseOneTen.roadtrip.invitationReady,
-  "ten Phase 1 room visits cannot bypass the party into Road Trip", phaseOneTen);
+check(phaseOneTen && phaseOneTen.roadtrip.explorationComplete && phaseOneTen.roadtrip.authorized &&
+  phaseOneTen.roadtrip.unlocked && phaseOneTen.roadtrip.invitationReady &&
+  !phaseOneTen.roadtrip.active,
+  "ten Phase 1 room visits authorize Road Trip without starting Party", phaseOneTen);
 var phaseTwoLatchedTen = step("phase-two-latched-ten");
 check(phaseTwoLatchedTen && phaseTwoLatchedTen.roadtrip.explorationComplete &&
   phaseTwoLatchedTen.roadtrip.unlocked && phaseTwoLatchedTen.roadtrip.invitationReady,

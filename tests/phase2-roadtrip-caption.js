@@ -65,16 +65,18 @@ var exact = "Who wants to go on a Road Trip? Head out to the car.";
 console.log("loft-day.html phase-two Road Trip caption handoff:");
 check(result && result.errors.length === 0, "the real Party transition has no page errors", result && result.errors);
 check(step("phase-one-complete") && !step("phase-one-complete").phase2 &&
-  step("phase-one-complete").seen.length === 10 && step("phase-one-complete").text !== exact,
-  "ten rooms completed in phase one retain the phase-one clue", step("phase-one-complete"));
+  step("phase-one-complete").seen.length === 10 && step("phase-one-complete").text !== exact &&
+  step("phase-one-complete").departure.acknowledged,
+  "reaching the car as the tenth Phase 1 room acknowledges the Road Trip departure clue",
+  step("phase-one-complete"));
 check(step("party-reveal") && step("party-reveal").phase2 && step("party-reveal").party &&
-  step("party-reveal").departure.pending,
-  "Party start arms the already-earned departure caption beneath its authored reveal", step("party-reveal"));
-check(step("after-reveal") && step("after-reveal").text === exact &&
-  step("after-reveal").key === "roadtrip_departure_caption" &&
-  step("after-reveal").caption.base.owner === "roadtrip-departure" &&
-  step("after-reveal").departure.pending,
-  "the departure invitation owns the caption after the Party reveal yields", step("after-reveal"));
+  step("party-reveal").departure.acknowledged && !step("party-reveal").departure.pending,
+  "Party start does not replay the Phase 1 Road Trip departure clue", step("party-reveal"));
+check(step("after-reveal") && step("after-reveal").text !== exact &&
+  step("after-reveal").key !== "roadtrip_departure_caption" &&
+  step("after-reveal").departure.acknowledged && !step("after-reveal").departure.pending,
+  "ordinary Party guidance resumes after its reveal without a duplicate Road Trip invitation",
+  step("after-reveal"));
 
 if (failures) process.exit(1);
 console.log("Phase-two Road Trip caption assertions passed.");

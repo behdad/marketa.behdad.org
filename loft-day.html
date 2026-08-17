@@ -6962,6 +6962,8 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .monitor-credits-software{fill:#f8f5ec;font:1.7px/1 "Source Serif 4",serif}
 .monitor-credits-notice{fill:#b8aca0;font:1.3px/1 "Source Serif 4",serif}
 .monitor-credits-made{fill:#fffdf8;font:600 1.95px/1 Fraunces,serif}
+.monitor-credits-link{fill:#d9c9bc;font:1.3px/1 "Source Serif 4",serif;pointer-events:auto;cursor:pointer;text-decoration:underline}
+.monitor-credits-link:hover,.monitor-credits-link:focus{fill:#fffdf8;outline:none}
 .monitor-credits-kill{opacity:0;text-anchor:middle;pointer-events:none}
 .monitor-credits-kill-title{fill:#fffdf8;font:700 3.8px/1 Fraunces,serif}
 .monitor-credits-kill-copy{fill:#e8dfcc;font:1.95px/1 "Source Serif 4",serif}
@@ -55000,7 +55002,11 @@ var LOFT_CREDITS = Object.freeze({
     "emduke32 (GPL-2.0) · Duke shareware (3D Realms)",
     "ioquake3 · OpenArena (GPL-2.0)"
   ]),
-  date: "August 2026"
+  date: "August 2026",
+  github: "github.com/behdad/marketa.behdad.org",
+  githubUrl: "https://github.com/behdad/marketa.behdad.org",
+  site: "marketa.behdad.org/loft-day",
+  siteUrl: "https://marketa.behdad.org/loft-day"
 });
 window.__loftCredits = LOFT_CREDITS;
 function loftCreditsLayout(testerCount, otherPeopleCount) {
@@ -55014,7 +55020,9 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
   var noticeY = softwareHeadingY + 5 + LOFT_CREDITS.software.length * 3;
   var closingY = noticeY + 7;
   var dateY = closingY + 4;
-  var travel = -(dateY - 152); // finish with even the final line fully above the y=155 clipped screen
+  var siteY = dateY + 3;
+  var githubY = siteY + 2.7;
+  var travel = 175 - (closingY + githubY) / 2; // leave the closing block centered and usable after the roll
   return {
     peopleY: peopleY,
     testersHeadingY: testersHeadingY,
@@ -55024,6 +55032,8 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
     noticeY: noticeY,
     closingY: closingY,
     dateY: dateY,
+    siteY: siteY,
+    githubY: githubY,
     travel: travel,
     duration: Math.max(22, Math.abs(travel) * 22 / 126)
   };
@@ -55050,7 +55060,8 @@ function loftCreditsLines(lang) {
   });
   lines.push("", dict.credits_open_source || T.en.credits_open_source);
   LOFT_CREDITS.software.forEach(function (name) { lines.push("  " + name); });
-  lines.push(dict.credits_licenses || T.en.credits_licenses, "", dict.credits_made || T.en.credits_made, LOFT_CREDITS.date);
+  lines.push(dict.credits_licenses || T.en.credits_licenses, "", dict.credits_made || T.en.credits_made,
+    LOFT_CREDITS.date, LOFT_CREDITS.site, LOFT_CREDITS.github);
   return lines;
 }
 window.__loftCreditsLines = loftCreditsLines;
@@ -74216,6 +74227,18 @@ setOfficeProgress("pc", false);
     creditsLine(creditsLayout.noticeY, "monitor-credits-notice", "credits_licenses");
     creditsLine(creditsLayout.closingY, "monitor-credits-made", "credits_made");
     creditsLine(creditsLayout.dateY, "monitor-credits-notice", null, LOFT_CREDITS.date);
+    function creditsLink(y, label, href) {
+      var anchor = mkEl("a", { href: href, target: "_blank", rel: "noopener", tabindex: "0" }, creditsRoll);
+      var text = mkEl("text", { x: 316, y: y, "class": "monitor-credits-link" }, anchor);
+      text.textContent = label;
+      anchor.addEventListener("click", function (e) { e.stopPropagation(); });
+      anchor.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      // Keep the browser's native Copy Link menu instead of the scene's custom menu.
+      anchor.addEventListener("contextmenu", function (e) { e.stopPropagation(); });
+      return anchor;
+    }
+    creditsLink(creditsLayout.siteY, LOFT_CREDITS.site, LOFT_CREDITS.siteUrl);
+    creditsLink(creditsLayout.githubY, LOFT_CREDITS.github, LOFT_CREDITS.githubUrl);
     creditsRoll.style.setProperty("--credits-travel", creditsLayout.travel + "px");
     creditsRoll.style.setProperty("--credits-duration", creditsLayout.duration + "s");
     var creditsKill = mkEl("g", { id: "monitor-credits-kill", "class": "monitor-credits-kill" }, creditsViewport);

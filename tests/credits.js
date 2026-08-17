@@ -48,6 +48,10 @@ var harness = String.raw`<script>
       creditsLines.indexOf("made with love by behdad, Claude & Codex") !== -1 &&
       window.__loftCreditsLines("cs").indexOf("s láskou vytvořili behdad, Claude a Codex") !== -1,
       JSON.stringify({ en: creditsLines.slice(-3), cs: window.__loftCreditsLines("cs").slice(-3) }));
+    check("the text credits include the canonical game and source URLs",
+      creditsLines.slice(-2).join("|") ===
+        "marketa.behdad.org/loft-day|github.com/behdad/marketa.behdad.org",
+      creditsLines.slice(-2).join("|"));
 
     var otherPeopleCount = window.__loftCredits.people.length - names.length;
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);
@@ -62,11 +66,18 @@ var harness = String.raw`<script>
     check("an oversized tester roster receives more travel and time",
       crowded.travel < current.travel && crowded.duration > current.duration,
       JSON.stringify({ current: current, crowded: crowded }));
-    check("the final credit clears the clipped screen",
-      current.dateY + current.travel < 155 && crowded.dateY + crowded.travel < 155,
+    check("the final credit settles as a centered closing card",
+      current.closingY + current.travel > 168 && current.githubY + current.travel < 182 &&
+      crowded.closingY + crowded.travel > 168 && crowded.githubY + crowded.travel < 182,
       JSON.stringify({ current: current, crowded: crowded }));
 
     var roll = document.getElementById("monitor-credits-roll");
+    var links = roll.querySelectorAll("a");
+    check("the rendered credits expose native links for the game and source",
+      links.length === 2 && links[0].getAttribute("href") === "https://marketa.behdad.org/loft-day" &&
+      links[1].getAttribute("href") === "https://github.com/behdad/marketa.behdad.org" &&
+      links[0].getAttribute("target") === "_blank" && links[1].getAttribute("target") === "_blank",
+      [].map.call(links, function (link) { return link.getAttribute("href"); }).join(", "));
     check("the rendered roll uses its computed travel and duration",
       roll.style.getPropertyValue("--credits-travel") === current.travel + "px" &&
       roll.style.getPropertyValue("--credits-duration") === current.duration + "s",

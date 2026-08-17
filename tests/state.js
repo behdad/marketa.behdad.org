@@ -506,6 +506,8 @@ var PROBE_HARNESS = [
   "    if (window.__applyRealWx) window.__applyRealWx();",
   "    await sleep(900);",
   "    ok('entry paint gate: full RSVP settles on the intro without remaining concealed', document.documentElement.classList.contains('loft-entry-ready') && !document.documentElement.classList.contains('loft-entry-pending') && !!el('click-me-overlay'));",
+  "    var entryStyle = getComputedStyle(el('click-me-overlay')), entryBackdrop = entryStyle.backdropFilter, entryWebkitBackdrop = entryStyle.webkitBackdropFilter;",
+  "    ok('entry overlay: no backdrop filter can destabilize old-Chromium SVG compositing', (!entryBackdrop || entryBackdrop === 'none') && (!entryWebkitBackdrop || entryWebkitBackdrop === 'none'), JSON.stringify({ backdrop: entryBackdrop, webkitBackdrop: entryWebkitBackdrop }));",
   "    // load-time class snapshot of every element under the strip (element",
   "    // identity, not index — probes spawn/remove particle nodes)",
   "    var snap = new Map();",

@@ -379,13 +379,17 @@ var harness = String.raw`<script>
       state().rooms.filter(function (room) { return room.locked; }).length === 9 &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1,
       JSON.stringify(state().rooms));
+    check("Phase 1 marks its visited room with the green check",
+      roomButton("kitchen").classList.contains("visited") &&
+      !roomButton("garden").classList.contains("visited") &&
+      getComputedStyle(roomButton("kitchen").querySelector(".loft-dollhouse-visited")).backgroundColor === "rgb(63, 125, 87)");
     window.__setPartyMode(true, true, false);
     check("the real Phase 1 to Phase 2 transition immediately sharpens an open Dollhouse",
       state().open && state().rooms.every(function (room) { return !room.locked; }) &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter === "none" &&
       getComputedStyle(roomButton("garden").querySelector("svg")).filter === "none",
       JSON.stringify(state().rooms));
-    check("Phase 2 marks only visited rooms with a green check",
+    check("Phase 2 preserves the green check only on visited rooms",
       roomButton("kitchen").classList.contains("visited") &&
       !roomButton("garden").classList.contains("visited") &&
       roomButton("kitchen").querySelector(".loft-dollhouse-visited").textContent === "✓" &&
@@ -394,6 +398,7 @@ var harness = String.raw`<script>
     window.__setSecondRound(false, { releaseHeld: false });
     check("returning to Phase 1 restores the unvisited-card lock semantics",
       roomButton("garden").classList.contains("locked") &&
+      roomButton("kitchen").classList.contains("visited") &&
       !roomButton("garden").classList.contains("visited") &&
       getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1);
     window.__closeDollhouse();

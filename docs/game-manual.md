@@ -40,9 +40,9 @@ Each main room contains a route downstairs; finding any one opens lower-floor na
 rest of the run. Before that, deliberately double-click or double-tap the floor control to open the
 current room's lower neighbour.
 
-The window-grid button opens **The Loft**, a ten-room map: clear cards are visited and blurred cards
-are waiting. Before the Party, a locked card needs a deliberate double-click or double-tap; after the
-Party begins, one selection unlocks and opens it.
+The window-grid button opens **The Loft**, a ten-room map: clear cards are available, blurred cards
+are waiting, and a green check marks a visited room. Before the Party, a locked card needs a
+deliberate double-click or double-tap; after the Party begins, one selection unlocks and opens it.
 
 During a Road Trip or Camping, Entrance represents the live scene. Opening the map during a drive
 pauses it; choosing Entrance returns to the paused dashboard, which you resume yourself.

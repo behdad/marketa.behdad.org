@@ -3790,6 +3790,8 @@ html.revealed #hunt-github-btn{display:none}
 #stage-balcony.tetris-on #balcony-wobble,
 #stage-balcony.tetris-on #balcony-wobble *{animation-play-state:paused !important}
 #stage-balcony.tetris-on #balcony-tetris-ui *{animation-play-state:running !important}
+#stage-balcony.tetris-on #balcony-butterfly,
+#stage-balcony.tetris-on #balcony-rainbow{opacity:0!important;animation:none!important}
 #balcony-tetris-ui .tetris-shield{fill:#101a21;opacity:.12}
 #balcony-tetris-ui .tetris-hud-bg{fill:#18242d;fill-opacity:.9;stroke:#f1cf78;stroke-width:1}
 #balcony-tetris-ui text{font-family:"Source Serif 4",Georgia,serif;fill:#fffdf8;letter-spacing:0}
@@ -100397,6 +100399,7 @@ def colormode(mode=None):
     function startGame() {
       if (active || window.__currentStageName !== "balcony") return false;
       if (resultVisible) dismissResult(false);
+      if (window.__clearBalconyFinaleVisuals) window.__clearBalconyFinaleVisuals();
       clearTimeout(ambientTimer); ambientTimer = null;
       clearAmbientEffects(true);
       normalWindowState = windows.map(function (windowEl) { return windowEl.classList.contains("lit"); });
@@ -117622,7 +117625,20 @@ function spawnDustMote(container) {
     if (window.__currentStageName === "office" && window.__restoreStageHint) window.__restoreStageHint("office");
     return true;
   };
-  var finaleTimers = [], finaleActTimer = null;
+  var finaleTimers = [], finaleActTimer = null, finaleRainbowTimer = null;
+  var finaleVisualGeneration = 0;
+  function clearBalconyFinaleVisuals() {
+    finaleVisualGeneration++;
+    if (finaleRainbowTimer) {
+      clearTimeout(finaleRainbowTimer);
+      finaleRainbowTimer = null;
+    }
+    var butterfly = document.getElementById("balcony-butterfly");
+    var rainbow = document.getElementById("balcony-rainbow");
+    if (butterfly) butterfly.classList.remove("flying", "startled");
+    if (rainbow) rainbow.classList.remove("burst", "after-rain");
+  }
+  window.__clearBalconyFinaleVisuals = clearBalconyFinaleVisuals;
   var balconyIntroSeen = false;
   window.__balconyUnlocked = function () { return balconyIntroSeen; }; // "first phase over" = the balcony's been properly reached (gates the autonomous kids-outside chance)
   function triggerBalconyFinale() {
@@ -117638,12 +117654,15 @@ function spawnDustMote(container) {
     finaleTimers = [];
     if (finaleActTimer && window.__cancelAttention) window.__cancelAttention(finaleActTimer);
     finaleActTimer = null;
+    var visualGeneration = ++finaleVisualGeneration;
     var butterfly = document.getElementById("balcony-butterfly");
     var rainbow = document.getElementById("balcony-rainbow");
     if (butterfly) {
       butterfly.classList.remove("flying");
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () { butterfly.classList.add("flying"); });
+        requestAnimationFrame(function () {
+          if (visualGeneration === finaleVisualGeneration) butterfly.classList.add("flying");
+        });
       });
     }
     finaleTimers.push(setTimeout(function () { spawnBalconyRain(); }, 500));
@@ -117652,12 +117671,17 @@ function spawnDustMote(container) {
     // unattended window shouldn't get a surprise melody (crickets/crane rule)
     finaleTimers.push(setTimeout(function () { if (window.__roomAutonomyAllowed("balcony")) playFinishMelody(); }, 3800));
     if (rainbow) {
-      finaleTimers.push(setTimeout(function () {
+      finaleRainbowTimer = setTimeout(function () {
+        finaleRainbowTimer = null;
+        if (visualGeneration !== finaleVisualGeneration) return;
         rainbow.classList.remove("burst", "after-rain");
         requestAnimationFrame(function () {
-          requestAnimationFrame(function () { rainbow.classList.add("burst"); });
+          requestAnimationFrame(function () {
+            if (visualGeneration === finaleVisualGeneration) rainbow.classList.add("burst");
+          });
         });
-      }, 4200));
+      }, 4200);
+      finaleTimers.push(finaleRainbowTimer);
     }
     // Fireworks are NOT part of the finale — they only light the sky on wedding
     // days / anniversaries, where the ambient controller (window.__updateSkyFireworks,

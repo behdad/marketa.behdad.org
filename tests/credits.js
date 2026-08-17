@@ -68,7 +68,8 @@ var harness = String.raw`<script>
       JSON.stringify({ current: current, crowded: crowded }));
     check("the final credit settles as a centered closing card",
       current.closingY + current.travel > 168 && current.githubY + current.travel < 182 &&
-      crowded.closingY + crowded.travel > 168 && crowded.githubY + crowded.travel < 182,
+      crowded.closingY + crowded.travel > 168 && crowded.githubY + crowded.travel < 182 &&
+      current.noticeY + current.travel < 155 && crowded.noticeY + crowded.travel < 155,
       JSON.stringify({ current: current, crowded: crowded }));
 
     var roll = document.getElementById("monitor-credits-roll");

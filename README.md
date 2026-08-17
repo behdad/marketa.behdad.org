@@ -15,8 +15,9 @@ part:
 - **Egg Hunt** — [`egg-hunt.html`](egg-hunt.html) — a quieter page with a scattering of
   little hidden things to find.
 
-New drops land every so often; each is kept as a frozen archive under its own name so
-older ones never disappear. `rsvp.html` reveals Loft Day inside the RSVP page and
+The root `index.html` is a small reverse-chronological hub for these drops. New ones land
+every so often; each is kept as a frozen archive under its own name so older ones never
+disappear. `rsvp.html` reveals Loft Day inside the RSVP page and
 `save-the-dates.html` reveals Egg Hunt inside the invitation; `loft-day.html` and
 `egg-hunt.html` are the canonical sources.
 

@@ -10,9 +10,9 @@ Pages have no build step or framework. `egg-hunt.html` remains self-contained an
 save-the-date/Egg Hunt source. `loft-day.html` is the canonical interactive game source, with only
 its review-friendly English and Czech message dictionaries split into `loft-day.en.js` and
 `loft-day.cs.js`. Keep that boundary narrow. The
-save-the-date page *was* `index.html`; it was renamed 2026-07 for the frozen-archive drops model. A landing
-`index.html` at the root — a hub linking every drop — is planned but not yet built; until it
-exists, `.htaccess` `DirectoryIndex` serves the `save-the-dates.html` alias at `/`. New save-the-date
+save-the-date page *was* `index.html`; it was renamed 2026-07 for the frozen-archive drops model. The landing
+`index.html` at the root is a hub linking every drop; `.htaccess` `DirectoryIndex` serves it at `/`.
+New save-the-date
 features go inside `egg-hunt.html` unless there's a strong reason not to. (`loft-day.html`
 follows the same rule; its self-hosted runtimes live in `pyodide/` — CPython wasm + wheels — and
 `linux/` — v86 + a repacked ISO carrying hb-shape/Fraunces/emoji; provenance in each

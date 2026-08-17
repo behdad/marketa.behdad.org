@@ -33,11 +33,12 @@ remain page-owned:
   review-friendly `loft-day.en.js` and `loft-day.cs.js` message dictionaries plus the public
   `code-snippets/` samples used by the in-game IDE. The `loft-day`,
   `rsvp`, and `rsvp.html` names are symlinks to it; only an RSVP-named URL reveals the surrounding
-  invitation content.
+  invitation content. In source order, that invitation's dates and RSVP markup deliberately precede
+  the large inline game so browsers can paint the useful page while the game is still arriving.
 
-The root `index.html` hub is planned but does not yet exist. Until then, `.htaccess` serves the
-`save-the-dates.html` alias for `/`. Keep a new invitation feature in `egg-hunt.html` and a new game
-feature in `loft-day.html` unless there is a strong architectural reason to create another public file.
+The root `index.html` is a lightweight, reverse-chronological hub for the published drops. Keep a new
+invitation feature in `egg-hunt.html` and a new game feature in `loft-day.html` unless there is a
+strong architectural reason to create another public file.
 
 Supporting boundaries are:
 

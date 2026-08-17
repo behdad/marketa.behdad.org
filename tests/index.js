@@ -10,6 +10,8 @@ function probe(width, height) {
   function check(name, pass, detail) { report.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   try {
     var cards = [].slice.call(document.querySelectorAll(".drop"));
+    var rsvpPrefetch = document.querySelector('link[rel="prefetch"][href="rsvp"][as="document"]');
+    check("the RSVP document is offered as a native browser prefetch", !!rsvpPrefetch);
     check("drops are reverse chronological RSVP then Save the Dates",
       cards.length === 2 && cards[0].getAttribute("href") === "rsvp" &&
       cards[1].getAttribute("href") === "save-the-dates",

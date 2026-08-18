@@ -1284,7 +1284,7 @@ window.__loftMessages["en"] = {
   "rsvp_exit_link": "You’ve seen the whole day — one thing left: tell us you’ll come ↓",
   "rsvp_gmail": "Open in Gmail",
   "rsvp_mail": "Email app",
-  "rsvp_sub": "Near or far, bring your loved ones — come to one or both. Just let us know.",
+  "rsvp_sub": "Near or far, little or grown, bring your loved ones — come to one or both. Just let us know.",
   "rsvp_title": "RSVP",
   "rumi_lines": [
     [

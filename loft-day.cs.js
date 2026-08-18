@@ -1286,7 +1286,7 @@ window.__loftMessages["cs"] = {
   "rsvp_mail": "E-mailová aplikace",
   "rsvp_sub": "Zblízka či zdaleka, malí i velcí, vezměte své nejdražší a přijeďte na jednu nebo na obě akce. Dejte nám vědět!",
   "rsvp_title": "Potvrzení účasti",
-  "rsvp_to_game": "Mezitím… prozkoumejte Loft. Je plný tajemství.",
+  "rsvp_to_game": "Mezitím… prozkoumejte <em>Loft plný tajemství</em>:",
   "rumi_lines": [
     [
       "Bez všech ostatních se obejdu; bez tebe ne.",

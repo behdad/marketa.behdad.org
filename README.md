@@ -6,19 +6,16 @@ point-and-click adventure.
 
 [![Loft Day — an interactive point-and-click adventure](art/og-loft-day.png)](https://marketa.behdad.org/loft-day)
 
-The site is a playground of interactive "drops" — each a self-contained little
-world you can poke at and explore.
-
 ## Play
 
-- **[Play Loft Day](https://marketa.behdad.org/loft-day)** — [`source`](loft-day.html) —
+- **[Loft Day](https://marketa.behdad.org/loft-day)** — [`source`](loft-day.html) —
   an interactive point-and-click loft:
   an illustrated home you wander room by room. Little games are tucked inside (catch the
   garnishes at the bar, clear the invaders from the office chair…), there's a whole
   JavaScript and Python API if you open the office monitor, and real self-hosted software
   runs in a few corners — Python, a tiny Linux, classic shooters, a text shaper. It's the
   good stuff.
-- **[Explore Egg Hunt](https://marketa.behdad.org/egg-hunt)** — [`source`](egg-hunt.html) —
+- **[Egg Hunt](https://marketa.behdad.org/egg-hunt)** — [`source`](egg-hunt.html) —
   a quieter interactive save-the-date with a scattering of hidden things to find.
 
 ## Loft Day documentation

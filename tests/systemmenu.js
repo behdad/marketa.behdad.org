@@ -25,6 +25,9 @@ var HARNESS = [
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
   "  S('tagline_removed',menu.querySelector('.desk-system-tagline')===null);",
   "  S('menu_type',parseFloat(getComputedStyle(menu.querySelector('.desk-system-label')).fontSize));",
+  "  S('menu_family',getComputedStyle(menu.querySelector('.desk-system-label')).fontFamily);",
+  "  S('menu_title_family',getComputedStyle(menu.querySelector('.desk-system-title')).fontFamily);",
+  "  S('caption_family',getComputedStyle(document.querySelector('.scene-caption')).fontFamily);",
   "  S('menu_fit_en',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.__setLang('cs'); S('menu_fit_cs',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.__setLang('en');",
   "  window.__monitorSystemAction('system'); await sleep(30); var sysinfo=document.getElementById('monitor-system-info-layer');",
   "  var statusLink=sysinfo.querySelector('.monitor-system-info-status-link');",
@@ -34,6 +37,7 @@ var HARNESS = [
   "  var systemApps=window.__chatMonitorApps(); if(window.__monitorZoomIn)window.__monitorZoomIn(); ['s','y','s'].forEach(key); var systemSearch=window.__monitorDockSearch(); key('Enter'); await sleep(40);",
   "  S('system_search',systemSearch.match==='system'&&!document.getElementById('monitor-dock-system')&&systemApps.some(function(app){return app.id==='system'&&app.access==='search';})&&sysinfo.classList.contains('open')&&mon.classList.contains('show-system')&&window.__monitorAppRunning('system'));",
   "  sysinfo.querySelector('.monitor-system-info-bg').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:120,clientY:80})); var systemCtx=document.querySelector('.mon-ctx');",
+  "  S('context_family',systemCtx&&getComputedStyle(systemCtx).fontFamily);",
   "  S('system_context',!!systemCtx&&!!systemCtx.querySelector('button.ctx-kill')&&!systemCtx.querySelector('button.ctx-restart')); systemCtx.querySelector('button.ctx-kill').click(); await sleep(300);",
   "  var bugs=sysinfo.querySelectorAll('.monitor-system-info-kill-bug'),receipt=sysinfo.querySelector('.monitor-system-info-kill-receipt');",
   "  S('system_killing',sysinfo.classList.contains('killing')&&!!receipt&&bugs.length===3&&document.getElementById('hunt-caption').textContent==='System killed. The bugs survived.'&&window.__loftMessages.cs.hunt.df_system_quip==='Systém ukončen. Chyby přežily.');",
@@ -48,6 +52,7 @@ var HARNESS = [
   "  window.__monitorSystemAction('credits'); await sleep(80); var credits=document.getElementById('monitor-credits-layer');",
   "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('Irene')<credits.textContent.indexOf('Kasra')&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf((window.__loftMessages[document.documentElement.lang]||window.__loftMessages.en).credits_made)>=0&&credits.textContent.indexOf('August 2026')>=0&&credits.textContent.indexOf('marketa.behdad.org/loft-day')>=0&&credits.textContent.indexOf('github.com/behdad/marketa.behdad.org')>=0);",
   "  S('credits_type',{title:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-title')).fontSize),name:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-name')).fontSize),body:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-software')).fontSize)});",
+  "  S('credits_link_family',getComputedStyle(credits.querySelector('.monitor-credits-link')).fontFamily);",
   "  window.__killMonitorCredits(); await sleep(80); S('credits_killing',credits.classList.contains('killing')&&credits.textContent.indexOf('the gratitude survives.')>=0);",
   "  await sleep(3000); S('credits_killed',!credits.classList.contains('open')&&!mon.classList.contains('show-credits')&&!window.__monitorAppRunning('credits')&&mon.classList.contains('show-caps'));",
   "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); if(window.__monitorZoomIn)window.__monitorZoomIn(); window.__monitorSystemAction('sleep');",
@@ -106,15 +111,20 @@ ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu groups power actions before Help, About, System, and Credits", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","help","about","system","credits"]));
 ok("compact menu leaves the motto for About", s.tagline_removed === true);
 ok("system-menu labels use the enlarged type", s.menu_type >= 2.2);
+ok("system-menu labels use Source Sans 3 while Loft OS keeps Fraunces",
+  /Source Sans 3/.test(s.menu_family || "") && /Fraunces/.test(s.menu_title_family || ""));
+ok("bottom instruction captions use Source Sans 3", /Source Sans 3/.test(s.caption_family || ""));
 ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true && s.menu_fit_cs === true);
 ok("System reports live diagnostics, fits both languages, and ordinary close retains its task", s.system_open === true && s.system_fit_en === true && s.system_fit_cs === true && s.system_closed === true);
 ok("System is searchable without receiving a desktop tile", s.system_search === true);
 ok("System context-menu Kill prints escaping bugs, owns bilingual copy, and clears its task", s.system_context === true && s.system_killing === true && s.system_killed === true);
+ok("shared context menus use Source Sans 3", /Source Sans 3/.test(s.context_family || ""));
 ok("About is a searchable running app with an about:eternity portal Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
 ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
 ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);
 ok("Credits rolls people, software, and the closing line", s.credits_open === true);
 ok("Credits title, names, and body use the enlarged type", s.credits_type && s.credits_type.title >= 4 && s.credits_type.name >= 2.75 && s.credits_type.body >= 1.7);
+ok("Credits URLs use Source Sans 3", /Source Sans 3/.test(s.credits_link_family || ""));
 ok("Credits Kill flares, preserves gratitude, and returns to desktop", s.credits_killing === true && s.credits_killed === true);
 ok("Sleep suspends and unzooms only the live monitor, then a press wakes it", s.sleep_suspended === true && s.sleep_unzoomed === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);

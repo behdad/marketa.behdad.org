@@ -1,27 +1,24 @@
-# markéta & behdad
+# Welcome to markéta & behdad’s wedding website
 
-The personal wedding website for **Markéta & Behdad**, live at
-[marketa.behdad.org](https://marketa.behdad.org).
+Live at [marketa.behdad.org](https://marketa.behdad.org). More interestingly, it is home
+to **[Loft Day](https://marketa.behdad.org/loft-day)**, a sprawling interactive
+point-and-click adventure.
 
-Mostly, though, it's a playground of interactive "drops" — each a self-contained little
-world you can poke at and explore. If you found your way to this repo, these are the fun
-part:
+The site is a playground of interactive "drops" — each a self-contained little
+world you can poke at and explore.
 
-- **Loft Day** — [`loft-day.html`](loft-day.html) — an interactive point-and-click loft:
+## Play
+
+- **[Play Loft Day](https://marketa.behdad.org/loft-day)** — [`source`](loft-day.html) —
+  an interactive point-and-click loft:
   an illustrated home you wander room by room. Little games are tucked inside (catch the
   garnishes at the bar, clear the invaders from the office chair…), there's a whole
   console DSL if you open the office monitor, and real self-hosted software runs in a few
   corners — Python, a tiny Linux, classic shooters, a text shaper. It's the good stuff.
-- **Egg Hunt** — [`egg-hunt.html`](egg-hunt.html) — a quieter page with a scattering of
-  little hidden things to find.
+- **[Explore Egg Hunt](https://marketa.behdad.org/egg-hunt)** — [`source`](egg-hunt.html) —
+  a quieter page with a scattering of little hidden things to find.
 
-The root `index.html` is a small reverse-chronological hub for these drops. New ones land
-every so often; each is kept as a frozen archive under its own name so older ones never
-disappear. `rsvp.html` reveals Loft Day inside the RSVP page and
-`save-the-dates.html` reveals Egg Hunt inside the invitation; `loft-day.html` and
-`egg-hunt.html` are the canonical sources.
-
-## Documentation
+## Loft Day documentation
 
 - **[Game manual](docs/game-manual.md)** — how to play, explore the rooms, use the apps,
   and discover the loft's optional systems.

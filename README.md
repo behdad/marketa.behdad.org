@@ -4,6 +4,8 @@ Live at [marketa.behdad.org](https://marketa.behdad.org). More interestingly, it
 to **[Loft Day](https://marketa.behdad.org/loft-day)**, a sprawling interactive
 point-and-click adventure.
 
+[![Loft Day — an interactive point-and-click adventure](art/og-loft-day.png)](https://marketa.behdad.org/loft-day)
+
 The site is a playground of interactive "drops" — each a self-contained little
 world you can poke at and explore.
 
@@ -13,10 +15,11 @@ world you can poke at and explore.
   an interactive point-and-click loft:
   an illustrated home you wander room by room. Little games are tucked inside (catch the
   garnishes at the bar, clear the invaders from the office chair…), there's a whole
-  console DSL if you open the office monitor, and real self-hosted software runs in a few
-  corners — Python, a tiny Linux, classic shooters, a text shaper. It's the good stuff.
+  JavaScript and Python API if you open the office monitor, and real self-hosted software
+  runs in a few corners — Python, a tiny Linux, classic shooters, a text shaper. It's the
+  good stuff.
 - **[Explore Egg Hunt](https://marketa.behdad.org/egg-hunt)** — [`source`](egg-hunt.html) —
-  a quieter page with a scattering of little hidden things to find.
+  a quieter interactive save-the-date with a scattering of hidden things to find.
 
 ## Loft Day documentation
 
@@ -28,7 +31,7 @@ world you can poke at and explore.
 ## Vibe coded
 
 This whole repository is vibe coded. Humans direct, review, and play-test it, but never
-touch the code: AI agents author and maintain the implementation. They own it.
+touch the code; AI agents write and maintain the implementation.
 
 ## A note for visitors
 

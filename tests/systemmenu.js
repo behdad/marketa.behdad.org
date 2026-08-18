@@ -44,8 +44,11 @@ var HARNESS = [
   "  var bugs=sysinfo.querySelectorAll('.monitor-system-info-kill-bug'),receipt=sysinfo.querySelector('.monitor-system-info-kill-receipt');",
   "  S('system_killing',sysinfo.classList.contains('killing')&&!!receipt&&bugs.length===3&&document.getElementById('hunt-caption').textContent==='System killed. The bugs survived.'&&window.__loftMessages.cs.hunt.df_system_quip==='Systém ukončen. Chyby přežily.');",
   "  await sleep(2000); S('system_killed',!sysinfo.classList.contains('open')&&!mon.classList.contains('show-system')&&!window.__monitorAppRunning('system')&&mon.classList.contains('show-caps'));",
+  "  window.__monitorSystemAction('help'); await sleep(30); var help=document.getElementById('monitor-help-layer');",
+  "  S('help_open',help.classList.contains('open')&&help.textContent.indexOf('take the road trip and go camping')>=0);",
+  "  S('help_fit_en',inside(help.querySelector('.monitor-help-bg'),help.querySelectorAll('.monitor-help-title,.monitor-help-copy,.monitor-help-manual'))); window.__setLang('cs'); S('help_fit_cs',inside(help.querySelector('.monitor-help-bg'),help.querySelectorAll('.monitor-help-title,.monitor-help-copy,.monitor-help-manual'))); window.__setLang('en'); window.__closeMonitorHelp();",
   "  window.__monitorSystemAction('about'); await sleep(30); var about=document.getElementById('monitor-about-layer');",
-  "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
+  "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('go camping beyond the mountains')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
   "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),motto:parseFloat(getComputedStyle(about.querySelector('.monitor-about-motto')).fontSize)});",
   "  S('about_fit_en',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.__setLang('cs'); S('about_fit_cs',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.__setLang('en');",
   "  window.__killMonitorAbout(); await sleep(300); var aboutRings=about.querySelectorAll('.monitor-about-portal-ring');",
@@ -122,6 +125,7 @@ ok("System reports live diagnostics, fits both languages, and ordinary close ret
 ok("System is searchable without receiving a desktop tile", s.system_search === true);
 ok("System context-menu Kill prints escaping bugs, owns bilingual copy, and clears its task", s.system_context === true && s.system_killing === true && s.system_killed === true);
 ok("shared context menus use Source Sans 3", /Source Sans 3/.test(s.context_family || ""));
+ok("Help hints at the road trip and camping and fits both languages", s.help_open === true && s.help_fit_en === true && s.help_fit_cs === true);
 ok("About is a searchable running app with an about:eternity portal Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
 ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
 ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);

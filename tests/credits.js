@@ -52,6 +52,10 @@ var harness = String.raw`<script>
       creditsLines.slice(-2).join("|") ===
         "marketa.behdad.org/loft-day|github.com/behdad/marketa.behdad.org",
       creditsLines.slice(-2).join("|"));
+    check("the Chromium debit appears in both text credits",
+      creditsLines.indexOf("  Chromium issue 546207266 — V8 GC doesn’t kick in during lots of animations…") !== -1 &&
+      window.__loftCreditsLines("cs").indexOf("  Chromium issue 546207266 — V8 GC doesn’t kick in during lots of animations…") !== -1,
+      creditsLines.join(" | "));
 
     var otherPeopleCount = window.__loftCredits.people.length - names.length;
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);
@@ -74,9 +78,10 @@ var harness = String.raw`<script>
 
     var roll = document.getElementById("monitor-credits-roll");
     var links = roll.querySelectorAll("a");
-    check("the rendered credits expose native links for the game and source",
-      links.length === 2 && links[0].getAttribute("href") === "https://marketa.behdad.org/loft-day" &&
+    check("the rendered credits expose native links for the game, source, and Chromium debit",
+      links.length === 3 && links[0].getAttribute("href") === "https://marketa.behdad.org/loft-day" &&
       links[1].getAttribute("href") === "https://github.com/behdad/marketa.behdad.org" &&
+      links[2].getAttribute("href") === "https://issues.chromium.org/issues/546207266" &&
       links[0].getAttribute("target") === "_blank" && links[1].getAttribute("target") === "_blank",
       [].map.call(links, function (link) { return link.getAttribute("href"); }).join(", "));
     check("the rendered roll uses its computed travel and duration",

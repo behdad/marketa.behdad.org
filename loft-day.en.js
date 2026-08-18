@@ -222,7 +222,7 @@ window.__loftMessages["en"] = {
   "ed_date1": "Sat, May 1 · 4pm–4am",
   "ed_date2": "Sun, May 2 · 4pm–10pm",
   "ed_desc1": "Ceremony & dinner at <a href=\"https://www.atriumatsabor.ca/\" target=\"_blank\" rel=\"noopener\">Atrium by Sabor ↗</a>, followed by concert, dancing & afterparty at <a href=\"https://www.99ten.ca/\" target=\"_blank\" rel=\"noopener\">9910 ↗</a>.",
-  "ed_desc2": "BBQ at the loft.",
+  "ed_desc2": "BBQ at our loft.",
   "entrance_intercom_reply": "“Alo?”",
   "entrance_windows_all_off": "The whole building has gone to bed.",
   "entrance_windows_all_on": "Every window is awake. Nobody told the power bill.",

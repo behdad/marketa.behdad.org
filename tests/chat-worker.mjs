@@ -223,7 +223,15 @@ check(sanitizedContext.apps.games.length === 2 &&
   sanitizedContext.apps.games[1].high_score === 230 &&
   !captured.body.instructions.includes("Private game"),
   "Worker forwards the authoritative game directory while dropping unknown entries", sanitizedContext.apps.games);
-check(/Verified knowledge/.test(captured.body.instructions) && /"official_name":"The Loft"/.test(captured.body.instructions) && /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) && /canonical runtime calendar/.test(captured.body.instructions), "verified venue and calendar-source knowledge reaches Charlie");
+check(/Verified knowledge/.test(captured.body.instructions) &&
+  /"official_name":"The Loft"/.test(captured.body.instructions) &&
+  /"event":"ceremony and dinner","venue":"Atrium by Sabor"/.test(captured.body.instructions) &&
+  /"event":"private concert and dancing","venue":"9910"/.test(captured.body.instructions) &&
+  /"event":"afterparty","venue":"Y Afterhours"/.test(captured.body.instructions) &&
+  /"events":\["garden party","sleepover","next-day brunch"\]/.test(captured.body.instructions) &&
+  /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) &&
+  /canonical runtime calendar/.test(captured.body.instructions),
+  "verified celebration venues and calendar-source knowledge reach Charlie");
 check(/knowledge\.loft\.rooms is Charlie's room guide/.test(captured.body.instructions) &&
   /"La Maz espresso machine"/.test(captured.body.instructions) &&
   /"El Maz grinder"/.test(captured.body.instructions) &&

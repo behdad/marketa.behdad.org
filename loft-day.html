@@ -6674,6 +6674,7 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 }
 #office-headphones.dragging{cursor:grabbing}
 #office-headphones.wobbling{animation:headphones-wobble .6s ease-in-out}
+#office-headphones.music-hinting{animation:headphones-music-hint .55s ease-in-out}
 @keyframes headphones-wobble{
   0%{transform:rotate(0deg)}
   20%{transform:rotate(-9deg)}
@@ -6681,7 +6682,12 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
   70%{transform:rotate(-4deg)}
   100%{transform:rotate(0deg)}
 }
-@media (prefers-reduced-motion: reduce){#office-headphones.wobbling{animation:none}}
+@keyframes headphones-music-hint{
+  0%,100%{transform:rotate(0deg)}
+  28%{transform:rotate(-3deg)}
+  62%{transform:rotate(2deg)}
+}
+@media (prefers-reduced-motion: reduce){#office-headphones.wobbling,#office-headphones.music-hinting{animation:none}}
 /* the cups pulse to the ACTUAL beat while headphone mode is on -- driven by direct
    per-frame transform writes off the real analyser data (see headphoneBeatFrame),
    same technique as the equalizer bars' driveBars, not a precomputed CSS keyframe loop.
@@ -64433,7 +64439,11 @@ function quickReversalGesture(action) {
       headphones.classList.remove("dragging");
       try { headphones.releasePointerCapture(e.pointerId); } catch (_error) {}
       headphones.style.transition = "";
-      if (headphonesDragMoved && window.__checkpointChanged) window.__checkpointChanged();
+      if (headphonesDragMoved) {
+        window.__headphonesHaveMoved = true;
+        headphones.classList.remove("music-hinting");
+        if (window.__checkpointChanged) window.__checkpointChanged();
+      }
     }
     headphones.addEventListener("pointerup", finishHeadphonesDrag);
     headphones.addEventListener("pointercancel", finishHeadphonesDrag);
@@ -72587,6 +72597,36 @@ setOfficeProgress("pc", false);
     return false;
   }
   window.__anySongPlaying = anySongPlaying; // the shared-context idle manager reads this cross-scope
+  // While music is playing, unplugged headphones give a quiet periodic hint even at
+  // low volume. Their position does not matter; dragging them around should not hide
+  // the affordance. Plugged-in headphones use the live analyser pulse instead.
+  var headphoneHintTimer = null;
+  function syncHeadphoneMusicHint() {
+    if (!anySongPlaying() || window.__headphonesHaveMoved) {
+      if (headphoneHintTimer != null) clearTimeout(headphoneHintTimer);
+      headphoneHintTimer = null;
+      return;
+    }
+    if (headphoneHintTimer != null) return;
+    headphoneHintTimer = setTimeout(function () {
+      headphoneHintTimer = null;
+      var headphones = document.getElementById("office-headphones");
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (headphones && !window.__headphonesHaveMoved && window.__currentStageName === "office" && !headphoneModeOn &&
+          !headphones.classList.contains("dragging") && !headphones.classList.contains("wobbling") &&
+          !document.hidden && document.hasFocus() && !reduced) {
+        headphones.classList.remove("music-hinting");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { headphones.classList.add("music-hinting"); });
+        });
+      }
+      syncHeadphoneMusicHint();
+    }, 4000);
+  }
+  var headphoneHintEl = document.getElementById("office-headphones");
+  if (headphoneHintEl) headphoneHintEl.addEventListener("animationend", function (event) {
+    if (event.animationName === "headphones-music-hint") headphoneHintEl.classList.remove("music-hinting");
+  });
   // Song-audio playback needs the shared context RUNNING (a captured <audio> element is
   // inaudible while the context is suspended), including while hidden/unfocused —
   // backgrounded playback is a feature (see the Media Session block below). That's now a
@@ -72978,6 +73018,7 @@ setOfficeProgress("pc", false);
     // play/pause/ended flip whether the pipeline context may idle suspended (these
     // events still fire in a hidden tab, e.g. from a lock-screen media control)
     updateEqCtxIdle();
+    syncHeadphoneMusicHint();
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn(); // rail play/pause icon follows the song state
 
     // show once the monitor's booted (even over the screensaver, which we wake)

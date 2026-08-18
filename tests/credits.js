@@ -95,10 +95,12 @@ var harness = String.raw`<script>
       getComputedStyle(roll).animationPlayState === "running",
       layer.getAttribute("class") + " / " + getComputedStyle(roll).animationPlayState);
     roll.dispatchEvent(new Event("animationend"));
-    check("the fire keeps running after the credits finish",
+    check("the credits finish over their self-contained dawn scene",
       document.getElementById("monitor-credits-layer").classList.contains("finished") &&
-      window.__cuddlyFlameRaf() !== null,
-      String(window.__cuddlyFlameRaf()));
+      !!document.getElementById("monitor-credits-dawn-sky") &&
+      !!document.getElementById("monitor-credits-sun") &&
+      !document.getElementById("monitor-credits-fire"),
+      document.getElementById("monitor-credits-layer").getAttribute("class"));
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
   }

@@ -25,7 +25,7 @@ var HARNESS = [
   "window.__goToStage('garden');await sleep(800);var guitar=document.getElementById('garden-guitar');",
   "S('garden_prevented',ctx(guitar));S('garden_items',items());closeMenus();S('garden_room',window.__currentStageName);",
   "window.__secondRound=true;window.__goToStage('office');await sleep(800);if(window.__loftControllers.computer)window.__loftControllers.computer.set(true);if(window.__monitorZoomIn)window.__monitorZoomIn();await sleep(20);",
-  "var vp=document.querySelector('.hunt-viewport').getBoundingClientRect(),officeStage=document.getElementById('stage-office');S('layer_prevented',ctx(officeStage,vp.left+vp.width/2,vp.top+vp.height/2));S('layer_items',items());button('.ctx-escape').click();await sleep(30);S('escape_zoomed',window.__monitorZoomed&&window.__monitorZoomed());S('escape_room',window.__currentStageName);",
+  "var vp=document.querySelector('.hunt-viewport').getBoundingClientRect(),officeStage=document.getElementById('stage-office');S('layer_prevented',ctx(officeStage,vp.left+vp.width/2,vp.top+vp.height/2));S('layer_items',items());S('layer_zoomed',window.__monitorZoomed&&window.__monitorZoomed());",
   "window.__goToStage('kitchen');await sleep(800);S('phase2_kitchen_prevented',ctxView(pan));S('phase2_kitchen_items',items());",
   "window.__secondRound=false;window.__setMaxUnlocked(0);document.documentElement.lang='cs';S('czech_prevented',ctxView(pan));S('czech_items',items());",
   "document.documentElement.lang='en';closeMenus();S('touch_positive',await hold(kitchenStage,801));",
@@ -53,7 +53,7 @@ check("bare scenery gets the same one-action menu", s.bare_prevented && JSON.str
 check("outside the loft retains the native menu", s.outside_native === true && !s.outside_items.length, { native: s.outside_native, items: s.outside_items });
 check("Solve advances one guided step", s.solve_advanced === true, s.solve_advanced);
 check("frontier menus never pan to the previous room", s.garden_prevented && JSON.stringify(s.garden_items) === JSON.stringify(["Solve"]) && s.garden_room === "garden", { items: s.garden_items, room: s.garden_room });
-check("a real layer exposes Escape and delegates to canonical behavior", s.layer_prevented && JSON.stringify(s.layer_items) === JSON.stringify(["Escape"]) && s.escape_zoomed === false && s.escape_room === "office", { items: s.layer_items, zoomed: s.escape_zoomed, room: s.escape_room });
+check("a real layer suppresses the native menu without offering a no-op Escape action", s.layer_prevented && !s.layer_items.length && s.layer_zoomed === true, { items: s.layer_items, zoomed: s.layer_zoomed });
 check("a solved scene suppresses the native menu without showing an empty custom menu", s.phase2_kitchen_prevented && !s.phase2_kitchen_items.length, { prevented: s.phase2_kitchen_prevented, items: s.phase2_kitchen_items });
 check("Czech menu copy stays in parity", s.czech_prevented && JSON.stringify(s.czech_items) === JSON.stringify(["Vyřešit"]), s.czech_items);
 check("ordinary touch holds still reach the contextual Solve action", s.touch_positive && JSON.stringify(s.touch_positive.scene) === JSON.stringify(["Solve"]) && !s.touch_positive.app, s.touch_positive);

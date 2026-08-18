@@ -38288,8 +38288,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-925e30735456"></script>
-<script src="loft-day.cs.js?v=dict-e45ee85f41a6"></script>
+<script src="loft-day.en.js?v=dict-7c4f1b212b27"></script>
+<script src="loft-day.cs.js?v=dict-afcd609bd9a7"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -118777,7 +118777,7 @@ function spawnDustMote(container) {
   // magic box…) claim the event first; every other right-click inside the scene gets this menu
   // so browser chrome never covers the game.
   (function () {
-    var menu = null, menuEscapeTarget = null;
+    var menu = null;
     function tr(key) {
       var l = document.documentElement.lang;
       return (T[l] && T[l][key]) || T.en[key] || key;
@@ -118786,7 +118786,6 @@ function spawnDustMote(container) {
       if (!menu) return;
       menu.remove();
       menu = null;
-      menuEscapeTarget = null;
       document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("mousedown", onAway, true);
       document.removeEventListener("scroll", closeMenu, true);
@@ -118808,42 +118807,13 @@ function spawnDustMote(container) {
       b.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var escapeTarget = menuEscapeTarget;
         closeMenu();
-        fn(escapeTarget);
+        fn();
       });
       return b;
     }
     function phaseOneFrontier() {
       return !lowerRoomOwnsViewport() && !window.__secondRound && !roomSolved(STAGES[stageIndex]);
-    }
-    function escapeHasLayer() {
-      if ((window.__monitorZoomed && window.__monitorZoomed()) ||
-          (window.__laptopZoomed && window.__laptopZoomed()) ||
-          (window.__rosterOpen && window.__rosterOpen()) ||
-          (window.__tripPickerOpen && window.__tripPickerOpen()) ||
-          (window.__djPickerOpen && window.__djPickerOpen()) ||
-          (window.__laptopCallLive && window.__laptopCallLive()) ||
-          document.querySelector(".pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show")) return true;
-      var game = (window.__flairState && window.__flairState()) ||
-        (window.__arcadeState && window.__arcadeState()) ||
-        (window.__balconyTetrisState && window.__balconyTetrisState());
-      if (game && (game.active || game.result)) return true;
-      var monitor = document.getElementById("office-monitor");
-      var monitorAppClasses = window.__monitorAppClasses;
-      if (monitor && monitorAppClasses) {
-        for (var id in monitorAppClasses) {
-          if (monitor.classList.contains(monitorAppClasses[id])) return true;
-        }
-      }
-      return false;
-    }
-    function semanticEscape(target) {
-      // Let the menu's own click finish after it has been removed, then hand off to the exact
-      // Escape state owner used by keyboard/Backspace (app → desktop → zoom → room).
-      setTimeout(function () {
-        if (window.__dispatchEscape) window.__dispatchEscape(target && target.isConnected ? target : null);
-      }, 0);
     }
     function solveNext() {
       var room = STAGES[stageIndex];
@@ -118853,14 +118823,11 @@ function spawnDustMote(container) {
     function openMenu(x, y) {
       closeMenu();
       var items = [];
-      var canEscape = escapeHasLayer();
-      if (canEscape) items.push(item("ctx-escape", "←", "scene_ctx_escape", semanticEscape));
-      if (!canEscape && phaseOneFrontier()) {
+      if (phaseOneFrontier()) {
         items.push(item("ctx-solve", "✓", "scene_ctx_solve", solveNext));
       }
       if (!items.length) return false;
       menu = document.createElement("div");
-      menuEscapeTarget = document.activeElement;
       menu.className = "mon-ctx scene-ctx";
       items.forEach(function (b) { menu.appendChild(b); });
       menu.style.visibility = "hidden";

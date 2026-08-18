@@ -1318,7 +1318,6 @@ window.__loftMessages["en"] = {
     ]
   ],
   "sat_call_sub": "Saturday, same as always",
-  "scene_ctx_escape": "Escape",
   "scene_ctx_solve": "Solve",
   "season_auto": "⛅ back to today",
   "season_autumn": "🍂 autumn",

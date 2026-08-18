@@ -1279,7 +1279,7 @@ window.__loftMessages["en"] = {
   "roster_empty": "The floor's empty — throw the party first.",
   "roster_none": "Nobody's in this room right now.",
   "roster_title": "who's here?",
-  "rsvp_email_body": "who we are:\n\nwhich celebration (one or both — all welcome): Edmonton · May 1  /  Prague · July 10\n\nhow many of us:\n\nanything you should know — food, little ones, a song we have to hear:\n\ncan't wait,",
+  "rsvp_email_body": "who we are:\n\nwhich celebration (one or both — all welcome): Edmonton · May 1  /  Prague · July 10\n\nhow many of us:\n\nanything you should know — food, little ones, a song we have to hear:",
   "rsvp_email_subject": "we're coming 💌",
   "rsvp_exit_link": "You’ve seen the whole day — one thing left: tell us you’ll come ↓",
   "rsvp_gmail": "Open in Gmail",

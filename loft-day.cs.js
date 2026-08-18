@@ -1279,7 +1279,7 @@ window.__loftMessages["cs"] = {
   "roster_empty": "Parket je prázdný — nejdřív uspořádej párty.",
   "roster_none": "V téhle místnosti teď nikdo není.",
   "roster_title": "kdo tu je?",
-  "rsvp_email_body": "kdo jsme:\n\nna kterou oslavu (jednu, nebo obě — všichni vítáni): Edmonton · 1. května  /  Praha · 10. července\n\nkolik nás přijede:\n\ncokoliv byste měli vědět — jídlo, malé děti, píseň, kterou prostě musíme slyšet:\n\ntěšíme se,",
+  "rsvp_email_body": "kdo jsme:\n\nna kterou oslavu (jednu, nebo obě — všichni vítáni): Edmonton · 1. května  /  Praha · 10. července\n\nkolik nás přijede:\n\ncokoliv byste měli vědět — jídlo, malé děti, píseň, kterou prostě musíme slyšet:",
   "rsvp_email_subject": "přijedeme 💌",
   "rsvp_exit_link": "Viděl(a) jsi celý den — zbývá jediné: dej nám vědět, že přijdeš ↓",
   "rsvp_gmail": "Otevřít v Gmailu",

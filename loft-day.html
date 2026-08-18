@@ -13815,8 +13815,11 @@ section{margin:1.9rem 0}
 .invite-rainbow path{fill:none;stroke-width:12;stroke-linecap:round}
 .invite-rainbow .invite-rainbow-glow{animation:invite-rainbow-glow 6s ease-in-out infinite}
 .invite-butterfly{width:90px;top:-225px;right:7%;filter:drop-shadow(0 3px 3px rgba(69,58,49,.15));animation:invite-butterfly-float 4.8s ease-in-out infinite}
+.invite-butterfly{pointer-events:auto;cursor:pointer}
 .invite-butterfly .wing{transform-box:fill-box;transform-origin:center;animation:invite-butterfly-flap .72s ease-in-out infinite alternate}
 .invite-butterfly .wing-right{animation-delay:-.36s}
+.invite-butterfly.startled{animation:invite-butterfly-startle .65s ease-out}
+.invite-butterfly.startled .wing{animation:invite-butterfly-click-flap .12s ease-in-out 5 alternate}
 .invite-fishu{width:118px;top:-225px;left:7%;filter:drop-shadow(0 4px 3px rgba(69,58,49,.15));animation:invite-fishu-drift 5.8s ease-in-out infinite}
 .invite-fishu{pointer-events:auto;cursor:pointer}
 .invite-fishu .fishu-fill{animation:invite-fishu-color 9s ease-in-out infinite}
@@ -13824,6 +13827,8 @@ section{margin:1.9rem 0}
 @keyframes invite-rainbow-glow{50%{opacity:.68}}
 @keyframes invite-butterfly-float{50%{translate:-8px 8px;rotate:-5deg}}
 @keyframes invite-butterfly-flap{to{scale:.58 1}}
+@keyframes invite-butterfly-click-flap{to{scale:.32 1}}
+@keyframes invite-butterfly-startle{35%{translate:-10px -14px;rotate:-9deg}70%{translate:5px -5px;rotate:5deg}}
 @keyframes invite-fishu-drift{50%{translate:12px -7px;rotate:3deg}}
 @keyframes invite-fishu-color{50%{fill:#d9a6a6}}
 @keyframes invite-fishu-puff{45%{scale:1.28 .82}70%{scale:.92 1.12}}
@@ -13836,6 +13841,7 @@ section{margin:1.9rem 0}
 }
 @media (prefers-reduced-motion:reduce){
   .invite-rainbow .invite-rainbow-glow,.invite-butterfly,.invite-butterfly .wing,
+  .invite-butterfly.startled,.invite-butterfly.startled .wing,
   .invite-fishu,.invite-fishu .fishu-fill,.invite-fishu-puff.puffing{animation:none}
 }
 .parties{display:flex; flex-direction:column; gap:1.4rem}
@@ -15240,7 +15246,7 @@ section{margin:1.9rem 0}
       <path d="M80 170 A70 70 0 0 1 220 170" stroke="#7f9ec0"/>
     </g>
   </svg>
-  <svg class="invite-flair invite-butterfly" viewBox="0 0 80 70">
+  <svg class="invite-flair invite-butterfly" id="rsvp-butterfly" viewBox="0 0 80 70">
     <path class="wing wing-left" d="M38 35 C21 4 3 8 8 29 C12 46 25 47 39 40 Z" fill="#d9a6a6" stroke="#8e3a4a" stroke-width="2"/>
     <path class="wing wing-right" d="M42 35 C59 4 77 8 72 29 C68 46 55 47 41 40 Z" fill="#7f9ec0" stroke="#4a6b94" stroke-width="2"/>
     <path d="M40 29 Q35 39 40 52 Q45 39 40 29 Z" fill="#453a31"/>
@@ -106416,6 +106422,21 @@ def colormode(mode=None):
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     sayFishu("fish fishu");
   });
+  var rsvpButterfly = document.getElementById("rsvp-butterfly");
+  var rsvpButterflyTimer = null;
+  if (rsvpButterfly) {
+    rsvpButterfly.addEventListener("animationend", function (event) {
+      if (event.animationName === "invite-butterfly-startle") rsvpButterfly.classList.remove("startled");
+    });
+    rsvpButterfly.addEventListener("click", function () {
+      clearTimeout(rsvpButterflyTimer);
+      rsvpButterfly.classList.remove("startled");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { rsvpButterfly.classList.add("startled"); });
+      });
+      rsvpButterflyTimer = setTimeout(function () { rsvpButterfly.classList.remove("startled"); }, 800);
+    });
+  }
   window.__speakFishu = function (phrase) {
     if (window.__currentStageName === "office") puffOffice();
     else if (window.__currentStageName === "cuddly") puffCuddly();

@@ -345,7 +345,6 @@ coordinates, x≈214–475, feet ≈y855) — only backgrounds differ. To make a
 the paper rect + figure block, redraw everything between. Behdad: pink suit, burgundy bow
 tie + brogues, flat cap, beard, glasses. Markéta: blue suit, blue hair, baker boy cap,
 patterned blue shoes, glasses. Scenes: `loft-scene` (Edmonton), `garden-scene` (Prague),
-`prague-scene` (Charles Bridge — unused, candidate for a future Prague travel page),
 `caps` (hero motif, also favicon).
 
 Each person's head (skin, hair, glasses, cap) is wrapped in its own `<g id="{scene}-

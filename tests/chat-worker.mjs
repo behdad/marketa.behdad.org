@@ -226,8 +226,11 @@ check(sanitizedContext.apps.games.length === 2 &&
 check(/Verified knowledge/.test(captured.body.instructions) &&
   /"official_name":"The Loft"/.test(captured.body.instructions) &&
   /"event":"ceremony and dinner","venue":"Atrium by Sabor"/.test(captured.body.instructions) &&
+  /"address":"10310 102 Ave NW, Edmonton, AB T5J 0Y8"/.test(captured.body.instructions) &&
   /"event":"private concert and dancing","venue":"9910"/.test(captured.body.instructions) &&
+  /"address":"9910 109 St NW, Edmonton, AB T5K 1H5","location_note":"Downstairs\."/.test(captured.body.instructions) &&
   /"event":"afterparty","venue":"Y Afterhours"/.test(captured.body.instructions) &&
+  /"address":"10028 102 St NW, Edmonton, AB T5J 0V6"/.test(captured.body.instructions) &&
   /"events":\["garden party","sleepover","next-day brunch"\]/.test(captured.body.instructions) &&
   /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) &&
   /canonical runtime calendar/.test(captured.body.instructions),

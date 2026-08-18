@@ -28,6 +28,8 @@ var HARNESS = [
   "  S('menu_family',getComputedStyle(menu.querySelector('.desk-system-label')).fontFamily);",
   "  S('menu_title_family',getComputedStyle(menu.querySelector('.desk-system-title')).fontFamily);",
   "  S('caption_family',getComputedStyle(document.querySelector('.scene-caption')).fontFamily);",
+  "  var modalCloses=document.querySelectorAll('.monitor-modal-close');",
+  "  S('modal_closes_unified',modalCloses.length===4&&[].every.call(modalCloses,function(close){return !!close.querySelector('.mini-hit')&&!!close.querySelector('.monitor-modal-close-base')&&!!close.querySelector('.monitor-modal-close-shine')&&!!close.querySelector('.monitor-modal-close-hover')&&!!close.querySelector('.monitor-modal-close-x')&&!close.querySelector('circle')&&!close.querySelector('text');}));",
   "  S('menu_fit_en',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.__setLang('cs'); S('menu_fit_cs',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.__setLang('en');",
   "  window.__monitorSystemAction('system'); await sleep(30); var sysinfo=document.getElementById('monitor-system-info-layer');",
   "  var statusLink=sysinfo.querySelector('.monitor-system-info-status-link');",
@@ -114,6 +116,7 @@ ok("system-menu labels use the enlarged type", s.menu_type >= 2.2);
 ok("system-menu labels use Source Sans 3 while Loft OS keeps Fraunces",
   /Source Sans 3/.test(s.menu_family || "") && /Fraunces/.test(s.menu_title_family || ""));
 ok("bottom instruction captions use Source Sans 3", /Source Sans 3/.test(s.caption_family || ""));
+ok("About, Help, System, and Credits share the standard dismiss control", s.modal_closes_unified === true);
 ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true && s.menu_fit_cs === true);
 ok("System reports live diagnostics, fits both languages, and ordinary close retains its task", s.system_open === true && s.system_fit_en === true && s.system_fit_cs === true && s.system_closed === true);
 ok("System is searchable without receiving a desktop tile", s.system_search === true);

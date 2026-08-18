@@ -547,6 +547,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.dispatchEvent(new Event("blur"));
     var earlyBlurImmediate = copy(state());
     var earlyBlurImmediateButton = transportButton.classList.contains("paused");
+    var earlyBlurImmediatePresentation = pausePresentation();
     attended = false;
     step(1000);
     var earlyBlurAfterFocusFlip = copy(state());
@@ -618,6 +619,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       earlyBlur: {
         immediate: earlyBlurImmediate,
         immediateButton: earlyBlurImmediateButton,
+        immediatePresentation: earlyBlurImmediatePresentation,
         afterFocusFlip: earlyBlurAfterFocusFlip,
         focusReturn: earlyBlurFocusReturn,
         focusReturnButton: earlyBlurFocusReturnButton,
@@ -1467,6 +1469,7 @@ var focusPause = s.focusPause;
 check(focusPause &&
   focusPause.earlyBlur.immediate.drive.roadtrip.resumePending &&
   focusPause.earlyBlur.immediateButton &&
+  focusPause.earlyBlur.immediatePresentation.display === "none" &&
   Object.keys(focusPause.earlyBlur.immediate.drive.holds).every(function (key) { return !focusPause.earlyBlur.immediate.drive.holds[key]; }) &&
   focusPause.earlyBlur.afterFocusFlip.drive.roadtrip.elapsedSeconds === focusPause.earlyBlur.immediate.drive.roadtrip.elapsedSeconds &&
   focusPause.earlyBlur.afterFocusFlip.drive.roadtrip.distance === focusPause.earlyBlur.immediate.drive.roadtrip.distance &&

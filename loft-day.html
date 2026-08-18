@@ -2228,7 +2228,7 @@ html.mir-chooser :is(#entrance-drive-dismiss-hud,#entrance-drive-help){display:n
 .entrance-roadtrip-reenter-choice text{font-size:8px}
 @media (pointer:coarse){.entrance-roadtrip-enter-hint{display:none}}
 #entrance-roadtrip-pause-dialog{display:none;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(31,20,18,.48))}
-#entrance-room.roadtrip-active.roadtrip-resume-pending #entrance-roadtrip-pause-dialog{display:inline}
+#entrance-room.roadtrip-active.roadtrip-pause-dialog-visible #entrance-roadtrip-pause-dialog{display:inline}
 html.mir-resume-pending #hunt-caption{visibility:hidden}
 .entrance-roadtrip-pause-copy{font-family:"Source Serif 4",Georgia,serif;fill:#fffdf8;text-anchor:middle}
 .entrance-roadtrip-invite-button{cursor:pointer}
@@ -47996,6 +47996,8 @@ window.__entranceRoomOpen = false;
     if (pending && window.__cancelQueuedAutonomousThunder) window.__cancelQueuedAutonomousThunder();
     roadtripResumePending = pending;
     room.classList.toggle("roadtrip-resume-pending", pending);
+    room.classList.toggle("roadtrip-pause-dialog-visible",
+      pending && !document.hidden && document.hasFocus());
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
     if (changed && roadtripState.active) syncPorscheDriveInstruction(true);
     if (changed && window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
@@ -48161,7 +48163,7 @@ window.__entranceRoomOpen = false;
     roadtripResumePending = false;
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
-    room.classList.remove("roadtrip-active", "roadtrip-resume-pending");
+    room.classList.remove("roadtrip-active", "roadtrip-resume-pending", "roadtrip-pause-dialog-visible");
     paintPorscheDrivePosition();
     if (roadtripHeadlightGroup) roadtripHeadlightGroup.setAttribute("visibility", "hidden");
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
@@ -48268,7 +48270,7 @@ window.__entranceRoomOpen = false;
     roadtripHandoffSerial++;
     room.classList.remove("roadtrip-handoff");
     room.classList.add("roadtrip-active");
-    room.classList.remove("roadtrip-resume-pending");
+    room.classList.remove("roadtrip-resume-pending", "roadtrip-pause-dialog-visible");
     if (window.__setPartyForegroundSuspended) window.__setPartyForegroundSuspended(true, "roadtrip");
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
     ensureRoadtripScene();
@@ -52203,11 +52205,22 @@ window.__entranceRoomOpen = false;
   function handlePorscheDriveBlur() {
     // blur can arrive before hasFocus() reflects the newly unattended window.
     if (roadtripState.active) setRoadtripResumePending(true);
+    room.classList.remove("roadtrip-pause-dialog-visible");
     updatePorscheDriveLifecycle();
   }
-  document.addEventListener("visibilitychange", updatePorscheDriveLifecycle);
+  function handlePorscheDriveVisibilityChange() {
+    updatePorscheDriveLifecycle();
+    room.classList.toggle("roadtrip-pause-dialog-visible",
+      roadtripResumePending && !document.hidden && document.hasFocus());
+  }
+  function handlePorscheDriveFocus() {
+    updatePorscheDriveLifecycle();
+    room.classList.toggle("roadtrip-pause-dialog-visible",
+      roadtripResumePending && !document.hidden && document.hasFocus());
+  }
+  document.addEventListener("visibilitychange", handlePorscheDriveVisibilityChange);
   window.addEventListener("blur", handlePorscheDriveBlur);
-  window.addEventListener("focus", updatePorscheDriveLifecycle);
+  window.addEventListener("focus", handlePorscheDriveFocus);
   function finishEntranceClose() {
     closeTimer = null;
     closing = false;

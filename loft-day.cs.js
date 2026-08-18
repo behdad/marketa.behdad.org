@@ -1284,7 +1284,7 @@ window.__loftMessages["cs"] = {
   "rsvp_exit_link": "Viděl(a) jsi celý den — zbývá jediné: dej nám vědět, že přijdeš ↓",
   "rsvp_gmail": "Otevřít v Gmailu",
   "rsvp_mail": "E-mailová aplikace",
-  "rsvp_sub": "Malí i vzdálení, přijďte na jednu akci nebo na obě — jen nám dejte vědět.",
+  "rsvp_sub": "Zblízka či zdaleka, vezměte své blízké — přijeďte na jednu oslavu nebo na obě. Jen nám dejte vědět.",
   "rsvp_title": "Potvrzení účasti",
   "rumi_lines": [
     [

@@ -18,7 +18,9 @@ point-and-click adventure.
 - **[Egg Hunt](https://marketa.behdad.org/egg-hunt)** — [`source`](egg-hunt.html) —
   a quieter interactive save-the-date with a scattering of hidden things to find.
 
-## Loft Day documentation
+## Documentation
+
+For **Loft Day**:
 
 - **[Game manual](docs/game-manual.md)** — how to play, explore the rooms, use the apps,
   and discover the loft's optional systems.

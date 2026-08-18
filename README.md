@@ -4,7 +4,7 @@ Live at [marketa.behdad.org](https://marketa.behdad.org). More interestingly, it
 to **[Loft Day](https://marketa.behdad.org/loft-day)**, a sprawling interactive
 point-and-click adventure.
 
-[![Loft Day — an interactive point-and-click adventure](art/og-loft-day.png)](https://marketa.behdad.org/loft-day)
+[![Loft Day’s ten-room dollhouse](art/loft-day-dollhouse.webp)](https://marketa.behdad.org/loft-day)
 
 ## Play
 

@@ -48,9 +48,9 @@ var HARNESS = [
   "  S('help_open',help.classList.contains('open')&&help.textContent.indexOf('take the road trip and go camping')>=0);",
   "  S('help_fit_en',inside(help.querySelector('.monitor-help-bg'),help.querySelectorAll('.monitor-help-title,.monitor-help-copy,.monitor-help-manual'))); window.__setLang('cs'); S('help_fit_cs',inside(help.querySelector('.monitor-help-bg'),help.querySelectorAll('.monitor-help-title,.monitor-help-copy,.monitor-help-manual'))); window.__setLang('en'); window.__closeMonitorHelp();",
   "  window.__monitorSystemAction('about'); await sleep(30); var about=document.getElementById('monitor-about-layer');",
-  "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('go camping beyond the mountains')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
-  "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),motto:parseFloat(getComputedStyle(about.querySelector('.monitor-about-motto')).fontSize)});",
-  "  S('about_fit_en',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.__setLang('cs'); S('about_fit_cs',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.__setLang('en');",
+  "  var aboutLinks=Array.from(about.querySelectorAll('a')); var aboutCaption=window.__captionArbiter.state().visible; S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('wedding invitation turned point-and-click browser game')>=0&&about.textContent.indexOf('8.8 MB HTML file')>=0&&aboutLinks.some(function(a){return /github\\.com/.test(a.getAttribute('href')||'');})&&aboutLinks.some(function(a){return /behdad\\.org/.test(a.getAttribute('href')||'');})&&aboutCaption&&aboutCaption.owner==='monitor-about'&&aboutCaption.key==='mon_sys_tagline_1');",
+  "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),link:parseFloat(getComputedStyle(about.querySelector('.monitor-about-link text')).fontSize)});",
+  "  S('about_fit_en',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-title,.monitor-about-copy,.monitor-about-link text'))); window.__setLang('cs'); S('about_fit_cs',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-title,.monitor-about-copy,.monitor-about-link text'))); window.__setLang('en'); window.__closeMonitorAbout(); S('about_caption_cleared',!(window.__captionArbiter.state().visible||{}).owner||window.__captionArbiter.state().visible.owner!=='monitor-about'); window.__openMonitorAbout();",
   "  window.__killMonitorAbout(); await sleep(300); var aboutRings=about.querySelectorAll('.monitor-about-portal-ring');",
   "  S('about_killing',about.classList.contains('killing')&&about.textContent.indexOf('about:eternity')>=0&&aboutRings.length===4&&!!about.querySelector('.monitor-about-portal-core'));",
   "  await sleep(2200); S('about_killed',!about.classList.contains('open')&&!mon.classList.contains('show-about')&&!window.__monitorAppRunning('about')&&mon.classList.contains('show-caps'));",
@@ -99,7 +99,7 @@ var HARNESS = [
   "  S('shutdown_cleared_lock',!window.__monitorLocked()&&localStorage.getItem('loftMonitorCapsLock')===null);",
   "  S('shutdown_cleared_apps',!window.__monitorAppRunning('mail'));",
   "  document.getElementById('__report').textContent=JSON.stringify(report);",
-  " } run();",
+  " } run().catch(function(error){report.errors.push('harness: '+String(error&&error.stack||error));}).then(function(){document.getElementById('__report').textContent=JSON.stringify(report);});",
   "})();",
   "</script>"
 ].join("\n");
@@ -127,7 +127,7 @@ ok("System context-menu Kill prints escaping bugs, owns bilingual copy, and clea
 ok("shared context menus use Source Sans 3", /Source Sans 3/.test(s.context_family || ""));
 ok("Help hints at the road trip and camping and fits both languages", s.help_open === true && s.help_fit_en === true && s.help_fit_cs === true);
 ok("About is a searchable running app with an about:eternity portal Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
-ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
+ok("About title, copy, and links use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.link >= 2.4);
 ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);
 ok("Credits rolls people, software, and the closing line", s.credits_open === true);
 ok("Credits title, names, and body use the enlarged type", s.credits_type && s.credits_type.title >= 4 && s.credits_type.name >= 2.75 && s.credits_type.body >= 1.7);
@@ -148,6 +148,7 @@ ok("a persisted lock resumes with its layout", s.resume_lock === true);
 ok("Shut down powers off and clears lock/apps", s.shutdown_off === true && s.shutdown_cleared_lock === true && s.shutdown_cleared_apps === true);
 if (fail) {
   console.error("\n" + fail + " system-menu check(s) failed.");
+  console.error(JSON.stringify(r.errors, null, 2));
   console.error(JSON.stringify(s, null, 2));
   process.exit(1);
 }

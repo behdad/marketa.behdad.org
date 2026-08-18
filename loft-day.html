@@ -7020,12 +7020,14 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .monitor-about-layer{opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--loft-os-surface-time) ease}
 .monitor-about-layer.open{opacity:1;visibility:visible;pointer-events:auto;cursor:default}
 .monitor-about-bg{fill:#f4ecdf;stroke:#8e3a4a;stroke-width:.42}
-.monitor-about-mark{fill:#8e3a4a;font:600 2.5px/1 Fraunces,serif;letter-spacing:.05px;text-anchor:end}
-.monitor-about-home{cursor:pointer;outline:none}
-.monitor-about-home:hover .monitor-about-mark,.monitor-about-home:focus .monitor-about-mark{fill:#a94a5d;text-decoration:underline}
 .monitor-about-title{fill:#453a31;font:600 5px/1 Fraunces,serif}
 .monitor-about-copy{fill:#5f5348;font:2.4px/1 "Source Serif 4",serif}
-.monitor-about-motto{fill:#8e3a4a;font:italic 2.2px/1 "Source Serif 4",serif}
+.monitor-about-link{cursor:pointer;outline:none}
+.monitor-about-link text{fill:#8e3a4a;font:600 2.4px/1 var(--system-font);text-decoration:underline}
+.monitor-about-link:hover text,.monitor-about-link:focus text{fill:#a94a5d}
+.monitor-about-inline-link{cursor:pointer;outline:none}
+.monitor-about-inline-link tspan{fill:#716455;text-decoration-line:underline;text-decoration-style:dashed;text-underline-offset:.45px}
+.monitor-about-inline-link:hover tspan,.monitor-about-inline-link:focus tspan{fill:#8e3a4a}
 .monitor-about-eternity{opacity:0;pointer-events:none}
 .monitor-about-eternity-label{fill:#453a31;font:2.8px/1 monospace;text-anchor:middle}
 .monitor-about-portal-ring{fill:none;stroke-linecap:round}
@@ -38553,8 +38555,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-e17fda6a1137"></script>
-<script src="loft-day.cs.js?v=dict-86723154d916"></script>
+<script src="loft-day.en.js?v=dict-af8d08411837"></script>
+<script src="loft-day.cs.js?v=dict-dd6f8f3700a4"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -73857,6 +73859,7 @@ setOfficeProgress("pc", false);
     monitorAboutKillTimer = null;
     monitorAboutLayer.classList.remove("open", "killing");
     monitor.classList.remove("show-about");
+    if (window.__cancelCaption) window.__cancelCaption("monitor-about");
     scheduleSaver();
   }
   function openMonitorAbout() {
@@ -73870,6 +73873,9 @@ setOfficeProgress("pc", false);
     monitorAboutLayer.classList.remove("killing");
     monitor.classList.add("show-about");
     monitorAboutLayer.classList.add("open");
+    if (window.__captionOverlay) window.__captionOverlay("mon_sys_tagline_1", {
+      owner: "monitor-about", scope: "stage:office", priority: 45
+    });
     var close = monitorAboutLayer.querySelector(".monitor-about-close");
     if (close) try { close.focus(); } catch (e) {}
     return true;
@@ -74540,26 +74546,30 @@ setOfficeProgress("pc", false);
     mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
       "class": "monitor-about-bg" }, monitorAboutLayer);
     var aboutNormal = mkEl("g", { "class": "monitor-about-normal" }, monitorAboutLayer);
-    var aboutHome = mkEl("a", { href: "https://marketa.behdad.org/", target: "_blank",
-      rel: "noopener", "class": "monitor-about-home" }, aboutNormal);
-    var aboutMark = mkEl("text", { x: 372, y: 193.5, "class": "monitor-about-mark" }, aboutHome);
-    aboutMark.textContent = "m ∞ b";
-    var aboutTitle = mkEl("text", { id: "monitor-about-title", x: 260, y: 165.5,
+    var aboutTitle = mkEl("text", { id: "monitor-about-title", x: 260, y: 163.5,
       "class": "monitor-about-title", "data-i": "mon_about_title" }, aboutNormal);
     aboutTitle.textContent = (T[document.documentElement.lang] || T.en).mon_about_title;
     [
-      ["mon_about_home", 170.5],
-      ["mon_about_wander", 175.5],
-      ["mon_about_party", 179.5],
-      ["mon_about_roadtrip", 183.5]
+      ["mon_about_game", 169],
+      ["mon_about_file", 173.5],
+      ["mon_about_build", 178],
+      ["mon_about_collab", 182.5]
     ].forEach(function (line) {
       var text = mkEl("text", { x: 260, y: line[1], "class": "monitor-about-copy",
         "data-i": line[0] }, aboutNormal);
       text.textContent = (T[document.documentElement.lang] || T.en)[line[0]];
     });
-    var aboutMotto = mkEl("text", { x: 260, y: 189.5, "class": "monitor-about-motto",
-      "data-i": "mon_sys_tagline_1" }, aboutNormal);
-    aboutMotto.textContent = (T[document.documentElement.lang] || T.en).mon_sys_tagline_1;
+    var directed = mkEl("text", { x: 260, y: 187, "class": "monitor-about-copy" }, aboutNormal);
+    var directedPrefix = mkEl("tspan", { "data-i": "mon_about_directed" }, directed);
+    directedPrefix.textContent = (T[document.documentElement.lang] || T.en).mon_about_directed;
+    var behdadLink = mkEl("a", { href: "https://behdad.org/", target: "_blank",
+      rel: "noopener noreferrer", "class": "monitor-about-inline-link" }, directed);
+    var behdadLabel = mkEl("tspan", {}, behdadLink);
+    behdadLabel.textContent = "behdad";
+    var sourceLink = mkEl("a", { href: "https://github.com/behdad/marketa.behdad.org",
+      target: "_blank", rel: "noopener noreferrer", "class": "monitor-about-link" }, aboutNormal);
+    var sourceLabel = mkEl("text", { x: 260, y: 192.5, "data-i": "mon_about_source" }, sourceLink);
+    sourceLabel.textContent = (T[document.documentElement.lang] || T.en).mon_about_source;
     var aboutEternity = mkEl("g", { "class": "monitor-about-eternity" }, monitorAboutLayer);
     [
       [1, 8, 4, "wine", .7],

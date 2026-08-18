@@ -849,7 +849,7 @@ window.__loftMessages["cs"] = {
   "mon_ctx_uninstall": "Odinstalovat",
   "mon_help_click": "Klikni na všechno! Pravé tlačítko nabízí další možnosti.",
   "mon_help_clue": "Sleduj nápovědu pod scénou.",
-  "mon_help_keyboard": "Stiskni ? pro úplný seznam ovládání.",
+  "mon_help_keyboard": "Stiskni ? pro klávesové zkratky.",
   "mon_help_manual": "Herní manuál ↗",
   "mon_help_roadtrip": "Po oslavě vyraz na cestu a utáboř se.",
   "mon_help_title": "Nápověda",

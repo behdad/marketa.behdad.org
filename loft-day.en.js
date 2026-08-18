@@ -849,7 +849,7 @@ window.__loftMessages["en"] = {
   "mon_ctx_uninstall": "Uninstall",
   "mon_help_click": "Click everything! Right-click for more options.",
   "mon_help_clue": "Follow the clue below the scene.",
-  "mon_help_keyboard": "Press ? for the full control list.",
+  "mon_help_keyboard": "Press ? for the keyboard shortcuts.",
   "mon_help_manual": "Game manual ↗",
   "mon_help_roadtrip": "After the party, take the road trip and go camping.",
   "mon_help_title": "Help",

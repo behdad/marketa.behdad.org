@@ -115,6 +115,11 @@ function run(width, height, standalone, fullPage, entryFile) {
     check("entry promises the full room-party-roadtrip arc",
       document.querySelector(".click-me-promise").textContent === "Explore → Party → Road Trip" &&
       promise.left >= viewport.left && promise.right <= viewport.right && promise.bottom <= viewport.bottom);
+    check("entry roadmap is centered between the title and CLICK ME",
+      Math.abs((promise.top + promise.height / 2) - (viewport.top + viewport.height / 2)) <= 2 &&
+      brand.bottom <= promise.top && promise.bottom <= clickWord.top,
+      JSON.stringify({ viewport: viewport, brand: brand, promise: promise, clickWord: clickWord }));
+    check("entry caption stays steady", getComputedStyle(document.getElementById("hunt-caption")).animationName === "none");
     check("entry keeps its repository link and fullscreen available",
       utilityIds.every(function(id){var e=document.getElementById(id);return getComputedStyle(e).visibility==="visible"&&e.getBoundingClientRect().width>0;}) &&
       getComputedStyle(document.getElementById("hunt-fullscreen-btn")).visibility === "visible" &&

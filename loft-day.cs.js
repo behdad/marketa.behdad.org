@@ -1284,8 +1284,9 @@ window.__loftMessages["cs"] = {
   "rsvp_exit_link": "Viděl(a) jsi celý den — zbývá jediné: dej nám vědět, že přijdeš ↓",
   "rsvp_gmail": "Otevřít v Gmailu",
   "rsvp_mail": "E-mailová aplikace",
-  "rsvp_sub": "Zblízka či zdaleka, malí i velcí, vezměte své blízké — přijeďte na jednu oslavu nebo na obě. Jen nám dejte vědět.",
+  "rsvp_sub": "Zblízka či zdaleka, malí i velcí, vezměte své nejdražší a přijeďte na jednu nebo na obě akce. Dejte nám vědět!",
   "rsvp_title": "Potvrzení účasti",
+  "rsvp_to_game": "Mezitím… prozkoumejte Loft. Je plný tajemství.",
   "rumi_lines": [
     [
       "Bez všech ostatních se obejdu; bez tebe ne.",

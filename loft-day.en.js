@@ -1286,6 +1286,7 @@ window.__loftMessages["en"] = {
   "rsvp_mail": "Email app",
   "rsvp_sub": "Near or far, little or grown, bring your loved ones — come to one or both. Just let us know.",
   "rsvp_title": "RSVP",
+  "rsvp_to_game": "In the meantime… explore the Loft. It’s full of secrets.",
   "rumi_lines": [
     [
       "I can do without everyone; without you, I cannot.",

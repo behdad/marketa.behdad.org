@@ -132229,7 +132229,18 @@ function spawnDustMote(container) {
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     showRecoveryCaption(saved);
     var buttons = [continueBtn, restartBtn], selected = 0;
-    function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
+    function select(index) {
+      selected = (index + buttons.length) % buttons.length;
+      buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); });
+      if (!document.documentElement.classList.contains("revealed")) {
+        buttons[selected].focus();
+        return;
+      }
+      var x = scrollX, y = scrollY;
+      try { buttons[selected].focus({ preventScroll: true }); }
+      catch (_error) { buttons[selected].focus(); }
+      if (scrollX !== x || scrollY !== y) scrollTo(x, y);
+    }
     function choose(index) {
       if (index === 0) {
         runGameEntryAction(function () { applyCheckpoint(saved); });

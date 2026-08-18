@@ -34,7 +34,8 @@ remain page-owned:
   `code-snippets/` samples used by the in-game IDE. The `loft-day`,
   `rsvp`, and `rsvp.html` names are symlinks to it; only an RSVP-named URL reveals the surrounding
   invitation content. In source order, that invitation's dates and RSVP markup deliberately precede
-  the large inline game so browsers can paint the useful page while the game is still arriving.
+  the large inline game so browsers can paint the useful page while the game is still arriving. The
+  saved-session recovery gate may take keyboard focus, but must preserve that invitation scroll position.
 
 The root `index.html` is a lightweight, reverse-chronological hub for the published drops. Keep a new
 invitation feature in `egg-hunt.html` and a new game feature in `loft-day.html` unless there is a

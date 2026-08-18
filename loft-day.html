@@ -55247,11 +55247,18 @@ window.__loftCredits = LOFT_CREDITS;
 function loftCreditsLayout(testerCount, otherPeopleCount) {
   testerCount = Math.max(0, +testerCount || 0);
   otherPeopleCount = Math.max(0, +otherPeopleCount || 0);
+  var testersPerColumn = 4;
+  var testerColumnsPerBand = 6;
+  var testersPerBand = testersPerColumn * testerColumnsPerBand;
   var peopleY = 209;
   var testersHeadingY = peopleY + otherPeopleCount * 7;
   var testersStartY = testersHeadingY + 4;
-  var testerRows = Math.ceil(testerCount / 2);
-  var softwareHeadingY = testersStartY + testerRows * 4.5 + 2.5;
+  var testerColumns = Math.min(testerColumnsPerBand, Math.ceil(testerCount / testersPerColumn));
+  var testerBands = Math.ceil(testerCount / testersPerBand);
+  var testerBandHeight = testersPerColumn * 4.5;
+  var testerBandGap = 2.5;
+  var testerBlockHeight = testerBands ? testerBands * testerBandHeight + (testerBands - 1) * testerBandGap : 0;
+  var softwareHeadingY = testersStartY + testerBlockHeight + 2.5;
   var noticeY = softwareHeadingY + 5 + LOFT_CREDITS.software.length * 3;
   var closingY = noticeY + 17; // clear the legal notice before the persistent signature arrives
   var dateY = closingY + 4;
@@ -55262,7 +55269,13 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
     peopleY: peopleY,
     testersHeadingY: testersHeadingY,
     testersStartY: testersStartY,
-    testerRows: testerRows,
+    testersPerColumn: testersPerColumn,
+    testerColumnsPerBand: testerColumnsPerBand,
+    testersPerBand: testersPerBand,
+    testerColumns: testerColumns,
+    testerBands: testerBands,
+    testerBandHeight: testerBandHeight,
+    testerBandGap: testerBandGap,
     softwareHeadingY: softwareHeadingY,
     noticeY: noticeY,
     closingY: closingY,
@@ -74472,10 +74485,18 @@ setOfficeProgress("pc", false);
       creditY += 7;
     });
     creditsLine(creditsLayout.testersHeadingY, "monitor-credits-section", "credits_testers");
-    creditY = creditsLayout.testersStartY;
     testers.forEach(function (person, i) {
-      creditsLine(creditY + Math.floor(i / 2) * 4.5, "monitor-credits-name", null, person.name,
-        i % 2 ? 328 : 304);
+      var band = Math.floor(i / creditsLayout.testersPerBand);
+      var withinBand = i % creditsLayout.testersPerBand;
+      var column = Math.floor(withinBand / creditsLayout.testersPerColumn);
+      var row = withinBand % creditsLayout.testersPerColumn;
+      var columnsInBand = Math.min(creditsLayout.testerColumnsPerBand,
+        Math.ceil(Math.min(creditsLayout.testersPerBand, testers.length - band * creditsLayout.testersPerBand) /
+          creditsLayout.testersPerColumn));
+      var columnGap = 19;
+      var firstX = 316 - (columnsInBand - 1) * columnGap / 2;
+      creditsLine(creditsLayout.testersStartY + band * (creditsLayout.testerBandHeight + creditsLayout.testerBandGap) + row * 4.5,
+        "monitor-credits-name", null, person.name, firstX + column * columnGap);
     });
     creditsLine(creditsLayout.softwareHeadingY, "monitor-credits-section", "credits_open_source");
     LOFT_CREDITS.software.forEach(function (name, i) {

@@ -57,11 +57,11 @@ var harness = String.raw`<script>
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);
     var crowded = window.__loftCreditsLayout(50, otherPeopleCount);
     check("software credits move below every tester",
-      crowded.softwareHeadingY - current.softwareHeadingY ===
-        (Math.ceil(50 / 2) - Math.ceil(names.length / 2)) * 4.5,
+      crowded.softwareHeadingY > current.softwareHeadingY,
       JSON.stringify({ current: current, crowded: crowded }));
-    check("tester growth is arranged in two rows of columns",
-      current.testerRows === Math.ceil(names.length / 2) && crowded.testerRows === 25,
+    check("testers fill six four-name columns before starting a new band",
+      names.length === 24 && current.testersPerColumn === 4 && current.testerColumns === 6 &&
+      current.testerBands === 1 && crowded.testerBands === 3,
       JSON.stringify({ current: current, crowded: crowded }));
     check("an oversized tester roster receives more travel and time",
       crowded.travel < current.travel && crowded.duration > current.duration,

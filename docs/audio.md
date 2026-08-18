@@ -484,6 +484,9 @@ disabled. It does not create or join the loft’s shared audio graph.
 - **A one-shot effect** → get the context via `getSfxCtx()` (returns null → bail; every
   caller already handles that). Connect to `ctx.destination` (the SFX master) directly or
   via `pannedOut(ctx, elId)`. Never construct your own context.
+- **CLICK ME entry** → a trusted pointer activation plays two filtered-noise voices on the
+  shared SFX bus, sweeping from the centre toward opposite stereo edges as the invitation
+  opens. Keyboard entry stays silent; mono browsers receive the same wash without panning.
 - **A new continuous bed / dance** → `x = audioBed(); if (!x) return;`. Build your graph on
   `x` exactly as if it were a context; end at `x.destination` (via `pannedOut`). Give it a
   `startX`/`stopX` where stop **fades a gain to silence, then a `setTimeout` stops the

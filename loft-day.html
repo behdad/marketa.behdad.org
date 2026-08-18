@@ -111206,6 +111206,49 @@ function pannedSweep(ctx, fromPan, toPan, dur) {
   p.connect(ctx.destination);
   return p;
 }
+// The invitation opens into the room with a short stereo "curtain": two airy voices
+// leave the centre in opposite directions. A mono browser still gets the same soft wash.
+function playGameEntrySwoosh() {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime, dur = 0.82;
+    var frames = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    var buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < frames; i++) {
+      var x = i / frames;
+      data[i] = (Math.random() * 2 - 1) * (0.55 + 0.45 * Math.sin(x * Math.PI));
+    }
+    [-1, 1].forEach(function (direction) {
+      var source = ctx.createBufferSource();
+      var filter = ctx.createBiquadFilter();
+      var gain = ctx.createGain();
+      source.buffer = buffer;
+      filter.type = "bandpass";
+      filter.Q.value = 0.72;
+      filter.frequency.setValueAtTime(520, t);
+      filter.frequency.exponentialRampToValueAtTime(1900, t + 0.38);
+      filter.frequency.exponentialRampToValueAtTime(760, t + dur);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.065, t + 0.09);
+      gain.gain.setValueAtTime(0.052, t + 0.28);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      source.connect(filter);
+      filter.connect(gain);
+      if (ctx.createStereoPanner) {
+        var pan = ctx.createStereoPanner();
+        pan.pan.setValueAtTime(0, t);
+        pan.pan.linearRampToValueAtTime(direction * 0.92, t + dur);
+        gain.connect(pan);
+        pan.connect(ctx.destination);
+      } else gain.connect(ctx.destination);
+      source.start(t);
+      source.stop(t + dur + 0.02);
+    });
+  } catch (_error) {}
+}
+window.__playGameEntrySwoosh = playGameEntrySwoosh;
 // Shared focus watcher for the continuous audio beds. Every bed's want-gate includes
 // document.hasFocus() (an unattended-but-"visible" window — covered on X11, which has
 // no occlusion detection — otherwise holds a live OS audio stream open indefinitely,
@@ -132581,6 +132624,7 @@ function spawnDustMote(container) {
   }
   function clickMeDismiss(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (e && e.isTrusted && window.__playGameEntrySwoosh) window.__playGameEntrySwoosh();
     runGameEntryAction(function () {
       removeClickMe();
       stopHintBlink();

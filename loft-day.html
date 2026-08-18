@@ -7076,10 +7076,11 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .monitor-system-info-title{fill:#453a31;font:600 5px/1 Fraunces,serif}
 .monitor-system-info-label{fill:#716455;font:2px/1 "Source Serif 4",serif}
 .monitor-system-info-value{fill:#453a31;font:600 2.15px/1 "Source Serif 4",serif}
-.monitor-system-info-value.warning{fill:#8e3a4a}
-.monitor-system-info-status-link{cursor:pointer}
-.monitor-system-info-status-link:hover .monitor-system-info-value,.monitor-system-info-status-link:focus .monitor-system-info-value{text-decoration:underline;fill:#a94a5d}
 .monitor-system-info-recommendation{fill:#716455;font:italic 1.65px/1 "Source Serif 4",serif}
+.monitor-system-info-link{cursor:pointer;outline:none}
+.monitor-system-info-link text{fill:#8e3a4a;font:600 1.8px/1 var(--system-font);text-decoration:underline}
+.monitor-system-info-link:hover text,.monitor-system-info-link:focus text{fill:#a94a5d}
+.monitor-system-info-link-separator{fill:#716455;font:1.8px/1 var(--system-font)}
 .monitor-system-info-kill{opacity:0;pointer-events:none}
 .monitor-system-info-kill-receipt{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.45}
 .monitor-system-info-kill-fold{fill:#e8dfcc}
@@ -38555,8 +38556,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-af8d08411837"></script>
-<script src="loft-day.cs.js?v=dict-dd6f8f3700a4"></script>
+<script src="loft-day.en.js?v=dict-7c1c4072068f"></script>
+<script src="loft-day.cs.js?v=dict-23d289ca6499"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -73675,7 +73676,6 @@ setOfficeProgress("pc", false);
   var monitorSystemMenu = null;
   var monitorSystemInfoLayer = null;
   var monitorSystemInfoValues = Object.create(null);
-  var monitorSystemStatusLink = null;
   var monitorAboutLayer = null;
   var monitorAboutKillTimer = null;
   var monitorHelpLayer = null;
@@ -73719,26 +73719,8 @@ setOfficeProgress("pc", false);
     return label;
   }
   function paintSystemBrowser(browser, dict) {
-    var major = parseInt(browser.version, 10) || 0;
-    var upgrade = browser.chromium && major && major < 150;
-    var limitations = !!browser.webkit;
     if (monitorSystemInfoValues.browser)
       monitorSystemInfoValues.browser.textContent = browser.name + (browser.version ? " " + browser.version : "");
-    if (monitorSystemInfoValues.status) {
-      monitorSystemInfoValues.status.textContent = upgrade ? dict.mon_system_info_upgrade :
-        limitations ? dict.mon_system_info_limitations : dict.mon_system_info_ready;
-      monitorSystemInfoValues.status.classList.toggle("warning", upgrade || limitations);
-    }
-    var issueTerm = browser.name === "Safari" ? "Safari" :
-      browser.name === "Firefox" ? "Firefox" :
-      browser.name === "Chrome" && browser.webkit ? "iOS" :
-      browser.webkit ? "WebKit" : browser.name;
-    var issuesHref = "https://github.com/behdad/marketa.behdad.org/issues?q=" +
-      encodeURIComponent("is:issue is:open " + issueTerm);
-    if (monitorSystemStatusLink) {
-      monitorSystemStatusLink.setAttribute("href", issuesHref);
-      monitorSystemStatusLink.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", issuesHref);
-    }
   }
   function requestFullBrowserInfo(dict) {
     var data = navigator.userAgentData;
@@ -73815,6 +73797,7 @@ setOfficeProgress("pc", false);
     if (!monitorSystemInfoLayer) return;
     monitorSystemInfoLayer.classList.remove("open", "killing");
     monitor.classList.remove("show-system");
+    if (window.__cancelCaption) window.__cancelCaption("monitor-system-info");
     scheduleSaver();
   }
   function openMonitorSystemInfo() {
@@ -73825,6 +73808,9 @@ setOfficeProgress("pc", false);
     monitorSystemInfoLayer.classList.remove("killing");
     monitor.classList.add("show-system");
     monitorSystemInfoLayer.classList.add("open");
+    if (window.__captionOverlay) window.__captionOverlay("mon_system_info_caption", {
+      owner: "monitor-system-info", scope: "stage:office", priority: 45
+    });
     var close = monitorSystemInfoLayer.querySelector(".monitor-system-info-close");
     if (close) try { close.focus(); } catch (e) {}
     return true;
@@ -74650,7 +74636,6 @@ setOfficeProgress("pc", false);
     systemInfoTitle.textContent = (T[document.documentElement.lang] || T.en).mon_system_info_title;
     [
       ["browser", "mon_system_info_browser"],
-      ["status", "mon_system_info_status"],
       ["graphics", "mon_system_info_graphics"],
       ["performance", "mon_system_info_performance"],
       ["hardware", "mon_system_info_hardware"],
@@ -74660,20 +74645,28 @@ setOfficeProgress("pc", false);
       var label = mkEl("text", { x: 260, y: y, "class": "monitor-system-info-label",
         "data-i": row[1] }, systemInfoNormal);
       label.textContent = (T[document.documentElement.lang] || T.en)[row[1]];
-      var valueParent = systemInfoNormal;
-      if (row[0] === "status") {
-        monitorSystemStatusLink = mkEl("a", { href: "https://github.com/behdad/marketa.behdad.org/issues",
-          target: "_blank", rel: "noopener", tabindex: "0", "class": "monitor-system-info-status-link" }, systemInfoNormal);
-        valueParent = monitorSystemStatusLink;
-      }
       monitorSystemInfoValues[row[0]] = mkEl("text", { x: 287, y: y,
-        "class": "monitor-system-info-value", "data-system-info": row[0] }, valueParent);
+        "class": "monitor-system-info-value", "data-system-info": row[0] }, systemInfoNormal);
     });
-    var systemRecommendation = mkEl("text", { x: 260, y: 194,
+    var systemRecommendation = mkEl("text", { x: 260, y: 190,
       "class": "monitor-system-info-recommendation",
       "data-i": "mon_system_info_recommendation" }, systemInfoNormal);
     systemRecommendation.textContent =
       (T[document.documentElement.lang] || T.en).mon_system_info_recommendation;
+    [["mon_system_info_source_code", "https://github.com/behdad/marketa.behdad.org", 260],
+      ["mon_system_info_known_issues", "https://github.com/behdad/marketa.behdad.org/issues", 282],
+      ["mon_system_info_report_issue", "https://github.com/behdad/marketa.behdad.org/issues/new", 306]]
+      .forEach(function (item) {
+        var link = mkEl("a", { href: item[1], target: "_blank", rel: "noopener", tabindex: "0",
+          "class": "monitor-system-info-link" }, systemInfoNormal);
+        var text = mkEl("text", { x: item[2], y: 194,
+          "data-i": item[0] }, link);
+        text.textContent = (T[document.documentElement.lang] || T.en)[item[0]];
+      });
+    [278.5, 302.5].forEach(function (x) {
+      mkEl("text", { x: x, y: 194, "class": "monitor-system-info-link-separator" },
+        systemInfoNormal).textContent = "|";
+    });
     var systemInfoClose = makeMonitorModalClose(systemInfoNormal, "monitor-system-info-close");
     var systemInfoKill = mkEl("g", { "class": "monitor-system-info-kill" }, monitorSystemInfoLayer);
     var receipt = mkEl("g", { id: "monitor-system-kill-receipt", "class": "monitor-system-info-kill-receipt-wrap",

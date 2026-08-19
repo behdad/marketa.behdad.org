@@ -1405,6 +1405,7 @@ window.__loftMessages["cs"] = {
   "shoot_duke": "Duke",
   "shoot_mouse_coach": "Esc uvolní myš",
   "shoot_q3": "Quake III",
+  "shoot_touch_coach": "Tažením zamiř",
   "sizdah_wish": "Zauzlovat <em>sabzeh</em> znamená přát si svatbu. Zabralo to.",
   "snake_setup_cancel": "Zrušit",
   "snake_setup_fast": "rychle",

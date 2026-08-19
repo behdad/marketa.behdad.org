@@ -1405,6 +1405,7 @@ window.__loftMessages["en"] = {
   "shoot_duke": "Duke",
   "shoot_mouse_coach": "Esc releases mouse",
   "shoot_q3": "Quake III",
+  "shoot_touch_coach": "Drag to aim",
   "sizdah_wish": "Knotting the <em>sabzeh</em> is a wish for a wedding. It worked.",
   "snake_setup_cancel": "Cancel",
   "snake_setup_fast": "fast",

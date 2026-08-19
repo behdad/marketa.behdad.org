@@ -106,6 +106,8 @@ If you are unsure what comes next:
   after it fills the view.
 - Snake opens with player-count and speed choices. Its × control ends the DOS session; opening the
   app again returns to those choices and starts a new game.
+- Shoot keeps “Esc releases mouse” on desktop. On touch, the visible D-pad handles movement and the
+  caption says “Drag to aim” for the game view.
 - Phone and tablet apps leave text fields unfocused; tap a field to type.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
   of the pedal slider holds speed; its outer zones accelerate or brake.

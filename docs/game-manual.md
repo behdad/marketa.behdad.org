@@ -104,6 +104,8 @@ If you are unsure what comes next:
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
 - At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
   after it fills the view.
+- The monitor and laptop identify each idle screensaver with a brief caption. Their unmarked
+  top-left bezel controls advance to the next saver without waking the device.
 - Snake opens with player-count and speed choices. Its × control ends the DOS session; opening the
   app again returns to those choices and starts a new game.
 - Shoot keeps “Esc releases mouse” on desktop. On touch, the visible D-pad handles movement and the

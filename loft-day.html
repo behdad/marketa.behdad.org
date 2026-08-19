@@ -38567,8 +38567,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-a0de89aab244"></script>
-<script src="loft-day.cs.js?v=dict-7d8a768be0b4"></script>
+<script src="loft-day.en.js?v=dict-5185f4710064"></script>
+<script src="loft-day.cs.js?v=dict-6ef94f98145d"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -70507,6 +70507,7 @@ setOfficeProgress("pc", false);
       stopLaptopSaverMotion();
       laptopSaverKind = null;
       laptop.classList.remove("show-saver", "saver-sleep", "saver-running");
+      if (window.__cancelCaption) window.__cancelCaption("laptop-saver");
     }
     function scheduleLaptopSaver(ms) {
       clearTimeout(laptopSaverTimer);
@@ -70571,12 +70572,20 @@ setOfficeProgress("pc", false);
         laptopSaverRaf = requestAnimationFrame(laptopSaverStep);
       };
     }
+    function showLaptopSaverCaption(kind) {
+      if (!window.__captionOverlay || (window.__monitorZoomed && window.__monitorZoomed())) return;
+      window.__captionOverlay("laptop_saver_caption_" + kind, {
+        owner: "laptop-saver", scope: "stage:office", priority: 20,
+        duration: 4000, clock: "attended"
+      });
+    }
     function showLaptopSaver(kind) {
       pauseLaptopSaverCycle(true);
       stopLaptopSaverMotion();
       laptopSaverKind = kind === "sleep" ? "sleep" : "caps";
       laptop.classList.toggle("saver-sleep", laptopSaverKind === "sleep");
       if (laptopSaverKind === "caps") startLaptopCapsSaver();
+      showLaptopSaverCaption(laptopSaverKind);
       syncLaptopSaverLoop();
     }
     function cycleLaptopSaver() {
@@ -71270,6 +71279,7 @@ setOfficeProgress("pc", false);
     saverTimer = null;
     stopMonitorSaver(true);
     monitor.classList.remove("show-saver", "saver-pipes", "saver-flower");
+    if (window.__cancelCaption) window.__cancelCaption("monitor-saver");
   }
   function scheduleSaver(ms) {
     clearTimeout(saverTimer);
@@ -71382,7 +71392,15 @@ setOfficeProgress("pc", false);
     monitorSaverKind = forced ? forcedKind : monitorSaverOrder[monitorSaverAt++ % monitorSaverOrder.length];
     monitor.classList.toggle("saver-pipes", monitorSaverKind === "pipes");
     monitor.classList.toggle("saver-flower", monitorSaverKind === "flower");
+    showMonitorSaverCaption(monitorSaverKind);
     startMonitorSaver();
+  }
+  function showMonitorSaverCaption(kind) {
+    if (!window.__captionOverlay || (window.__laptopZoomed && window.__laptopZoomed())) return;
+    window.__captionOverlay("mon_saver_caption_" + kind, {
+      owner: "monitor-saver", scope: "stage:office", priority: 20,
+      duration: 4000, clock: "attended"
+    });
   }
   function cycleMonitorSaver() {
     if (monitorSleeping || monitorLocked || !monitor.classList.contains("screen-on")) return false;
@@ -71394,6 +71412,7 @@ setOfficeProgress("pc", false);
     monitorSaverKind = monitorSaverOrder[monitorSaverAt++ % monitorSaverOrder.length];
     monitor.classList.toggle("saver-pipes", monitorSaverKind === "pipes");
     monitor.classList.toggle("saver-flower", monitorSaverKind === "flower");
+    showMonitorSaverCaption(monitorSaverKind);
     startMonitorSaver();
     return true;
   }

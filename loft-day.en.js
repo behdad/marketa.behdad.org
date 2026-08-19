@@ -848,7 +848,7 @@ window.__loftMessages["en"] = {
   "mon_app_caption_chrome": "The whole web, inside one room.",
   "mon_app_caption_classics": "Old games never really retire.",
   "mon_app_caption_clock": "Edmonton and Prague disagree politely.",
-  "mon_app_caption_code": "Change the Loft from inside the Loft.",
+  "mon_app_caption_code": "Change the Loft from inside the Loft—with AI help. Phew!",
   "mon_app_caption_console": "Ask the Loft directly.",
   "mon_app_caption_credits": "Stay for the people behind the pixels.",
   "mon_app_caption_help": "If you made it this far, you won’t need our help.",

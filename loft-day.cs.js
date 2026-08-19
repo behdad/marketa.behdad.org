@@ -848,7 +848,7 @@ window.__loftMessages["cs"] = {
   "mon_app_caption_chrome": "Celý web v jedné místnosti.",
   "mon_app_caption_classics": "Staré hry nikdy doopravdy neodcházejí.",
   "mon_app_caption_clock": "Edmonton a Praha se zdvořile neshodnou.",
-  "mon_app_caption_code": "Změňte Loft zevnitř Loftu.",
+  "mon_app_caption_code": "Změňte Loft zevnitř Loftu — s pomocí AI. Uf!",
   "mon_app_caption_console": "Zeptejte se Loftu přímo.",
   "mon_app_caption_credits": "Zůstaňte kvůli lidem za všemi těmi pixely.",
   "mon_app_caption_help": "Jestli jste se dostali až sem, naši pomoc už nepotřebujete.",

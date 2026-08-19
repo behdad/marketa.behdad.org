@@ -44,7 +44,7 @@ var HARNESS = [
   "  S('context_family',systemCtx&&getComputedStyle(systemCtx).fontFamily);",
   "  S('system_context',!!systemCtx&&!!systemCtx.querySelector('button.ctx-kill')&&!systemCtx.querySelector('button.ctx-restart')); systemCtx.querySelector('button.ctx-kill').click(); await sleep(300);",
   "  var bugs=sysinfo.querySelectorAll('.monitor-system-info-kill-bug'),receipt=sysinfo.querySelector('.monitor-system-info-kill-receipt');",
-  "  S('system_killing',sysinfo.classList.contains('killing')&&!!receipt&&bugs.length===3&&document.getElementById('hunt-caption').textContent==='System killed. The bugs survived.'&&window.__loftMessages.cs.hunt.df_system_quip==='Systém ukončen. Chyby přežily.');",
+  "  S('system_killing',sysinfo.classList.contains('killing')&&!!receipt&&bugs.length===3&&document.getElementById('hunt-caption').textContent==='The system exercised its right to remain silent.'&&window.__loftMessages.cs.hunt.df_system_quip==='Systém využil svého práva nevypovídat.');",
   "  await sleep(2000); S('system_killed',!sysinfo.classList.contains('open')&&!mon.classList.contains('show-system')&&!window.__monitorAppRunning('system')&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('help'); await sleep(30); var help=document.getElementById('monitor-help-layer');",
   "  S('help_open',help.classList.contains('open')&&help.textContent.indexOf('take the road trip and go camping')>=0);",

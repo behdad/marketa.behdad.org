@@ -851,6 +851,7 @@ window.__loftMessages["cs"] = {
   "mon_app_caption_code": "Změňte Loft zevnitř Loftu — s pomocí AI. Uf!",
   "mon_app_caption_console": "Zeptejte se Loftu přímo.",
   "mon_app_caption_credits": "Zůstaňte kvůli lidem za všemi těmi pixely.",
+  "mon_app_caption_dos": "V podstatě systém na ověření věku.",
   "mon_app_caption_help": "Jestli jste se dostali až sem, naši pomoc už nepotřebujete.",
   "mon_app_caption_life": "Život si najde cestu. A pak ji zopakuje.",
   "mon_app_caption_linux": "Malý Linux. Protože samozřejmě.",

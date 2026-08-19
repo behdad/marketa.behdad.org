@@ -851,6 +851,7 @@ window.__loftMessages["en"] = {
   "mon_app_caption_code": "Change the Loft from inside the Loft—with AI help. Phew!",
   "mon_app_caption_console": "Ask the Loft directly.",
   "mon_app_caption_credits": "Stay for the people behind the pixels.",
+  "mon_app_caption_dos": "Basically an age verification system.",
   "mon_app_caption_help": "If you made it this far, you won’t need our help.",
   "mon_app_caption_life": "Life finds a way. Then repeats.",
   "mon_app_caption_linux": "A tiny Linux. Because of course.",

@@ -233,7 +233,8 @@ Kill gags that animate the live app itself
 paint, runtime identity, the clipped Kill raster, and the mobile zoom handoff covered by the focused
 monitor tests. The click completing a zoom or screensaver-wake gesture may be re-hit-tested onto the
 newly promoted overlay, so its one-shot guard belongs at Window capture rather than on the pre-zoom
-SVG device. A monitor summoned from another upper or lower room must finish the lower-floor return,
+SVG device. Both the monitor and laptop wake paths arm that guard before revealing their interactive
+content. A monitor summoned from another upper or lower room must finish the lower-floor return,
 when present, and then the upper-room pan before zoom takes ownership of the strip transform and promotes HTML;
 `--floor-pan`'s transition end followed by `__afterRoomPan` is the serialization boundary.
 

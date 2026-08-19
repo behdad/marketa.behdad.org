@@ -70515,6 +70515,12 @@ setOfficeProgress("pc", false);
         startLaptopSaver();
       }, ms || 8000);
     }
+    function wakeLaptopSaver() {
+      if (!laptop.classList.contains("show-saver")) return false;
+      stopLaptopSaver();
+      scheduleLaptopSaver();
+      return true;
+    }
     function startLaptopSaver(forcedKind) {
       if (!laptop.classList.contains("open") || laptop.classList.contains("updating") ||
           laptop.classList.contains("rebooting") || anyCall()) return;
@@ -70606,6 +70612,15 @@ setOfficeProgress("pc", false);
     window.__startLaptopSaver = function (kind) { startLaptopSaver(kind); return window.__laptopSaverState(); };
     window.__cycleLaptopSaver = function () { cycleLaptopSaver(); return window.__laptopSaverState(); };
     var laptopSaverCycleHit = document.getElementById("laptop-saver-cycle-hit");
+    laptop.addEventListener("pointerdown", function (e) {
+      if (!laptop.classList.contains("show-saver")) return;
+      if (e.target && e.target.closest && e.target.closest("#laptop-saver-cycle-hit")) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__armDeviceHandoffClickSuppress) window.__armDeviceHandoffClickSuppress();
+      wakeLaptopSaver();
+      playLaptopClickSound("office-laptop");
+    }, true);
     if (laptopSaverCycleHit) {
       laptopSaverCycleHit.addEventListener("pointerdown", function (e) {
         e.preventDefault();
@@ -70846,9 +70861,7 @@ setOfficeProgress("pc", false);
       if (laptopBusy) return; // mid lid/zoom glide — ignore so a 2nd tap can't re-toggle
       stopLaptopInvite();
       clearTimeout(laptopClickTimer);
-      if (laptop.classList.contains("show-saver")) {
-        stopLaptopSaver();
-        scheduleLaptopSaver(); // back to idle — the screensaver clock resumes
+      if (wakeLaptopSaver()) {
         playLaptopClickSound("office-laptop");
         return;
       }
@@ -70862,9 +70875,7 @@ setOfficeProgress("pc", false);
     });
     laptop.addEventListener("pointermove", function (e) {
       if (e.target && e.target.closest && e.target.closest("#laptop-saver-cycle-hit")) return;
-      if (!laptop.classList.contains("show-saver")) return;
-      stopLaptopSaver();
-      scheduleLaptopSaver();
+      wakeLaptopSaver();
     });
     laptop.addEventListener("dblclick", function () {
       if (laptopBusy) return; // mid lid/zoom glide — ignore
@@ -70879,9 +70890,7 @@ setOfficeProgress("pc", false);
       if (laptopBusy) return; // mid lid/zoom glide — ignore
       stopLaptopInvite();
       clearTimeout(laptopClickTimer);
-      if (laptop.classList.contains("show-saver")) {
-        stopLaptopSaver();
-        scheduleLaptopSaver();
+      if (wakeLaptopSaver()) {
         playLaptopClickSound("office-laptop");
         return;
       }
@@ -90329,7 +90338,7 @@ def colormode(mode=None):
       if (e.target && e.target.closest && e.target.closest("#monitor-saver-cycle-hit")) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      if (window.__armMonitorHandoffClickSuppress) window.__armMonitorHandoffClickSuppress();
+      if (window.__armDeviceHandoffClickSuppress) window.__armDeviceHandoffClickSuppress();
       wakeMonitorSaver();
       playLaptopClickSound("office-monitor");
       return;
@@ -92345,7 +92354,7 @@ def colormode(mode=None):
     if (suppressTimer) clearTimeout(suppressTimer);
     suppressTimer = setTimeout(function () { suppressZoomClick = false; suppressTimer = null; }, 500); // fallback if no click follows the gesture
   }
-  window.__armMonitorHandoffClickSuppress = armZoomClickSuppress;
+  window.__armDeviceHandoffClickSuppress = armZoomClickSuppress;
   function swallowZoomClick(e) {
     if (!suppressZoomClick) return;
     suppressZoomClick = false;

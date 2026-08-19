@@ -865,7 +865,7 @@ window.__loftMessages["cs"] = {
   "mon_app_caption_shoot": "Vyberte si arénu.",
   "mon_app_caption_snake": "Jezte. Rostěte. Opakujte.",
   "mon_app_caption_tattoo": "Vyzkoušejte si ho, než bude navždy.",
-  "mon_app_caption_video": "Co dělá Behdad, když se nudí.",
+  "mon_app_caption_video": "Behdad rád natáčí, když se nudí.",
   "mon_app_caption_weather": "Stejné nebe. Jiná předpověď.",
   "mon_ctx_copy": "Kopírovat",
   "mon_ctx_cut": "Vyjmout",

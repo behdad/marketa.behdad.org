@@ -865,7 +865,7 @@ window.__loftMessages["en"] = {
   "mon_app_caption_shoot": "Choose your arena.",
   "mon_app_caption_snake": "Eat. Grow. Repeat.",
   "mon_app_caption_tattoo": "Try it on before it’s forever.",
-  "mon_app_caption_video": "What Behdad does when he’s bored.",
+  "mon_app_caption_video": "Behdad likes to film when bored.",
   "mon_app_caption_weather": "Same sky. Different forecast.",
   "mon_ctx_copy": "Copy",
   "mon_ctx_cut": "Cut",

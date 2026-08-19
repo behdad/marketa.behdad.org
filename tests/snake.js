@@ -33,6 +33,15 @@ var HARNESS = [
   '})();</script>'
 ].join("\n");
 
+var DPAD_LAYOUT_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
+  'var report={errors:[]};window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},300);});',
+  'async function run(){var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio"),host=document.getElementById("monitor-html-overlay"),dpadHost=document.getElementById("monitor-snake-dpad"),dpad=document.getElementById("monitor-snake-controls");window.__goToStage("office");tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(40);dpadHost.style.setProperty("display","inline","important");dpad.style.setProperty("display","grid","important");window.__openMonitorApp("snake");await sleep(35);document.getElementById("snake-launch-panel").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));await sleep(50);var frame=document.querySelector("#monitor-snake-wrap iframe");window.dispatchEvent(new MessageEvent("message",{origin:location.origin,source:frame.contentWindow,data:{type:"snake-ready"}}));await sleep(50);var state=window.__monitorHtmlOverlayState(),button=dpad.querySelector("[data-snake-key=ArrowUp]").getBoundingClientRect(),pad=dpad.getBoundingClientRect(),overlay=host.getBoundingClientRect();report.layout={active:state.active,roots:state.roots,physical:state.geometry&&state.geometry.physicalRuntime,scale:state.geometry&&state.geometry.scale,overlay:!!dpad.closest("#monitor-html-overlay"),buttonWidth:button.width,padWidth:pad.width,hostWidth:overlay.width};}',
+  '})();</script>'
+].join("\n");
+
 var failures = 0;
 function check(ok, msg, detail) {
   if (ok) console.log("  ✓ " + msg);
@@ -70,6 +79,7 @@ check(/mode = params\.get\("mode"\) === "dos" \? "dos" : "nibbles"/.test(playerH
   "one pinned bundle boots either a bare DOS prompt or a one-shot Nibbles session");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4500, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
+var dpadLayout = lib.runPageSync("rsvp.html", DPAD_LAYOUT_HARNESS, 1800, { patchRaf: true });
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(!s.grid.calendar && s.grid.tattooAt === 7 &&
@@ -115,6 +125,11 @@ check(dpadChecks && dpadChecks.count && dpadChecks.keys &&
   dpadChecks.right && dpadChecks.before && dpadChecks.held && dpadChecks.released &&
   dpadChecks.prevented,
   "the right-side touch D-pad relays an ArrowUp press and release through snake-key", {state:s.dpad,checks:dpadChecks});
+check(dpadLayout && dpadLayout.errors.length === 0 && dpadLayout.layout.active &&
+    dpadLayout.layout.physical && dpadLayout.layout.overlay &&
+    dpadLayout.layout.roots.indexOf("snake-dpad-host") !== -1 && dpadLayout.layout.scale > 1 &&
+    Math.abs(dpadLayout.layout.buttonWidth / dpadLayout.layout.scale - 6) < 0.15,
+  "the promoted mobile Nibbles D-pad retains its authored control size beside the physical DOS runtime", dpadLayout);
 check(s.menu.kill && !s.menu.restart && JSON.stringify(s.menu.labels) === JSON.stringify(["Kill app"]),
   "the open DOS surface exposes only the enabled Kill app action", s.menu);
 check(!s.close.open && !s.close.frame && !s.close.running && !s.close.host && !s.close.dot &&

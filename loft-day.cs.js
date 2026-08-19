@@ -766,8 +766,8 @@ window.__loftMessages["cs"] = {
   "madla_fam": "Madla",
   "madla_place": "noční služba, Německo",
   "mail_back": "‹ Doručená",
-  "mail_body_lore": "ahoj.\nslavíme dvakrát: svatbu 1. května 2027 v Edmontonu a svatební oslavu 10. července 2027 v Praze.\npřijeďte na jednu, přijeďte na obě — všichni naši blízcí jsou vítáni, v malém i ve velkém.\nmezi oslavami se loftu stýská po návštěvách. — m ∞ b",
-  "mail_body_rsvp": "gauč vám drží místo.\nklikni na odpovědět a zbav nás napětí.",
+  "mail_body_lore": "ahoj.\nslavíme dvakrát: svatbu 1. května 2027 v Edmontonu a svatební oslavu 10. července 2027 v Praze.\npřijeď na jednu, přijeď na obě — všichni naši blízcí jsou vítáni, v malém i ve velkém.\nmezi oslavami se loftu stýská po návštěvách. — m ∞ b",
+  "mail_body_rsvp": "gauč ti drží místo.\nklikni na odpovědět a zbav nás napětí.",
   "mail_body_spam": "to jsme my. ti sexy nezadaní jsme my.\nbudeme se brát.\nodhlásit odběr bude možné na svatbě.",
   "mail_cancel": "Zrušit",
   "mail_cc": "Kopie",
@@ -1319,9 +1319,9 @@ window.__loftMessages["cs"] = {
   "rsvp_exit_link": "Viděl(a) jsi celý den — zbývá jediné: dej nám vědět, že přijdeš ↓",
   "rsvp_gmail": "Otevřít v Gmailu",
   "rsvp_mail": "E-mailová aplikace",
-  "rsvp_sub": "Zblízka či zdaleka, malí i velcí, vezměte své nejdražší a přijeďte na jednu nebo na obě akce. Dejte nám vědět!",
+  "rsvp_sub": "Ať přijíždíš zblízka či zdaleka, sám nebo s blízkými — přijeď na jednu oslavu nebo na obě. Jen nám dej vědět!",
   "rsvp_title": "Potvrzení účasti",
-  "rsvp_to_game": "Mezitím… prozkoumejte <em>Loft plný tajemství</em>:",
+  "rsvp_to_game": "Mezitím… prozkoumej <em>Loft plný tajemství</em>:",
   "rumi_lines": [
     [
       "Bez všech ostatních se obejdu; bez tebe ne.",

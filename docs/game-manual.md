@@ -104,6 +104,8 @@ If you are unsure what comes next:
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
 - At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
   after it fills the view.
+- Snake opens with player-count and speed choices. Its × control ends the DOS session; opening the
+  app again returns to those choices and starts a new game.
 - Phone and tablet apps leave text fields unfocused; tap a field to type.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
   of the pedal slider holds speed; its outer zones accelerate or brake.

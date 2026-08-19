@@ -205,9 +205,11 @@ stay in the SVG path. This identity-preserving promotion is the default for HTML
 the WebKit-safe boundary for focused interaction. The viewport’s shared `device-zoomed` state hides
 all three roster surfaces (chip, panel, and modal backdrop), preserving their state so they return
 when either device releases the view. Iframe-owned game canvases must be sized from the
-physical screen box rather than through ancestor CSS zoom. Establish that host before creating a
-runtime iframe, and reconcile an active surface by root/owner identity: state-only mutations refit in
-place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
+physical screen box rather than through ancestor CSS zoom. Shoot and a running Snake use that path;
+Snake's native setup panel uses the logical overlay, and Close destroys its iframe because moving a
+retained browsing context back through the scaled `foreignObject` reloads the DOS machine anyway.
+Establish the host before creating a runtime iframe, and reconcile an active surface by root/owner
+identity: state-only mutations refit in place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
 canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later
 controls. Replaced media gets the final physical screen box. Video's card chooser stays on the
 ordinary logical overlay; entering its player refits the same root to the physical screen before the

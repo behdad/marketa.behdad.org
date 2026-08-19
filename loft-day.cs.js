@@ -1171,7 +1171,7 @@ window.__loftMessages["cs"] = {
   "pr_desc1": "Zahradní slavnost: aperitiv, hudba, večeře, tanec a afterparty.",
   "pr_desc2": "Brunch.",
   "pr_desc_half": "+ možnost přespání.",
-  "pr_venue": "Oba dny na chatě.",
+  "pr_venue": "Oba dny na statku.",
   "prince_kill_line": "písek v přesýpacích hodinách došel.",
   "prince_kill_title": "JAFFAR VÍTĚZÍ",
   "quiz_again": "Vyplnit kvíz znovu",
@@ -1319,9 +1319,9 @@ window.__loftMessages["cs"] = {
   "rsvp_exit_link": "Viděl(a) jsi celý den — zbývá jediné: dej nám vědět, že přijdeš ↓",
   "rsvp_gmail": "Otevřít v Gmailu",
   "rsvp_mail": "E-mailová aplikace",
-  "rsvp_sub": "Ať přijíždíš zblízka či zdaleka, sám nebo s blízkými — přijeď na jednu oslavu nebo na obě. Jen nám dej vědět!",
+  "rsvp_sub": "Zblízka či zdaleka, malí i velcí, vezměte své nejdražší a přijeďte na jednu nebo na obě akce. Dejte nám vědět!",
   "rsvp_title": "Potvrzení účasti",
-  "rsvp_to_game": "Mezitím… prozkoumej <em>Loft plný tajemství</em>:",
+  "rsvp_to_game": "Mezitím… prozkoumejte <em>Loft plný tajemství</em>:",
   "rumi_lines": [
     [
       "Bez všech ostatních se obejdu; bez tebe ne.",

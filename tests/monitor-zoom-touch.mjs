@@ -129,6 +129,14 @@ function check(ok, message, detail) {
     await send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", buttons: 0, clickCount: 1 });
     await sleep(120);
   }
+  async function trustedTouch(x, y) {
+    await send("Input.dispatchTouchEvent", {
+      type: "touchStart", touchPoints: [{ x, y, radiusX: 2, radiusY: 2, force: 1, id: 81 }]
+    });
+    await sleep(30);
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await sleep(120);
+  }
   await tap(candidate.x, candidate.y);
   const first = await evaluate(`(function(){
     var mon=document.getElementById("office-monitor");
@@ -145,6 +153,22 @@ function check(ok, message, detail) {
   const second = await evaluate(`(function(){return {running:window.__monitorRunningApps(),roots:window.__monitorHtmlOverlayState().roots};})()`);
   check(second.running.indexOf(candidate.app) !== -1,
     "a second deliberate touch still opens that monitor app", { candidate, second });
+
+  const saverPoint = await evaluate(`(async function(){
+    window.__closeTopMonitorApp();await new Promise(function(resolve){setTimeout(resolve,60);});
+    var cell=document.getElementById(${JSON.stringify(candidate.id)}),r=cell.getBoundingClientRect();
+    window.__startMonitorSaver("julia");await new Promise(function(resolve){setTimeout(resolve,60);});
+    return {x:r.left+r.width/2,y:r.top+r.height/2,saver:document.getElementById("office-monitor").classList.contains("show-saver"),overlay:window.__monitorHtmlOverlayState().active};
+  })()`);
+  check(saverPoint.saver && !saverPoint.overlay, "the zoomed saver parks the promoted desktop before the touch", saverPoint);
+  await trustedTouch(saverPoint.x, saverPoint.y);
+  const saverWake = await evaluate(`(function(){var mon=document.getElementById("office-monitor"),cls=window.__monitorAppClasses[${JSON.stringify(candidate.app)}];return {awake:!mon.classList.contains("show-saver"),foreground:mon.classList.contains(cls),roots:window.__monitorHtmlOverlayState().roots};})()`);
+  check(saverWake.awake && !saverWake.foreground && saverWake.roots.length === 1 && saverWake.roots[0] === "dock-grid",
+    "the trusted touch that wakes the saver launches no newly exposed app", { candidate, saverWake });
+  await trustedTouch(saverPoint.x, saverPoint.y);
+  const saverSecond = await evaluate(`(function(){var mon=document.getElementById("office-monitor"),cls=window.__monitorAppClasses[${JSON.stringify(candidate.app)}];return {foreground:mon.classList.contains(cls),roots:window.__monitorHtmlOverlayState().roots};})()`);
+  check(saverSecond.foreground,
+    "the next trusted touch opens the app after the saver wake", { candidate, saverSecond });
   check(exceptions.length === 0, "zoom handoff and compatibility clicks raise no page exceptions", exceptions);
 
   ws.close();

@@ -90287,7 +90287,7 @@ def colormode(mode=None):
     updateScreen();
   }
   typewriter.addEventListener("dblclick", function () { swap(true); });
-  var monClickTimer = null, monitorSaverWakeUntil = 0;
+  var monClickTimer = null;
   function wakeMonitorSaver() {
     if (!monitor.classList.contains("show-saver")) return false;
     stopSaver();
@@ -90327,7 +90327,7 @@ def colormode(mode=None):
       if (e.target && e.target.closest && e.target.closest("#monitor-saver-cycle-hit")) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      monitorSaverWakeUntil = Date.now() + 450;
+      if (window.__armMonitorHandoffClickSuppress) window.__armMonitorHandoffClickSuppress();
       wakeMonitorSaver();
       playLaptopClickSound("office-monitor");
       return;
@@ -90339,7 +90339,7 @@ def colormode(mode=None):
     playLaptopClickSound("office-monitor");
   }, true);
   monitor.addEventListener("click", function (e) {
-    if (Date.now() >= monitorSleepWakeUntil && Date.now() >= monitorSaverWakeUntil) return;
+    if (Date.now() >= monitorSleepWakeUntil) return;
     e.preventDefault();
     e.stopImmediatePropagation();
   }, true);
@@ -92340,6 +92340,7 @@ def colormode(mode=None):
     if (suppressTimer) clearTimeout(suppressTimer);
     suppressTimer = setTimeout(function () { suppressZoomClick = false; suppressTimer = null; }, 500); // fallback if no click follows the gesture
   }
+  window.__armMonitorHandoffClickSuppress = armZoomClickSuppress;
   function swallowZoomClick(e) {
     if (!suppressZoomClick) return;
     suppressZoomClick = false;

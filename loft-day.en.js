@@ -766,7 +766,7 @@ window.__loftMessages["en"] = {
   "madla_fam": "Madla",
   "madla_place": "night shift, Germany",
   "mail_back": "‹ Inbox",
-  "mail_body_lore": "hi you.\nwe're getting married — twice: Edmonton on May 1, 2027, and Prague on July 10, 2027.\ncome to one or both — all our loved ones welcome, small or big.\nbetween the parties, the loft misses visitors. — m ∞ b",
+  "mail_body_lore": "hi you.\nwe're doing this twice: the wedding in Edmonton on May 1, 2027, and a wedding party in Prague on July 10, 2027.\ncome to one or both — all our loved ones welcome, small or big.\nbetween the parties, the loft misses visitors. — m ∞ b",
   "mail_body_rsvp": "the couch is saving you a seat.\nhit reply and put us out of our suspense.",
   "mail_body_spam": "it's us. we're the hot singles.\nwe're getting married.\nunsubscribe at the wedding.",
   "mail_cancel": "Cancel",
@@ -1099,11 +1099,11 @@ window.__loftMessages["en"] = {
   "occ_banner_bbq": "🍖 BBQ Day",
   "occ_banner_brunch": "🍳 Garden Brunch",
   "occ_banner_wed_edm": "💍 Edmonton Wedding",
-  "occ_banner_wed_prg": "💍 Prague Wedding",
+  "occ_banner_wed_prg": "💍 Prague Wedding Party",
   "occ_invite_bbq": "cookout on the balcony today 🍖 come by for the BBQ!",
   "occ_invite_brunch": "garden brunch in Prague today 🍳 come join the family!",
   "occ_invite_wed_edm": "it's our Edmonton wedding day! 💍 come celebrate with us",
-  "occ_invite_wed_prg": "it's our Prague wedding day! 💍 come celebrate with us",
+  "occ_invite_wed_prg": "it's our Prague wedding party today! 💍 come celebrate with us",
   "occasion_activate": "activate this day",
   "office_pouf_sock_found": "Two medals—and the missing sock. Of course.",
   "pacman_kill": "GHOSTS WIN",
@@ -1525,5 +1525,6 @@ window.__loftMessages["en"] = {
   "watch_skip": "□ Take over",
   "wd_anniversary": "anniversary",
   "wd_ribbon": "just married",
-  "wd_wedding_day": "Wedding day"
+  "wd_wedding_day": "Wedding day",
+  "wd_wedding_party_day": "Wedding party day"
 };

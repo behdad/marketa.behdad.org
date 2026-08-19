@@ -1105,7 +1105,7 @@ function checkI18nKeys(file, script, html) {
     try { loftEn = parseLoftDictionary("en"); }
     catch (_error) { return; } // the dictionary check reports the parse failure
   }
-  var attrRe = /\bdata-(?:i|href-i|aria-i|title-i|note-key)="([^"]+)"/g;
+  var attrRe = /\bdata-(?:i|href-i|title-i|note-key)="([^"]+)"/g;
   var m, seen = new Set(), missing = [];
   while ((m = attrRe.exec(html))) {
     var key = m[1];
@@ -1507,11 +1507,10 @@ function checkNoConflictMarkers(file, html) {
   else pass(file + ": no leftover merge conflict markers");
 }
 
-// Loft Day deliberately teaches through visible copy and authored coaches instead of
-// invisible accessibility metadata. Keep that game-specific boundary from regressing
-// when new controls are added; egg-hunt.html follows a different policy.
-function checkMetadataFreeGame(file, html) {
-  if (file !== "loft-day.html") return;
+// These canonical pages teach through visible copy, authored coaches, and visible
+// tooltips instead of invisible accessibility metadata. Keep the boundary uniform when
+// new hub cards, Egg Hunt controls, or Loft Day apps are added.
+function checkMetadataFreePages(file, html) {
   var issues = [];
   var aria = html.match(/\baria-[a-z0-9_-]+/gi) || [];
   if (aria.length) issues.push("ARIA tokens: " + Array.from(new Set(aria)).join(", "));
@@ -1520,12 +1519,16 @@ function checkMetadataFreeGame(file, html) {
     return /\srole\s*=/i.test(tag);
   });
   if (roleTags.length) issues.push("explicit role attributes: " + roleTags.length);
-  if (/\.setAttribute\(\s*["']role["']/i.test(html)) issues.push("dynamic role assignment");
-  var labelledImages = html.match(/<img\b[^>]*\s(?:alt|aria-label|title)\s*=/gi) || [];
-  if (labelledImages.length) issues.push("image label/tooltip attributes: " + labelledImages.length);
-  if (/\.alt\s*=|\.setAttribute\(\s*["']alt["']/i.test(html)) issues.push("dynamic image alt assignment");
-  if (issues.length) fail(file + ": game UI stays free of hidden accessibility metadata", issues.join("\n"));
-  else pass(file + ": game UI stays free of hidden accessibility metadata");
+  if (/\.setAttribute(?:NS)?\(\s*(?:[^,]+,\s*)?["']role["']|\.role\s*=(?!=)|["']role["']\s*:/i.test(html) ||
+      /\brole\\=["']|\brole=\\["']/i.test(html)) issues.push("dynamic role assignment");
+  var labelledImages = html.match(/<img\b[^>]*\salt\s*=/gi) || [];
+  if (labelledImages.length) issues.push("image alt attributes: " + labelledImages.length);
+  if (/\bdata-alt-i\b/i.test(html) ||
+      /\.alt\s*=|\.setAttribute(?:NS)?\(\s*(?:[^,]+,\s*)?["']alt["']|["']alt["']\s*:/i.test(html)) {
+    issues.push("dynamic image alt assignment");
+  }
+  if (issues.length) fail(file + ": canonical page stays free of hidden accessibility metadata", issues.join("\n"));
+  else pass(file + ": canonical page stays free of hidden accessibility metadata");
 }
 
 // #hunt-caption is a shared projection. Producers publish structured claims; only the
@@ -1673,7 +1676,7 @@ FILES.forEach(function (file) {
   var script = extractScript(html);
   var style = extractStyle(html);
   checkNoConflictMarkers(file, html);
-  checkMetadataFreeGame(file, html);
+  checkMetadataFreePages(file, html);
   checkSyntax(file, script);
   if (script) {
     checkDictParity(file, script, html);

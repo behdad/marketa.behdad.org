@@ -212,7 +212,9 @@ Establish the host before creating a runtime iframe, and reconcile an active sur
 identity: state-only mutations refit in place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
 canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later
 controls. Fixed-size HTML controls promoted beside a physical runtime must explicitly reapply
-`--monitor-overlay-scale`; the Nibbles D-pad is the reference. Replaced media gets the final
+`--monitor-overlay-scale`; the Nibbles D-pad is the reference. When that pad is promoted, its
+right-side runtime gutter must release pointer ownership so real hit-tested touch reaches the HTML
+buttons below the SVG control layer. Replaced media gets the final
 physical screen box. Video's card chooser stays on the
 ordinary logical overlay; entering its player refits the same root to the physical screen before the
 media source loads, and its HTML playback chrome multiplies authored sizes by the live scale. The

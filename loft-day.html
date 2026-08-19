@@ -87821,7 +87821,8 @@ def colormode(mode=None):
   function shootSync() {
     if (!shootFrame || !shootFrame.contentWindow) return;
     try {
-      shootFrame.contentWindow.postMessage({ kind: "shoot-control", active: shootShouldRun() }, location.origin);
+      shootFrame.contentWindow.postMessage({ kind: "shoot-control", active: shootShouldRun(),
+        focused: !!(window.__monitorZoomed && window.__monitorZoomed()) }, location.origin);
     } catch (e) {}
   }
   window.__syncMonitorDoom = shootSync;
@@ -88034,6 +88035,7 @@ def colormode(mode=None):
   window.addEventListener("message", function (event) {
     if (!shootFrame || event.source !== shootFrame.contentWindow || event.origin !== location.origin ||
         !event.data || event.data.game !== shootFrameGame) return;
+    if (event.data.kind === "shoot-focus-query") { shootSync(); return; }
     if (event.data.kind === "shoot-touch-control") {
       if (window.__monitorZoomIn && (!window.__monitorZoomed || !window.__monitorZoomed())) window.__monitorZoomIn();
       shootSync();
@@ -92104,6 +92106,7 @@ def colormode(mode=None):
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
     if (el === monitor && window.__monitorHtmlOverlayOpen) window.__monitorHtmlOverlayOpen();
+    if (el === monitor && window.__syncMonitorDoom) window.__syncMonitorDoom();
     if (window.__dropTermOpen && window.__dropTermOpen() && window.__claimDropTermFocus) window.__claimDropTermFocus();
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // screen focus settles musically: ~2.5s rather than the projector's ~1s
@@ -92113,13 +92116,15 @@ def colormode(mode=None):
   }
   function zoomOut() {
     if (!zoomEl) return;
-    if (zoomEl === monitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
+    var releasedMonitor = zoomEl === monitor;
+    if (releasedMonitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
     if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
-    if (zoomEl === monitor) monitorIntentUntil = 0;
+    if (releasedMonitor) monitorIntentUntil = 0;
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
+    if (releasedMonitor && window.__syncMonitorDoom) window.__syncMonitorDoom();
     monitorContentFullscreen = false;
     monitor.classList.remove("monitor-content-fullscreen");
     if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");

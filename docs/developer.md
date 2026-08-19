@@ -208,6 +208,9 @@ when either device releases the view. Iframe-owned game canvases must be sized f
 physical screen box rather than through ancestor CSS zoom. Shoot and a running Snake use that path;
 Snake's native setup panel uses the logical overlay, and Close destroys its iframe because moving a
 retained browsing context back through the scaled `foreignObject` reloads the DOS machine anyway.
+The Shoot host publishes whether the monitor is focused as part of its control message. Quake III
+uses that state to turn a room-scale arena press into a focus request; only a later focused press
+selects the arena.
 Establish the host before creating a runtime iframe, and reconcile an active surface by root/owner
 identity: state-only mutations refit in place and must never reparent a live browsing context. While ordinary DOM owns paint, park the
 canonical `foreignObject`; mixed surfaces keep opaque SVG backing below HTML and promote only later

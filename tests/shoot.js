@@ -41,7 +41,26 @@ var HARNESS = [
   '})();</script>'
 ].join("");
 
+var Q3_PICKER_HARNESS = [
+  '<pre id="__report">pending</pre>',
+  '<script>setTimeout(function(){',
+  'var picker=document.getElementById("arena-picker"),title=picker.querySelector("strong"),choices=document.getElementById("arena-choices"),button=picker.querySelector(".arena-choice"),pickerBox=picker.getBoundingClientRect(),choicesBox=choices.getBoundingClientRect(),buttonBox=button.getBoundingClientRect(),pickerStyle=getComputedStyle(picker),buttonStyle=getComputedStyle(button);',
+  'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs||[],inner:[innerWidth,innerHeight],compact:matchMedia("(max-height:120px)").matches,picker:{width:pickerBox.width,height:pickerBox.height,border:pickerStyle.borderTopWidth},choices:{width:choicesBox.width,height:choicesBox.height},title:getComputedStyle(title).display,button:{width:buttonBox.width,height:buttonBox.height,font:buttonStyle.fontSize},selection:getComputedStyle(document.body).userSelect});',
+  '},100);</script>'
+].join("");
+
+var Q3_FOCUS_HARNESS = [
+  '<pre id="__report">pending</pre>',
+  '<script>(function(){',
+  'var focusRequests=0,nativePostMessage=window.postMessage;window.postMessage=function(data){if(data&&data.kind==="shoot-touch-control"&&data.game==="q3"){focusRequests++;return;}if(data&&data.kind==="shoot-focus-query"&&data.game==="q3")return;return nativePostMessage.apply(window,arguments);};',
+  'setTimeout(function(){var picker=document.getElementById("arena-picker"),button=picker.querySelector(".arena-choice");function control(focused){dispatchEvent(new MessageEvent("message",{origin:location.origin,data:{kind:"shoot-control",active:true,focused:focused}}));}function pointer(type,id){button.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerType:"touch",pointerId:id,isPrimary:true,button:0}));}control(false);pointer("pointerdown",91);pointer("pointerup",91);button.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,button:0}));var kept=!picker.hidden;control(true);pointer("pointerdown",92);pointer("pointerup",92);button.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,button:0}));document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs||[],focusRequests:focusRequests,kept:kept,picked:picker.hidden});},100);',
+  '})();</script>'
+].join("");
+
 var result = lib.runPageSync("rsvp.html", HARNESS, 2200, { patchRaf: true, forceMotion: true });
+var compactPicker = lib.runPageSync("q3/player.html", Q3_PICKER_HARNESS, 600, { chromeFlags: "--window-size=500,120" });
+var expandedPicker = lib.runPageSync("q3/player.html", Q3_PICKER_HARNESS, 600, { chromeFlags: "--window-size=760,600" });
+var focusPicker = lib.runPageSync("q3/player.html", Q3_FOCUS_HARNESS, 600);
 var failures = 0;
 function check(ok, label, detail) {
   console.log("  " + (ok ? "✓" : "✗") + " " + label);
@@ -168,9 +187,32 @@ check(!/setTimeout\(\(\) => pick/.test(players[2]) &&
     /canvas\.addEventListener\("pointerdown"/.test(players[2]) &&
     !/document\.addEventListener\("pointerdown", \(\) =>/.test(players[2]),
   "Quake III waits for a choice and only the game canvas takes pointer focus");
-check(/width:min\(84vw,760px\)/.test(players[2]) &&
+check(/width:min\(90vw,262vh\)/.test(players[2]) && /aspect-ratio:3\.45/.test(players[2]) &&
     /touch-action:manipulation/.test(players[2]),
-  "Quake III arena cards keep touch-sized explicit pointer targets");
+  "Quake III arena cards keep the same tall three-card proportions at every scale");
+check(compactPicker && compactPicker.errors.length === 0 && compactPicker.compact &&
+    compactPicker.title === "none" && compactPicker.picker.border === "0px" &&
+    Math.abs(compactPicker.picker.width - compactPicker.inner[0]) < 1 &&
+    Math.abs(compactPicker.picker.height - compactPicker.inner[1]) < 1 &&
+    compactPicker.button.height > compactPicker.inner[1] * 0.6,
+  "Quake III's room-scale arena chooser fills the screen with three tall cards", compactPicker);
+check(expandedPicker && expandedPicker.errors.length === 0 && !expandedPicker.compact &&
+    expandedPicker.title === "none" && expandedPicker.picker.border === "0px" &&
+    Math.abs(expandedPicker.picker.width - expandedPicker.inner[0]) < 1 &&
+    Math.abs(expandedPicker.picker.height - expandedPicker.inner[1]) < 1 &&
+    expandedPicker.button.height >= 50,
+  "Quake III keeps the same full-screen three-card chooser when expanded", expandedPicker);
+check(compactPicker && expandedPicker &&
+    Math.abs(compactPicker.button.width / compactPicker.button.height -
+      expandedPicker.button.width / expandedPicker.button.height) < 0.12,
+  "Quake III arena cards retain one silhouette across room and expanded scales",
+  { compact: compactPicker && compactPicker.button, expanded: expandedPicker && expandedPicker.button });
+check(compactPicker && expandedPicker && compactPicker.selection === "none" && expandedPicker.selection === "none",
+  "Quake III's non-editor runtime text cannot be selected", { compact: compactPicker, expanded: expandedPicker });
+check(focusPicker && focusPicker.errors.length === 0 && focusPicker.focusRequests === 1 &&
+    focusPicker.kept && focusPicker.picked,
+  "a room-scale arena press only requests monitor focus; the next expanded press chooses it",
+  focusPicker);
 check(result && result.steps.q3Gutters.length === 2 &&
     result.steps.q3Gutters.every(function(value) { return value === "none"; }),
   "Quake III leaves its full visible picker free of monitor gutter hit surfaces");

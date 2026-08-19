@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quake III — OpenArena</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
 body{display:grid;place-items:center}
 #canvas{grid-area:1/1;display:block;width:min(100vw,133.333vh)!important;height:auto!important;max-width:100vw!important;max-height:100vh!important;aspect-ratio:4/3!important;background:#000;outline:0}
 #touch-look{display:none;grid-area:1/1;z-index:3;width:min(100vw,133.333vh);max-width:100vw;max-height:100vh;aspect-ratio:4/3;touch-action:none;-webkit-touch-callout:none}
@@ -13,11 +13,11 @@ body{display:grid;place-items:center}
 #status{grid-area:1/1;z-index:1;margin:0;padding:0 4px;color:#e8c060;text-align:center;font:11px/1.3 ui-monospace,monospace;pointer-events:none}
 #status.err{color:#e0736a}
 #status:empty{display:none}
-#arena-picker{grid-area:1/1;z-index:2;align-self:center;width:min(84vw,760px);box-sizing:border-box;padding:clamp(8px,2.5vh,16px) clamp(10px,3vw,24px);border:clamp(1px,.5vh,3px) solid #6c5944;border-radius:clamp(5px,2vh,14px);background:#161210;color:#ead9b7;text-align:center;font:clamp(11px,3.6vh,19px)/1.3 ui-monospace,monospace;box-shadow:0 clamp(3px,1.5vh,10px) clamp(10px,5vh,32px) #000}
+#arena-picker{grid-area:1/1;z-index:2;align-self:stretch;justify-self:stretch;width:100%;height:100%;box-sizing:border-box;display:grid;place-items:center;border:0;background:radial-gradient(circle at 50% 35%,#30251b,#100d0a 72%);color:#f5e3a5;text-align:center;font:min(5.5vh,1.9vw)/1.05 "Source Serif 4",Georgia,serif}
 #arena-picker[hidden]{display:none}
-#arena-picker strong{display:block;margin-bottom:clamp(7px,2vh,14px);color:#f1c96c;font:700 clamp(15px,5vh,26px)/1.15 ui-monospace,monospace;letter-spacing:.02em;white-space:nowrap}
-#arena-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(9px,2vmin,18px)}
-.arena-choice{min-width:0;min-height:clamp(50px,23vh,86px);padding:clamp(8px,3vh,14px) 5px;border:clamp(1px,.5vh,3px) solid #76644d;border-radius:clamp(4px,1.5vh,10px);color:#fff8e8;font:inherit;text-shadow:0 1px 2px #000;cursor:pointer;touch-action:manipulation}
+#arena-picker strong{display:none}
+#arena-choices{width:min(90vw,262vh);aspect-ratio:3.45;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:min(1.6vw,4.7vh)}
+.arena-choice{min-width:0;min-height:0;padding:min(1vw,3vh);border:min(.5vw,1.2vh) solid rgba(232,192,96,.55);border-radius:min(2vw,4.8vh);color:#fff8e8;font:inherit;text-shadow:0 1px 2px #000;cursor:pointer;touch-action:manipulation}
 .arena-choice:nth-child(1){background:
   radial-gradient(circle at 52% 24%,rgba(208,247,255,.9) 0 5%,transparent 6%),
   linear-gradient(150deg,transparent 43%,rgba(105,202,219,.45) 44% 47%,transparent 48%),
@@ -29,7 +29,7 @@ body{display:grid;place-items:center}
 .arena-choice:nth-child(3){background:
   linear-gradient(125deg,transparent 34%,#ffb22e 35% 39%,transparent 40% 67%,#ff7b20 68% 72%,transparent 73%),
   radial-gradient(circle at 55% 80%,#d83b14,#6c1f16 54%,#271719 55%)}
-.arena-choice:hover,.arena-choice:focus-visible{border-color:#f1c96c;outline:0;transform:translateY(-1px)}
+.arena-choice:hover,.arena-choice:focus-visible{border-color:#f1c96c;outline:0}
 #touch-pad{--touch-cell:clamp(25px,16.6vmin,76px);display:none;position:fixed;z-index:4;left:max(0px,env(safe-area-inset-left));bottom:max(clamp(5px,2vmin,14px),env(safe-area-inset-bottom));grid-template:repeat(3,var(--touch-cell))/repeat(3,var(--touch-cell));justify-content:center;gap:clamp(2px,1.4vmin,8px);border-radius:clamp(5px,3vmin,16px);touch-action:none;cursor:grab;background:linear-gradient(90deg,transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%),linear-gradient(transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #touch-pad[hidden]{display:none}
 #touch-pad::before{content:"";grid-area:2/2;width:53.333%;height:53.333%;place-self:center;border:clamp(.45px,.12vmin,1px) solid #6579dc;border-radius:50%;background:#253fc8;box-shadow:0 0 clamp(1px,.25vmin,1.5px) rgba(65,100,255,.75);pointer-events:none}
@@ -70,6 +70,7 @@ const picker = document.getElementById("arena-picker");
 const arenas = ["oa_shine", "aggressor", "am_lavaarena"];
 let game = null;
 let parentActive = true;
+let parentFocused = parent === window;
 let paused = false;
 const touchPad = document.getElementById("touch-pad");
 let touchDrag = null;
@@ -164,6 +165,13 @@ if (touchPad) {
 function chooseArena() {
   return new Promise(resolve => {
     let picked = false;
+    let roomScalePointer = null;
+    let roomScaleClearTimer = 0;
+    function clearRoomScalePointer() {
+      clearTimeout(roomScaleClearTimer);
+      roomScaleClearTimer = 0;
+      roomScalePointer = null;
+    }
     function pick(arena) {
       if (picked) return;
       picked = true;
@@ -171,7 +179,30 @@ function chooseArena() {
       try { localStorage.setItem("loft:q3-arena", arena); } catch (_) {}
       resolve(arena);
     }
+    picker.addEventListener("pointerdown", event => {
+      if (!event.target.closest("[data-arena]")) return;
+      if (parentFocused) { clearRoomScalePointer(); return; }
+      clearRoomScalePointer();
+      roomScalePointer = event.pointerId;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      try { parent.postMessage({ kind:"shoot-touch-control", game:"q3" }, location.origin); } catch (_) {}
+    }, true);
+    addEventListener("pointerup", event => {
+      if (roomScalePointer !== event.pointerId) return;
+      clearTimeout(roomScaleClearTimer);
+      roomScaleClearTimer = setTimeout(clearRoomScalePointer, 500);
+    }, true);
+    addEventListener("pointercancel", event => {
+      if (roomScalePointer === event.pointerId) clearRoomScalePointer();
+    }, true);
     picker.addEventListener("click", event => {
+      if (roomScalePointer != null) {
+        clearRoomScalePointer();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
       const button = event.target.closest("[data-arena]");
       if (button) pick(button.dataset.arena);
     });
@@ -215,9 +246,11 @@ function sync() {
 addEventListener("message", event => {
   if (event.origin !== location.origin || !event.data || event.data.kind !== "shoot-control") return;
   parentActive = !!event.data.active;
+  parentFocused = !!event.data.focused;
   if (!parentActive) releaseTouchKeys();
   sync();
 });
+try { parent.postMessage({ kind:"shoot-focus-query", game:"q3" }, location.origin); } catch (_) {}
 addEventListener("focus", sync);
 addEventListener("blur", sync);
 addEventListener("blur", releaseTouchKeys);

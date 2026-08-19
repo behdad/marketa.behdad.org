@@ -3818,8 +3818,8 @@ html.revealed #hunt-github-btn{display:none}
    (wine is already the on-cream link colour, so contrast holds). */
 @media (prefers-reduced-motion: reduce){.scene-caption.hint-blink{animation:none; color:var(--wine); font-weight:700}}
 /* a brick hint gently breathes while it's up, so it reads as a temporary aside */
-.scene-caption.brick-hint-live,
-.scene-caption.temporary-caption-live{animation:brick-hint-breathe 1.6s ease-in-out infinite}
+.scene-caption.brick-hint-live{animation:brick-hint-breathe 1.6s ease-in-out infinite}
+.scene-caption.temporary-caption-live{animation:brick-hint-breathe 1.6s ease-in-out 2}
 @keyframes brick-hint-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
 @media (prefers-reduced-motion: reduce){.scene-caption.brick-hint-live,.scene-caption.temporary-caption-live{animation:none}}
 .watch-controls{display:flex; justify-content:center; align-items:center; gap:.9rem; margin:.5rem 0 0; min-height:1.5rem; font-family:var(--system-font)}
@@ -38556,8 +38556,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-7c1c4072068f"></script>
-<script src="loft-day.cs.js?v=dict-23d289ca6499"></script>
+<script src="loft-day.en.js?v=dict-0069bb9a2be3"></script>
+<script src="loft-day.cs.js?v=dict-0d50e5446d82"></script>
 <script src="code-snippets/manifest.js?v=transport-1dcbd1191304"></script>
 <script>
 (function () {
@@ -71298,6 +71298,7 @@ setOfficeProgress("pc", false);
   }
   function showMonitorLockSaver() {
     if (!monitorLocked) return false;
+    if (window.__cancelCaption) window.__cancelCaption("monitor-lock-app");
     clearMonitorLockIdle();
     monitor.classList.remove("monitor-lock-awake");
     saverCameFrom = "desktop";
@@ -71317,6 +71318,9 @@ setOfficeProgress("pc", false);
     monitorUrl = CAPS_URL;
     paintMonitorLock();
     scheduleMonitorLockIdle();
+    if (window.__captionOverlay) window.__captionOverlay("mon_app_caption_lock", {
+      owner: "monitor-lock-app", scope: "stage:office", priority: 15
+    });
     return true;
   }
   // wake the screensaver back to the desktop (same as clicking the monitor while it's saving) —
@@ -71419,6 +71423,7 @@ setOfficeProgress("pc", false);
     monitorLockMatched = { pink: false, blue: false };
     monitorLockCapsState = null; monitorLockCapsPresses = 0;
     monitor.classList.remove("monitor-locked", "monitor-lock-awake");
+    if (window.__cancelCaption) window.__cancelCaption("monitor-lock-app");
     var layer = document.getElementById("monitor-lock-layer");
     if (layer) layer.classList.remove("complete");
     saveMonitorLock();
@@ -73580,6 +73585,19 @@ setOfficeProgress("pc", false);
     system: "show-system", about: "show-about", help: "show-help", credits: "show-credits"
   };
   window.__monitorAppClasses = MONITOR_APP_CLASSES;
+  var MONITOR_APP_CAPTIONS = {
+    chrome: "mon_app_caption_chrome", music: "mon_app_caption_music",
+    photobooth: "mon_app_caption_photobooth", video: "mon_app_caption_video",
+    call: "mon_app_caption_call", chat: "mon_app_caption_chat", mail: "mon_app_caption_mail",
+    calendar: "mon_app_caption_calendar", clock: "mon_app_caption_clock",
+    tattoo: "mon_app_caption_tattoo", classics: "mon_app_caption_classics",
+    pacman: "mon_app_caption_pacman", prince: "mon_app_caption_prince",
+    life: "mon_app_caption_life", shoot: "mon_app_caption_shoot",
+    code: "mon_app_caption_code", console: "mon_app_caption_console",
+    python: "mon_app_caption_python", linux: "mon_app_caption_linux",
+    snake: "mon_app_caption_snake", weather: "mon_app_caption_weather",
+    help: "mon_app_caption_help", credits: "mon_app_caption_credits"
+  };
   var MONITOR_APP_KILLS = {
     chrome: "__killMonitorBrowser", music: "__killMonitorMusic",
     photobooth: "__killMonitorPhotobooth", video: "__killMonitorVideo",
@@ -73632,13 +73650,35 @@ setOfficeProgress("pc", false);
       else if (!showing && monitorKillingApps[id]) delete monitorKillingApps[id];
     });
   }
+  var monitorCaptionApp = "";
+  function syncMonitorAppCaption() {
+    var active = "";
+    Object.keys(MONITOR_APP_CAPTIONS).some(function (id) {
+      if (!monitor.classList.contains(MONITOR_APP_CLASSES[id])) return false;
+      active = id;
+      return true;
+    });
+    if (active === monitorCaptionApp) return;
+    monitorCaptionApp = active;
+    if (window.__cancelCaption) window.__cancelCaption("monitor-app");
+    if (active && window.__captionOverlay) window.__captionOverlay(MONITOR_APP_CAPTIONS[active], {
+      owner: "monitor-app", scope: "stage:office", priority: 15
+    });
+  }
+  function restoreMonitorAppCaption() {
+    monitorCaptionApp = "";
+    syncMonitorAppCaption();
+  }
   window.__monitorAppRunning = function (id) { return !!monitorRunningApps[monitorRegistryId(id)]; };
   window.__monitorRunningApps = function () { return Object.keys(monitorRunningApps); };
   window.__markMonitorAppRunning = markMonitorAppRunning;
   window.__markMonitorAppKilled = markMonitorAppKilled;
   window.__clearMonitorRunningApps = clearMonitorRunningApps;
   if (monitor && window.MutationObserver) {
-    new MutationObserver(syncMonitorRunningApps).observe(monitor, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(function () {
+      syncMonitorRunningApps();
+      syncMonitorAppCaption();
+    }).observe(monitor, { attributes: true, attributeFilter: ["class"] });
     syncMonitorRunningApps();
   }
   var dockGrid = null, dockSearch = null, dockSearchText = null, dockSearchInput = null, dockSearchResults = null;
@@ -75378,6 +75418,7 @@ setOfficeProgress("pc", false);
     if (dockSearchResults) dockSearchResults.textContent = "";
     for (var id in dockCells) dockCells[id].classList.remove("search-match");
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
+    if (window.__cancelCaption) window.__cancelCaption("monitor-search");
     if (wasOpen && monitor.classList.contains("screen-on") && monitor.classList.contains("show-caps") && !monitor.classList.contains("show-saver")) scheduleSaver();
   }
   window.__closeMonitorDockSearch = function () {
@@ -75389,6 +75430,9 @@ setOfficeProgress("pc", false);
     if (!dockSearchReady()) return false;
     stopSaver();
     dockSearchOpen = true;
+    if (window.__captionOverlay) window.__captionOverlay("mon_app_caption_search", {
+      owner: "monitor-search", scope: "stage:office", priority: 20
+    });
     if (focusKeyboard && dockSearchInput) {
       dockSearchInput.value = dockSearchQuery;
       dockSearchInput.classList.add("active");
@@ -87718,8 +87762,14 @@ def colormode(mode=None):
   var shootFullscreenProbeTimer = null;
   function doomSetMsg(txt, isErr) { if (!doomMsg) return; doomMsg.textContent = txt || ""; doomMsg.className = "doom-msg" + (isErr ? " err" : ""); }
   function showShootCoach() {
-    if (!shootCoach || shootView === "chooser") return;
-    shootCoach.classList.add("on");
+    if (shootView === "chooser") return;
+    if (window.__captionOverlay) window.__captionOverlay("shoot_mouse_coach", {
+      owner: "monitor-shoot-mouse", scope: "stage:office", priority: 20
+    });
+  }
+  function hideShootCoach() {
+    if (window.__cancelCaption) window.__cancelCaption("monitor-shoot-mouse");
+    restoreMonitorAppCaption();
   }
   function shootShouldRun() {
     return !shootFrozen && shootView !== "chooser" &&
@@ -87809,7 +87859,7 @@ def colormode(mode=None):
   window.__enterShootBrowserFullscreen = function () { setShootFocus(true); };
   function destroyShootFrame() {
     if (shootFocusActive) setShootFocus(false);
-    if (shootCoach) shootCoach.classList.remove("on");
+    hideShootCoach();
     if (!shootFrame) { shootFrameGame = ""; shootFrameState = "cold"; return; }
     try { shootFrame.contentWindow.postMessage({ kind: "shoot-control", active: false }, location.origin); } catch (e) {}
     try { shootFrame.remove(); } catch (e) { if (shootFrame.parentNode) shootFrame.parentNode.removeChild(shootFrame); }
@@ -117807,6 +117857,7 @@ function spawnDustMote(container) {
 
   function createCaptionArbiter(element) {
     var base = null, transient = null, serial = 0, paintCount = 0, batchDepth = 0, paintPending = false;
+    var lastPulsedOverlay = 0;
     function publicClaim(claim) {
       if (!claim) return null;
       var expiry = claim.expiryToken && attentionScheduler.state(claim.expiryToken);
@@ -117834,7 +117885,15 @@ function spawnDustMote(container) {
       if (host) host.classList.toggle("caption-reserved-fit", !!(claim &&
         (claim.kind === "exclusive" || claim.format === "rsvp" || claim.owner === "roadtrip-departure" ||
           claim.priority >= CAPTION_PRIORITY.terminal)));
-      element.classList.toggle("temporary-caption-live", !!(claim && claim.kind === "overlay"));
+      if (!claim || claim.kind !== "overlay") {
+        element.classList.remove("temporary-caption-live");
+        lastPulsedOverlay = 0;
+      } else if (claim.id !== lastPulsedOverlay) {
+        element.classList.remove("temporary-caption-live");
+        void element.offsetWidth;
+        element.classList.add("temporary-caption-live");
+        lastPulsedOverlay = claim.id;
+      }
       element.classList.toggle("roadtrip-departure-caption", !!(claim && claim.owner === "roadtrip-departure"));
       element.classList.toggle("rsvp-nudge", !!(claim && claim.format === "rsvp"));
       element.classList.toggle("hint-blink", !!(claim && claim.blink));

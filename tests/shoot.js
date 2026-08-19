@@ -11,7 +11,7 @@ var HARNESS = [
   'var report={errors:window.__errs||[],steps:{}};',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function snap(name){var s=window.__shootState();report.steps[name]={view:s.view,open:s.open,src:s.iframe&&s.iframe.src,running:window.__monitorAppRunning&&window.__monitorAppRunning("shoot")};}',
-  'addEventListener("load",function(){setTimeout(async function(){',
+  'addEventListener("load",function(){setTimeout(async function(){try{',
   'window.__goToStage("office");',
   'var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");',
   'tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");',
@@ -27,15 +27,15 @@ var HARNESS = [
   'window.__openMonitorApp("duke");snap("duke");report.steps.colors.dukeClose=getComputedStyle(closeBg).fill;',
   'window.__openMonitorApp("quake");report.steps.colors.q3Close=getComputedStyle(closeBg).fill;window.__openMonitorApp("doom");',
   'var gutters=document.querySelectorAll("#monitor-doom .monitor-runtime-side-hit");gutters[1].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:850,clientY:450}));report.steps.gutters={count:gutters.length,menu:!!document.querySelector(".mon-ctx")};document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
-  'var coach=document.getElementById("monitor-shoot-coach"),coachRect=coach.querySelector("rect"),screen=document.getElementById("office-monitor-bg");',
-  'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
-  'window.__setLang("cs");report.steps.coach.cs=coach.querySelector("text").textContent;window.__setLang("en");',
+  'var coachState=window.__captionArbiter&&window.__captionArbiter.state();',
+  'report.steps.coach={en:document.getElementById("hunt-caption").textContent,key:coachState&&coachState.visible&&coachState.visible.key};',
+  'window.__setLang("cs");report.steps.coach.cs=document.getElementById("hunt-caption").textContent;window.__setLang("en");',
   'window.__openMonitorApp("quake");snap("quake");await sleep(120);report.steps.q3Gutters=Array.from(document.querySelectorAll("#monitor-doom .monitor-runtime-side-hit")).map(function(el){return getComputedStyle(el).pointerEvents;});',
   'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),fullscreen=document.getElementById("monitor-doom-fullscreen"),shootHost=document.getElementById("monitor-shoot-host");',
   'var backRect=back.querySelector(".shoot-close-bg").getBoundingClientRect(),fullscreenRect=fullscreen.querySelector(".shoot-close-bg").getBoundingClientRect(),closeRect=close.querySelector(".shoot-close-bg").getBoundingClientRect(),backHit=back.querySelector(".mini-hit").getBoundingClientRect(),fullscreenHit=fullscreen.querySelector(".mini-hit").getBoundingClientRect(),closeHit=close.querySelector(".mini-hit").getBoundingClientRect();report.steps.gameControls={closeMark:close.querySelector("path").getAttribute("d"),fullscreenMark:fullscreen.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,fullscreenPointer:getComputedStyle(fullscreen).pointerEvents,order:backRect.left<fullscreenRect.left&&fullscreenRect.left<closeRect.left,disjoint:backHit.right<=fullscreenHit.left+.1&&fullscreenHit.right<=closeHit.left+.1};var requested=false,beforeFrame=document.querySelector("#monitor-shoot-host iframe"),beforeWindow=beforeFrame.contentWindow,beforeSrc=beforeFrame.getAttribute("src"),focusLoads=0;beforeFrame.addEventListener("load",function(){focusLoads++;});shootHost.requestFullscreen=function(){requested=this===shootHost;return Promise.resolve();};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(60);report.steps.focus={requested:requested,hostParent:shootHost.parentNode.id,sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,noExitButton:!document.getElementById("shoot-focus-exit"),controlOutside:!shootHost.contains(fullscreen)};document.dispatchEvent(new Event("fullscreenchange"));await sleep(60);report.steps.focus.after={sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,hostParent:shootHost.parentNode.id};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents,fullscreen:getComputedStyle(fullscreen).pointerEvents};',
   'window.__openMonitorApp("shoot");snap("reopened");document.querySelector("[data-shoot-game=\\"q3\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));snap("q3reopened");var fallbackFrame=document.querySelector("#monitor-shoot-host iframe");shootHost.requestFullscreen=null;shootHost.webkitRequestFullscreen=null;fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);report.steps.fallback={content:window.__monitorContentFullscreen(),sameFrame:fallbackFrame===document.querySelector("#monitor-shoot-host iframe"),hostParent:shootHost.parentNode.id};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);report.steps.fallback.after={content:window.__monitorContentFullscreen(),sameFrame:fallbackFrame===document.querySelector("#monitor-shoot-host iframe"),hostParent:shootHost.parentNode.id};back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
   'report.steps.chooserControls={closePointer:getComputedStyle(close).pointerEvents,backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
-  'report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);',
+  '}catch(e){report.errors=(window.__errs||[]).concat(["harness: "+String(e&&e.stack||e)]);}report.errors=report.errors.length?report.errors:(window.__errs||[]);document.getElementById("__report").textContent=JSON.stringify(report);',
   '},350);});',
   '})();</script>'
 ].join("");
@@ -104,10 +104,8 @@ if (result) {
     { fallback: s.fallback });
   check(s.gutters.count === 2 && s.gutters.menu,
     "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
-  check(s.coach.on && s.coach.en === "Esc releases mouse" && s.coach.cs === "Esc uvolní myš",
-    "mouse-release coach appears immediately with EN/CS copy", s.coach);
-  check(s.coach.pointer === "none" && s.coach.y >= s.coach.screenBottom,
-    "coach is click-through and below the game viewport", s.coach);
+  check(s.coach.key === "shoot_mouse_coach" && s.coach.en === "Esc releases mouse" && s.coach.cs === "Esc uvolní myš",
+    "mouse-release coach appears immediately in the shared EN/CS caption", s.coach);
   check(s.quake.view === "q3" && s.quake.src === "q3/player.html",
     "quake routes directly to Quake III", s.quake);
   check(s.gameControls.backPointer !== "none" &&

@@ -209,7 +209,8 @@ Entrance instead offers **Continue**, **New**, or, once reached, **Camping**.
 At Camping, follow the caption through fire, stew, stargazing, and sleep. Choose any combination of
 ingredients for the stew, then use the central **Cook** button. Stew can burn; Markéta’s open
 notebook pauses its cooking clock. The finale reports time spent in the loft and offers to
-share it in the RSVP.
+share it in the RSVP. After `~ fin ~`, the camera returns to one last fireside magnum under the
+stars: sleep can wait.
 
 ## Saves and browser notes
 

@@ -322,7 +322,8 @@ restore or lay out the covered strip.
 
 Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
 split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order
-is fire, stew, stargazing, sleep/finale. Restore and replay must project the appropriate scene before
+is fire, stew, stargazing, sleep/finale, then the checkpointed magnum afterglow. Restore and replay
+must project the appropriate scene before
 it becomes visible, so an old finale or unfinished road frame never flashes on entry.
 
 The stew’s elapsed cooking time is checkpointed, but the notebook modal is not. Its clock advances

@@ -479,6 +479,7 @@ window.__loftMessages["cs"] = {
     "entrance_roadtrip_camp_arrival": "Gratulujeme! Dojel(a) jsi na konec hry. <span class=\"camp-rsvp-cta\">Teď běž vyplnit účast!</span>",
     "entrance_roadtrip_camp_attended_time": "Páni, to byl ale loftový den! {time} v loftu. <span class=\"camp-rsvp-cta\">Poděl se o svůj čas v potvrzení účasti.</span>",
     "entrance_roadtrip_camp_behdad_aria": "Rozesmát Behdada",
+    "entrance_roadtrip_camp_epilogue": "Spánek počká.",
     "entrance_roadtrip_camp_finale": "Páni, to byl ale loftový den! <span class=\"camp-rsvp-cta\">Teď hurá na potvrzení účasti!</span>",
     "entrance_roadtrip_camp_fire_close": "Zavřít stavbu ohně",
     "entrance_roadtrip_camp_fire_igniting": "Oheň se rozhořívá…",

@@ -210,6 +210,7 @@ The campsite outdoor bed keeps a low-passed lake lap under its wind and fire/wea
 rain is a softly band-passed wash rather than a bright broadband hiss. The
 sleep finale retains the lake and halves the calm wind while the locally clear stargazing sky keeps
 rain/storm channels at zero; the night therefore stays audible without reverting to broadband hiss.
+The post-`~ fin ~` afterglow brings the fire bed back at ember level beneath that same lake and wind.
 Each of the four staggered wisdom bubbles carries one soft, speaker-pitched formant murmur,
 triggered by that bubble's reveal animation and suppressed whenever Camping is unattended or covered.
 At `~ fin ~`, the campsite also suppresses the loft weather scheduler's lightning and thunder,

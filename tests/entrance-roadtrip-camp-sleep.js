@@ -306,6 +306,7 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
     var camp = document.getElementById("entrance-roadtrip-camp");
     var fin = document.getElementById("entrance-roadtrip-camp-finale-fin");
     var breath = fin.querySelector(".entrance-roadtrip-camp-finale-fin-breath");
+    var epilogue = document.getElementById("entrance-roadtrip-camp-epilogue");
     var style = getComputedStyle(camp);
     var matrix = style.transform === "none" ? null : new DOMMatrixReadOnly(style.transform);
     return {
@@ -316,7 +317,11 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
       finOpacity: Number(getComputedStyle(fin).opacity),
       finText: fin.textContent.replace(/\s+/g, " ").trim(),
       finAnimation: getComputedStyle(breath).animationName,
-      finTransform: getComputedStyle(breath).transform
+      finTransform: getComputedStyle(breath).transform,
+      epilogueOpacity: Number(getComputedStyle(epilogue).opacity),
+      epilogueBottle: !!epilogue.querySelector("text") && epilogue.textContent.indexOf("m ∞ b") >= 0,
+      caption: window.__captionKey && window.__captionKey(),
+      captionText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim()
     };
   }
   window.addEventListener("load", function () {
@@ -356,6 +361,12 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
           var report = { warning: frame() };
           window.__entranceRoadtripCampSleepStep();
           report.congrats = frame();
+          window.__entranceRoadtripCampSleepStep();
+          report.epilogue = frame();
+          window.__entranceRoadtripCampSleepStep();
+          report.afterglow = frame();
+          window.__setLang("cs");
+          report.czechAfterglow = frame().captionText;
           report.errors = window.__errs || [];
           document.getElementById("__report").textContent = JSON.stringify(report);
         }, 220);
@@ -612,8 +623,14 @@ check(reduced && reduced.errors.length === 0 && reduced.warning && reduced.warni
   reduced.warning.offset === 120 && reduced.warning.finOpacity === 0 &&
   reduced.congrats && reduced.congrats.phase === "congrats" && reduced.congrats.offset === 120 &&
   reduced.congrats.finOpacity === .9 && reduced.congrats.finText === "~ fin ~" &&
-  reduced.congrats.finAnimation === "none" && reduced.congrats.finTransform === "none",
-  "reduced motion snaps to the safe sky composition while fin still waits for congratulations",
+  reduced.congrats.finAnimation === "none" && reduced.congrats.finTransform === "none" &&
+  reduced.epilogue && reduced.epilogue.phase === "epilogue" && reduced.epilogue.offset === 0 &&
+  reduced.epilogue.finOpacity === 0 && reduced.epilogue.epilogueOpacity === 1 &&
+  reduced.epilogue.epilogueBottle && reduced.epilogue.caption === "entrance_roadtrip_camp_attended_time" &&
+  reduced.afterglow && reduced.afterglow.phase === "afterglow" && reduced.afterglow.offset === 0 &&
+  reduced.afterglow.caption === "entrance_roadtrip_camp_epilogue" &&
+  reduced.afterglow.captionText === "Sleep can wait." && reduced.czechAfterglow === "Spánek počká.",
+  "reduced motion preserves fin, then snaps to the bilingual magnum afterglow",
   reduced);
 
 var finMotion = lib.runPageSync("loft-day.html", FIN_MOTION_HARNESS, 800, {

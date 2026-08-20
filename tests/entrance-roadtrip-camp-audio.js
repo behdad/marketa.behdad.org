@@ -93,6 +93,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceRoadtripCampFireReplay(); window.__updateRoadtripCampAudio();
     report.steps.out = snap();
 
+    finaleCheckpoint.drive.roadtrip.stargazing.sleepPhase = "afterglow";
+    finaleCheckpoint.drive.roadtrip.stargazing.sleepElapsed = 0;
+    window.__restoreCheckpointSystems({ entrance: finaleCheckpoint }, "afterStage");
+    window.__updateRoadtripCampAudio(); await sleep(420); report.steps.afterglow = snap();
+
     focused = false; window.dispatchEvent(new Event("blur")); await sleep(620);
     report.steps.blur = snap();
     focused = true; window.dispatchEvent(new Event("focus")); await sleep(40);
@@ -161,6 +166,10 @@ check(s.finale && s.finale.audio.active && !s.finale.audio.fireLit &&
   "the sleep finale keeps a quiet lake wash and lower wind without weather hiss", s.finale);
 check(s.out && !s.out.audio.fireLit && s.out.audio.mix.fire === 0 && !s.out.audio.fireSource && s.out.audio.active,
   "extinguishing the fire removes crackle without stopping the outdoor bed", s.out);
+check(s.afterglow && s.afterglow.audio.active && !s.afterglow.audio.fireLit &&
+  s.afterglow.audio.mix.fire === .012 && s.afterglow.audio.fireSource &&
+  s.afterglow.audio.mix.lake > 0 && s.afterglow.audio.mix.wind > 0,
+  "the magnum afterglow restores only an ember-level crackle beneath the night bed", s.afterglow);
 check(s.blur && !s.blur.audio.active && !s.blur.audio.attended && s.blur.beds === s.calm.before,
   "blur fades and closes the campsite-owned bed", s.blur);
 check(s.refocus && s.refocus.audio.active && s.refocus.audio.attended && s.refocus.beds === s.calm.beds,

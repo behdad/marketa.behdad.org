@@ -479,6 +479,7 @@ window.__loftMessages["en"] = {
     "entrance_roadtrip_camp_arrival": "Congrats! You reached the end of the game. <span class=\"camp-rsvp-cta\">Now go do your RSVP!</span>",
     "entrance_roadtrip_camp_attended_time": "Wow, what a lofly day! {time} in loft. <span class=\"camp-rsvp-cta\">Tell us your time in your RSVP.</span>",
     "entrance_roadtrip_camp_behdad_aria": "Make Behdad laugh",
+    "entrance_roadtrip_camp_epilogue": "Sleep can wait.",
     "entrance_roadtrip_camp_finale": "Wow, what a lofly day! <span class=\"camp-rsvp-cta\">Now go do your RSVP!</span>",
     "entrance_roadtrip_camp_fire_close": "Close fire building",
     "entrance_roadtrip_camp_fire_igniting": "The fire is catching…",

@@ -67,9 +67,9 @@ var harness = String.raw`<script>
     check("software credits move below every tester",
       crowded.softwareHeadingY > current.softwareHeadingY,
       JSON.stringify({ current: current, crowded: crowded }));
-    check("testers fill six four-name columns before starting a new band",
-      names.length === 26 && current.testersPerColumn === 4 && current.testerColumns === 6 &&
-      current.testerBands === 2 && crowded.testerBands === 3,
+    check("the roster grows to five rows when that avoids a sparse extra band",
+      names.length === 26 && current.testersPerColumn === 5 && current.testerColumns === 6 &&
+      current.testerBands === 1 && crowded.testersPerColumn === 5 && crowded.testerBands === 2,
       JSON.stringify({ current: current, crowded: crowded }));
     check("an oversized tester roster receives more travel and time",
       crowded.travel < current.travel && crowded.duration > current.duration,

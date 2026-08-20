@@ -15,7 +15,7 @@ var HARNESS = [
   ' window.__registerTransientResetHook("test-first",function(){order.push("first");});',
   ' window.__registerTransientResetHook("test-broken",function(){order.push("broken");throw new Error("expected reset-hook probe");});',
   ' window.__registerTransientResetHook("test-last",function(){order.push("last");});',
-  ' window.__activateExtinguisher();await sleep(850);',
+  ' window.__setLang("en");window.__activateExtinguisher();await sleep(100);report.steps.deathCaptionDuring=document.getElementById("hunt-caption").textContent;await sleep(750);report.steps.deathCaptionAfter=document.getElementById("hunt-caption").textContent;window.__setLang("cs");report.steps.deathCaptionCs=document.getElementById("hunt-caption").textContent;',
   ' report.steps.order=order.slice();',
   ' var whipper=document.getElementById("kitchen-whipper");',
   ' whipper.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);',
@@ -47,6 +47,12 @@ check(result.errors.length === 0, "a throwing hook does not escape the reset", r
 check(result.steps.api, "the registration API is available");
 check(result.steps.order && result.steps.order.join(",") === "first,broken,last",
   "hooks run additively in registration order and continue after an exception", result.steps.order);
+check(result.steps.deathCaptionDuring === "In another life…" &&
+  result.steps.deathCaptionAfter === "In another life…" &&
+  result.steps.deathCaptionCs === "V jiném životě…",
+  "extinguisher carries its bilingual whole-game death caption through the wipe", {
+    during: result.steps.deathCaptionDuring, after: result.steps.deathCaptionAfter, cs: result.steps.deathCaptionCs
+  });
 check(result.steps.whipperStarted, "the cream whipper enters its dispensing delay");
 check(result.steps.whipperSettled, "reset clears the cream whipper's dispensing state immediately");
 check(result.steps.whipperStayedReset, "reset cancels the cream whipper's delayed laughing-gas trip");

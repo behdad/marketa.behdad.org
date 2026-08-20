@@ -235,7 +235,7 @@ window.__loftMessages["cs"] = {
   "entrance_windows_all_on": "Všechna okna svítí. Účet za elektřinu nikdo neřeší.",
   "entrance_windows_uv": "Celý dům se snaží spát. A kvůli tobě nemůže.",
   "eq_off_note": "Tenhle prohlížeč přehrává písničky napřímo — ekvalizér tu nemá za co tahat. Zkus to na jiném zařízení 🎚",
-  "extinguisher_reset": "Tak přece. A je to. Hra resetována.",
+  "extinguisher_reset": "V jiném životě…",
   "extinguisher_warning": "Radši ne.",
   "fal_intro": "Otevřeš Díván namátkou. Háfiz odpovídá:",
   "fal_lines": [

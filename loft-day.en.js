@@ -235,7 +235,7 @@ window.__loftMessages["en"] = {
   "entrance_windows_all_on": "Every window is awake. Nobody told the power bill.",
   "entrance_windows_uv": "The building is trying to sleep. You're the reason it can't.",
   "eq_off_note": "This browser plays the songs directly — there's no audio pipeline for the equalizer to pull on. Try it on another device 🎚",
-  "extinguisher_reset": "You would. You did. Game reset.",
+  "extinguisher_reset": "In another life…",
   "extinguisher_warning": "I wouldn't.",
   "fal_intro": "You open the Divan at random. Hafez answers:",
   "fal_lines": [

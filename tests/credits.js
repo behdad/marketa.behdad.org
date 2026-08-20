@@ -23,9 +23,13 @@ var harness = String.raw`<script>
       names.indexOf("Ayushi") !== -1, names.join(", "));
     check("Jay appears in the language-neutral tester roster",
       names.indexOf("Jay") !== -1, names.join(", "));
+    check("Farid and Elham appear as separate tester entries",
+      names.indexOf("Farid") !== -1 && names.indexOf("Elham") !== -1 &&
+      names.filter(function (name) { return name === "Farid" || name === "Elham"; }).length === 2,
+      names.join(", "));
     check("new testers remain appended in source order",
-      names.slice(-11).join(",") ===
-        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash,Jay",
+      names.slice(-13).join(",") ===
+        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash,Jay,Farid,Elham",
       names.join(", "));
     var marketa = window.__loftCredits.people.find(function (person) { return person.name === "Markéta"; });
     check("Markéta is credited for co-design and Czech translation",
@@ -64,8 +68,8 @@ var harness = String.raw`<script>
       crowded.softwareHeadingY > current.softwareHeadingY,
       JSON.stringify({ current: current, crowded: crowded }));
     check("testers fill six four-name columns before starting a new band",
-      names.length === 24 && current.testersPerColumn === 4 && current.testerColumns === 6 &&
-      current.testerBands === 1 && crowded.testerBands === 3,
+      names.length === 26 && current.testersPerColumn === 4 && current.testerColumns === 6 &&
+      current.testerBands === 2 && crowded.testerBands === 3,
       JSON.stringify({ current: current, crowded: crowded }));
     check("an oversized tester roster receives more travel and time",
       crowded.travel < current.travel && crowded.duration > current.duration,

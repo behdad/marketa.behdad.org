@@ -189,7 +189,7 @@ window.__loftMessages["cs"] = {
   "credits_survives": "vděčnost přežívá.",
   "credits_tester": "tester",
   "credits_testers": "Testeři",
-  "credits_thanks": "s poděkováním",
+  "credits_thanks": "S poděkováním",
   "credits_title": "Titulky",
   "cue_calendar_body": "zapiš si nás do kalendáře 📅 1. května · 10. července",
   "cue_cocktails_body": "celé menu máš v telefonu, když vybíráš 🍸",

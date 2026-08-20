@@ -42,6 +42,9 @@ var harness = String.raw`<script>
     check("the displayed tester roster is alphabetized at runtime",
       sortedNames.join(",") === expectedSorted.join(","), sortedNames.join(", "));
     var creditsLines = window.__loftCreditsLines("en");
+    check("the thanks heading is capitalized in both languages",
+      creditsLines[0] === "With thanks" && window.__loftCreditsLines("cs")[0] === "S poděkováním",
+      JSON.stringify({ en: creditsLines[0], cs: window.__loftCreditsLines("cs")[0] }));
     var testersHeading = creditsLines.indexOf("Testers");
     var softwareHeading = creditsLines.indexOf("Open-source software");
     var lineNames = creditsLines.slice(testersHeading + 1, softwareHeading)

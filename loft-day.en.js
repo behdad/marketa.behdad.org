@@ -189,7 +189,7 @@ window.__loftMessages["en"] = {
   "credits_survives": "the gratitude survives.",
   "credits_tester": "tester",
   "credits_testers": "Testers",
-  "credits_thanks": "with thanks",
+  "credits_thanks": "With thanks",
   "credits_title": "Credits",
   "cue_calendar_body": "put us in your calendar 📅 may 1 · july 10",
   "cue_cocktails_body": "the full menu's on your phone if you're deciding 🍸",

@@ -18,7 +18,7 @@ var HARNESS = [
   ' window.__goToStage("office");await sleep(920);',
   ' var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");mon.classList.remove("show-saver","saver-pipes","saver-flower");',
   ' var hit=document.getElementById("monitor-saver-cycle-hit");function tapHit(){hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,button:0}));hit.dispatchEvent(new MouseEvent("click",{bubbles:true}));}tapHit();await sleep(360);var first=window.__monitorSaverState();tapHit();await sleep(360);var second=window.__monitorSaverState(),bezelCaption=saverCaption();window.__wakeMonitorSaver();S("bezelCycle",{first:first.kind,second:second.kind,awake:!mon.classList.contains("show-saver"),caption:bezelCaption,afterWake:saverCaption()});',
-  ' var cycles=[];for(var i=0;i<4;i++){window.__startMonitorSaver();await sleep(360);var state=window.__monitorSaverState();cycles.push({kind:state.kind,painted:state.painted,running:state.running,segments:state.segments,backend:state.backend,order:state.order,next:state.next,pipesClass:mon.classList.contains("saver-pipes"),flowerClass:mon.classList.contains("saver-flower"),caption:saverCaption()});if(i<3)window.__wakeMonitorSaver();}',
+  ' window.__monitorZoomIn();await sleep(40);var cycles=[];for(var i=0;i<4;i++){window.__startMonitorSaver();await sleep(360);var state=window.__monitorSaverState();cycles.push({kind:state.kind,painted:state.painted,running:state.running,segments:state.segments,backend:state.backend,order:state.order,next:state.next,pipesClass:mon.classList.contains("saver-pipes"),flowerClass:mon.classList.contains("saver-flower"),caption:saverCaption()});if(i<3)window.__wakeMonitorSaver();}window.__monitorZoomOut();S("zoomOutCaption",saverCaption());',
   ' S("cycles",cycles);',
   ' window.__goToStage("garden");await sleep(80);S("parked",{running:window.__monitorSaverLoopRunning(),state:window.__monitorSaverState()});',
   '}',
@@ -62,11 +62,9 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 4000, {
 });
 check(r && r.errors.length === 0, "all screensavers run without uncaught errors", r && r.errors);
 check(r && r.steps.bezelCycle && r.steps.bezelCycle.awake &&
-  r.steps.bezelCycle.first !== r.steps.bezelCycle.second && r.steps.bezelCycle.caption &&
-  r.steps.bezelCycle.caption.owner === "monitor-saver" &&
-  r.steps.bezelCycle.caption.key === "mon_saver_caption_" + r.steps.bezelCycle.second &&
+  r.steps.bezelCycle.first !== r.steps.bezelCycle.second && !r.steps.bezelCycle.caption &&
   !r.steps.bezelCycle.afterWake,
-  "the top-left bezel starts and advances the saver without waking it",
+  "the top-left bezel starts and advances the unzoomed saver without captioning the room",
   r && r.steps.bezelCycle);
 var cycles = r && r.steps.cycles || [], firstOrder = cycles[0] && cycles[0].order || [];
 check(cycles.length === 4 && firstOrder.length === 3 &&
@@ -84,6 +82,8 @@ check(cycles.every(function (x) {
   return x.caption && x.caption.owner === "monitor-saver" && x.caption.remaining > 3000 &&
     x.caption.key === "mon_saver_caption_" + x.kind;
 }), "every shuffled saver paints through its selected SVG image and names itself briefly", cycles);
+check(r && !r.steps.zoomOutCaption,
+  "zooming out dismisses the monitor screensaver caption", r && r.steps.zoomOutCaption);
 check(r && !r.steps.parked.running,
   "the shared saver loop stops when the office is parked", r && r.steps.parked);
 var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1200, {

@@ -70576,7 +70576,7 @@ setOfficeProgress("pc", false);
       };
     }
     function showLaptopSaverCaption(kind) {
-      if (!window.__captionOverlay || (window.__monitorZoomed && window.__monitorZoomed())) return;
+      if (!window.__captionOverlay || !window.__laptopZoomed || !window.__laptopZoomed()) return;
       window.__captionOverlay("laptop_saver_caption_" + kind, {
         owner: "laptop-saver", scope: "stage:office", priority: 20,
         duration: 4000, clock: "attended"
@@ -71399,7 +71399,7 @@ setOfficeProgress("pc", false);
     startMonitorSaver();
   }
   function showMonitorSaverCaption(kind) {
-    if (!window.__captionOverlay || (window.__laptopZoomed && window.__laptopZoomed())) return;
+    if (!window.__captionOverlay || !window.__monitorZoomed || !window.__monitorZoomed()) return;
     window.__captionOverlay("mon_saver_caption_" + kind, {
       owner: "monitor-saver", scope: "stage:office", priority: 20,
       duration: 4000, clock: "attended"
@@ -92162,6 +92162,8 @@ def colormode(mode=None):
   function zoomOut() {
     if (!zoomEl) return;
     var releasedMonitor = zoomEl === monitor;
+    var releasedSaverOwner = releasedMonitor ? "monitor-saver" :
+      (zoomEl === laptop ? "laptop-saver" : null);
     if (releasedMonitor && window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
     if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
@@ -92169,6 +92171,7 @@ def colormode(mode=None):
     if (releasedMonitor) monitorIntentUntil = 0;
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
+    if (releasedSaverOwner && window.__cancelCaption) window.__cancelCaption(releasedSaverOwner);
     if (releasedMonitor && window.__syncMonitorDoom) window.__syncMonitorDoom();
     monitorContentFullscreen = false;
     monitor.classList.remove("monitor-content-fullscreen");
@@ -92195,6 +92198,10 @@ def colormode(mode=None):
   function prepareRoomPan() {
     var hadZoom = !!zoomEl || !!zoomOutTimer || vp.classList.contains("device-zoomed") || !!strip.style.transformOrigin;
     if (!hadZoom) return false;
+    if (window.__cancelCaption) {
+      if (zoomEl === monitor) window.__cancelCaption("monitor-saver");
+      else if (zoomEl === laptop) window.__cancelCaption("laptop-saver");
+    }
     if (window.__monitorHtmlOverlayClose) window.__monitorHtmlOverlayClose();
     if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
     if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }

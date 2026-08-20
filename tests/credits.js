@@ -67,9 +67,13 @@ var harness = String.raw`<script>
     check("software credits move below every tester",
       crowded.softwareHeadingY > current.softwareHeadingY,
       JSON.stringify({ current: current, crowded: crowded }));
-    check("the roster grows to five rows when that avoids a sparse extra band",
+    check("tester columns distribute their remainder from left to right",
       names.length === 26 && current.testersPerColumn === 5 && current.testerColumns === 6 &&
-      current.testerBands === 1 && crowded.testersPerColumn === 5 && crowded.testerBands === 2,
+      current.testerBands === 1 && JSON.stringify(current.testerColumnCounts[0]) === "[5,5,4,4,4,4]" &&
+      crowded.testersPerColumn === 5 && crowded.testerBands === 2 &&
+      JSON.stringify(crowded.testerBandCounts) === "[25,25]" &&
+      JSON.stringify(crowded.testerColumnCounts[0]) === "[5,4,4,4,4,4]" &&
+      JSON.stringify(crowded.testerColumnCounts[1]) === "[5,4,4,4,4,4]",
       JSON.stringify({ current: current, crowded: crowded }));
     check("an oversized tester roster receives more travel and time",
       crowded.travel < current.travel && crowded.duration > current.duration,
@@ -81,6 +85,19 @@ var harness = String.raw`<script>
       JSON.stringify({ current: current, crowded: crowded }));
 
     var roll = document.getElementById("monitor-credits-roll");
+    var testerNameSet = {};
+    names.forEach(function (name) { testerNameSet[name] = true; });
+    var renderedColumns = {};
+    [].forEach.call(roll.querySelectorAll(".monitor-credits-name"), function (node) {
+      if (!testerNameSet[node.textContent]) return;
+      var x = node.getAttribute("x");
+      renderedColumns[x] = (renderedColumns[x] || 0) + 1;
+    });
+    var renderedColumnCounts = Object.keys(renderedColumns).sort(function (a, b) { return +a - +b; })
+      .map(function (x) { return renderedColumns[x]; });
+    check("the rendered roster uses two five-name columns followed by four four-name columns",
+      JSON.stringify(renderedColumnCounts) === "[5,5,4,4,4,4]",
+      JSON.stringify(renderedColumns));
     var links = roll.querySelectorAll("a");
     check("the rendered credits expose native links for the game, source, and Chromium debit",
       links.length === 3 && links[0].getAttribute("href") === "https://marketa.behdad.org/loft-day" &&

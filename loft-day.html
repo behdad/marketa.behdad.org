@@ -55677,18 +55677,42 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
   testerCount = Math.max(0, +testerCount || 0);
   otherPeopleCount = Math.max(0, +otherPeopleCount || 0);
   var testerColumnsPerBand = 6;
-  var fourRowBands = Math.ceil(testerCount / (4 * testerColumnsPerBand));
-  var fiveRowBands = Math.ceil(testerCount / (5 * testerColumnsPerBand));
-  var testersPerColumn = fiveRowBands < fourRowBands ? 5 : 4;
-  var testersPerBand = testersPerColumn * testerColumnsPerBand;
+  var testersPerBand = 5 * testerColumnsPerBand;
+  var testerBands = Math.ceil(testerCount / testersPerBand);
+  var testerBandCounts = [];
+  var testerBandColumns = [];
+  var testerColumnCounts = [];
+  var testerBandOffsets = [];
+  var testerBandGap = 2.5;
+  var testerBlockHeight = 0;
+  var testersPerColumn = 0;
+  var testerColumns = 0;
+  if (testerBands) {
+    var baseBandCount = Math.floor(testerCount / testerBands);
+    var extraBandTesters = testerCount % testerBands;
+    for (var band = 0; band < testerBands; band++) {
+      var bandCount = baseBandCount + (band < extraBandTesters ? 1 : 0);
+      var columns = Math.min(testerColumnsPerBand, Math.max(1, Math.ceil(bandCount / 4)));
+      var baseColumnCount = Math.floor(bandCount / columns);
+      var extraColumnTesters = bandCount % columns;
+      var columnCounts = [];
+      for (var column = 0; column < columns; column++) {
+        columnCounts.push(baseColumnCount + (column < extraColumnTesters ? 1 : 0));
+      }
+      if (band) testerBlockHeight += testerBandGap;
+      testerBandOffsets.push(testerBlockHeight);
+      testerBandCounts.push(bandCount);
+      testerBandColumns.push(columns);
+      testerColumnCounts.push(columnCounts);
+      testersPerColumn = Math.max(testersPerColumn, columnCounts[0]);
+      testerColumns = Math.max(testerColumns, columns);
+      testerBlockHeight += columnCounts[0] * 4.5;
+    }
+  }
   var peopleY = 209;
   var testersHeadingY = peopleY + otherPeopleCount * 7;
   var testersStartY = testersHeadingY + 4;
-  var testerColumns = Math.min(testerColumnsPerBand, Math.ceil(testerCount / testersPerColumn));
-  var testerBands = Math.ceil(testerCount / testersPerBand);
   var testerBandHeight = testersPerColumn * 4.5;
-  var testerBandGap = 2.5;
-  var testerBlockHeight = testerBands ? testerBands * testerBandHeight + (testerBands - 1) * testerBandGap : 0;
   var softwareHeadingY = testersStartY + testerBlockHeight + 2.5;
   var noticeY = softwareHeadingY + 5 + LOFT_CREDITS.software.length * 3;
   var debitsHeadingY = noticeY + 5;
@@ -55707,6 +55731,10 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
     testersPerBand: testersPerBand,
     testerColumns: testerColumns,
     testerBands: testerBands,
+    testerBandCounts: testerBandCounts,
+    testerBandColumns: testerBandColumns,
+    testerColumnCounts: testerColumnCounts,
+    testerBandOffsets: testerBandOffsets,
     testerBandHeight: testerBandHeight,
     testerBandGap: testerBandGap,
     softwareHeadingY: softwareHeadingY,
@@ -75045,16 +75073,24 @@ setOfficeProgress("pc", false);
     });
     creditsLine(creditsLayout.testersHeadingY, "monitor-credits-section", "credits_testers");
     testers.forEach(function (person, i) {
-      var band = Math.floor(i / creditsLayout.testersPerBand);
-      var withinBand = i % creditsLayout.testersPerBand;
-      var column = Math.floor(withinBand / creditsLayout.testersPerColumn);
-      var row = withinBand % creditsLayout.testersPerColumn;
-      var columnsInBand = Math.min(creditsLayout.testerColumnsPerBand,
-        Math.ceil(Math.min(creditsLayout.testersPerBand, testers.length - band * creditsLayout.testersPerBand) /
-          creditsLayout.testersPerColumn));
+      var band = 0;
+      var bandStart = 0;
+      while (band + 1 < creditsLayout.testerBands &&
+          i >= bandStart + creditsLayout.testerBandCounts[band]) {
+        bandStart += creditsLayout.testerBandCounts[band++];
+      }
+      var withinBand = i - bandStart;
+      var columnCounts = creditsLayout.testerColumnCounts[band];
+      var column = 0;
+      var columnStart = 0;
+      while (column + 1 < columnCounts.length && withinBand >= columnStart + columnCounts[column]) {
+        columnStart += columnCounts[column++];
+      }
+      var row = withinBand - columnStart;
+      var columnsInBand = creditsLayout.testerBandColumns[band];
       var columnGap = 19;
       var firstX = 316 - (columnsInBand - 1) * columnGap / 2;
-      creditsLine(creditsLayout.testersStartY + band * (creditsLayout.testerBandHeight + creditsLayout.testerBandGap) + row * 4.5,
+      creditsLine(creditsLayout.testersStartY + creditsLayout.testerBandOffsets[band] + row * 4.5,
         "monitor-credits-name", null, person.name, firstX + column * columnGap);
     });
     creditsLine(creditsLayout.softwareHeadingY, "monitor-credits-section", "credits_open_source");

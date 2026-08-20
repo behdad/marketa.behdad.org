@@ -85,6 +85,20 @@ var harness = String.raw`<script>
       JSON.stringify({ current: current, crowded: crowded }));
 
     var roll = document.getElementById("monitor-credits-roll");
+    var crewNames = ["Markéta", "Irene", "Athena"];
+    var renderedCrew = [].filter.call(roll.querySelectorAll(".monitor-credits-name"), function (node) {
+      return crewNames.indexOf(node.textContent) !== -1;
+    });
+    var renderedRoles = [].slice.call(roll.querySelectorAll(".monitor-credits-role"));
+    check("the three credited crew share one row with aligned roles beneath",
+      renderedCrew.length === 3 && new Set(renderedCrew.map(function (node) { return node.getAttribute("x"); })).size === 3 &&
+      new Set(renderedCrew.map(function (node) { return node.getAttribute("y"); })).size === 1 &&
+      renderedRoles.length === 3 && renderedRoles.every(function (role, i) {
+        return role.getAttribute("x") === renderedCrew[i].getAttribute("x") &&
+          +role.getAttribute("y") === +renderedCrew[i].getAttribute("y") + 2.5;
+      }),
+      JSON.stringify({ names: renderedCrew.map(function (node) { return [node.textContent, node.getAttribute("x"), node.getAttribute("y")]; }),
+        roles: renderedRoles.map(function (node) { return [node.getAttribute("x"), node.getAttribute("y")]; }) }));
     var testerNameSet = {};
     names.forEach(function (name) { testerNameSet[name] = true; });
     var renderedColumns = {};

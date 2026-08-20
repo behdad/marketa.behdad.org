@@ -55710,7 +55710,9 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
     }
   }
   var peopleY = 209;
-  var testersHeadingY = peopleY + otherPeopleCount * 7;
+  var peopleColumns = Math.min(3, otherPeopleCount);
+  var peopleRows = peopleColumns ? Math.ceil(otherPeopleCount / peopleColumns) : 0;
+  var testersHeadingY = peopleY + peopleRows * 7;
   var testersStartY = testersHeadingY + 4;
   var testerBandHeight = testersPerColumn * 4.5;
   var softwareHeadingY = testersStartY + testerBlockHeight + 2.5;
@@ -55724,6 +55726,8 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
   var travel = 175 - (closingY + githubY) / 2; // leave the closing block centered and usable after the roll
   return {
     peopleY: peopleY,
+    peopleColumns: peopleColumns,
+    peopleRows: peopleRows,
     testersHeadingY: testersHeadingY,
     testersStartY: testersStartY,
     testersPerColumn: testersPerColumn,
@@ -75065,11 +75069,16 @@ setOfficeProgress("pc", false);
     var otherPeople = LOFT_CREDITS.people.filter(function (person) { return person.role !== "credits_tester"; });
     var testers = loftCreditsTesters();
     var creditsLayout = loftCreditsLayout(testers.length, otherPeople.length);
-    var creditY = creditsLayout.peopleY;
-    otherPeople.forEach(function (person) {
-      creditsLine(creditY, "monitor-credits-name", null, person.name);
-      creditsLine(creditY + 2.5, "monitor-credits-role", person.role);
-      creditY += 7;
+    otherPeople.forEach(function (person, i) {
+      var row = Math.floor(i / creditsLayout.peopleColumns);
+      var column = i % creditsLayout.peopleColumns;
+      var columnsInRow = Math.min(creditsLayout.peopleColumns,
+        otherPeople.length - row * creditsLayout.peopleColumns);
+      var columnGap = 38;
+      var firstX = 316 - (columnsInRow - 1) * columnGap / 2;
+      var creditY = creditsLayout.peopleY + row * 7;
+      creditsLine(creditY, "monitor-credits-name", null, person.name, firstX + column * columnGap);
+      creditsLine(creditY + 2.5, "monitor-credits-role", person.role, null, firstX + column * columnGap);
     });
     creditsLine(creditsLayout.testersHeadingY, "monitor-credits-section", "credits_testers");
     testers.forEach(function (person, i) {

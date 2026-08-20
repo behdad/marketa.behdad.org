@@ -382,7 +382,7 @@ window.__loftMessages["en"] = {
     "df_calendar_quip": "Your days are numbered.",
     "df_call_lost": "CONNECTION LOST",
     "df_call_quip": "It’s not you. It’s the connection.",
-    "df_chat_quip": "Charlie has left the chat.",
+    "df_chat_quip": "Charlie left the chat. He still knows too much.",
     "df_classics_quip": "They never retire. They just get reshuffled.",
     "df_clock_quip": "For once, Edmonton and Prague agree: time’s up.",
     "df_code_quip": "AI out. Back to BASICs.",

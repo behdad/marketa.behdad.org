@@ -73806,6 +73806,16 @@ setOfficeProgress("pc", false);
     if (monitorSystemInfoValues.browser)
       monitorSystemInfoValues.browser.textContent = browser.name + (browser.version ? " " + browser.version : "");
   }
+  function layoutMonitorSystemInfoFooter() {
+    if (!monitorSystemInfoLayer) return;
+    var x = 260;
+    monitorSystemInfoLayer.querySelectorAll(".monitor-system-info-footer-piece").forEach(function (piece, index) {
+      if (index) x += piece.classList.contains("monitor-system-info-recommendation") ? 2.2 : .55;
+      piece.setAttribute("x", x);
+      piece.setAttribute("y", 193.5);
+      x += piece.getComputedTextLength();
+    });
+  }
   function requestFullBrowserInfo(dict) {
     var data = navigator.userAgentData;
     if (!data || !data.getHighEntropyValues) return;
@@ -73850,6 +73860,7 @@ setOfficeProgress("pc", false);
       if (!el) return;
       el.textContent = values[key];
     });
+    layoutMonitorSystemInfoFooter();
     paintSystemBrowser(browser, dict);
     requestFullBrowserInfo(dict);
   }
@@ -74737,25 +74748,27 @@ setOfficeProgress("pc", false);
       monitorSystemInfoValues[row[0]] = mkEl("text", { x: 287, y: y,
         "class": "monitor-system-info-value", "data-system-info": row[0] }, systemInfoNormal);
     });
-    var systemRecommendation = mkEl("text", { x: 260, y: 190,
-      "class": "monitor-system-info-recommendation",
-      "data-i": "mon_system_info_recommendation" }, systemInfoNormal);
-    systemRecommendation.textContent =
-      (T[document.documentElement.lang] || T.en).mon_system_info_recommendation;
     [["mon_system_info_source_code", "https://github.com/behdad/marketa.behdad.org", 260],
       ["mon_system_info_known_issues", "https://github.com/behdad/marketa.behdad.org/issues", 282],
       ["mon_system_info_report_issue", "https://github.com/behdad/marketa.behdad.org/issues/new", 306]]
-      .forEach(function (item) {
+      .forEach(function (item, index, items) {
         var link = mkEl("a", { href: item[1], target: "_blank", rel: "noopener", tabindex: "0",
           "class": "monitor-system-info-link" }, systemInfoNormal);
-        var text = mkEl("text", { x: item[2], y: 194,
+        var text = mkEl("text", { x: item[2], y: 193.5,
+          "class": "monitor-system-info-footer-piece",
           "data-i": item[0] }, link);
         text.textContent = (T[document.documentElement.lang] || T.en)[item[0]];
+        if (index < items.length - 1) {
+          mkEl("text", { x: item[2], y: 193.5,
+            "class": "monitor-system-info-link-separator monitor-system-info-footer-piece" },
+            systemInfoNormal).textContent = "|";
+        }
       });
-    [278.5, 302.5].forEach(function (x) {
-      mkEl("text", { x: x, y: 194, "class": "monitor-system-info-link-separator" },
-        systemInfoNormal).textContent = "|";
-    });
+    var systemRecommendation = mkEl("text", { x: 330, y: 193.5,
+      "class": "monitor-system-info-recommendation monitor-system-info-footer-piece",
+      "data-i": "mon_system_info_recommendation" }, systemInfoNormal);
+    systemRecommendation.textContent =
+      (T[document.documentElement.lang] || T.en).mon_system_info_recommendation;
     var systemInfoClose = makeMonitorModalClose(systemInfoNormal, "monitor-system-info-close");
     var systemInfoKill = mkEl("g", { "class": "monitor-system-info-kill" }, monitorSystemInfoLayer);
     var receipt = mkEl("g", { id: "monitor-system-kill-receipt", "class": "monitor-system-info-kill-receipt-wrap",

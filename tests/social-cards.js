@@ -34,7 +34,7 @@ check(/egg-scene loft[^>]+loft-scene\.svg/.test(renderer) &&
   /egg-scene garden[^>]+garden-scene\.svg/.test(renderer),
   "Egg Hunt card pairs the two authored scene illustrations");
 check(/hub-caps[^>]+caps\.svg/.test(renderer) &&
-  /hub-title[^>]*>markéta/.test(renderer) && /Invitations &amp; updates/.test(renderer),
+  /hub-title[^>]*>markéta/.test(renderer) && /Everything we’ve sent you lives here\./.test(renderer),
   "hub card keeps the root preview generic");
 
 [

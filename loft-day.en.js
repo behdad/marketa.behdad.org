@@ -381,7 +381,7 @@ window.__loftMessages["en"] = {
     "df_browser_quip": "The whole web survived. This tab snapped.",
     "df_calendar_quip": "Your days are numbered.",
     "df_call_lost": "CONNECTION LOST",
-    "df_call_quip": "It’s not you. It’s the connection.",
+    "df_call_quip": "The signal dropped. The feelings didn’t.",
     "df_chat_quip": "Charlie left the chat. He still knows too much.",
     "df_classics_quip": "They never retire. They just get reshuffled.",
     "df_clock_quip": "For once, Edmonton and Prague agree: time’s up.",

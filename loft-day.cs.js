@@ -381,7 +381,7 @@ window.__loftMessages["cs"] = {
     "df_browser_quip": "Celý web přežil. Tenhle panel rupnul.",
     "df_calendar_quip": "Tvé dny jsou sečteny.",
     "df_call_lost": "SPOJENÍ PŘERUŠENO",
-    "df_call_quip": "Ty za to nemůžeš. Zlobí připojení.",
+    "df_call_quip": "Signál vypadl. City zůstaly.",
     "df_chat_quip": "Charlie odešel z chatu. Pořád toho ví až moc.",
     "df_classics_quip": "Nikdy nejdou do důchodu. Jen se znovu zamíchají.",
     "df_clock_quip": "Edmonton a Praha se pro jednou shodnou: čas vypršel.",

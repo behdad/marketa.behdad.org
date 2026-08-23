@@ -27,7 +27,7 @@ var HARNESS = [
   "  async function run(){",
   "    report.steps.hasHooks = (typeof window.__loftControllers.birthday==='function') && (typeof window.__stepBirthday==='function');",
   "    report.steps.hamidDays=[birthdayDay('2031-08-11','hamid','#garden-guests .g-hamid .bd-hat-hamid'),birthdayDay('2031-08-12','hamid','#garden-guests .g-hamid .bd-hat-hamid'),birthdayDay('2031-08-13','hamid','#garden-guests .g-hamid .bd-hat-hamid')];",
-  "    report.steps.mohsenDays=[birthdayDay('2031-08-22','mohsen','#tehran-hon-mohsen'),birthdayDay('2031-08-23','mohsen','#tehran-hon-mohsen'),birthdayDay('2031-08-24','mohsen','#tehran-hon-mohsen')];",
+  "    report.steps.mohsenDays=[birthdayDay('2031-08-23','mohsen','#tehran-hon-mohsen'),birthdayDay('2031-08-24','mohsen','#tehran-hon-mohsen'),birthdayDay('2031-08-25','mohsen','#tehran-hon-mohsen')];",
   "    // first 'b' → the ring leader, Markéta (Jan 20)",
   "    pressB(false);",
   "    report.steps.first = { bdMarketa: hasCls('bd-marketa'), toast: toastText(), sd: window.__seasonDate && window.__seasonDate() };",

@@ -18,10 +18,9 @@ required.
 ## Start here
 
 The opening promise is the shape of the day: **Explore → Party → Road Trip**. Select **CLICK ME**.
-The opening coach points out the top room navigation and bottom instructions together. Select its
-card, bottom prompt, or visible × to dismiss it. Follow the bottom instructions when you want
-direction. The required path is short, and most objects, games, apps, conversations, and surprises
-are optional.
+The opening coach points out the top room navigation and bottom instructions. Follow the bottom
+instructions when you want direction. The required path is short, and most objects, games, apps,
+conversations, and surprises are optional.
 
 ## Finding your way
 
@@ -79,8 +78,7 @@ turnoff for the fire, dinner, stargazing, sleep, and `~ fin ~`.
 ## Captions, coaches, and messages
 
 The bottom caption carries the Morning clues, feedback, and progression help. Coaches explain
-easy-to-miss controls; select a card or its × to dismiss it. The opening, Party-exploration, and first
-unread-message lessons pause unrelated room actions, but their highlighted controls remain usable.
+easy-to-miss controls; select a card or its × to dismiss it.
 
 Opening a message never performs its suggested activity; use its activity arrow. Old messages remain
 readable after an invitation expires. Irene and Hannah may invite you to a game. Birthday greetings
@@ -97,8 +95,6 @@ If you are unsure what comes next:
 
 - Click or tap an object to use it. Some objects can be dragged; a short tap still performs their
   ordinary action.
-- The Kitchen fire extinguisher falls from its bracket on first use. Use it again from the floor to
-  start the game over and return it to the wall.
 - Right-click opens local actions. On touch, press and hold without moving.
 - Double-click or double-tap only for deliberate early unlocks in the map or floor control; ordinary
   actions need one selection.
@@ -106,13 +102,6 @@ If you are unsure what comes next:
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
 - At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
   after it fills the view.
-- The monitor and laptop identify each idle screensaver with a brief caption. Their unmarked
-  top-left bezel controls advance to the next saver without waking the device.
-- Snake opens with player-count and speed choices. Its × control ends the DOS session; opening the
-  app again returns to those choices and starts a new game.
-- Shoot keeps “Esc releases mouse” on desktop. On touch, the visible D-pad handles movement and the
-  caption says “Drag to aim” for the game view.
-- Phone and tablet apps leave text fields unfocused; tap a field to type.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
   of the pedal slider holds speed; its outer zones accelerate or brake.
 
@@ -154,8 +143,7 @@ a typing field, `?` opens the complete shortcut card.
 The JavaScript console, Code, and Python share the typed `loft` scripting API. Use `help loft`,
 `loft.help()`, or `loft.api.capabilities()` to browse it. Code keeps edits as local overrides;
 right-click a default file to restore it or use **Reset files…**. Code resets do not affect the game
-checkpoint. Watch Trailer and Code share `trailer.js`; closing an app preserves its session, while
-killing it resets the app.
+checkpoint. Closing an app preserves its session; killing it resets the app.
 
 ### Fast-forward shortcuts
 

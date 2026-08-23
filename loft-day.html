@@ -4127,6 +4127,22 @@ html.revealed #hunt-github-btn{display:none}
 @keyframes tongs-snap-left{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
 @keyframes tongs-snap-right{0%,100%{transform:rotate(0)}50%{transform:rotate(7deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-tongs.snap #kitchen-tongs-left, #kitchen-tongs.snap #kitchen-tongs-right{animation:none}}
+/* First use takes the reset extinguisher off its wall bracket and leaves it on the hardwood.
+   The transparent hit pad is in this same outer group, so the landed prop remains usable. */
+#kitchen-extinguisher{transform-box:view-box; transform-origin:629px 74px}
+#kitchen-extinguisher.dropping{animation:kitchen-extinguisher-drop .48s cubic-bezier(.48,.04,.86,.53) forwards}
+#kitchen-extinguisher.fallen{transform:translate(0,244px) rotate(88deg)}
+#kitchen-extinguisher-impact{opacity:0; transition:opacity .12s ease}
+#stage-kitchen.extinguisher-fallen #kitchen-extinguisher-impact{opacity:1}
+@keyframes kitchen-extinguisher-drop{
+  0%{transform:translate(0,0) rotate(0)}
+  24%{transform:translate(1px,44px) rotate(4deg)}
+  60%{transform:translate(3px,170px) rotate(32deg)}
+  82%{transform:translate(0,244px) rotate(94deg)}
+  91%{transform:translate(0,237px) rotate(83deg)}
+  100%{transform:translate(0,244px) rotate(88deg)}
+}
+@media (prefers-reduced-motion: reduce){#kitchen-extinguisher.dropping{animation:none; transform:translate(0,244px) rotate(88deg)}}
 #garden-blind-slats{transform-box:fill-box; transform-origin:top center; transition:transform .6s ease}
 #garden-blind.raised #garden-blind-slats{transform:scaleY(.18)}
 #garden-light-overlay{transition:opacity .6s ease; mix-blend-mode:overlay}
@@ -16074,6 +16090,12 @@ section{margin:1.9rem 0}
 <path d="M28 322Q78 321 105 322M165 333Q226 331 265 333M318 336Q384 333 427 336M545 333Q603 331 654 332" stroke="#f0ce91" stroke-width=".65" opacity=".22"/>
 <path d="M229 326l15-1M473 328l16 1M122 337l14-1M586 336l13 1" stroke="#5e3924" stroke-width=".9" opacity=".28"/>
 </g>
+<g id="kitchen-extinguisher-impact" fill="none" stroke-linecap="round" pointer-events="none">
+<ellipse cx="629" cy="334" rx="38" ry="4.3" fill="#4f2e20" stroke="none" opacity=".16"/>
+<path d="M600 333Q616 337 635 333T665 334" stroke="#4f2e20" stroke-width="1.2" opacity=".7"/>
+<path d="M607 330l-6 -3M619 333l-3 5M642 332l5 -5M654 334l7 3" stroke="#70432a" stroke-width="1" opacity=".72"/>
+<path d="M608 335Q628 338 652 335" stroke="#f0ce91" stroke-width=".7" opacity=".45"/>
+</g>
 <g id="kitchen-plant" class="hunt-hit">
 <rect x="640" y="250" width="46" height="72" fill="transparent"/>
 <defs>
@@ -16216,6 +16238,7 @@ section{margin:1.9rem 0}
 <path d="M626.9 77.6 A3.2 3.2 0 1 1 623.1 77.6" fill="none" stroke="#7d1f2c" stroke-width="1.1" stroke-linecap="round" pointer-events="none"/>
 <path d="M626.9 77.6 l2 -0.4 l-1 1.9 z" fill="#7d1f2c" pointer-events="none"/>
 <path d="M636 66 Q643 82 635 98" fill="none" stroke="#2d2d2d" stroke-width="2.5"/>
+<circle id="kitchen-extinguisher-nozzle" cx="635" cy="98" r=".1" fill="transparent" pointer-events="none"/>
 </g>
 <g id="kitchen-scoops">
 <rect x="610" y="128" width="25" height="100" fill="transparent"/>
@@ -109506,13 +109529,14 @@ function spawnSteamWisps(svg, cx, cy, scale, xDir, yDir, count, peakOpacity) {
     })(i);
   }
 }
-function spawnPowderBurst(svg, cx, cy, color, count) {
+function spawnPowderBurst(svg, cx, cy, color, count, angleOffset) {
   if (!svg) return;
   color = color || "#f5f2e8";
   count = count || 14;
+  angleOffset = angleOffset || 0;
   for (var i = 0; i < count; i++) {
     (function (i) {
-      var angle = 100 + Math.random() * 70;
+      var angle = 100 + angleOffset + Math.random() * 70;
       var rad = angle * Math.PI / 180;
       var dist = 40 + Math.random() * 50;
       var dx = Math.cos(rad) * dist;
@@ -116027,6 +116051,52 @@ function playExtinguisherHissSound(panId) {
     gain.connect(pannedOut(ctx, panId == null ? "kitchen-extinguisher" : panId));
     noise.start(t);
     noise.stop(t + 0.6);
+  } catch (e) {}
+}
+function playExtinguisherDropSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId == null ? "kitchen-extinguisher" : panId);
+
+    // A short wooden-floor thump under the cylinder's metallic ring.
+    var thud = ctx.createOscillator();
+    thud.type = "sine";
+    thud.frequency.setValueAtTime(135, t);
+    thud.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+    var thudGain = ctx.createGain();
+    thudGain.gain.setValueAtTime(0.0001, t);
+    thudGain.gain.exponentialRampToValueAtTime(0.22, t + 0.008);
+    thudGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    thud.connect(thudGain); thudGain.connect(out);
+    thud.start(t); thud.stop(t + 0.3);
+
+    var bufferSize = Math.max(1, Math.floor(ctx.sampleRate * 0.16));
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.8);
+    var knock = ctx.createBufferSource(); knock.buffer = buffer;
+    var knockFilter = ctx.createBiquadFilter(); knockFilter.type = "bandpass"; knockFilter.Q.value = 0.75;
+    knockFilter.frequency.setValueAtTime(620, t);
+    knockFilter.frequency.exponentialRampToValueAtTime(240, t + 0.16);
+    var knockGain = ctx.createGain();
+    knockGain.gain.setValueAtTime(0.0001, t);
+    knockGain.gain.exponentialRampToValueAtTime(0.12, t + 0.006);
+    knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    knock.connect(knockFilter); knockFilter.connect(knockGain); knockGain.connect(out);
+    knock.start(t); knock.stop(t + 0.17);
+
+    [410, 690, 1080].forEach(function (frequency, index) {
+      var ring = ctx.createOscillator(); ring.type = "triangle";
+      ring.frequency.setValueAtTime(frequency, t + 0.015);
+      var ringGain = ctx.createGain();
+      ringGain.gain.setValueAtTime(0.0001, t + 0.015);
+      ringGain.gain.exponentialRampToValueAtTime(0.045 / (index + 1), t + 0.024);
+      ringGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.46 - index * 0.08);
+      ring.connect(ringGain); ringGain.connect(out);
+      ring.start(t + 0.015); ring.stop(t + 0.48);
+    });
   } catch (e) {}
 }
 function playBassBoomSound(panId) {
@@ -129437,7 +129507,6 @@ function spawnDustMote(container) {
     options = options || {};
     var enterPageMode = !!options.enterPageMode;
     var resetDateTime = options.resetDateTime === true;
-    try { localStorage.removeItem("loftExtinguisherWarned"); } catch (error) {}
     if (window.__resetShareAutoShow) window.__resetShareAutoShow();
     window.__runTransientResetHooks();
     captionArbiter.clearTransients();
@@ -132045,9 +132114,77 @@ function spawnDustMote(container) {
   setTimeout(shareAutoShow, 1200); // let the scene settle before it opens
 
   var extinguisher = document.getElementById("kitchen-extinguisher");
+  var extinguisherStage = document.getElementById("stage-kitchen");
+  var extinguisherHomeNext = extinguisher && extinguisher.nextSibling;
+  var extinguisherFloorNext = document.getElementById("kitchen-sunrays");
   var wipe = document.getElementById("hunt-wipe");
   if (extinguisher) {
-    var extinguisherWarningKey = "loftExtinguisherWarned";
+    var extinguisherDropTimer = null;
+    function setExtinguisherFallen(on) {
+      clearTimeout(extinguisherDropTimer);
+      extinguisherDropTimer = null;
+      extinguisher.classList.remove("dropping");
+      extinguisher.classList.toggle("fallen", !!on);
+      if (extinguisherStage) extinguisherStage.classList.toggle("extinguisher-fallen", !!on);
+      if (extinguisherStage) {
+        if (on && extinguisherFloorNext && extinguisherFloorNext.parentNode === extinguisherStage) {
+          extinguisherStage.insertBefore(extinguisher, extinguisherFloorNext);
+        } else if (!on && extinguisherHomeNext && extinguisherHomeNext.parentNode === extinguisherStage) {
+          extinguisherStage.insertBefore(extinguisher, extinguisherHomeNext);
+        }
+      }
+    }
+    function settleExtinguisherDrop() {
+      if (extinguisher.classList.contains("fallen")) return;
+      setExtinguisherFallen(true);
+      if (!document.hidden && document.hasFocus()) playExtinguisherDropSound();
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }
+    function dropExtinguisher() {
+      if (extinguisher.classList.contains("fallen") || extinguisher.classList.contains("dropping")) return false;
+      if (extinguisherStage && extinguisherFloorNext && extinguisherFloorNext.parentNode === extinguisherStage) {
+        extinguisherStage.insertBefore(extinguisher, extinguisherFloorNext);
+      }
+      extinguisher.classList.add("dropping");
+      if (window.__captionOverlay) window.__captionOverlay("extinguisher_warning", {
+        owner: "extinguisher", scope: "stage:kitchen", priority: 30,
+        duration: 2500, clock: "attended"
+      });
+      var reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      if (reduced) settleExtinguisherDrop();
+      else extinguisherDropTimer = setTimeout(settleExtinguisherDrop, 540);
+      return true;
+    }
+    function extinguisherPowderOrigin() {
+      var origin = { x: 635, y: 98, angle: 0 };
+      if (!extinguisher.classList.contains("fallen") || !extinguisherStage) return origin;
+      var marker = document.getElementById("kitchen-extinguisher-nozzle");
+      var strip = document.getElementById("loft-game-strip");
+      try {
+        if (marker && strip && strip.createSVGPoint && extinguisherStage.getScreenCTM) {
+          var rect = marker.getBoundingClientRect();
+          var point = strip.createSVGPoint();
+          point.x = rect.left + rect.width / 2;
+          point.y = rect.top + rect.height / 2;
+          var local = point.matrixTransform(extinguisherStage.getScreenCTM().inverse());
+          if (isFinite(local.x) && isFinite(local.y)) { origin.x = local.x; origin.y = local.y; }
+        }
+      } catch (error) {}
+      origin.angle = 88;
+      return origin;
+    }
+    extinguisher.addEventListener("animationend", function (event) {
+      if (event.animationName === "kitchen-extinguisher-drop") settleExtinguisherDrop();
+    });
+    if (window.__deferCheckpointAdapter) window.__deferCheckpointAdapter("kitchen-extinguisher", {
+      capture: function () {
+        return extinguisher.classList.contains("fallen") || extinguisher.classList.contains("dropping") ? { fallen: true } : null;
+      },
+      restore: function (row, phase) {
+        if (phase === "beforeStage") setExtinguisherFallen(!!row && row.fallen === true);
+      },
+      reset: function () { setExtinguisherFallen(false); }
+    });
     function showExtinguisherResetCaption() {
       if (window.__captionExclusive) window.__captionExclusive("extinguisher_reset", {
         owner: "extinguisher", scope: "global", priority: CAPTION_PRIORITY.exclusive + 1,
@@ -132059,7 +132196,9 @@ function spawnDustMote(container) {
       var enterPageMode = !!(window.__gameOnlyEntered && window.__gameOnlyEntered());
       showExtinguisherResetCaption();
       playExtinguisherHissSound();
-      spawnPowderBurst(document.getElementById("loft-game-strip"), 635, 98);
+      var powderOrigin = extinguisherPowderOrigin();
+      spawnPowderBurst(document.getElementById("loft-game-strip"), powderOrigin.x, powderOrigin.y,
+        null, null, powderOrigin.angle);
       if (wipe) wipe.classList.add("active");
       setTimeout(function () {
         resetHunt({ enterPageMode: enterPageMode, resetDateTime: resetDateTime });
@@ -132083,8 +132222,9 @@ function spawnDustMote(container) {
         else run();
       });
     };
-    // The 'r' key asks first (a full reset loses your progress); the physical
-    // fire-extinguisher in the scene stays immediate — grabbing it is deliberate.
+    // The 'r' key asks first (a full reset loses your progress). The scene extinguisher is
+    // deliberately two-step: first knock it down, then use it from the floor. Chrome/API reset
+    // paths still call the canonical activation directly.
     window.__confirmRestart = function () {
       var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
       var held = window.__holdFullscreenFill && window.__holdFullscreenFill();
@@ -132117,21 +132257,15 @@ function spawnDustMote(container) {
     });
     extinguisher.addEventListener("click", function (e) {
       e.stopPropagation();
-      if (e.detail === 0) activateExtinguisher();
-      else {
-        var warned = false;
-        try { warned = localStorage.getItem(extinguisherWarningKey) === "1"; } catch (error) {}
-        if (!warned) {
-          try { localStorage.setItem(extinguisherWarningKey, "1"); } catch (error) {}
-          if (window.__captionOverlay) window.__captionOverlay("extinguisher_warning", {
-            owner: "extinguisher", scope: "stage:kitchen", priority: 30,
-            duration: 2500, clock: "attended"
-          });
-        } else activateExtinguisher();
-      }
+      if (extinguisher.classList.contains("fallen")) activateExtinguisher();
+      else dropExtinguisher();
     });
     extinguisher.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateExtinguisher(); }
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (extinguisher.classList.contains("fallen")) activateExtinguisher();
+        else dropExtinguisher();
+      }
     });
   }
 
@@ -138690,6 +138824,8 @@ function exposePrivateFunction(name, read, write) {
   Object.defineProperty(window, name, { configurable: true, enumerable: true, get: read, set: write });
 }
 exposePrivateFunction("__getSfxCtx", function () { return getSfxCtx; }, function (fn) { getSfxCtx = fn; });
+exposePrivateFunction("__playExtinguisherDropSound", function () { return playExtinguisherDropSound; }, function (fn) { playExtinguisherDropSound = fn; });
+exposePrivateFunction("__playExtinguisherHissSound", function () { return playExtinguisherHissSound; }, function (fn) { playExtinguisherHissSound = fn; });
 exposePrivateFunction("__playGlassClinkSound", function () { return playGlassClinkSound; }, function (fn) { playGlassClinkSound = fn; });
 exposePrivateFunction("__playCampWisdomMurmurSound", function () { return playCampWisdomMurmurSound; }, function (fn) { playCampWisdomMurmurSound = fn; });
 exposePrivateFunction("__playLaptopClickSound", function () { return playLaptopClickSound; }, function (fn) { playLaptopClickSound = fn; });
@@ -138714,6 +138850,7 @@ exposePrivateFunction("__playWaterSound", function () { return playWaterSound; }
 exposePrivateFunction("__scheduleCampFinLoveVoices", function () { return scheduleCampFinLoveVoices; }, function (fn) { scheduleCampFinLoveVoices = fn; });
 exposePrivateFunction("__spawnHearts", function () { return spawnHearts; }, function (fn) { spawnHearts = fn; });
 exposePrivateFunction("__spawnMusicNotes", function () { return spawnMusicNotes; }, function (fn) { spawnMusicNotes = fn; });
+exposePrivateFunction("__spawnPowderBurst", function () { return spawnPowderBurst; }, function (fn) { spawnPowderBurst = fn; });
 exposePrivateFunction("__spawnWaterDroplets", function () { return spawnWaterDroplets; }, function (fn) { spawnWaterDroplets = fn; });
 })();
 </script>

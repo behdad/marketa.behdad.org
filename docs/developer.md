@@ -564,7 +564,7 @@ audio dormant.
 An adapter should persist **intent**, not runtime mechanics:
 
 - Persist a chosen projector channel, room visitation, Party story latch, completed Camping beat,
-  or paused Road Trip run.
+  a settled moved prop such as the fallen Kitchen extinguisher, or a paused Road Trip run.
 - Do not persist an open modal, active pointer drag, pending call, camera stream, raw timeout,
   animation frame, autonomous particle, or currently ringing sound.
 

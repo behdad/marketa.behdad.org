@@ -97,6 +97,8 @@ If you are unsure what comes next:
 
 - Click or tap an object to use it. Some objects can be dragged; a short tap still performs their
   ordinary action.
+- The Kitchen fire extinguisher falls from its bracket on first use. Use it again from the floor to
+  start the game over and return it to the wall.
 - Right-click opens local actions. On touch, press and hold without moving.
 - Double-click or double-tap only for deliberate early unlocks in the map or floor control; ordinary
   actions need one selection.

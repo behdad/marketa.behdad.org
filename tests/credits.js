@@ -27,9 +27,11 @@ var harness = String.raw`<script>
       names.indexOf("Farid") !== -1 && names.indexOf("Elham") !== -1 &&
       names.filter(function (name) { return name === "Farid" || name === "Elham"; }).length === 2,
       names.join(", "));
+    check("Kaveh appears in the language-neutral tester roster",
+      names.indexOf("Kaveh") !== -1, names.join(", "));
     check("new testers remain appended in source order",
-      names.slice(-13).join(",") ===
-        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash,Jay,Farid,Elham",
+      names.slice(-14).join(",") ===
+        "Pendar,Mehraveh,Siamak,Navid,Mina,Mourad,Douglas,Robin,Amir,Arash,Jay,Farid,Elham,Kaveh",
       names.join(", "));
     var marketa = window.__loftCredits.people.find(function (person) { return person.name === "Markéta"; });
     check("Markéta is credited for co-design and Czech translation",
@@ -71,8 +73,8 @@ var harness = String.raw`<script>
       crowded.softwareHeadingY > current.softwareHeadingY,
       JSON.stringify({ current: current, crowded: crowded }));
     check("tester columns distribute their remainder from left to right",
-      names.length === 26 && current.testersPerColumn === 5 && current.testerColumns === 6 &&
-      current.testerBands === 1 && JSON.stringify(current.testerColumnCounts[0]) === "[5,5,4,4,4,4]" &&
+      names.length === 27 && current.testersPerColumn === 5 && current.testerColumns === 6 &&
+      current.testerBands === 1 && JSON.stringify(current.testerColumnCounts[0]) === "[5,5,5,4,4,4]" &&
       crowded.testersPerColumn === 5 && crowded.testerBands === 2 &&
       JSON.stringify(crowded.testerBandCounts) === "[25,25]" &&
       JSON.stringify(crowded.testerColumnCounts[0]) === "[5,4,4,4,4,4]" &&
@@ -112,8 +114,8 @@ var harness = String.raw`<script>
     });
     var renderedColumnCounts = Object.keys(renderedColumns).sort(function (a, b) { return +a - +b; })
       .map(function (x) { return renderedColumns[x]; });
-    check("the rendered roster uses two five-name columns followed by four four-name columns",
-      JSON.stringify(renderedColumnCounts) === "[5,5,4,4,4,4]",
+    check("the rendered roster uses three five-name columns followed by three four-name columns",
+      JSON.stringify(renderedColumnCounts) === "[5,5,5,4,4,4]",
       JSON.stringify(renderedColumns));
     var links = roll.querySelectorAll("a");
     check("the rendered credits expose native links for the game, source, and Chromium debit",

@@ -12,8 +12,8 @@ var FULL = {
     cuddly: 4600,
     party: 6500,
     night: 5200,
-    roll: 3200,
-    road: 4600,
+    roll: 5500,
+    road: 7500,
     camp: 6000,
     final: 4000,
     kitchen: 1000
@@ -87,6 +87,41 @@ async function interact(loft, id) {
     return action(loft.interaction.activate(id), "Activate " + id);
 }
 
+/* A tiny autopilot: the route starts parked on the shoulder, so merge into the
+   right-hand driving lane, accelerate through the gears, set cruise, and keep the
+   lane through the bends. Anything slow in the lane ahead (wildlife) is sidestepped
+   into the passing lane. Everything here is the same typed API a visitor gets. */
+async function steerTheDrive(loft, t) {
+    var LANE = 1.5, steering = null, cruising = false;
+    var remaining = t.roll + t.road;
+    await action(loft.car.control.set({ control: "throttle", pressed: true }), "Press the accelerator");
+    while (remaining > 0) {
+      await pause(loft, Math.min(150, remaining));
+      remaining -= 150;
+      if (!cruising && (remaining <= t.road ||
+          unwrap(loft.car.status(), "Read car status").drive.speed >= 75)) {
+        await action(loft.car.cruise.set(true), "Set cruise control");
+        await action(loft.car.control.set({ control: "throttle", pressed: false }), "Release the accelerator");
+        cruising = true;
+      }
+      var road = unwrap(loft.roadtrip.status(), "Read Road Trip status");
+      var home = LANE;
+      (road.entities || []).forEach(function (entity) {
+        var gap = entity.at - road.distance;
+        if (gap > 0 && gap < 60 && Math.abs(entity.lane - LANE) < .6 &&
+            (entity.velocity || 0) * 3.6 < 40) home = .5;
+      });
+      var error = road.playerLane - home;
+      var want = error > .1 ? "steerLeft" : error < -.1 ? "steerRight" : null;
+      if (want !== steering) {
+        if (steering) await action(loft.car.control.set({ control: steering, pressed: false }), "Ease the wheel");
+        if (want) await action(loft.car.control.set({ control: want, pressed: true }), "Steer");
+        steering = want;
+      }
+    }
+    if (steering) await action(loft.car.control.set({ control: steering, pressed: false }), "Ease the wheel");
+}
+
 async function playTimeline(loft) {
     var t = timing(loft);
 
@@ -146,11 +181,7 @@ async function playTimeline(loft) {
       await action(loft.car.transmission.set("auto"), "Select the automatic");
       await action(loft.car.range.set("D"), "Shift into Drive");
     });
-    await action(loft.car.control.set({ control: "throttle", pressed: true }), "Press the accelerator");
-    await pause(loft, t.roll);
-    await action(loft.car.cruise.set(true), "Set cruise control");
-    await action(loft.car.control.set({ control: "throttle", pressed: false }), "Release the accelerator");
-    await pause(loft, t.road);
+    await steerTheDrive(loft, t);
 
     await announce(loft, "cine_chapter_camp", "cine_camp");
     await pause(loft, t.announce);

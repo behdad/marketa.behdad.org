@@ -5,17 +5,16 @@
 var FULL = {
     announce: 2200,
     title: 4000,
-    office: 1600,
-    python: 2600,
+    office: 5000,
     cinema: 4000,
-    garden: 3500,
-    bathroom: 3500,
-    phone: 2700,
-    bedroom: 3500,
-    cuddly: 3500,
-    party: 4500,
-    road: 5500,
-    camp: 6500,
+    bathroom: 3200,
+    bedroom: 3200,
+    cuddly: 4600,
+    party: 6500,
+    night: 5200,
+    roll: 3200,
+    road: 4600,
+    camp: 6000,
     final: 4000,
     kitchen: 1000
 };
@@ -52,22 +51,6 @@ async function pause(loft, ms) {
       remaining -= slice;
       if (!unwrap(loft.trailer.status(), "Read Trailer status").playing) throw trailerStopped();
     }
-}
-
-async function waitForPython(loft) {
-    var remaining = 60000;
-    var opened = false;
-    while (remaining > 0) {
-        var status = unwrap(loft.app.python.status(), "Read Python runtime status");
-        if (status.open) opened = true;
-        if (status.open && status.ready) return status;
-        if (status.state === "failed" || (opened && !status.open)) {
-            throw new Error("Python runtime did not become ready.");
-        }
-        await pause(loft, 100);
-        remaining -= 100;
-    }
-    throw new Error("Python runtime did not become ready in time.");
 }
 
 async function action(promise, label) {
@@ -109,6 +92,7 @@ async function playTimeline(loft) {
 
     await action(loft.presentation.card.show("title"), "Show Trailer title");
     await caption(loft, "cine_open");
+    await action(loft.kitchen.gong.strike(), "Strike the Kitchen gong");
     await action(loft.session.preview.score.play({
       track: "tumbala", loop: true, level: .42, fade_ms: 900
     }), "Start Trailer score");
@@ -118,31 +102,17 @@ async function playTimeline(loft) {
     await announceAndCut(loft, t, "office", "cine_chapter_jump", "cine_arcade", t.office,
       async function () { await action(loft.office.invaders.preview(true), "Start Invaders preview"); });
     await action(loft.office.invaders.preview(false), "Stop Invaders preview");
-    await action(loft.app.open("python"), "Open Python");
-    await waitForPython(loft);
-    await pause(loft, t.python);
-    await action(loft.app.kill({ app: "python", device: "monitor" }), "Kill Python");
 
     await announceAndCut(loft, t, "cinema", "cine_chapter_open", "cine_below", t.cinema,
       async function () {
         await interact(loft, "cinema.bike");
-        await pause(loft, unwrap(loft.presentation.reduced.status(), "Read motion preference").on ? 500 : 900);
-        await interact(loft, "cinema.cushion");
+        await pause(loft, unwrap(loft.presentation.reduced.status(), "Read motion preference").on ? 500 : 800);
+        await action(loft.cinema.projector.set(true), "Power the Cinema projector");
       });
-
-    await announceAndCut(loft, t, "garden", "cine_chapter_unlock", "cine_clues", t.garden,
-      async function () { await interact(loft, "garden.tensegrity"); });
 
     await announceAndCut(loft, t, "bathroom", "cine_chapter_wander", "cine_anywhere", t.bathroom,
       async function () { await action(loft.bathroom.bubbles.preview(true), "Start bubbles preview"); });
     await action(loft.bathroom.bubbles.preview(false), "Stop bubbles preview");
-
-    await caption(loft, "cine_phone");
-    await action(loft.app.open("clock"), "Open Clock");
-    await pause(loft, t.phone);
-    await action(loft.app.open("mines"), "Open Mines");
-    await pause(loft, t.phone);
-    await action(loft.app.close("phone"), "Close phone");
 
     await announceAndCut(loft, t, "bedroom", "cine_chapter_round", "cine_round", t.bedroom,
       async function () { await action(loft.bedroom["tic-tac-toe"].preview(true), "Start tic-tac-toe preview"); });
@@ -150,20 +120,36 @@ async function playTimeline(loft) {
 
     await announceAndCut(loft, t, "cuddly", "cine_chapter_soft", "cine_soft", t.cuddly,
       async function () {
-        await interact(loft, "cuddly.pan-edge");
-        await pause(loft, unwrap(loft.presentation.reduced.status(), "Read motion preference").on ? 450 : 800);
         await interact(loft, "cuddly.bolster");
+        await pause(loft, unwrap(loft.presentation.reduced.status(), "Read motion preference").on ? 450 : 700);
+        await action(loft.cuddly.projector.set("totoro"), "Tune the Cuddly projector");
       });
 
     await announceAndCut(loft, t, "garden", "cine_chapter_party", "cine_party", t.party,
       async function () { await action(loft.party.set(true), "Start Party preview"); });
 
-    await announce(loft, "cine_chapter_road", "cine_road");
+    await announce(loft, "cine_chapter_late", "cine_late");
     await pause(loft, t.announce);
     await cut(loft, async function () {
       await action(loft.party.set(false), "Stop Party preview");
-      await action(loft.roadtrip.preview.show({ route: "banff", distance: 540 }), "Show Road Trip");
+      await action(loft.weather.scene.set("clear"), "Clear the night sky");
+      await action(loft.sky.effect.set("aurora"), "Summon the aurora");
+      await action(loft.room.go("balcony"), "Open balcony");
     });
+    await pause(loft, t.night);
+
+    await announce(loft, "cine_chapter_road", "cine_road");
+    await pause(loft, t.announce);
+    await cut(loft, async function () {
+      await action(loft.roadtrip.preview.show({ route: "banff", distance: 540 }), "Show Road Trip");
+      await action(loft.car.engine.set(true), "Start the engine");
+      await action(loft.car.transmission.set("auto"), "Select the automatic");
+      await action(loft.car.range.set("D"), "Shift into Drive");
+    });
+    await action(loft.car.control.set({ control: "throttle", pressed: true }), "Press the accelerator");
+    await pause(loft, t.roll);
+    await action(loft.car.cruise.set(true), "Set cruise control");
+    await action(loft.car.control.set({ control: "throttle", pressed: false }), "Release the accelerator");
     await pause(loft, t.road);
 
     await announce(loft, "cine_chapter_camp", "cine_camp");

@@ -1,8 +1,12 @@
 #!/usr/bin/env node
-// Authored Trailer regression: verifies the roughly 100-second reel, preview-safe use of real
-// rooms/apps/minigames/Road Trip/Camping, narration lead time, score ownership, and all
-// natural/take-over/attention-loss/error teardown paths. The final matrix also checks the
-// EN/CS title treatment in desktop and phone-landscape frames.
+// Authored Trailer regression: verifies the roughly 95-second reel — gong-struck title,
+// day montage (Invaders, Cinema projector, bubbles, tic-tac-toe, Totoro), Party, then the
+// authored night arc (clear-sky aurora on the Balcony, a rolling cruise-controlled drive,
+// starlit Camping) — preview-safe use of the real owners, narration lead time, score
+// ownership, and all natural/take-over/attention-loss/error teardown paths. The final
+// matrix also checks the EN/CS title treatment in desktop and phone-landscape frames.
+// (The typed Python ready/Kill lifecycle checks live here too: they share this one-shot
+// page harness even though the Trailer timeline no longer boots Python.)
 "use strict";
 
 var fs = require("fs");
@@ -20,21 +24,22 @@ var COMMON = [
   " var python=value(window.loft.app.python.status())||{};return {room:room,preview:!!preview.active,party:!!window.__gardenPartyOn,roadActive:!!road.active,roadRoute:road.route||null,fireBuilt:!!(fire&&fire.classList.contains('fire-built')),phoneOpen:!!app.phone_open,monitor:app.monitor||null,python:python,arcade:!!(window.__arcadeState&&window.__arcadeState().active),bubbles:!!(window.__bathroomInteractionState&&window.__bathroomInteractionState().bubbles.active),ttt:window.__bedroomTicTacToeState?window.__bedroomTicTacToeState().phase:'idle',frame:!!document.querySelector('#hunt-fullscreen-area.cinematic-running'),cursor:!!document.getElementById('cine-cursor'),scorePaused:!score||score.paused,scoreLoop:!!(score&&score.loop),scoreTime:score?score.currentTime:0,raw:localStorage.getItem('loftCheckpoint:v1'),custom:localStorage.getItem('trailer-test'),max:window.__maxUnlocked?window.__maxUnlocked():null,clickMe:!!document.getElementById('click-me-overlay'),recovery:!!document.getElementById('loft-recovery-gate'),recoveryPreview:document.getElementById('loft-game-strip').classList.contains('recovery-preview'),started:window.__gameStarted()};",
   "}",
   "function instrumentScore(){var a=document.getElementById('tumbala-song-audio');if(!a||a._trailerPlayOwner)return;a._trailerPlayOwner=a.play;a._trailerPlayCalls=0;a.play=function(){a._trailerPlayCalls++;return a._trailerPlayOwner.call(a);};}",
-  "function baseReport(){return {errors:[],duration:0,ended:false,reduced:false,rooms:[],captions:{},arrivals:{},visibleForeignCaptions:[],apps:{},python:{opened:false,ready:false,death:false,killed:false,states:[]},games:{},roads:{},party:false,formal:false,scoreAtRoad:false,scoreAtCamp:false,scorePlayCalls:0,roadExact:false,campExact:false,campFire:false,presentation:false,extinguisher:false,state:null,checkpoint:'{ \\\"trailer\\\": \\\"raw bytes\\\", \\\"spacing\\\": true }'};}",
+  "function baseReport(){return {errors:[],duration:0,ended:false,reduced:false,rooms:[],captions:{},arrivals:{},visibleForeignCaptions:[],games:{},roads:{},party:false,formal:false,projector:false,totoro:false,aurora:false,balconyNight:false,driveMoving:false,cruise:false,campNight:false,scoreAtRoad:false,scoreAtCamp:false,scorePlayCalls:0,roadExact:false,campExact:false,campFire:false,presentation:false,extinguisher:false,state:null,checkpoint:'{ \\\"trailer\\\": \\\"raw bytes\\\", \\\"spacing\\\": true }'};}",
   "function sample(r,t0){",
   " var now=performance.now()-t0,room=value(window.loft.room.current()),key=window.__captionKey?window.__captionKey():null,overlay=document.getElementById('cine-overlay'),cut=!!(overlay&&overlay.classList.contains('cine-cut'));",
   " if(key&&r.captions[key]==null)r.captions[key]=now;",
-  " if(key&&!cut&&key!=='kitchen'&&key.indexOf('cine_')!==0&&r.visibleForeignCaptions.indexOf(key)<0)r.visibleForeignCaptions.push(key);",
+  " if(key&&!cut&&key!=='kitchen'&&key!=='extinguisher_reset'&&key.indexOf('cine_')!==0&&r.visibleForeignCaptions.indexOf(key)<0)r.visibleForeignCaptions.push(key);",
   " if(room&&r.rooms[r.rooms.length-1]!==room){r.rooms.push(room);r.arrivals[room]={time:now,key:key};}",
-  " var app=value(window.loft.app.current())||{};if(app.phone)r.apps[app.phone]=true;if(app.monitor&&app.monitor!=='desktop')r.apps[app.monitor]=true;",
-  " var python=value(window.loft.app.python.status())||{};if(python.open)r.python.opened=true;if(python.ready)r.python.ready=true;if(document.getElementById('office-monitor').classList.contains('death-python'))r.python.death=true;if(r.python.ready&&python.state==='stopped')r.python.killed=true;if(python.state&&r.python.states[r.python.states.length-1]!==python.state)r.python.states.push(python.state);",
+  " if(room==='cinema'&&window.__cinemaRoomState&&window.__cinemaRoomState().powered)r.projector=true;",
+  " if(room==='cuddly'&&window.__cuddlyProjector&&window.__cuddlyProjector.channel&&window.__cuddlyProjector.channel()==='totoro')r.totoro=true;",
+  " if(room==='balcony'){var au=window.__auroraStatus&&window.__auroraStatus();if(au&&au.showing)r.aurora=true;var bal=document.getElementById('stage-balcony');if(bal&&bal.classList.contains('dusk'))r.balconyNight=true;}",
   " if(window.__arcadeState&&window.__arcadeState().active)r.games.invaders=true;",
   " if(window.__bathroomInteractionState&&window.__bathroomInteractionState().bubbles.active)r.games.bubbles=true;",
   " if(window.__bedroomTicTacToeState&&window.__bedroomTicTacToeState().phase!=='idle')r.games.ttt=true;",
   " if(window.__gardenPartyOn)r.party=true;",
   " if(window.__firstDanceOn||window.__slowDanceOn||window.__toastsOn||window.__groupPhotoOn||window.__sparklersOn||window.__cakeOn||window.__bouquetOn)r.formal=true;",
   " var road=value(window.loft.roadtrip.status())||{},score=document.getElementById('tumbala-song-audio');",
-  " if(road.active&&road.route){r.roads[road.route]=true;if(road.route==='banff'){r.roadExact=!!document.querySelector('#entrance-room.roadtrip-route-banff');r.scoreAtRoad=!!(score&&score.loop&&score._trailerPlayCalls>=2);}if(road.route==='camp'){var camp=document.getElementById('entrance-roadtrip-camp');r.campExact=!!(camp&&getComputedStyle(camp).display!=='none');r.campFire=!!(camp&&camp.classList.contains('fire-built')&&!camp.classList.contains('fire-out'));r.scoreAtCamp=!!(score&&score.loop&&score._trailerPlayCalls>=2);}}",
+  " if(road.active&&road.route){r.roads[road.route]=true;var ent=window.__entranceRoomState?window.__entranceRoomState():null;if(road.route==='banff'){r.roadExact=!!document.querySelector('#entrance-room.roadtrip-route-banff');r.scoreAtRoad=!!(score&&score.loop&&score._trailerPlayCalls>=2);if(ent&&ent.drive&&ent.drive.speed>5)r.driveMoving=true;if(ent&&ent.drive&&ent.drive.cruise&&ent.drive.cruise.active)r.cruise=true;}if(road.route==='camp'){var camp=document.getElementById('entrance-roadtrip-camp');r.campExact=!!(camp&&getComputedStyle(camp).display!=='none');r.campFire=!!(camp&&camp.classList.contains('fire-built')&&!camp.classList.contains('fire-out'));r.scoreAtCamp=!!(score&&score.loop&&score._trailerPlayCalls>=2);if(ent&&ent.night)r.campNight=true;}}",
   " if(document.querySelector('#hunt-fullscreen-area.cinematic-running #cine-overlay'))r.presentation=true;",
   "}",
   "async function runNatural(r){",
@@ -154,20 +159,22 @@ if (!full) check(false, "full reel produced a report");
 else {
   check(full.errors.length === 0, "no uncaught errors", full.errors);
   check(!full.reduced && full.ended, "full-motion reel ends naturally", { reduced: full.reduced, ended: full.ended });
-  check(full.duration >= 90000 && full.duration <= 145000, "cold-start editorial duration stays bounded (" + (full.duration / 1000).toFixed(1) + "s)", full.duration);
+  check(full.duration >= 75000 && full.duration <= 115000, "editorial duration stays bounded (" + (full.duration / 1000).toFixed(1) + "s)", full.duration);
   check(full.presentation, "authored cards, grade, rails, and captions own the presentation");
-  check(full.rooms.join("|") === "kitchen|office|cinema|garden|bathroom|bedroom|cuddly|garden|entrance|kitchen", "room order is the authored non-map montage", full.rooms);
-  check(hasAll(full.apps, ["clock", "mines"]), "real Clock and Mines phone apps appear", full.apps);
-  check(full.apps.python && full.python.opened && full.python.ready && full.python.death && full.python.killed && full.events.indexOf("app.open") >= 0 && full.events.indexOf("app.kill") >= 0,
-    "Python reaches its public ready state before the full themed monitor Kill completes", { apps: full.apps, python: full.python, events: full.events });
+  check(full.rooms.join("|") === "kitchen|office|cinema|bathroom|bedroom|cuddly|garden|balcony|entrance|kitchen", "room order is the authored day-to-night montage", full.rooms);
+  check(full.events.indexOf("kitchen.gong.strike") >= 0, "the title beat strikes the real Kitchen gong", full.events);
   check(hasAll(full.games, ["invaders", "bubbles", "ttt"]), "real room minigames appear", full.games);
+  check(full.projector && full.totoro, "the Cinema projector powers on and the Cuddly projector tunes to Totoro", { projector: full.projector, totoro: full.totoro });
   check(full.party && !full.formal, "Party appears without a formal/spoiler payoff", { party: full.party, formal: full.formal });
+  check(full.aurora && full.balconyNight, "night falls and the summoned aurora is showing over the Balcony", { aurora: full.aurora, night: full.balconyNight });
   check(full.autonomous && full.autonomous.attempt === false && full.autonomous.rewriteCalls === 0 && full.autonomous.turnstile.length === 0,
     "Trailer holds autonomous rewrites before Chat or Turnstile starts", full.autonomous);
   check(full.roads.banff && full.roads.camp && full.roadExact && full.campExact && full.campFire, "real Road Trip and lit Camping renderers appear", { roads: full.roads, road: full.roadExact, camp: full.campExact, fire: full.campFire });
+  check(full.driveMoving && full.cruise, "the highway actually rolls under cruise control", { moving: full.driveMoving, cruise: full.cruise });
+  check(full.campNight, "Camping plays under the night sky so the stars can come out", full.campNight);
   check(full.scorePlayCalls >= 2 && full.scoreAtRoad && full.scoreAtCamp, "one looping score covers Road Trip through Camping", { calls: full.scorePlayCalls, road: full.scoreAtRoad, camp: full.scoreAtCamp });
   check(full.visibleForeignCaptions.length === 0, "room/minigame clues never replace narration outside the canonical reset", full.visibleForeignCaptions);
-  [["cinema","cine_below"],["bathroom","cine_anywhere"],["bedroom","cine_round"]].forEach(function (pair) { var arrival=full.arrivals[pair[0]],lead=arrival&&full.captions[pair[1]]!=null?arrival.time-full.captions[pair[1]]:null;check(arrival&&arrival.key===pair[1]&&lead>=1950,pair[0]+" narration leads the pan by at least ~2s and survives it",{arrival:arrival,lead:lead}); });
+  [["cinema","cine_below"],["bathroom","cine_anywhere"],["bedroom","cine_round"],["balcony","cine_late"]].forEach(function (pair) { var arrival=full.arrivals[pair[0]],lead=arrival&&full.captions[pair[1]]!=null?arrival.time-full.captions[pair[1]]:null;check(arrival&&arrival.key===pair[1]&&lead>=1950,pair[0]+" narration leads the pan by at least ~2s and survives it",{arrival:arrival,lead:lead}); });
   check(full.extinguisher && full.state.room === "kitchen" && full.state.max === 0, "finale pans to Kitchen and uses canonical extinguisher reset", { event: full.extinguisher, state: full.state });
   check(full.state.clickMe && !full.state.recovery && !full.state.started, "normal completion with no resumable save returns to CLICK ME", full.state);
   clean(full, "natural finish");
@@ -178,9 +185,9 @@ var reduced = lib.runPageSync("loft-day.html", NATURAL, 125000, { patchRaf: true
 if (!reduced) check(false, "reduced reel produced a report");
 else {
   check(reduced.errors.length === 0, "no reduced-motion errors", reduced.errors);
-  check(reduced.reduced && reduced.ended && reduced.duration >= 50000 && reduced.duration <= 115000, "reduced edit is finite and deliberately shorter", { reduced: reduced.reduced, ended: reduced.ended, duration: reduced.duration });
+  check(reduced.reduced && reduced.ended && reduced.duration >= 40000 && reduced.duration <= 90000, "reduced edit is finite and deliberately shorter", { reduced: reduced.reduced, ended: reduced.ended, duration: reduced.duration });
   check(reduced.roads.banff && reduced.roads.camp && reduced.party && hasAll(reduced.games,["bubbles","ttt"]), "reduced edit preserves the real authored beats (motion-heavy Invaders stays suppressed)", { roads: reduced.roads, party: reduced.party, games: reduced.games });
-  check(reduced.python.opened && reduced.python.ready && reduced.python.death && reduced.python.killed, "reduced edit preserves Python's real ready-to-Kill lifecycle", reduced.python);
+  check(reduced.aurora && reduced.campNight, "reduced edit keeps the aurora night arc", { aurora: reduced.aurora, night: reduced.campNight });
   check(reduced.autonomous && reduced.autonomous.attempt === false && reduced.autonomous.rewriteCalls === 0 && reduced.autonomous.turnstile.length === 0,
     "reduced Trailer holds autonomous rewrites before Chat or Turnstile starts", reduced.autonomous);
   check(reduced.state.recovery && reduced.state.recoveryPreview && !reduced.state.clickMe && !reduced.state.started && reduced.state.room === "kitchen" && reduced.state.max === 0, "normal completion reconstructs Welcome back without applying the resumable save", reduced.state);
@@ -228,7 +235,7 @@ check(!/\bhost\./.test(source), "canonical Trailer has no injected presentation 
 check(/loft\.trailer\.play\(\)/.test(source) && /loft\.session\.preview\.begin\("trailer"\)/.test(source) && /loft\.game\.reset\("instant"\)/.test(source) && /loft\.trailer\.stop\("entry"\)/.test(source), "ordinary Trailer source bootstraps its bounded public play, preview, and entry-completion lifecycle");
 var normalizedSource = source.replace(/\["tic-tac-toe"\]/g, ".tic-tac-toe");
 var apiCalls = Array.from(new Set(Array.from(normalizedSource.matchAll(/(?:window\.)?loft\.([A-Za-z0-9_.-]+)\s*\(/g), function (match) { return match[1]; }))).sort();
-var expectedApiCalls = ["app.close","app.kill","app.open","app.python.status","bathroom.bubbles.preview","bedroom.tic-tac-toe.preview","camping.fire.light","camping.fire.open","camping.fire.place","game.reset","interaction.activate","office.invaders.preview","party.set","presentation.card.hide","presentation.card.show","presentation.caption.show","presentation.chapter.show","presentation.cut","presentation.point","presentation.reduced.status","roadtrip.preview.show","room.go","session.preview.begin","session.preview.score.play","session.preview.score.stop","trailer.play","trailer.status","trailer.stop","util.sleep"].sort();
+var expectedApiCalls = ["bathroom.bubbles.preview","bedroom.tic-tac-toe.preview","camping.fire.light","camping.fire.open","camping.fire.place","car.control.set","car.cruise.set","car.engine.set","car.range.set","car.transmission.set","cinema.projector.set","cuddly.projector.set","game.reset","interaction.activate","kitchen.gong.strike","office.invaders.preview","party.set","presentation.card.hide","presentation.card.show","presentation.caption.show","presentation.chapter.show","presentation.cut","presentation.point","presentation.reduced.status","roadtrip.preview.show","room.go","session.preview.begin","session.preview.score.play","session.preview.score.stop","sky.effect.set","trailer.play","trailer.status","trailer.stop","util.sleep","weather.scene.set"].sort();
 check(apiCalls.join("|") === expectedApiCalls.join("|"), "every Trailer dependency stays under the public Loft root", apiCalls);
 
 console.log("");

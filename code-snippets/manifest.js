@@ -3,7 +3,7 @@
 
   window.__loftCodeSnippets = Object.freeze([
     { "filename": "space-filler.py", "path": "code-snippets/space-filler-py.txt", "version": "source-99d6e466ecac" },
-    { "filename": "trailer.js", "path": "code-snippets/trailer-js.txt", "version": "source-e577db1464a7" },
+    { "filename": "trailer.js", "path": "code-snippets/trailer-js.txt", "version": "source-bc977574b013" },
     { "filename": "hello.py", "path": "code-snippets/hello-py.txt", "version": "source-cb43305f40e4" },
     { "filename": "loft-type.js", "path": "code-snippets/loft-type-js.txt", "version": "source-22d79634ffb5" },
     { "filename": "square.py", "path": "code-snippets/square-py.txt", "version": "source-09ed362ac687" },

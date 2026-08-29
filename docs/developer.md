@@ -269,11 +269,13 @@ suppresses the physical UV class and snapshots its prior state; only the final o
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
 cannot relight or strand the blacklight.
 
-Exact-day birthday messages, the birthday ribbon, cake, and postcard all route through the shared
-birthday ceremony owner. The registry's exact month/day also gates every hat, crown, call prop, and
-current-date postcard classification; there are no birthday buffer ranges. Keep delivery serialized
-and cancel its transient work on Party teardown; checkpoint restore may re-enter an interrupted
-ceremony. A shortcut must enqueue that owner rather than create a second cake or postcard lifecycle.
+Exact-day birthday messages, the `?date=` preview ribbon, cake, and postcard all route through the
+shared birthday ceremony owner. The persistent viewport ribbon is preview-only; a real current-date
+occasion keeps its decor and invitations without overlaying play. The registry's exact month/day also
+gates every hat, crown, call prop, and current-date postcard classification; there are no birthday
+buffer ranges. Keep delivery serialized and cancel its transient work on Party teardown; checkpoint
+restore may re-enter an interrupted ceremony. A shortcut must enqueue that owner rather than create
+a second cake or postcard lifecycle.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been

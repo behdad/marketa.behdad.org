@@ -82,7 +82,8 @@ easy-to-miss controls; select a card or its × to dismiss it.
 
 Opening a message never performs its suggested activity; use its activity arrow. Old messages remain
 readable after an invitation expires. Irene and Hannah may invite you to a game. Birthday greetings
-can start a ceremony and postcard, and the birthday ribbon is a shortcut to the same celebration.
+can start a ceremony and postcard; a shared `?date=` birthday preview also shows a ribbon shortcut to
+the same celebration.
 
 If you are unsure what comes next:
 

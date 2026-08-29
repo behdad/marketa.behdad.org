@@ -8023,8 +8023,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .calx-mon .calx-search-row{border-radius:0.6px; border-width:0.3px; padding:0.3px 1px; font-size:2px}
 .calx-mon .calx-search-date{font-size:1.8px}
 .calx-mon .calx-search-none{font-size:2px; padding:1px 0}
-/* occasion-day ribbon: a small tasteful banner naming the active happening (wedding / bbq /
-   garden brunch), centred at the top of the viewport. Shows with the happening, clears on reset.
+ /* occasion-day preview ribbon: a small banner naming the active happening (wedding / bbq /
+    garden brunch), centred at the top of the viewport. Shows only for explicit ?date= previews.
    Plain HTML in .hunt-viewport (no foreignObject scale), so a transform/opacity layer is safe. */
 .occasion-banner{position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:7; appearance:none; font-family:"Fraunces","Source Serif 4",serif; font-weight:600; font-size:13px; line-height:1; color:#fffdf8; background:var(--wine,#8e3a4a); border:1px solid rgba(255,253,248,.45); border-radius:13px; padding:5px 14px; box-shadow:0 4px 14px rgba(0,0,0,.28); white-space:nowrap; cursor:pointer; user-select:none; opacity:0; transition:opacity .4s ease}
 .occasion-banner.show{opacity:1}
@@ -131026,7 +131026,7 @@ function spawnDustMote(container) {
     var a = occAnnounceDay(sk, y);
     return !!a && a[0] === m && a[1] === d;
   };
-  // One localized description for the permanent viewport ribbon. This lives beside the calendar
+  // One localized description for the date-preview viewport ribbon. This lives beside the calendar
   // tables so birthdays, drifting holidays and previews all resolve from their single source of truth.
   window.__specialDayBannerInfo = function () {
     var s = seasonDate();
@@ -135498,8 +135498,10 @@ function spawnDustMote(container) {
     function gated() {
       return document.hidden || !document.hasFocus() || !!window.__tripActive;
     }
-    // A permanent viewport ribbon names the loft's exact special day. Clicking it opens Calendar
-    // for context, but deliberately does not activate the occasion or navigate the scene.
+    // A viewport ribbon names the loft's exact special day only while an explicit ?date= preview
+    // is active. Real-calendar visitors get the occasion itself without persistent chrome over play.
+    // Clicking the preview ribbon opens Calendar for context, but deliberately does not activate the
+    // occasion or navigate the scene.
     // Fixed event days reuse the existing labels; birthdays and holiday anchor days share the
     // calendar's localized names. seasonDate() also makes the pro preview controls tell the truth.
     function occasionBannerInfo() {
@@ -135509,7 +135511,12 @@ function spawnDustMote(container) {
       var b = document.getElementById("occasion-banner");
       if (b && b.parentNode) b.parentNode.removeChild(b);
     }
+    function occasionBannerPreviewActive() {
+      try { return /^\d{4}-\d{2}-\d{2}$/.test(new URL(location.href).searchParams.get("date") || ""); }
+      catch (e) { return false; }
+    }
     function refreshOccasionBanner() {
+      if (!occasionBannerPreviewActive()) { clearOccasionBanner(); return; }
       var info = occasionBannerInfo();
       if (!info) { clearOccasionBanner(); return; }
       var vp = document.querySelector(".hunt-viewport");

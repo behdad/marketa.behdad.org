@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Real entry regressions: ordinary Party stays greeting-only; birthday ribbon starts the ceremony.
+// Real entry regressions: ordinary Party stays greeting-only; the birthday preview ribbon starts the ceremony.
 "use strict";
 
 var lib = require("./lib");
@@ -89,7 +89,7 @@ check(r && !r.beforeEight.card && r.afterEight.card && r.afterEight.matching && 
 check(r && r.repeat.available, "the birthday action remains available after closing the postcard", r && r.repeat);
 check(r && r.errors.length === 0, "no uncaught JavaScript errors", r && r.errors);
 
-console.log("loft-day.html birthday ribbon flow:");
+console.log("loft-day.html birthday preview ribbon flow:");
 var banner = lib.runPageSync("loft-day.html", BANNER_HARNESS, 19000, {
   patchRaf: true,
   forceMotion: true,
@@ -98,10 +98,10 @@ var banner = lib.runPageSync("loft-day.html", BANNER_HARNESS, 19000, {
 });
 
 check(banner && banner.before.splash && banner.before.banner && !banner.before.party && !banner.before.card && !banner.before.cake,
-  "the birthday ribbon is available without auto-starting its ceremony", banner && banner.before);
+  "the birthday preview ribbon is available without auto-starting its ceremony", banner && banner.before);
 check(banner && banner.started.started && banner.started.phase2 && banner.started.party && banner.started.room === "garden" &&
     banner.started.message && banner.started.cake && !banner.started.card,
-  "the real ribbon fast-forwards to Party, delivers the greeting, and starts the cake", banner && banner.started);
+  "the preview ribbon fast-forwards to Party, delivers the greeting, and starts the cake", banner && banner.started);
 check(banner && !banner.beforeEight.card && banner.afterEight.card && banner.afterEight.matching && banner.afterEight.image,
   "the ribbon-owned matching postcard waits for the same eight-second beat", { before: banner && banner.beforeEight, after: banner && banner.afterEight });
 check(banner && banner.errors.length === 0, "the ribbon path has no uncaught JavaScript errors", banner && banner.errors);

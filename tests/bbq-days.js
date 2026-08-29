@@ -23,7 +23,7 @@ function harness(cfg) {
   check("is an open-BBQ occasion day", window.__bbqDateNow());
   check("keeps its own seasonal decor", document.getElementById("loft-game-strip").classList.contains(${JSON.stringify(cfg.decor)}));
   var banner = document.getElementById("occasion-banner");
-  check("keeps its own permanent banner", !!banner && banner.getAttribute("data-i") === ${JSON.stringify(cfg.banner)}, banner && banner.getAttribute("data-i"));
+  check("keeps its own date-preview banner", !!banner && banner.getAttribute("data-i") === ${JSON.stringify(cfg.banner)}, banner && banner.getAttribute("data-i"));
   check("BBQ prompt waits through phase one", !window.__phoneMessageReceived("bbq"));
 
   window.__setPartyMode(true);

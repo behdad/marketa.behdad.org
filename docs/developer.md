@@ -371,6 +371,11 @@ object or visible control still needs an equivalent click/tap path. Mobile drag 
 on a delegated non-passive `touchmove` listener on the SVG strip; `touch-action` on SVG children is
 not reliable.
 
+Target-specific `contextmenu` handlers claim supported props and devices first. The final
+viewport-level guard only prevents the browser menu; it must never synthesize a room action. This
+keeps mouse right-click and touch long-press inside the game while Enter remains the sole global
+solve walker.
+
 ### Captions and coaches
 
 `captionArbiter` is the only writer of `#hunt-caption`; `tests/check.js` enforces that boundary. It

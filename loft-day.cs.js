@@ -1371,7 +1371,6 @@ window.__loftMessages["cs"] = {
     ]
   ],
   "sat_call_sub": "Sobota, jako vždycky",
-  "scene_ctx_solve": "Vyřešit",
   "season_auto": "⛅ zpátky k dnešku",
   "season_autumn": "🍂 podzim",
   "season_canada": "🍁 den Kanady",

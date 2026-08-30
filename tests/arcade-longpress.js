@@ -7,15 +7,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <script>
 (function () {
   var report = { errors: [], steps: {} };
+  function menus() {
+    return [].map.call(document.querySelectorAll(".mon-ctx,.console-ctx.show"), function (menu) {
+      return menu.textContent.trim();
+    });
+  }
   function hold(name, host, target) {
-    window.__closeSceneContextMenu();
+    document.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
     if (name) host.classList.add(name);
     target.dispatchEvent(new Event("touchstart", { bubbles: true, cancelable: true }));
     var event = new MouseEvent("contextmenu", {
       bubbles: true, cancelable: true, clientX: 120, clientY: 120
     });
     var prevented = !target.dispatchEvent(event);
-    var menu = window.__sceneContextMenu();
+    var menu = menus();
     var selected = getComputedStyle(target).userSelect;
     if (name) host.classList.remove(name);
     return { prevented: prevented, menu: menu, userSelect: selected };
@@ -43,13 +48,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.steps.entranceCar = hold("", document.getElementById("entrance-room"),
           document.getElementById("entrance-porsche"));
         window.__closeEntranceRoom();
-        window.__closeSceneContextMenu();
         office.classList.add("arcade");
         var desktop = new MouseEvent("contextmenu", {
           bubbles: true, cancelable: true, clientX: 130, clientY: 130
         });
-        document.getElementById("office-chair").dispatchEvent(desktop);
-        report.steps.desktop = { menu: window.__sceneContextMenu() };
+        var desktopPrevented = !document.getElementById("office-chair").dispatchEvent(desktop);
+        report.steps.desktop = { prevented: desktopPrevented, menu: menus() };
         office.classList.remove("arcade");
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
@@ -79,13 +83,17 @@ if (!result) {
   process.exit(1);
 }
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-["flair", "invaders", "tetris", "roomPacman", "monitorPacman"].forEach(function (name) {
+["flair", "invaders", "tetris", "roomPacman"].forEach(function (name) {
   var step = result.steps[name];
   check(step && step.prevented && step.menu.length === 0 && step.userSelect === "none",
     name + " consumes a touch-generated context menu without opening Solve/Escape", step);
 });
-check(result.steps.desktop && result.steps.desktop.menu.length > 0,
-  "an ordinary desktop right-click remains available", result.steps.desktop);
+check(result.steps.monitorPacman && result.steps.monitorPacman.prevented &&
+  JSON.stringify(result.steps.monitorPacman.menu) === JSON.stringify(["Kill app"]) &&
+  result.steps.monitorPacman.userSelect === "none",
+  "Hack-Man keeps its intentional app action without opening Solve", result.steps.monitorPacman);
+check(result.steps.desktop && result.steps.desktop.prevented && result.steps.desktop.menu.length === 0,
+  "an ordinary desktop right-click is consumed without opening Solve", result.steps.desktop);
 check(result.steps.entranceCar && result.steps.entranceCar.prevented &&
   result.steps.entranceCar.menu.length === 0,
   "a downstairs car hold never leaks the phase-one Solve menu", result.steps.entranceCar);

@@ -99,7 +99,8 @@ If you are unsure what comes next:
 
 - Click or tap an object to use it. Some objects can be dragged; a short tap still performs their
   ordinary action.
-- Right-click opens local actions. On touch, press and hold without moving.
+- Right-click opens local actions on supported objects and devices. On touch, press and hold without
+  moving. Elsewhere the game consumes the gesture without opening a menu.
 - Double-click or double-tap only for deliberate early unlocks in the map or floor control; ordinary
   actions need one selection.
 - Use × or Back to close a layer. From an idle lower room, use Up to return to its main room.

@@ -38948,8 +38948,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-d40699d3915b"></script>
-<script src="loft-day.cs.js?v=dict-8d745e35b677"></script>
+<script src="loft-day.en.js?v=dict-db3730de7b28"></script>
+<script src="loft-day.cs.js?v=dict-8355d8fb0fb2"></script>
 <script src="code-snippets/manifest.js?v=transport-8e2570670d9e"></script>
 <script>
 (function () {
@@ -117820,7 +117820,6 @@ function spawnDustMote(container) {
         (spec.floor === "lower" ? activeLowerRoom().id === spec.room : window.__currentStageName === spec.room);
     });
     setDollhouseCursor(selected >= 0 ? selected : 0);
-    if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     return true;
   }
   function toggleDollhouse() {
@@ -118312,7 +118311,6 @@ function spawnDustMote(container) {
   }
   function openLowerPortalMenu(event, enterLowerRoom) {
     closeLowerPortalMenu();
-    if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     lowerPortalMenu = document.createElement("div");
     lowerPortalMenu.className = "mon-ctx scene-ctx lower-portal-ctx";
     var unlock = document.createElement("button");
@@ -119669,7 +119667,6 @@ function spawnDustMote(container) {
     var rosterOpen = rosterHoldsOccupants();
     var rosterNavigation = !!(opts && opts.rosterNavigation);
     if (rosterOpen && name !== window.__currentStageName && !rosterNavigation) return false;
-    if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     var idx = STAGES.indexOf(name);
     if (idx === -1) return false;
     stageVisitGeneration++;
@@ -119932,96 +119929,17 @@ function spawnDustMote(container) {
     arcadeTouchContextUntil = 0;
     e.preventDefault();
   }, true);
-  // The whole loft shares a small room-action fallback. Target-specific menus (DJ, devices,
-  // magic box…) claim the event first; every other right-click inside the scene gets this menu
-  // so browser chrome never covers the game.
-  (function () {
-    var menu = null;
-    function tr(key) {
-      var l = document.documentElement.lang;
-      return (T[l] && T[l][key]) || T.en[key] || key;
-    }
-    function closeMenu() {
-      if (!menu) return;
-      menu.remove();
-      menu = null;
-      document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("mousedown", onAway, true);
-      document.removeEventListener("scroll", closeMenu, true);
-      window.removeEventListener("blur", closeMenu);
-      window.removeEventListener("resize", closeMenu);
-    }
-    function onAway(e) { if (menu && !menu.contains(e.target)) closeMenu(); }
-    function onKey(e) {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      closeMenu();
-    }
-    function item(cls, icon, key, fn) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = cls;
-      b.innerHTML = '<span class="ctx-ico">' + icon + '</span><span>' + tr(key) + "</span>";
-      b.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeMenu();
-        fn();
-      });
-      return b;
-    }
-    function phaseOneFrontier() {
-      return !lowerRoomOwnsViewport() && !window.__secondRound && !roomSolved(STAGES[stageIndex]);
-    }
-    function solveNext() {
-      var room = STAGES[stageIndex];
-      var fn = window["__" + room + "DoNext"];
-      if (typeof fn === "function") fn();
-    }
-    function openMenu(x, y) {
-      closeMenu();
-      var items = [];
-      if (phaseOneFrontier()) {
-        items.push(item("ctx-solve", "✓", "scene_ctx_solve", solveNext));
-      }
-      if (!items.length) return false;
-      menu = document.createElement("div");
-      menu.className = "mon-ctx scene-ctx";
-      items.forEach(function (b) { menu.appendChild(b); });
-      menu.style.visibility = "hidden";
-      var viewport = document.querySelector(".hunt-viewport");
-      if (!viewport) { menu = null; return false; }
-      var host = document.fullscreenElement || document.webkitFullscreenElement ||
-        document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
-      host.appendChild(menu);
-      var r = menu.getBoundingClientRect();
-      var vr = viewport.getBoundingClientRect();
-      menu.style.left = Math.max(vr.left + 4, Math.min(x, vr.right - r.width - 4)) + "px";
-      menu.style.top = Math.max(vr.top + 4, Math.min(y, vr.bottom - r.height - 4)) + "px";
-      menu.style.visibility = "";
-      document.addEventListener("keydown", onKey, true);
-      document.addEventListener("mousedown", onAway, true);
-      document.addEventListener("scroll", closeMenu, true);
-      window.addEventListener("blur", closeMenu);
-      window.addEventListener("resize", closeMenu);
-      return true;
-    }
-    document.addEventListener("contextmenu", function (e) {
-      if (e.defaultPrevented) return;
-      var viewport = document.querySelector(".hunt-viewport");
-      var vr = viewport && viewport.getBoundingClientRect();
-      var targetInside = !!(e.target && e.target.closest && e.target.closest(".hunt-viewport"));
-      var pointInside = !!(vr && e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom);
-      if (!targetInside && !pointInside) return;
-      e.preventDefault();
-      openMenu(e.clientX, e.clientY);
-    });
-    window.__sceneContextMenu = function () {
-      return menu ? [].map.call(menu.querySelectorAll("button span:last-child"), function (s) { return s.textContent; }) : [];
-    };
-    window.__closeSceneContextMenu = closeMenu;
-  })();
+  // Target-specific menus (DJ, devices, magic box…) claim contextmenu first. Everywhere
+  // else inside the game, consume mouse right-click and touch long-press without exposing
+  // browser chrome or a room-solving shortcut; Enter remains the only global solve walker.
+  document.addEventListener("contextmenu", function (e) {
+    if (e.defaultPrevented) return;
+    var viewport = document.querySelector(".hunt-viewport");
+    var vr = viewport && viewport.getBoundingClientRect();
+    var targetInside = !!(e.target && e.target.closest && e.target.closest(".hunt-viewport"));
+    var pointInside = !!(vr && e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom);
+    if (targetInside || pointInside) e.preventDefault();
+  });
   // Right-clicking an EMPTY area of any custom context menu shouldn't summon the native browser
   // menu on top of it. One capture-phase guard covers them all (every custom menu carries .mon-ctx
   // — mon-ctx/desktop/laptop/phone — or .console-ctx).

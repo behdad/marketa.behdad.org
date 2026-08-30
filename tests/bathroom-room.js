@@ -151,7 +151,7 @@ check(s.enterTub && s.enterTub.starting.tubFilling && s.enterTub.once.filled && 
   "bare Enter fills the tub once without draining it on a second press", s.enterTub);
 check(s.functional && s.functional.water === "M119 139V171",
   "the faucet stream falls from the midpoint between both faucet uprights", s.functional);
-check(s.functional && s.functional.towelOrigin === "44px 0px" &&
+check(s.functional && s.functional.towelOrigin === "58px 0px" &&
   s.functional.towelBox === "fill-box" &&
   s.functional.stoolOrigin === "380px 332px",
   "the towel turns from its rail and the stool wobbles from its feet", s.functional);
@@ -241,6 +241,9 @@ check(/@media \(any-pointer:coarse\)\{\.bathroom-bubble-hit\{r:40px\}\}/.test(so
 check(/\.bathroom-bubble\.aimed > circle:nth-of-type\(2\)\{stroke:#f6d98a;stroke-width:3\}/.test(source) &&
   /\.bathroom-stool-aim\{[\s\S]*?stroke-dasharray:3 4/.test(source),
   "the Bubble-gun lane and lock use existing bubbles plus a transient guide");
+check(/@keyframes bathroom-towel-fluff\{[\s\S]*?skewX\(-4deg\)[\s\S]*?skewX\(2\.6deg\)/.test(source) &&
+  !/@keyframes bathroom-towel-fluff\{[^}]*rotate/.test(source),
+  "the towel deforms like fabric instead of rotating as a rigid panel");
 ["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-waffle-towel",
  "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
  "bathroom-toilet-action", "bathroom-toilet-book", "bathroom-book-motion", "bathroom-book-action",

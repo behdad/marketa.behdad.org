@@ -169,6 +169,13 @@ current upper room to its pair, and `__navigateLowerRoom` owns entering and leav
 dollhouse, number keys, arrows, and direct scene controls must converge on these owners rather than
 inventing parallel navigation.
 
+`princeDungeonProgress` owns the Dungeon's settled torches, loose stone, potion, and awakening state.
+`syncPrinceDungeonProgress()` is the only DOM/caption projection; pointer props and bare `Enter`
+converge through it, while the `dungeon-awakening` checkpoint adapter restores the revealed wall
+without constructing the Prince iframe. The ordinary UI cannot start Prince before the reveal;
+`dungeon.game.start` preserves its automation contract by settling the reveal immediately and still
+constructs the iframe lazily at game start.
+
 The combined opening landmarks coach blocks scene input while leaving the explicit whole-loft Reset
 available. Its two arrows share one card and point to the top navigation and bottom instruction plate.
 
@@ -195,8 +202,9 @@ withheld: cold cards expose a per-card progress indicator, while a missing light
 keeps showing its last capture until the replacement lands. Each capture records a semantic key
 (lighting/Party variant plus that room's occupant assignment), so only explicit Party/lighting
 transitions schedule work. Animation phase and the
-Garden card's fixed four-pool composition never invalidate the cache. Dungeon remains the direct
-static vector card because it has no authored state variation.
+Garden card's fixed four-pool composition never invalidate the cache. Dungeon remains a direct
+static vector card in its canonical sealed state; its live awakening does not invalidate or capture
+a second dollhouse variant.
 
 The Office monitor retains app DOM and runtime state across zoom and room changes. At room scale,
 HTML stays in its canonical `foreignObject`; zoom promotes the foreground root itself, not a clone,

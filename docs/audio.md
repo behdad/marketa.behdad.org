@@ -106,7 +106,11 @@ lateral lower-room pans cannot click or leave stale attenuation behind.
 Local one-shot SFX deliberately bypass the boundary: a bathroom faucet or
 entrance window was touched in the room the visitor occupies and should remain
 present. The dungeon's autonomous ceiling-drip plink follows the standard
-hidden-or-unfocused gate before touching the shared SFX context. Opening the
+hidden-or-unfocused gate before touching the shared SFX context. Its old-game
+melody is no longer an entry cue: the completed torch–stone–potion–chain awakening
+starts it once, while checkpoint restore and later room entries settle silently. Drinking the
+potion decodes PrinceJS's pinned `31_Drink_potion_glug_glug.mp3` cue from an inline data URL
+through the shared SFX context. Opening the
 Bathroom synchronously cancels Pouria's in-flight ambient
 or player cocktail make, so its queued pours and shaker rattles cannot bypass
 the boundary from the bar above. `__roomAutonomyAllowed(room)` is the shared

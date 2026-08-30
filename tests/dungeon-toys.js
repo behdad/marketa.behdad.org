@@ -94,7 +94,7 @@ check(/\.prince-dungeon-prop\{[\s\S]*?-webkit-tap-highlight-color:transparent;[\
   /\.prince-dungeon-prop:focus,\.prince-dungeon-prop:focus-visible\{outline:0\}/.test(source),
   "Dungeon props suppress focus borders, touch callouts, highlights, and selection");
 check(/#prince-dungeon-drip\{[\s\S]*?left:17%;[\s\S]*?height:83%;/.test(source) &&
-  /#prince-dungeon-puddle\{[\s\S]*?transform:translateY\(2px\)/.test(source),
+  /#prince-dungeon-puddle\{[\s\S]*?transform:translateY\(7px\)/.test(source),
   "the drip clears the sealed door and its puddle sits at floor level");
 
 console.log("");

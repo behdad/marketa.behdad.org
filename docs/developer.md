@@ -37,9 +37,11 @@ remain page-owned:
   the large inline game so browsers can paint the useful page while the game is still arriving. The
   saved-session recovery gate may take keyboard focus, but must preserve that invitation scroll position.
 
-The root `index.html` is a lightweight, reverse-chronological hub for the published drops. Keep a new
-invitation feature in `egg-hunt.html` and a new game feature in `loft-day.html` unless there is a
-strong architectural reason to create another public file.
+The root `index.html` is a lightweight, reverse-chronological hub for the published drops. Its
+self-contained sound controller owns the opt-in savanna ambience and synchronized goose-flight
+replay; it does not reach into Loft Day's audio graph. Keep a new invitation feature in
+`egg-hunt.html` and a new game feature in `loft-day.html` unless there is a strong architectural
+reason to create another public file.
 
 Supporting boundaries are:
 

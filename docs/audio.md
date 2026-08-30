@@ -4,16 +4,6 @@ All sound owned by `loft-day.html` is Web Audio built on **one shared `AudioCont
 graph, the lifecycle rules, and the gotchas — read it before touching any `start*/stop*`
 sound function, `getSfxCtx`, the song pipeline, or the idle/focus gating.
 
-## Root hub audio (separate document)
-
-`index.html` has one independent, lazily created `AudioContext`; it cannot share nodes with Loft Day
-because navigation replaces the document. Its explicit Sound control starts a spatial savanna bed
-(separate left/right wind, insects, and bounded distant bird calls) and restarts the geese so their
-filtered wing rush and honks pan from left to right with the 24-second flight. Mute, blur, hide, and
-page exit fade and stop every owned source. Refocus restores only the opted-in ambience, not an
-interrupted flock; pressing Sound again deliberately replays the visual and audio flight together.
-`tests/index-audio.js` covers the one-context, stereo-node, bilingual-control, and lifecycle boundary.
-
 The shoot launcher has one contained exception: all three shooters run in disposable
 same-origin iframe documents. Duke and Quake III construct engine-owned SDL/MIDI
 contexts; Doom remains `-nosound`. Only one shooter iframe exists at a time. The

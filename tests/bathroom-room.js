@@ -149,7 +149,7 @@ check(s.enterTub && s.enterTub.starting.tubFilling && s.enterTub.once.filled && 
   s.enterTub.twice.filled && s.enterTub.twice.state.bubbles.active &&
   s.enterTub.once.state.hits["tub-fill"] === s.enterTub.twice.state.hits["tub-fill"],
   "bare Enter fills the tub once without draining it on a second press", s.enterTub);
-check(s.functional && s.functional.water === "M119 139V171",
+check(s.functional && s.functional.water === "M116 139V171",
   "the faucet stream falls from the midpoint between both faucet uprights", s.functional);
 check(s.functional && s.functional.towelOrigin === "58px 0px" &&
   s.functional.towelBox === "fill-box" &&

@@ -2651,6 +2651,14 @@ html.mir-resume-pending #hunt-caption{visibility:hidden}
 #bathroom-room.cabinet-open #bathroom-cabinet-inside{opacity:1}
 #bathroom-room.cabinet-open #bathroom-cabinet-left-door{transform:translateX(-3px) scaleX(.2)}
 #bathroom-room.cabinet-open #bathroom-cabinet-right-door{transform:translateX(3px) scaleX(.2)}
+#bathroom-vanity-top-inside,#bathroom-vanity-bottom-inside{opacity:0;transition:opacity .22s ease}
+#bathroom-vanity-top-motion,#bathroom-vanity-bottom-motion{
+  transform-box:fill-box;transform-origin:50% 0;transition:transform .3s cubic-bezier(.2,.75,.25,1)
+}
+#bathroom-room.vanity-top-open #bathroom-vanity-top-inside,
+#bathroom-room.vanity-bottom-open #bathroom-vanity-bottom-inside{opacity:1}
+#bathroom-room.vanity-top-open #bathroom-vanity-top-motion,
+#bathroom-room.vanity-bottom-open #bathroom-vanity-bottom-motion{transform:translateY(8px)}
 #bathroom-room.sink-running #bathroom-sink-water{opacity:1;animation:bathroom-water-run .78s ease-in-out}
 #bathroom-room.mirror-shimmer #bathroom-mirror-gleam{animation:bathroom-mirror-shimmer .72s ease-out}
 #bathroom-room.towel-fluff #bathroom-waffle-towel{animation:bathroom-towel-fluff .62s ease-in-out}
@@ -33933,9 +33941,27 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <g id="bathroom-sink" data-bath-action="sink" class="hunt-hit">
           <g id="bathroom-sink-vanity" transform="translate(2 0)">
             <rect x="24" y="176" width="174" height="137" rx="4" fill="#425356" stroke="#29383a" stroke-width="3"/>
-            <rect x="34" y="204" width="154" height="45" rx="3" fill="#526669" stroke="#2e4143" stroke-width="2"/>
-            <rect x="34" y="257" width="154" height="46" rx="3" fill="#526669" stroke="#2e4143" stroke-width="2"/>
-            <circle cx="111" cy="227" r="3" fill="#c7a36d"/><circle cx="111" cy="280" r="3" fill="#c7a36d"/>
+            <g id="bathroom-vanity-top" data-bath-action="vanity-top" class="hunt-hit">
+              <g id="bathroom-vanity-top-inside">
+                <rect x="35" y="202" width="152" height="14" rx="3" fill="#263638"/>
+                <path d="M47 211H80V204H47ZM88 211H121V205H88Z" fill="#d4d0c9" stroke="#8f8a84" stroke-width=".8"/>
+                <rect x="136" y="204" width="9" height="8" rx="2" fill="#a9c7bd"/><rect x="149" y="206" width="23" height="6" rx="3" fill="#d9a6a6"/>
+              </g>
+              <g id="bathroom-vanity-top-motion">
+                <rect x="34" y="204" width="154" height="45" rx="3" fill="#526669" stroke="#2e4143" stroke-width="2"/>
+                <circle cx="111" cy="227" r="3" fill="#c7a36d"/>
+              </g>
+            </g>
+            <g id="bathroom-vanity-bottom" data-bath-action="vanity-bottom" class="hunt-hit">
+              <g id="bathroom-vanity-bottom-inside">
+                <rect x="35" y="255" width="152" height="14" rx="3" fill="#263638"/>
+                <path d="M49 265H91V257H49ZM97 265H141V258H97ZM147 265H174V259H147Z" fill="#bfc8c5" stroke="#7f8986" stroke-width=".8"/>
+              </g>
+              <g id="bathroom-vanity-bottom-motion">
+                <rect x="34" y="257" width="154" height="46" rx="3" fill="#526669" stroke="#2e4143" stroke-width="2"/>
+                <circle cx="111" cy="280" r="3" fill="#c7a36d"/>
+              </g>
+            </g>
           </g>
           <path d="M14 163Q19 150 37 149H194Q210 150 214 164L200 193H29Q17 184 14 163Z" fill="url(#bathroom-porcelain)" stroke="#bbbcb8" stroke-width="2"/>
           <path d="M42 160Q50 154 69 154H169Q186 155 188 162L177 181H54Q44 175 42 160Z" fill="#d0d7d5" stroke="#afb6b3"/>
@@ -39203,7 +39229,7 @@ window.__bathroomRoomOpen = false;
   var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "tub-filling", "tub-draining", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open", "paper-unrolled",
     "toilet-flush", "book-open", "book-flip", "spare-paper-shift", "espresso-lift", "toothbrush-wiggle", "comb-rake", "soap-pump",
-    "bubble-hunt", "bubble-complete", "bubble-game-over"];
+    "vanity-top-open", "vanity-bottom-open", "bubble-hunt", "bubble-complete", "bubble-game-over"];
   if (!room || !viewport || !art || !stoolPosition ||
       !stool || !scaleNeedle || !scaleReading || !bubbleHudScore || !bubbleHudHigh ||
       !bubbleHudTime || !bubbleHudResult || !bubbleHudClose ||
@@ -39510,6 +39536,9 @@ window.__bathroomRoomOpen = false;
     if (action === "sink") {
       pulseClass("sink-running", 850);
       bathroomSound("water");
+    } else if (action === "vanity-top" || action === "vanity-bottom") {
+      room.classList.toggle(action + "-open");
+      bathroomSound("creak");
     } else if (action === "mirror") {
       pulseClass("mirror-shimmer", 780);
       if (room.classList.contains("tub-filled")) {

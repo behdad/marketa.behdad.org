@@ -8870,7 +8870,8 @@ html.mir-uv #prince-dungeon-set.gate-secret-peek #prince-dungeon-secret-light{
   opacity:.86;
   transform:translateY(0) scale(1);
 }
-#prince-dungeon-set.chain-dragging #prince-dungeon-gate{transition:none}
+#prince-dungeon-set.chain-dragging #prince-dungeon-gate,
+#prince-dungeon-set.chain-dragging #prince-dungeon-chain{transition:none}
 #prince-dungeon-chain{
   right:7%;
   top:8%;
@@ -8879,6 +8880,7 @@ html.mir-uv #prince-dungeon-set.gate-secret-peek #prince-dungeon-secret-light{
   z-index:3;
   transform:translate(var(--prince-chain-x,0px),var(--prince-chain-y,0px));
   transform-origin:50% 0;
+  transition:transform .32s cubic-bezier(.3,.8,.45,1);
   background:repeating-linear-gradient(0deg,transparent 0 8%,#788494 8% 13%,transparent 13% 18%);
   cursor:grab;
 }
@@ -88837,6 +88839,7 @@ def colormode(mode=None):
     if (!princeDungeonProgress.torchLeft || !princeDungeonProgress.torchRight ||
         !princeDungeonProgress.stone || !princeDungeonProgress.potion) return false;
     princeDungeonProgress.awakened = true;
+    setPrinceChainPosition(0, 78);
     clearTimeout(princeGateSecretTimer);
     princeGateSecretTimer = null;
     if (princeDungeonSet) princeDungeonSet.classList.remove("gate-secret-peek");
@@ -88877,11 +88880,12 @@ def colormode(mode=None):
     princeDungeonSet.style.setProperty("--prince-gate-lift", "0px");
     if (princeDungeonRat) princeDungeonRat.classList.remove("scurrying");
     princeChainPointer = null;
-    princeChainX = princeChainY = 0;
+    princeChainX = 0;
+    princeChainY = princeDungeonProgress.awakened ? 78 : 0;
     princeChainMoved = princeChainSuppressClick = false;
     if (princeDungeonChain) {
       princeDungeonChain.style.setProperty("--prince-chain-x", "0px");
-      princeDungeonChain.style.setProperty("--prince-chain-y", "0px");
+      princeDungeonChain.style.setProperty("--prince-chain-y", princeChainY + "px");
     }
     syncPrinceDungeonProgress(false);
   }
@@ -89090,7 +89094,7 @@ def colormode(mode=None):
     if (princeDungeonSet) princeDungeonSet.classList.remove("chain-dragging");
     var heldSecret = princeDungeonSet && princeDungeonSet.classList.contains("gate-secret-peek");
     if (princeDungeonProgress.awakened) {
-      setPrinceChainPosition(0, 0);
+      setPrinceChainPosition(0, 78);
       syncPrinceDungeonProgress(true);
     } else if (heldSecret) {
       clearTimeout(princeGateSecretTimer);

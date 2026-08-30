@@ -65,9 +65,10 @@ check(s.left && s.left.state.torchLeft && !s.left.state.torchRight &&
   "bare Enter lights both torches, finds the potion, and drinks it one beat at a time",
   { left: s.left, lit: s.lit, potionFound: s.potionFound, potionDrunk: s.potionDrunk });
 check(s.awakened && s.awakened.state.awakened && s.awakened.frame === 0 &&
+  s.awakened.state.chainX === 0 && s.awakened.state.chainY === 78 &&
   !s.awakened.wallDisabled && s.awakened.revealedClass &&
   s.awakened.caption === "prince_awake",
-  "the next Enter reveals the palace and play emblem without eagerly constructing Prince", s.awakened);
+  "the next Enter pulls down the chain and reveals the palace without eagerly constructing Prince", s.awakened);
 check(s.saved && s.saved.awakened && s.saved.stone && s.saved.potion && s.saved.torchLeft && s.saved.torchRight,
   "the checkpoint adapter captures the settled awakening without an iframe", s.saved);
 check(s.started && s.started.frame && s.started.src === "princejs/index.html" &&

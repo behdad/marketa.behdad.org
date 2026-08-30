@@ -72,8 +72,8 @@ check(s.emptyTap && s.emptyTap.tapped && s.emptyTap.state.potion && s.emptyTap.s
 check(s.revealDrag && s.revealDrag.awakened && s.revealDrag.chainY === 78 &&
   s.revealed && s.revealed.state.awakened && !s.revealed.wallDisabled &&
   s.revealed.caption === "prince_awake" && s.later && s.later.awakened &&
-  s.later.chainX === 0 && s.later.chainY === 0,
-  "a ready chain drag reveals Prince permanently while the weight returns to rest",
+  s.later.chainX === 0 && s.later.chainY === 78,
+  "a ready chain drag reveals Prince permanently and leaves the weight pulled down",
   { drag: s.revealDrag, revealed: s.revealed, later: s.later });
 check(s.later && s.later.dripNodes === 1 && s.later.dripRunning,
   "the single ceiling drop replenishes without accumulating nodes", s.later);

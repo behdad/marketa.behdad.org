@@ -169,7 +169,8 @@ current upper room to its pair, and `__navigateLowerRoom` owns entering and leav
 dollhouse, number keys, arrows, and direct scene controls must converge on these owners rather than
 inventing parallel navigation.
 
-`princeDungeonProgress` owns the Dungeon's settled torches, loose stone, potion, and awakening state.
+`princeDungeonProgress` owns the Dungeon's settled torches, loose stone, potion, and awakening state;
+the awakened projection also keeps the gate chain in its pulled rest position.
 `syncPrinceDungeonProgress()` is the only DOM/caption projection; pointer props and bare `Enter`
 converge through it, while the `dungeon-awakening` checkpoint adapter restores the revealed wall
 without constructing the Prince iframe. The ordinary UI cannot start Prince before the reveal;

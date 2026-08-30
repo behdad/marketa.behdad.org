@@ -13,11 +13,12 @@ var HARNESS = [
   'function click(id){document.getElementById(id).dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__releaseCat(true);window.__goToStage("garden");window.__openGardenPrince();await sleep(100);',
-  'report.steps.open={state:window.__princeDungeonState(),rat:document.getElementById("prince-dungeon-rat").classList.contains("scurrying"),catParent:document.getElementById("witchy-chest-cat-pos").parentNode.id,catReaction:window.__dungeonCatRatReaction(),wallDisabled:document.getElementById("prince-play-wall").disabled};',
+  'function seal(){var style=getComputedStyle(document.querySelector(".prince-seal-lock"));return {border:style.borderTopColor,shadow:style.boxShadow};}',
+  'report.steps.open={state:window.__princeDungeonState(),rat:document.getElementById("prince-dungeon-rat").classList.contains("scurrying"),catParent:document.getElementById("witchy-chest-cat-pos").parentNode.id,catReaction:window.__dungeonCatRatReaction(),wallDisabled:document.getElementById("prince-play-wall").disabled,seal:seal(),hourglass:!!document.querySelector(".prince-seal-hourglass svg .sand")};',
   'function lights(){return ["left","right"].map(function(side){return Number(getComputedStyle(document.getElementById("prince-dungeon-light-"+side)).opacity);});}',
   'var chain=document.getElementById("prince-dungeon-chain"),rect=chain.getBoundingClientRect();chain.dispatchEvent(new PointerEvent("pointerdown",{pointerId:17,clientX:rect.left+5,clientY:rect.top+5,bubbles:true,cancelable:true}));chain.dispatchEvent(new PointerEvent("pointermove",{pointerId:17,clientX:rect.left+105,clientY:rect.top+205,bubbles:true,cancelable:true}));report.steps.drag=window.__princeDungeonState();chain.dispatchEvent(new PointerEvent("pointerup",{pointerId:17,clientX:rect.left+105,clientY:rect.top+205,bubbles:true,cancelable:true}));report.steps.drop=window.__princeDungeonState();',
   'await sleep(600);report.steps.earlySettled={state:window.__princeDungeonState(),caption:window.__captionKey()};click("prince-dungeon-torch-left");await sleep(360);report.steps.one={state:window.__princeDungeonState(),caption:window.__captionKey(),wallDisabled:document.getElementById("prince-play-wall").disabled,lights:lights()};',
-  'click("prince-dungeon-torch-right");await sleep(360);report.steps.lit={state:window.__princeDungeonState(),caption:window.__captionKey(),wallDisabled:document.getElementById("prince-play-wall").disabled,lights:lights()};',
+  'click("prince-dungeon-torch-right");await sleep(360);report.steps.lit={state:window.__princeDungeonState(),caption:window.__captionKey(),wallDisabled:document.getElementById("prince-play-wall").disabled,lights:lights(),seal:seal()};',
   'window.__setLang("cs");report.steps.cs={caption:document.getElementById("hunt-caption").textContent.trim()};window.__setLang("en");click("prince-dungeon-stone");await sleep(50);report.steps.potionFound={state:window.__princeDungeonState(),caption:window.__captionKey(),opacity:Number(getComputedStyle(document.getElementById("prince-dungeon-potion")).opacity)};click("prince-dungeon-potion");await sleep(50);var potion=document.getElementById("prince-dungeon-potion"),bubbles=potion.querySelector(".bubbles");report.steps.potionDrinking={state:window.__princeDungeonState(),caption:window.__captionKey(),drinking:potion.classList.contains("drinking"),animation:getComputedStyle(potion).animationName,bubbles:Number(getComputedStyle(bubbles).opacity)};await sleep(800);report.steps.potionDrunk={drunk:potion.classList.contains("drunk"),drinking:potion.classList.contains("drinking"),opacity:Number(getComputedStyle(potion).opacity),bubbles:Number(getComputedStyle(bubbles).opacity)};click("prince-dungeon-potion");await sleep(20);report.steps.emptyTap={tapped:potion.classList.contains("empty-tapped"),state:window.__princeDungeonState(),caption:window.__captionKey()};',
   'rect=chain.getBoundingClientRect();chain.dispatchEvent(new PointerEvent("pointerdown",{pointerId:18,clientX:rect.left+5,clientY:rect.top+5,bubbles:true,cancelable:true}));chain.dispatchEvent(new PointerEvent("pointermove",{pointerId:18,clientX:rect.left+5,clientY:rect.top+205,bubbles:true,cancelable:true}));report.steps.revealDrag=window.__princeDungeonState();chain.dispatchEvent(new PointerEvent("pointerup",{pointerId:18,clientX:rect.left+5,clientY:rect.top+205,bubbles:true,cancelable:true}));report.steps.revealed={state:window.__princeDungeonState(),caption:window.__captionKey(),wallDisabled:document.getElementById("prince-play-wall").disabled};',
   'await sleep(2450);report.steps.later=window.__princeDungeonState();window.__closeMonitorPrince();',
@@ -39,7 +40,7 @@ var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.open && s.open.state.dripNodes === 1 && s.open.state.dripRunning && s.open.rat &&
   s.open.catParent === "prince-cat-overlay" && s.open.catReaction &&
-  s.open.state.torchesOut === 2 && s.open.state.dark && s.open.wallDisabled,
+  s.open.state.torchesOut === 2 && s.open.state.dark && s.open.wallDisabled && s.open.hourglass,
   "one drip and one rat share the cold sealed dungeon with its routed cat", s.open);
 check(s.drag && s.drag.chainX === 14 && s.drag.chainY === 78 && parseFloat(s.drag.gateLift) >= 60 &&
   !s.drag.awakened && s.drop && !s.drop.awakened && s.earlySettled &&
@@ -54,6 +55,9 @@ check(s.one && s.one.state.torchesOut === 1 && !s.one.state.dark &&
 check(s.lit && s.lit.state.torchesOut === 0 && !s.lit.state.dark && !s.lit.state.ready &&
   s.lit.caption === "prince_torches_lit" && s.lit.wallDisabled && s.lit.lights.every(function (opacity) { return opacity > .5; }),
   "both flames reveal the loose-stone clue without revealing Prince", s.lit);
+check(s.open && s.lit && JSON.stringify(s.lit.seal) === JSON.stringify(s.open.seal),
+  "the drawn full hourglass seal stays visually inert when the second torch lights",
+  { cold: s.open && s.open.seal, lit: s.lit && s.lit.seal });
 check(s.cs && s.cs.caption === "Ve světle ohně je vidět uvolněný kámen v podlaze.",
   "the live loose-stone clue switches to Czech", s.cs);
 check(s.potionFound && s.potionFound.state.stone && !s.potionFound.state.potion && !s.potionFound.state.ready &&

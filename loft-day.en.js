@@ -1195,7 +1195,7 @@ window.__loftMessages["en"] = {
   "pr_date2": "Sun, July 11 · 11am–3pm",
   "pr_desc1": "Garden party: drinks, music, dinner, dancing, afterparty.",
   "pr_desc2": "Brunch.",
-  "pr_desc_half": "+ sleepover option available.",
+  "pr_desc_half": "+ Sleepover option available.",
   "pr_venue": "Both days at the summer house.",
   "prince_kill_line": "the hourglass runs out.",
   "prince_kill_title": "JAFFAR WINS",

@@ -1195,7 +1195,7 @@ window.__loftMessages["cs"] = {
   "pr_date2": "Ne 11. července · 11–15 h",
   "pr_desc1": "Zahradní slavnost: aperitiv, hudba, večeře, tanec a afterparty.",
   "pr_desc2": "Brunch.",
-  "pr_desc_half": "+ možnost přespání.",
+  "pr_desc_half": "+ Možnost přespání.",
   "pr_venue": "Oba dny na statku.",
   "prince_kill_line": "písek v přesýpacích hodinách došel.",
   "prince_kill_title": "JAFFAR VÍTĚZÍ",

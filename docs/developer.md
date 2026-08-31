@@ -658,6 +658,19 @@ gate or disconnect that feature's nodes. Read [the audio guide](audio.md) before
 weather, Party, cabin exposure, media capture, or route/Camping sound. It is the authoritative graph
 and lifecycle reference.
 
+The persistent rail mixer lives in `localStorage["loftAudioMix:v1"]` and exposes Master, Music,
+Ambience, and Effects. Master composes once with each category. `audioBed()` defaults to Ambience;
+musical beds that already read `__songVolume()` use `audioBed("music")`, while Party beds retain
+their departure-aware `audioBed("party")` route. One-shots use Master × Effects. The captured-song
+pipeline, Vimeo, and monitor Video receive Master × Music through their existing media owners. Do
+not route projector, Party, or Road Trip music through the Music app EQ: that EQ belongs only to the
+captured-song pipeline.
+
+`window.__audioMixState`, `__setAudioMixLevel`, and `__resetAudioMix` are the internal coordination
+hooks. The public boundary is `loft.volume.status()`,
+`loft.volume.{master,music,ambience,effects}.set()`, and `loft.volume.reset()`;
+`loft.volume.set()` remains the compatible Master shorthand.
+
 ### Rendering and browser constraints
 
 The scene is a large SVG strip with embedded HTML app surfaces. Two rules prevent many rendering

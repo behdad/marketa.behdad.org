@@ -105,6 +105,9 @@ If you are unsure what comes next:
   actions need one selection.
 - Use × or Back to close a layer. From an idle lower room, use Up to return to its main room.
 - On a narrow phone, landscape orientation gives the scenes and overlays more room.
+- The speaker button cycles the music level. Right-click it to open **Sound**. Master scales the
+  whole loft; Music, Ambience, and Effects adjust those parts independently. **Reset mix** restores
+  the authored balance, and the mix is remembered on this device.
 - At room scale, the first tap on the Office monitor or laptop only zooms the device; tap an app
   after it fills the view.
 - In the car, starting the engine reveals touch steering and accelerator/brake sliders. The centre
@@ -217,6 +220,7 @@ Game **Start over** clears the checkpoint and finale clock; it is separate from 
 **Reset files…**. The **Trailer** does not alter game progress.
 
 - English and Czech are available, and the choice persists when storage is allowed.
+- Sound-mixer choices persist separately from the game checkpoint.
 - Reduced-motion preferences simplify animation without removing activities.
 - Camera, torch, sharing, fullscreen, installation, and some computer toys need browser support or
   permission; denying them does not block the story.

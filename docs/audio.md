@@ -42,26 +42,26 @@ sites; must be exactly 1).
   factory so `audioBed` and `getSfxCtx` can't drift apart. `createStereoPanner` is exposed
   only if the real context has it (so `pannedOut`/`swirlBus` keep their mono fallback).
 
-## Three disjoint sub-buses on the one context
+## Category mixer on the one context
 
-Everything mixes at the single `ac.destination`, but through three independent paths — so
-their volume controls never double-scale:
+Everything mixes at the single `ac.destination`. The persistent `loftAudioMix:v1` settings expose
+Master, Music, Ambience, and Effects; Master composes once with each category:
 
-1. **Beds / dances** → `audioBed()`. Each bed's graph ends at the handle's `.destination`,
+1. **Continuous beds** → `audioBed()`. Each bed's graph ends at the handle's `.destination`,
    which is a per-bed unity **`_out` gain** → the shared lower-floor boundary →
-   `ac.destination`. The campsite's explicit `audioBed("outdoor")` route skips only the indoor
+   `ac.destination`. Ordinary and outdoor beds pass through the shared Ambience multiplier. The
+   campsite's explicit `audioBed("outdoor")` route skips only the indoor
    lower-floor filter while retaining the same shared master/context. Party dances alone insert one additional unity departure gain between
-   `_out` and the lower-floor boundary. Music/projector/dance beds
-   apply the volume-button level at their own in-graph `_masterGain` (`__songVolume()`);
-   ambient environmental beds (fire, aqua hush, wind…) sit at fixed low levels and are NOT
-   scaled by the button. The `bandari` source keeps its fast coastal 6/8 graph.
+   `_out` and the lower-floor boundary. Music/projector/dance beds use `audioBed("music")` or
+   `audioBed("party")` and apply Master × Music at their own in-graph `_masterGain`
+   (`__songVolume()`). Environmental beds retain their authored source balance beneath Master ×
+   Ambience. The `bandari` source keeps its fast coastal 6/8 graph.
 2. **One-shot SFX and the projector play-along piano** → `getSfxCtx()`. A persistent
    handle whose `.destination` is one **SFX master gain** (`_volMaster`) →
-   `ac.destination`. The piano keeps one filtered output bus on that handle and gives
+   `ac.destination`, set to Master × Effects. The piano keeps one filtered output bus on that handle and gives
    each pressed key short, self-terminating oscillator voices. It is deliberately
    independent of the night-sky backing bed, so transport pause silences the score but
-   not live keys. The public `loft.volume.set()` action (`__audioMaster`) scales this;
-   `__applySfxMaster()` pushes changes onto it.
+   not live keys. `__applySfxMaster()` pushes mixer changes onto it.
 3. **Songs (real recordings)** → the **pipeline** (`eqAudioCtx`), which uses the **raw
    shared context** (not a handle — it needs real `suspend/resume` and, crucially,
    `createMediaElementSource`, which irreversibly captures an `<audio>` element). Graph:
@@ -71,17 +71,21 @@ their volume controls never double-scale:
    room stereo panner; headphone mode crossfades to an HRTF panner whose restrained
    position follows the draggable office headphones.
 
-**Volume model (by design):** the in-scene volume **button** controls music/beds and the
-active cross-origin Cinema film (`__songVolume`), so you can turn program audio down to
-hear SFX. The public **`loft.volume.set()`** master (`__audioMaster`) is the god-knob over
-everything (SFX master + folded into `__songVolume`, including foreground films). Cinema's
+**Volume model (by design):** the rail and Office-monitor speakers retain their quick stepped Music
+control. Right-clicking the rail speaker opens the persistent four-channel mixer; both surfaces
+change the same Music value. The public
+**`loft.volume.set()`** remains the Master shorthand; `loft.volume.status()`, the four category
+setters, and `loft.volume.reset()` expose the complete model. Cinema's
 Vimeo player and the monitor Video app get the same smooth perceptual lift after that shared
-level: mute remains exactly 0, site 0.15 maps to 1/3, site 0.4 to 2/3, and full remains 1.
+Master × Music level: mute remains exactly 0, site 0.15 maps to 1/3, site 0.4 to 2/3, and full remains 1.
 Video's local continuous slider stays direct; using a shared volume button takes
 control back and reapplies the lifted site level. Other sources keep their existing linear
 levels. Overall level is otherwise the device's job. The headphone-mode
 filter (bass shelf + lowpass) lives only in the song pipeline — music-only, deliberately
 not applied to SFX/beds or Vimeo.
+
+The Music app EQ remains inside the captured-song pipeline only. Musical synth beds—projector,
+Party, Road Trip, and similar sources—follow the Music slider but never enter that EQ.
 
 The roughly 100-second Trailer owns Tumbalalaika as one temporary, gracefully faded loop. The score
 starts from the trusted Trailer click, spans the whole reel (including Road Trip, Camping, and the

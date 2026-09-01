@@ -21,7 +21,7 @@ function probe(width, height) {
         function (image) { return /\.svg$/.test(image.getAttribute("src")); }));
     setLang("en");
     check("RSVP names Loft Day in English",
-      cards[0].textContent.indexOf("Loft Day") !== -1 && cards[0].textContent.indexOf("Open RSVP") !== -1,
+      cards[0].querySelector("h2").textContent.trim() === "RSVP" && cards[0].textContent.indexOf("Loft Day") !== -1,
       cards[0].textContent);
     setLang("cs");
     check("both cards switch to Czech",

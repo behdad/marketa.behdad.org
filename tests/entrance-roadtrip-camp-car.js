@@ -54,6 +54,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         viewport.style.setProperty("--floor-pan", "100%");
         viewport.classList.add("entrance-room-open");
         var host = document.getElementById("entrance-roadtrip-camp-porsche");
+        var camp = document.getElementById("entrance-roadtrip-camp");
+        var epilogueCar = document.getElementById("entrance-roadtrip-camp-epilogue-car");
+        report.epilogueCar = { inactive: getComputedStyle(epilogueCar).display };
+        camp.classList.add("camp-sleep-epilogue");
+        report.epilogueCar.active = getComputedStyle(epilogueCar).display;
+        camp.classList.remove("camp-sleep-epilogue");
         var copy = host.querySelector(".entrance-roadtrip-camp-porsche-copy");
         var dragHit = copy.querySelector(".entrance-roadtrip-camp-car-drag-hit");
         var carHitHost = dragHit.parentNode;
@@ -267,6 +273,9 @@ check(result && result.hitMap && result.hitMap.count === 8 && result.hitMap.acti
   result.hitMap.alignedWithArt && result.hitMap.dragBelowControls,
   "seven controls and the body drag surface share the artwork's scaled coordinate group",
   result && result.hitMap);
+check(result && result.epilogueCar && result.epilogueCar.inactive === "none" &&
+  result.epilogueCar.active !== "none",
+  "the decorative epilogue car leaves hit testing until its scene is active", result && result.epilogueCar);
 check(result && result.points && result.points.every(function (row) {
   return row[1].indexOf(row[0]) >= 0 && row[1].every(function (action) {
     return action === row[0] || row[0] === "roof" && action === "window";

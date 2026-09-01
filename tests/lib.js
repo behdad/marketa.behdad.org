@@ -207,9 +207,81 @@ function runPage(file, harness, budgetMs, opts) {
   return attempt(1);
 }
 
+// Real-time CDP runner for focused tests that intentionally leave AudioContext or
+// animation loops alive. --dump-dom waits for Chrome's virtual-time idle/exit and
+// can hang after the report is already ready; CDP lets us read that report and
+// explicitly tear down the private browser instead.
+async function runPageCdp(file, harness, timeoutMs, opts) {
+  opts = opts || {};
+  var scratch = makeScratch(file, harness, hook(opts));
+  var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
+  var args = ["--headless=new", "--disable-gpu", "--mute-audio", "--window-size=1100,900",
+    "--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check",
+    "--remote-debugging-port=0"];
+  if (opts.chromeFlags) args.push.apply(args, opts.chromeFlags.trim().split(/\s+/));
+  args.push("file://" + scratch + (opts.urlSuffix || ""));
+  var chrome = child.spawn(process.env.CHROME_BIN || "google-chrome", args, { stdio: "ignore" });
+  var ws = null, nextId = 0, pending = new Map();
+  function delay(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+  function send(method, params) {
+    return new Promise(function (resolve, reject) {
+      var id = ++nextId;
+      pending.set(id, { resolve: resolve, reject: reject });
+      ws.send(JSON.stringify({ id: id, method: method, params: params || {} }));
+    });
+  }
+  var deadline = Date.now() + timeoutMs;
+  try {
+    var portFile = path.join(profile, "DevToolsActivePort"), port = null;
+    while (Date.now() < deadline && !port) {
+      try { port = fs.readFileSync(portFile, "utf8").split(/\r?\n/)[0]; } catch (_error) {}
+      if (!port) await delay(25);
+    }
+    if (!port) throw new Error("Chrome did not expose a CDP port");
+    var target = null;
+    while (Date.now() < deadline && !target) {
+      try {
+        var targets = await fetch("http://127.0.0.1:" + port + "/json/list").then(function (r) { return r.json(); });
+        target = targets.filter(function (item) { return item.type === "page" && /\/rsvp\.html/.test(item.url); })[0];
+      } catch (_error) {}
+      if (!target) await delay(25);
+    }
+    if (!target) throw new Error("Chrome did not expose the scratch page target");
+    ws = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise(function (resolve, reject) { ws.onopen = resolve; ws.onerror = reject; });
+    ws.onmessage = function (event) {
+      var message = JSON.parse(event.data);
+      if (!message.id || !pending.has(message.id)) return;
+      var waiter = pending.get(message.id); pending.delete(message.id);
+      if (message.error) waiter.reject(new Error(message.error.message)); else waiter.resolve(message.result);
+    };
+    while (Date.now() < deadline) {
+      var value = await send("Runtime.evaluate", {
+        expression: "(function(){var p=document.getElementById('__report');return p&&p.textContent!=='pending'?p.textContent:null;})()",
+        returnByValue: true
+      });
+      var text = value && value.result && value.result.value;
+      if (text) return JSON.parse(text);
+      await delay(25);
+    }
+    throw new Error("Timed out waiting for the page report");
+  } finally {
+    if (ws) try { ws.close(); } catch (_error) {}
+    chrome.kill("SIGTERM");
+    await new Promise(function (resolve) {
+      if (chrome.exitCode !== null) return resolve();
+      chrome.once("exit", resolve);
+      setTimeout(function () { if (chrome.exitCode === null) chrome.kill("SIGKILL"); resolve(); }, 1000);
+    });
+    removeScratch(scratch);
+    fs.rmSync(profile, { recursive: true, force: true });
+  }
+}
+
 module.exports = {
   ROOT: ROOT,
   hook: hook,
   runPage: runPage,
+  runPageCdp: runPageCdp,
   runPageSync: runPageSync
 };

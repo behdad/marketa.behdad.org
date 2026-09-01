@@ -64,19 +64,19 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 4200, {
-  forceMotion: true,
-  patchRaf: true,
-  seedRandom: true,
-  chromeFlags: "--autoplay-policy=no-user-gesture-required"
-});
-if (!result) { console.error("party audio fade: no report"); process.exit(1); }
-var failed = false;
-result.checks.forEach(function (item) {
-  console.log("  " + (item.pass ? "PASS" : "FAIL") + " " + item.name +
-    (item.pass || !item.detail ? "" : " - " + JSON.stringify(item.detail)));
-  if (!item.pass) failed = true;
-});
-if (result.errors.length) { failed = true; console.error("runtime errors:\n  " + result.errors.join("\n  ")); }
-if (failed) process.exit(1);
-console.log("party audio fade: all " + result.checks.length + " checks passed");
+(async function () {
+  var result = await lib.runPageCdp("rsvp.html", harness, 20000, {
+    forceMotion: true,
+    seedRandom: true,
+    chromeFlags: "--autoplay-policy=no-user-gesture-required"
+  });
+  var failed = false;
+  result.checks.forEach(function (item) {
+    console.log("  " + (item.pass ? "PASS" : "FAIL") + " " + item.name +
+      (item.pass || !item.detail ? "" : " - " + JSON.stringify(item.detail)));
+    if (!item.pass) failed = true;
+  });
+  if (result.errors.length) { failed = true; console.error("runtime errors:\n  " + result.errors.join("\n  ")); }
+  if (failed) process.exitCode = 1;
+  else console.log("party audio fade: all " + result.checks.length + " checks passed");
+})().catch(function (error) { console.error(error); process.exit(1); });

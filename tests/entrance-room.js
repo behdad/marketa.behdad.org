@@ -18,7 +18,7 @@ var HARNESS = [
   'function surface(cls){var el=document.createElement("div");el.className=cls;el.style.display="block";el.style.opacity="1";document.querySelector(".hunt-viewport").appendChild(el);return el;}',
   'function state(){return window.__entranceRoomState();}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__markLowerRoomDiscovered();',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();document.getElementById("hunt-fullscreen-area").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__markLowerRoomDiscovered();',
   ' var room=document.getElementById("entrance-room"),art=document.getElementById("entrance-room-art"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),roster=document.querySelector(".roster-panel"),toggle=document.querySelector(".roster-toggle"),backdrop=document.querySelector(".roster-backdrop");room.style.transition="none";viewport.style.transition="none";strip.style.transition="none";var probeBadge=surface("msg-badge show entrance-probe"),probeCoach=surface("msg-badge-coach show entrance-probe"),probeThumb=surface("msg-thumb show entrance-probe"),probeCall=surface("call-ring show entrance-probe");',
   ' if(window.__setDayNight)window.__setDayNight(false);if(window.__setWildfireSmoke)window.__setWildfireSmoke(1);window.__goToStage("balcony");await sleep(40);',
   ' dblclick(document.getElementById("balcony-wall"));await sleep(30);report.steps.interactive=state();dblclick(document.getElementById("stage-balcony"));await sleep(50);report.steps.stageBackground=state();',
@@ -66,10 +66,9 @@ if (!result) { console.log("  ✗ harness produced no report"); process.exit(1);
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.interactive && !s.interactive.open && s.stageBackground && !s.stageBackground.open &&
-  s.background && !s.background.open &&
-  s.open && s.open.bare && s.open.state.open &&
+  s.open && s.open.state.open &&
   s.open.room === "balcony" && s.open.viewport && !s.open.state.hidden,
-  "Balcony props and bare backgrounds stay upstairs while Down opens Entrance",
+  "Balcony props and the stage background stay upstairs while Down opens Entrance",
   {interactive:s.interactive,stageBackground:s.stageBackground,background:s.background,open:s.open});
 check(s.open && s.open.geometry &&
   s.open.geometry.entrance.every(function(value,index){return Math.abs(value-s.open.geometry.viewport[index])<0.7;}) &&

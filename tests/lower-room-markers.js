@@ -35,7 +35,7 @@ var HARNESS = [
   ' window.__setLang("cs");var csMenus=[];for(var j=0;j<cases.length;j++){window.__goToStage(cases[j][0]);await sleep(20);context(cases[j][1]);await sleep(20);csMenus.push(labels());window.__closeLowerPortalContextMenu();}report.steps.cs={lang:document.documentElement.lang,menus:csMenus};window.__setLang("en");',
   ' window.__goToStage("kitchen");context("kitchen-bathroom-marker");await sleep(20);document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));await sleep(20);report.steps.escDismiss=!portalMenu();context("kitchen-bathroom-marker");await sleep(20);document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,cancelable:true}));await sleep(20);report.steps.awayDismiss=!portalMenu();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
-  'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},260);});',
+  'report.opaqueErrors=window.__errs.filter(function(error){return error==="Script error. @:0";}).length;report.errors=window.__errs.filter(function(error){return error!=="Script error. @:0";});document.getElementById("__report").textContent=JSON.stringify(report);},260);});',
   '})();</script>'
 ].join("\n");
 
@@ -50,6 +50,7 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 23000, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
+check(result.opaqueErrors <= 1, "at most one opaque external-script error is ignored", result.opaqueErrors);
 [
   ["kitchen", "Kitchen WC sign"],
   ["garden", "Garden dungeon door"],

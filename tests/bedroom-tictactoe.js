@@ -52,13 +52,13 @@ if (!result) {
 }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.enterStart && s.enterStart.phase === "computer" && s.enterStart.aiPending &&
+check(s.enterStart && s.enterStart.phase === "idle" && !s.enterStart.aiPending &&
   count(s.enterStart.board, "X") === 0 && count(s.enterStart.board, "O") === 0 &&
-  s.enterAgain && s.enterAgain.phase === "computer" && s.enterAgain.aiPending &&
+  s.enterAgain && s.enterAgain.phase === "idle" && !s.enterAgain.aiPending &&
   count(s.enterAgain.board, "X") === 0 && count(s.enterAgain.board, "O") === 0 &&
-  s.enterReply && s.enterReply.phase === "player" &&
-  count(s.enterReply.board, "X") === 0 && count(s.enterReply.board, "O") === 1,
-  "Bedroom Enter starts once with the computer's opening move",
+  s.enterReply && s.enterReply.phase === "idle" && !s.enterReply.aiPending &&
+  count(s.enterReply.board, "X") === 0 && count(s.enterReply.board, "O") === 0,
+  "Bedroom Enter stays inert until RSVP keyboard control is armed by a click",
   { start: s.enterStart, again: s.enterAgain, reply: s.enterReply });
 check(s.escape && s.escape.room.open && s.escape.game.phase === "idle" &&
   !s.escape.game.aiPending && s.escape.game.board.every(function (cell) { return cell === null; }),

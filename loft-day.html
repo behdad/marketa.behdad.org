@@ -39154,6 +39154,28 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 "use strict";
 const T = window.__loftMessages;
 var controllers = window.__loftControllers = Object.create(null);
+// The surrounding RSVP is a document first and a game second. Do not let an incidental Enter or
+// Space while reading it claim the unopened loft; one click inside the game frame arms its keyboard
+// controls. Canonical Loft Day remains keyboard-ready from load.
+var rsvpGameKeyboardArmed = !document.documentElement.classList.contains("revealed");
+var rsvpGameKeyboardArea = document.getElementById("hunt-fullscreen-area");
+window.__rsvpGameKeyboardArmed = function () {
+  return !document.documentElement.classList.contains("revealed") || rsvpGameKeyboardArmed;
+};
+document.addEventListener("click", function (event) {
+  if (rsvpGameKeyboardArea && rsvpGameKeyboardArea.contains(event.target)) rsvpGameKeyboardArmed = true;
+}, true);
+document.addEventListener("keydown", function (event) {
+  if (window.__rsvpGameKeyboardArmed() ||
+      (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar")) return;
+  var target = event.target;
+  var outsideGameControl = target && rsvpGameKeyboardArea && !rsvpGameKeyboardArea.contains(target) &&
+    target.matches && target.matches("button,a[href],input,select,textarea,summary,[contenteditable]");
+  // Keep native RSVP controls usable. Stopping propagation prevents the game's global routers from
+  // seeing their key, while leaving the browser's own button/link activation default intact.
+  if (!outsideGameControl) event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
 // Lazy classic-script runtimes historically publish one bootstrap symbol on Window.
 // Arm a configurable accessor before injection, capture the value into this closure,
 // then remove the temporary property as soon as the script finishes evaluating.

@@ -18,6 +18,8 @@ required.
 ## Start here
 
 The opening promise is the shape of the day: **Explore → Party → Road Trip**. Select **CLICK ME**.
+On the RSVP page, click or tap the game before using `Enter` or `Space`; those keys stay inactive
+while you are reading the invitation. The game-only Loft Day page is keyboard-ready immediately.
 The opening coach points out the top room navigation and bottom instructions. Follow the bottom
 instructions when you want direction. The required path is short, and most objects, games, apps,
 conversations, and surprises are optional.

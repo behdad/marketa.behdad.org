@@ -23,10 +23,11 @@ var HARNESS = [
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
   "  function key(k){ document.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true})); }",
   "  function enter(){ key('Enter'); }",
-  "  var report={errors:[],introKeys:{},reached:{},solvedFinalIdx:null,phaseTwoActions:{}};",
+  "  var report={errors:[],introKeys:{},armedEntry:{},reached:{},solvedFinalIdx:null,phaseTwoActions:{}};",
   "  async function pressUntil(idx,maxPresses,gap){var i=0;for(;i<maxPresses&&window.__currentStageIndex===idx;i++){enter();await sleep(gap);}return i;}",
   "  async function run(){",
-  "    for (var ik=0,keys=[['Enter','Enter'],['Escape','Escape'],['Backspace','Backspace'],['Space',' ']];ik<keys.length;ik++){if(window.__showHuntIntro)window.__showHuntIntro();await sleep(40);key(keys[ik][1]);await sleep(80);var machine=document.getElementById('kitchen-lamarzocco');report.introKeys[keys[ik][0]]=!document.getElementById('click-me-overlay')&&window.__gameStarted()&&!(machine&&machine.classList.contains('powered-on'));}",
+  "    for (var ik=0,keys=[['Enter','Enter'],['Escape','Escape'],['Backspace','Backspace'],['Space',' ']];ik<keys.length;ik++){if(window.__showHuntIntro)window.__showHuntIntro();await sleep(40);key(keys[ik][1]);await sleep(80);var machine=document.getElementById('kitchen-lamarzocco');report.introKeys[keys[ik][0]]={overlay:!!document.getElementById('click-me-overlay'),started:window.__gameStarted(),powered:!!(machine&&machine.classList.contains('powered-on'))};}",
+  "    if(window.__showHuntIntro)window.__showHuntIntro();await sleep(40);var entryOverlay=document.getElementById('click-me-overlay');if(entryOverlay)entryOverlay.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));await sleep(80);report.armedEntry.clicked=window.__rsvpGameKeyboardArmed&&window.__rsvpGameKeyboardArmed();report.armedEntry.guide=!!(window.__openingGuideShowing&&window.__openingGuideShowing());key('Enter');await sleep(80);report.armedEntry.enterDismissedGuide=!!(window.__openingGuideShowing&&!window.__openingGuideShowing());",
   // ── Part 1: Enter alone walks every room's solve and reaches the balcony ──
   "    window.__goToStage('kitchen');await sleep(300);",
   "    report.reached.kitchen=await pressUntil(0,25,1500);report.after0=window.__currentStageIndex;", // espresso: power/warmup/grind/tamp/brew/sip
@@ -51,17 +52,41 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
+var GAME_ONLY_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>',
+  '(function(){window.addEventListener("load",function(){setTimeout(function(){',
+  'var before=!!document.getElementById("click-me-overlay");',
+  'document.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
+  'setTimeout(function(){document.getElementById("__report").textContent=JSON.stringify({before:before,after:!!document.getElementById("click-me-overlay"),started:window.__gameStarted(),armed:window.__rsvpGameKeyboardArmed()});},80);',
+  '},300);});})();',
+  '</script>'
+].join("\n");
+
 var failures = 0;
 function pass(msg) { console.log("  ✓ " + msg); }
 function fail(msg, detail) { failures++; console.log("  ✗ " + msg); if (detail) console.log("      " + String(detail).split("\n").join("\n      ")); }
 
 console.log("rsvp.html keyboard room-control (Enter):");
 var r = lib.runPageSync("rsvp.html", HARNESS, 75000, { patchRaf: true });
+var gameOnly = lib.runPageSync("loft-day.html", GAME_ONLY_HARNESS, 1200, { patchRaf: true });
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
-  if (r.introKeys.Enter && r.introKeys.Escape && r.introKeys.Backspace && r.introKeys.Space) pass("Enter, Escape, Backspace, and Space dismiss CLICK ME without operating the room");
-  else fail("Enter, Escape, Backspace, and Space dismiss CLICK ME without operating the room", JSON.stringify(r.introKeys));
+  if (r.introKeys.Enter.overlay && !r.introKeys.Enter.started && !r.introKeys.Enter.powered &&
+      r.introKeys.Space.overlay && !r.introKeys.Space.started && !r.introKeys.Space.powered)
+    pass("RSVP keeps Enter and Space inert until the game is clicked");
+  else fail("RSVP keeps Enter and Space inert until the game is clicked", JSON.stringify(r.introKeys));
+  if (!r.introKeys.Escape.overlay && r.introKeys.Escape.started && !r.introKeys.Escape.powered &&
+      !r.introKeys.Backspace.overlay && r.introKeys.Backspace.started && !r.introKeys.Backspace.powered)
+    pass("Escape and Backspace retain their intro dismissal behavior");
+  else fail("Escape and Backspace retain their intro dismissal behavior", JSON.stringify(r.introKeys));
+  if (r.armedEntry.clicked && r.armedEntry.guide && r.armedEntry.enterDismissedGuide)
+    pass("a game click arms RSVP keyboard control");
+  else fail("a game click arms RSVP keyboard control", JSON.stringify(r.armedEntry));
+  if (gameOnly && gameOnly.before && !gameOnly.after && gameOnly.started && gameOnly.armed)
+    pass("game-only Loft Day remains keyboard-ready from load");
+  else fail("game-only Loft Day remains keyboard-ready from load", JSON.stringify(gameOnly));
   if (r.solvedFinalIdx === 4) pass("Enter alone walks every room's solve and reaches the balcony");
   else fail("Enter walks the whole game to the balcony", "stage progression: " + JSON.stringify({ after0: r.after0, after1: r.after1, after2: r.after2, after3: r.after3, reached: r.reached }));
   if (r.gardenEnterGuitar) pass("garden music step: Enter clicks the guitar, not the ukulele");

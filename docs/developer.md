@@ -351,11 +351,13 @@ belongs in [the audio guide](audio.md).
 The capture-phase document keyboard router is the final arbiter for global shortcuts. Its ordering
 is deliberate:
 
-1. Typing targets and browser-reserved key combinations keep their native behavior; explicit
+1. The RSVP shell leaves `Enter` and `Space` unowned until a click inside `#hunt-fullscreen-area`;
+   game-only Loft Day is armed from load. Invitation controls outside the game keep native behavior.
+2. Typing targets and browser-reserved key combinations keep their native behavior; explicit
    developer shortcuts are handled separately.
-2. Open dialogs, coaches, apps, media, minigames, and lower-room controllers get first refusal.
-3. The active driving controller may claim steering/action keys.
-4. Global room navigation and `activateCurrentRoom()` run only if nothing closer owns the key.
+3. Open dialogs, coaches, apps, media, minigames, and lower-room controllers get first refusal.
+4. The active driving controller may claim steering/action keys.
+5. Global room navigation and `activateCurrentRoom()` run only if nothing closer owns the key.
 
 Preserve the `activeControlFocused` checks and the capture-phase ordering around Enter. Do not add an
 independent bubble-phase key listener for a room action; it will eventually race a phone field,

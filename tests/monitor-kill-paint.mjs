@@ -295,11 +295,15 @@ try {
     if (await evaluate('!!document.querySelector("#monitor-prince-host iframe")')) break;
     await sleep(50);
   }
+  // The optional local runtime is absent in a normal checkout, so Prince navigates to
+  // its cross-origin fallback after the iframe node is mounted. Let that initial load
+  // settle before counting reloads caused by Kill.
+  await sleep(800);
   const princeBefore = await evaluate(`(function(){
     var frame=document.querySelector("#monitor-prince-host iframe"),screen=document.getElementById("monitor-zoom-box").getBoundingClientRect(),
       root=document.querySelector(".prince-monitor-wrap"),state=window.__monitorHtmlOverlayState();
-    window.__princeKillFrame=frame;window.__princeKillDocument=frame&&frame.contentDocument;
-    if(frame&&frame.contentWindow)frame.contentWindow.__princeKillMarker="retained";
+    window.__princeKillFrame=frame;window.__princeKillSrc=frame&&frame.src;window.__princeKillLoads=0;
+    if(frame)frame.addEventListener("load",function(){window.__princeKillLoads++;});
     return{frame:!!frame,open:window.__princeState().open,active:state.active,roots:state.roots,
       rootOverlay:!!(root&&root.closest("#monitor-html-overlay")),clip:{x:screen.left,y:screen.top,width:screen.width,height:screen.height,scale:1}};
   })()`);
@@ -310,8 +314,8 @@ try {
     var frame=document.querySelector("#monitor-prince-host iframe"),root=document.querySelector(".prince-monitor-wrap"),
       card=document.getElementById("prince-monitor-kill"),style=getComputedStyle(card),r=card.getBoundingClientRect(),
       screen=document.getElementById("monitor-zoom-box").getBoundingClientRect(),state=window.__monitorHtmlOverlayState(),prince=window.__princeState();
-    return{sameFrame:frame===window.__princeKillFrame,sameDocument:!!frame&&frame.contentDocument===window.__princeKillDocument,
-      marker:frame&&frame.contentWindow.__princeKillMarker,open:prince.open,iframe:prince.iframe,killing:document.getElementById("monitor-prince").classList.contains("prince-killing"),
+    return{sameFrame:frame===window.__princeKillFrame,sameSrc:!!frame&&frame.src===window.__princeKillSrc,reloads:window.__princeKillLoads,
+      open:prince.open,iframe:prince.iframe,killing:document.getElementById("monitor-prince").classList.contains("prince-killing"),
       liveKilling:!!(root&&root.classList.contains("prince-killing")),
       active:state.active,roots:state.roots,rootOverlay:!!(root&&root.closest("#monitor-html-overlay")),visibility:style.visibility,
       opacity:Number(style.opacity),intersects:r.right>screen.left&&r.left<screen.right&&r.bottom>screen.top&&r.top<screen.bottom};
@@ -319,7 +323,7 @@ try {
   const princeDuringRaster = await screenshot(princeBefore.clip, "prince-kill");
   const princeRaster = rasterDifference(princeBeforeRaster, princeDuringRaster);
   check(princeBefore.frame && princeBefore.open && princeBefore.active && princeBefore.roots.includes("prince-monitor-wrap") && princeBefore.rootOverlay &&
-      princeDuring.sameFrame && princeDuring.sameDocument && princeDuring.marker === "retained" && princeDuring.open && princeDuring.iframe &&
+      princeDuring.sameFrame && princeDuring.sameSrc && princeDuring.reloads === 0 && princeDuring.open && princeDuring.iframe &&
       princeDuring.active && princeDuring.roots.includes("prince-monitor-wrap") && princeDuring.rootOverlay,
     "Prince Kill keeps the exact live browsing context mounted behind its farewell", { before: princeBefore, during: princeDuring });
   check(princeDuring.killing && princeDuring.liveKilling && princeDuring.visibility === "visible" && princeDuring.opacity > .8 && princeDuring.intersects &&

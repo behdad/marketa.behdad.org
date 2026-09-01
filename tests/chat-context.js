@@ -57,7 +57,10 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 4000, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, sources = s.sources || {}, env = s.environment || {};
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(sources.mail && sources.mail.length === 3 && sources.mail.some(function (m) { return m.id === "lore" && /getting married/.test(m.body); }) && sources.mail.every(function (m) { return !Object.prototype.hasOwnProperty.call(m, "draft"); }), "Mail exposes only the three authored inbox messages", sources.mail);
+check(sources.mail && sources.mail.map(function (m) { return m.id; }).join(",") === "lore,rsvp,spam" &&
+  sources.mail.some(function (m) { return m.id === "lore" && /Edmonton/.test(m.body) && /Prague/.test(m.body); }) &&
+  sources.mail.every(function (m) { return !Object.prototype.hasOwnProperty.call(m, "draft"); }),
+  "Mail exposes only the three authored inbox messages", sources.mail);
 check(sources.messages && sources.messages.length === 1 && sources.messages[0].id === "cue_mail" && /Bahareh/i.test(sources.messages[0].sender) && !/<[^>]+>/.test(sources.messages[0].text), "Messages exposes a bounded plain-text view of the live thread", sources.messages);
 check(sources.phrasebook && sources.phrasebook.length === 16 &&
   sources.phrasebook.some(function (p) { return p.english === "One beer, please" && p.czech === "Jedno pivo, prosím"; }) &&

@@ -23,6 +23,7 @@ async function stay(name,delay){
   report.rooms[name]={room:window.__currentStageName,solved:window.__roomSolved(name),completed:completed,terminal:terminal};
 }
 async function run(){
+  document.getElementById("hunt-fullscreen-area").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));
   window.__endAttract();
   window.__setMaxUnlocked(4);
   window.__setSolvedRooms(["kitchen","garden","cuddly","office"]);

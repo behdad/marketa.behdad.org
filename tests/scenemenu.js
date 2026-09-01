@@ -13,7 +13,7 @@ var HARNESS = [
   'window.__setLang("en");var splash=document.getElementById("click-me-overlay"),machine=document.getElementById("kitchen-lamarzocco");',
   'report.steps.splash={prevented:ctx(splash),present:!!document.getElementById("click-me-overlay"),menus:menus(),powered:machine.classList.contains("powered-on")};',
   'splash.dispatchEvent(new Event("touchstart",{bubbles:true,cancelable:true}));report.steps.splashHold={prevented:ctx(splash),present:!!document.getElementById("click-me-overlay"),menus:menus()};',
-  'window.__endAttract();var pans=document.getElementById("kitchen-pans"),stage=document.getElementById("stage-kitchen");',
+  'document.getElementById("hunt-fullscreen-area").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__endAttract();var pans=document.getElementById("kitchen-pans"),stage=document.getElementById("stage-kitchen");',
   'report.steps.prop={prevented:ctx(pans),menus:menus(),powered:machine.classList.contains("powered-on")};',
   'report.steps.scenery={prevented:ctx(stage),menus:menus(),powered:machine.classList.contains("powered-on")};',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));report.steps.enter={powered:machine.classList.contains("powered-on")};',

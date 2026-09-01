@@ -252,7 +252,6 @@ window.__loftMessages["cs"] = {
   ],
   "fern_found": "Květ kapradí. Stál jsi tady o půlnoci té jediné noci, kdy se otevírá. V tom to celé je — a prý to nosí štěstí.",
   "fern_legend": "Kapradí. Prý kvete jednu půlnoc do roka — dnes v noci, jestli té pověsti věříš — a kdo najde květ, dojde štěstí.",
-  "flight_note": "Edmonton → Praha — asi 10 týdnů (a jeden oceán) od sebe.",
   "fun_ali": "závodní cyklista",
   "fun_alireza": "vytrvalostní běžec",
   "fun_ashraf": "taky miluje vrhcáby",

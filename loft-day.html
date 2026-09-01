@@ -14421,14 +14421,14 @@ section{margin:1.9rem 0}
   .rsvp-gmail{display:none}
   .rsvp-send{flex:0 0 auto; width:200px}
 }
-.flight-plane{animation:flight-fly 1.4s ease-out forwards}
-@keyframes flight-fly{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(130px)}
+.rsvp-flight{
+  position:fixed;inset:0;z-index:22;width:100vw;height:100vh;overflow:visible;
+  pointer-events:none;filter:drop-shadow(0 3px 3px rgba(69,58,49,.18));
 }
-@media (prefers-reduced-motion: reduce){
-  .flight-plane{animation:none; transform:translateX(130px)}
-}
+.rsvp-flight-route{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;opacity:.55}
+.rsvp-flight-plane{transform-box:fill-box;transform-origin:center}
+.rsvp-flight.arrived{opacity:0;transition:opacity .35s ease}
+@media (prefers-reduced-motion:reduce){.rsvp-flight.arrived{transition:none}}
 /* The rsvp aliases and #invite reveal names, dates, RSVP, footer + the game. Canonical
    Loft Day and #trailer get the self-contained game shell. Entry identity/actions live
    inside that shell; the RSVP page retains the outer title, language and browser advice. */
@@ -39086,8 +39086,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-b9a4fcd4f150"></script>
-<script src="loft-day.cs.js?v=dict-25d41b5c8240"></script>
+<script src="loft-day.en.js?v=dict-09e96ecd7f5f"></script>
+<script src="loft-day.cs.js?v=dict-e137a116384a"></script>
 <script src="code-snippets/manifest.js?v=transport-8e2570670d9e"></script>
 <script>
 (function () {
@@ -57829,25 +57829,70 @@ document.addEventListener("click", function (e) {
   }
 });
 (function () {
-  function flightBubbleHtml() {
-    var l = document.documentElement.lang;
-    var note = (T[l] && T[l].flight_note) || T.en.flight_note;
-    return '<div style="text-align:center">' +
-      '<svg width="170" height="46" viewBox="0 0 170 46" style="display:block; margin:0 auto">' +
-        '<line x1="14" y1="26" x2="156" y2="26" stroke="#8a7c6a" stroke-width="1.5" stroke-dasharray="3 4"/>' +
-        '<circle cx="14" cy="26" r="3" fill="#d9a6a6"/>' +
-        '<circle cx="156" cy="26" r="3" fill="#7f9ec0"/>' +
-        '<text x="14" y="40" font-size="9" text-anchor="middle" fill="currentColor">YEG</text>' +
-        '<text x="156" y="40" font-size="9" text-anchor="middle" fill="currentColor">PRG</text>' +
-        '<text class="flight-plane" x="14" y="22" font-size="13" text-anchor="middle">✈️</text>' +
-      '</svg>' +
-      '<div style="margin-top:.3rem">' + note + '</div>' +
-    '</div>';
+  var activeFlight = null;
+  function svgEl(name, attrs) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.keys(attrs || {}).forEach(function (key) { el.setAttribute(key, attrs[key]); });
+    return el;
+  }
+  function flyBetweenCities() {
+    var ed = document.getElementById("h-ed");
+    var pr = document.getElementById("h-pr");
+    if (!ed || !pr) return;
+    if (activeFlight) activeFlight.remove();
+    var a = ed.getBoundingClientRect();
+    var b = pr.getBoundingClientRect();
+    var sideBySide = Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2) < 80;
+    var start = sideBySide ? { x: a.right + 12, y: (a.top + a.bottom) / 2 } :
+      { x: (a.left + a.right) / 2, y: a.bottom + 8 };
+    var end = sideBySide ? { x: b.left - 17, y: (b.top + b.bottom) / 2 } :
+      { x: (b.left + b.right) / 2, y: b.top - 8 };
+    var bend = sideBySide ? Math.min(72, Math.abs(end.x - start.x) * .2) :
+      Math.min(72, Math.abs(end.y - start.y) * .2);
+    var control = sideBySide ?
+      { x: (start.x + end.x) / 2, y: Math.min(start.y, end.y) - bend } :
+      { x: Math.max(start.x, end.x) + bend, y: (start.y + end.y) / 2 };
+    var d = "M" + start.x + " " + start.y + " Q" + control.x + " " + control.y + " " + end.x + " " + end.y;
+    var svg = svgEl("svg", { "class": "rsvp-flight" });
+    var route = svgEl("path", { "class": "rsvp-flight-route", d: d });
+    var plane = svgEl("g", { "class": "rsvp-flight-plane" });
+    plane.appendChild(svgEl("path", { d: "M-16-2C-7-3 8-3 18 0C8 3-7 3-16 2Z", fill: "#fffdf8", stroke: "#453a31", "stroke-width": "1.2" }));
+    plane.appendChild(svgEl("path", { d: "M-3-2L-10-13L-6-14L8-2Z", fill: "#d9a6a6", stroke: "#8e3a4a", "stroke-width": "1" }));
+    plane.appendChild(svgEl("path", { d: "M-3 2L-10 13L-6 14L8 2Z", fill: "#7f9ec0", stroke: "#4a6b94", "stroke-width": "1" }));
+    plane.appendChild(svgEl("path", { d: "M-11-2L-16-8L-13-8L-5-2ZM-11 2L-16 8L-13 8L-5 2Z", fill: "#fffdf8", stroke: "#453a31", "stroke-width": ".8" }));
+    svg.appendChild(route);
+    svg.appendChild(plane);
+    document.body.appendChild(svg);
+    activeFlight = svg;
+    var length = route.getTotalLength();
+    route.style.strokeDasharray = "3 7";
+    route.style.strokeDashoffset = String(length);
+    var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var duration = reduced ? 0 : 1900;
+    var started = performance.now();
+    function draw(now) {
+      if (activeFlight !== svg) return;
+      var t = duration ? Math.min(1, (now - started) / duration) : 1;
+      var eased = 1 - Math.pow(1 - t, 3);
+      var distance = length * eased;
+      var point = route.getPointAtLength(distance);
+      var behind = route.getPointAtLength(Math.max(0, distance - 1));
+      var ahead = route.getPointAtLength(Math.min(length, distance + 1));
+      var angle = Math.atan2(ahead.y - behind.y, ahead.x - behind.x) * 180 / Math.PI;
+      plane.setAttribute("transform", "translate(" + point.x + " " + point.y + ") rotate(" + angle + ")");
+      route.style.strokeDashoffset = String(length - distance);
+      if (t < 1) requestAnimationFrame(draw);
+      else {
+        svg.classList.add("arrived");
+        setTimeout(function () { if (svg.parentNode) svg.remove(); if (activeFlight === svg) activeFlight = null; }, reduced ? 0 : 380);
+      }
+    }
+    requestAnimationFrame(draw);
   }
   var divInf = document.querySelector(".divider .inf");
   if (divInf) {
     divInf.addEventListener("click", function () {
-      eggBubble(divInf, flightBubbleHtml());
+      flyBetweenCities();
     });
   }
 })();

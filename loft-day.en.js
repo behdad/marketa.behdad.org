@@ -252,7 +252,6 @@ window.__loftMessages["en"] = {
   ],
   "fern_found": "The fern flower. You were standing here at midnight on the one night it opens. That's the whole trick, and it's supposed to be luck.",
   "fern_legend": "Fern. They say it flowers one midnight a year — tonight, if you believe the story — and whoever finds the flower comes into luck.",
-  "flight_note": "Edmonton → Prague — about 10 weeks (and one ocean) apart.",
   "fun_ali": "competitive cyclist",
   "fun_alireza": "long-distance runner",
   "fun_ashraf": "also loves backgammon",

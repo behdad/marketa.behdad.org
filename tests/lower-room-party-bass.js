@@ -83,6 +83,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
 
 function run(options) {
   return lib.runPageSync("loft-day.html", HARNESS, 5000, Object.assign({
+    patchRaf: true,
     seedRandom: true,
     urlSuffix: "?date=2026-08-21&time=22:00"
   }, options));

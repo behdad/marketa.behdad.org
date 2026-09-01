@@ -165,7 +165,7 @@ try {
 
     const setup = await evaluate(`(async function () {
       var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
-      var point=function(el){var r=el.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];};
+      var visiblePoint=function(el,clip){var r=el.getBoundingClientRect(),c=clip.getBoundingClientRect();return [(Math.max(r.left,c.left)+Math.min(r.right,c.right))/2,(Math.max(r.top,c.top)+Math.min(r.bottom,c.bottom))/2];};
       document.hasFocus=function(){return true;};localStorage.clear();
       var restart=document.querySelector("#loft-recovery-gate .loft-recovery-btn:not(.primary)");
       if(restart){restart.click();await sleep(650);}if(window.__removeClickMe)window.__removeClickMe();
@@ -181,7 +181,7 @@ try {
       window.__setSecondRound(true,{releaseHeld:false});window.__goToStage("garden");await sleep(850);
       if(window.__stopCueDrip)window.__stopCueDrip();if(window.__hideMessageThumb)window.__hideMessageThumb(true);
       if(window.__hideCallRing)window.__hideCallRing();if(window.__resetPhoneApps)window.__resetPhoneApps();
-      var ball=document.getElementById("garden-disco-ball"),spin=document.getElementById("garden-disco-ball-spin"),p=point(ball),hit=document.elementFromPoint(p[0],p[1]);
+      var ball=document.getElementById("garden-disco-ball"),spin=document.getElementById("garden-disco-ball-spin"),p=visiblePoint(ball,document.querySelector(".hunt-viewport")),hit=document.elementFromPoint(p[0],p[1]);
       var roster=document.querySelector(".roster-toggle"),br=ball.getBoundingClientRect(),rr=roster&&roster.getBoundingClientRect();
       return {phase1:phase1,ball:p,ballRect:ball.getBoundingClientRect().toJSON(),ballHit:hit&&!!hit.closest("#garden-disco-ball"),ballOpacity:getComputedStyle(ball).opacity,
         spin:getComputedStyle(spin).animationName,party:!!window.__gardenPartyOn,daylight:!document.getElementById("stage-garden").classList.contains("dusk"),phase2:!!window.__secondRound,
@@ -274,10 +274,10 @@ try {
 
     const controls = await evaluate(`(async function(){
       var sleep=function(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});};
-      var point=function(el){var r=el.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2];};
+      var visiblePoint=function(el,clip){var r=el.getBoundingClientRect(),c=clip.getBoundingClientRect();return [(Math.max(r.left,c.left)+Math.min(r.right,c.right))/2,(Math.max(r.top,c.top)+Math.min(r.bottom,c.bottom))/2];};
       if(window.__closePhoneModal)window.__closePhoneModal(true);await sleep(320);if(window.__setPartyMode)window.__setPartyMode(false,true,false);
       if(window.__resetPartyExitHint)window.__resetPartyExitHint();if(window.__setPartyMode)window.__setPartyMode(true,true,false);window.__goToStage("garden");await sleep(120);
-      var ball=document.getElementById("garden-disco-ball"),bp=point(ball),bh=document.elementFromPoint(bp[0],bp[1]);
+      var ball=document.getElementById("garden-disco-ball"),bp=visiblePoint(ball,document.querySelector(".hunt-viewport")),bh=document.elementFromPoint(bp[0],bp[1]);
       return {ball:bp,ballHit:bh&&!!bh.closest("#garden-disco-ball"),beforeNight:document.getElementById("stage-garden").classList.contains("dusk"),
         relit:{opacity:getComputedStyle(ball).opacity,overlayOpacity:getComputedStyle(document.getElementById("garden-disco-overlay")).opacity,spin:getComputedStyle(document.getElementById("garden-disco-overlay-spin")).animationName,rect:ball.getBoundingClientRect().toJSON(),noEntrance:!document.querySelector(".disco-peek")}};
     })()`);

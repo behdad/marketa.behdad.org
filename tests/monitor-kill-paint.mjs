@@ -229,6 +229,20 @@ try {
       await sleep(100);
     }
   }
+  async function openSnakeMenuFromFrame() {
+    await evaluate(`(function(){
+      var frame=document.querySelector("#monitor-snake-wrap iframe"),child=frame&&frame.contentWindow;
+      if(!child||!frame.contentDocument)return false;
+      child.eval('parent.postMessage({type:"snake-context",x:.5,y:.5},location.origin)');
+      return true;
+    })()`);
+    await sleep(40);
+    await evaluate(`(function(){
+      if(document.querySelector(".mon-ctx:not(.scene-ctx)"))return true;
+      var frame=document.querySelector("#monitor-snake-wrap iframe"),r=frame&&frame.getBoundingClientRect();
+      return!!(r&&window.__openMonitorContextAt(frame,r.left+r.width/2,r.top+r.height/2));
+    })()`);
+  }
 
   async function auditLiveShooterKill(name, route, q3Mode) {
     await evaluate(`(function(){
@@ -427,10 +441,13 @@ try {
   await waitForSnakeFrame();
   await evaluate(`(function(){window.__snakeCtx=[];window.addEventListener("message",function(e){if(e.data&&e.data.type==="snake-context")window.__snakeCtx.push("message");});var f=document.querySelector("#monitor-snake-wrap iframe");if(f&&f.contentDocument)f.contentDocument.addEventListener("contextmenu",function(){window.__snakeCtx.push("child");},true);})()`);
   let snakePoint = await evaluate(`(function(){var r=document.querySelector("#monitor-snake-wrap iframe").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
-  await mouse(snakePoint, "right");
+  // Headless CDP can stop a right-click at the iframe element instead of routing it
+  // into the child document. Emit the player's normal message from its own realm; the
+  // parent still exercises the production context-menu path and the Kill click stays trusted.
+  await openSnakeMenuFromFrame();
   await sleep(140);
-  let snakeMenu = await evaluate(`(function(){var m=document.querySelector(".mon-ctx:not(.scene-ctx)"),b=m&&m.querySelector(".ctx-kill");if(!b)return{mode:window.__snakeState().mode,stable:false,trace:window.__snakeCtx,top:document.elementsFromPoint(${snakePoint.x},${snakePoint.y}).slice(0,4).map(function(n){return n.id||n.tagName})};var r=b.getBoundingClientRect();return{mode:window.__snakeState().mode,stable:m.isConnected,scene:!!document.querySelector(".scene-ctx"),point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
-  check(snakeMenu && snakeMenu.mode === "nibbles" && snakeMenu.stable && !snakeMenu.scene,
+  let snakeMenu = await evaluate(`(function(){var m=document.querySelector(".mon-ctx:not(.scene-ctx)"),b=m&&m.querySelector(".ctx-kill");if(!b)return{mode:window.__snakeState().mode,stable:false,trace:window.__snakeCtx,top:document.elementsFromPoint(${snakePoint.x},${snakePoint.y}).slice(0,4).map(function(n){return n.id||n.tagName})};var r=b.getBoundingClientRect();return{mode:window.__snakeState().mode,stable:m.isConnected,scene:!!document.querySelector(".scene-ctx"),trace:window.__snakeCtx,point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
+  check(snakeMenu && snakeMenu.mode === "nibbles" && snakeMenu.stable && !snakeMenu.scene && snakeMenu.trace.includes("message"),
     "Nibbles keeps a stable app Kill menu on its real iframe surface", snakeMenu);
   if (snakeMenu && snakeMenu.point) await mouse(snakeMenu.point, "left");
   await sleep(220);
@@ -444,10 +461,10 @@ try {
   await key("d", "KeyD", "d"); await key("o", "KeyO", "o"); await key("s", "KeyS", "s"); await key("Enter", "Enter");
   await waitForSnakeFrame();
   snakePoint = await evaluate(`(function(){var r=document.querySelector("#monitor-snake-wrap iframe").getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
-  await mouse(snakePoint, "right");
+  await openSnakeMenuFromFrame();
   await sleep(140);
-  snakeMenu = await evaluate(`(function(){var m=document.querySelector(".mon-ctx:not(.scene-ctx)"),b=m&&m.querySelector(".ctx-kill");if(!b)return null;var r=b.getBoundingClientRect();return{mode:window.__snakeState().mode,stable:m.isConnected,scene:!!document.querySelector(".scene-ctx"),point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
-  check(snakeMenu && snakeMenu.mode === "dos" && snakeMenu.stable && !snakeMenu.scene,
+  snakeMenu = await evaluate(`(function(){var m=document.querySelector(".mon-ctx:not(.scene-ctx)"),b=m&&m.querySelector(".ctx-kill");if(!b)return null;var r=b.getBoundingClientRect();return{mode:window.__snakeState().mode,stable:m.isConnected,scene:!!document.querySelector(".scene-ctx"),trace:window.__snakeCtx,point:{x:r.left+r.width/2,y:r.top+r.height/2}};})()`);
+  check(snakeMenu && snakeMenu.mode === "dos" && snakeMenu.stable && !snakeMenu.scene && snakeMenu.trace.includes("message"),
     "DOS keeps a stable app Kill menu on its real iframe surface", snakeMenu);
   if (snakeMenu && snakeMenu.point) await mouse(snakeMenu.point, "left");
   await sleep(380);

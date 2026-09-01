@@ -14349,31 +14349,42 @@ section{margin:1.9rem 0}
 }
 .sec-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:.35rem .6rem}
 .rsvp-mobile-horizon{
+  --rsvp-sky-opacity:.48;--rsvp-sky-bloom-opacity:.69;
   width:100%;height:clamp(82px,24vw,120px);margin:.45rem 0 -.1rem;background-repeat:no-repeat;
-  background-position:center bottom;background-size:contain;pointer-events:none;opacity:.48;
+  background-position:center bottom;background-size:contain;cursor:pointer;opacity:var(--rsvp-sky-opacity);
 }
 .rsvp-mobile-horizon.edmonton{background-image:url("art/rsvp-edmonton-skyline.svg")}
-.rsvp-mobile-horizon.prague{background-image:url("art/rsvp-prague-skyline.svg");opacity:.4}
+.rsvp-mobile-horizon.prague{
+  --rsvp-sky-opacity:.4;--rsvp-sky-bloom-opacity:.65;
+  background-image:url("art/rsvp-prague-skyline.svg");mix-blend-mode:multiply;
+}
 .rsvp-horizons{display:none}
+.rsvp-mobile-horizon.skyline-bloom{animation:rsvp-skyline-bloom 1.25s ease-in-out}
+@keyframes rsvp-skyline-bloom{
+  0%,100%{filter:saturate(1);opacity:var(--rsvp-sky-opacity)}
+  42%{filter:saturate(2.1) contrast(1.04) brightness(1.02);opacity:var(--rsvp-sky-bloom-opacity)}
+}
 @media (min-width:760px){
   .rsvp-mobile-horizon{display:none}
   .invite-card .rsvp-block{position:relative;margin-top:110px;padding-top:1.65rem}
   .rsvp-horizons{
     position:absolute;right:0;bottom:calc(100% + 1px);left:0;height:132px;display:grid;
     grid-template-columns:minmax(0,calc(50% - 3.75rem)) minmax(0,calc(50% - 4.75rem));
-    gap:8.5rem;pointer-events:none;
+    gap:8.5rem;
   }
-  .rsvp-horizon-cell{position:relative;min-width:0;overflow:hidden}
+  .rsvp-horizon-cell{--rsvp-sky-opacity:.48;--rsvp-sky-bloom-opacity:.69;position:relative;min-width:0;overflow:hidden;cursor:pointer}
   .rsvp-horizon-cell::before{
     content:"";position:absolute;inset:0;background-repeat:no-repeat;
-    background-position:center bottom -14px;background-size:100% auto;opacity:.48;
+    background-position:center bottom -14px;background-size:100% auto;opacity:var(--rsvp-sky-opacity);
   }
   .rsvp-horizon-cell:first-child::before{background-image:url("art/rsvp-edmonton-skyline.svg")}
   .rsvp-horizon-cell:last-child::before{
-    background-image:url("art/rsvp-prague-skyline.svg");opacity:.4;
+    --rsvp-sky-opacity:.4;--rsvp-sky-bloom-opacity:.65;
+    background-image:url("art/rsvp-prague-skyline.svg");mix-blend-mode:multiply;
     -webkit-mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.08) .3%,rgba(0,0,0,.35) .8%,rgba(0,0,0,.75) 1.4%,#000 2%);
     mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.08) .3%,rgba(0,0,0,.35) .8%,rgba(0,0,0,.75) 1.4%,#000 2%);
   }
+  .rsvp-horizon-cell.skyline-bloom::before{animation:rsvp-skyline-bloom 1.25s ease-in-out}
   .rsvp-block h2{
     position:absolute;z-index:1;top:0;left:50%;transform:translate(-50%,-100%);
     padding:0 .55rem;background:transparent;
@@ -57828,6 +57839,18 @@ document.addEventListener("click", function (e) {
     target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 });
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll(".rsvp-mobile-horizon,.rsvp-horizon-cell"), function (skyline) {
+    skyline.addEventListener("click", function () {
+      skyline.classList.remove("skyline-bloom");
+      void skyline.offsetWidth;
+      skyline.classList.add("skyline-bloom");
+    });
+    skyline.addEventListener("animationend", function (event) {
+      if (event.animationName === "rsvp-skyline-bloom") skyline.classList.remove("skyline-bloom");
+    });
+  });
+})();
 (function () {
   var activeFlight = null;
   function svgEl(name, attrs) {

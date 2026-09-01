@@ -186,7 +186,7 @@ check(s.dismissed && !s.dismissed.audio.active && !s.dismissed.audio.attended &&
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/new Ctx\(\)/g) || []).length === 1 &&
   /bed = audioBed\("outdoor"\)/.test(source) &&
-  /else if \(kind === "outdoor"\) \{\s*out\.connect\(loftAudioDestination\(ac\)\)/.test(source),
+  /ambienceOutput\.connect\(kind === "outdoor" \? loftAudioDestination\(ac\) : lowerFloorAudioOutput\(ac\)\)/.test(source),
   "the campsite route reuses the sole AudioContext through the authored outdoor bed bus");
 check((source.match(/campFinaleOwnsQuiet\(\)/g) || []).length === 3 &&
   /function autonomousThunderPlayback\(\) \{[\s\S]{0,180}campFinaleOwnsQuiet\(\)/.test(source) &&

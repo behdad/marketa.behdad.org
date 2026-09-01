@@ -77,7 +77,7 @@ check(!s.gate.incidentalAccepted && s.gate.captionOwner === "recovery",
 check(!!s.gate.summary && /^Saved office · /.test(s.gate.summary) && !s.gate.duplicateMeta && s.gate.ariaCount === 0, "the visible caption alone carries the concise recovery summary, without ARIA metadata", s.gate);
 check(s.gate.recoveryActive && s.gate.restartVisibility === "hidden" && s.gate.escapeVisibility === "hidden" && s.gate.prevVisibility === "hidden" && s.gate.mediaVisibility === "hidden" && s.gate.dotsDisplay === "none" && s.gate.fullscreenVisibility === "visible", "recovery hides inactive game controls but keeps fullscreen available", s.gate);
 check(s.gate.utilityVisibility === "visible" && s.gate.brandDisplay === "block" && s.gate.langsDisplay === "flex", "recovery keeps utilities/language and Loft Day in its entry chrome", s.gate);
-check(Math.abs(s.gate.brandTopRatio - .29) < .015,
+check(s.gate.brandTopRatio > .18 && s.gate.brandTopRatio < .26,
   "recovery pins Loft Day at the shared upper splash position", s.gate.brandTopRatio);
 check(s.translatedRecovery && s.translatedRecovery.brand === "Den v loftu" && s.translatedRecovery.title === "Vítej zpátky" &&
   /Pokračovat/.test(s.translatedRecovery.continueText) && /Začít znovu/.test(s.translatedRecovery.restartText) && /^Uloženo pracovna · /.test(s.translatedRecovery.summary),

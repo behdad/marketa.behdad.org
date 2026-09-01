@@ -14414,7 +14414,38 @@ section{margin:1.9rem 0}
   text-align:center;margin:1.2rem auto 0;padding-top:.65rem;
 }
 .rsvp-block h2{display:block}
-.rsvp-title{display:inline-block;color:var(--ink)}
+.rsvp-title{display:inline-block;color:var(--ink);cursor:pointer;transform-origin:center;user-select:none}
+.rsvp-title.stamping{animation:rsvp-title-stamp .72s cubic-bezier(.2,.8,.25,1)}
+@keyframes rsvp-title-stamp{
+  0%,100%{transform:translateY(0) scale(1)}
+  32%,48%{transform:translateY(5px) scale(.93)}
+  68%{transform:translateY(-1px) scale(1.02)}
+}
+.rsvp-card-stamp{
+  position:fixed;z-index:22;left:50%;top:calc(50% - 30px);pointer-events:none;translate:-50% -50%;
+  padding:.02em .24em .08em;border:.065em solid currentColor;border-radius:.05em;
+  color:rgba(142,58,74,.7);background:rgba(255,253,248,.08);
+  box-shadow:inset 0 0 0 .025em currentColor,0 0 0 .018em currentColor;
+  font:700 clamp(4.6rem,12vw,9rem)/.92 Fraunces,"Source Serif 4",serif;letter-spacing:.015em;
+  text-transform:uppercase;white-space:nowrap;mix-blend-mode:multiply;
+  animation:rsvp-card-stamp-land 1.55s cubic-bezier(.16,.82,.24,1) forwards;
+}
+.rsvp-card-stamp::after{
+  content:"";position:absolute;inset:-.045em;
+  background:repeating-linear-gradient(103deg,transparent 0 9px,rgba(255,253,248,.28) 10px 11px,transparent 12px 18px);
+  mix-blend-mode:screen;opacity:.55;
+}
+@keyframes rsvp-card-stamp-land{
+  0%{opacity:0;transform:rotate(-8deg) scale(2.1)}
+  20%{opacity:.9;transform:rotate(-8deg) scale(.92)}
+  30%,72%{opacity:.9;transform:rotate(-8deg) scale(1)}
+  100%{opacity:0;transform:rotate(-8deg) scale(1.03)}
+}
+@media (prefers-reduced-motion:reduce){
+  .rsvp-title.stamping{animation:none}
+  .rsvp-card-stamp{animation:rsvp-card-stamp-fade .9s ease forwards;transform:rotate(-8deg)}
+  @keyframes rsvp-card-stamp-fade{0%,70%{opacity:.9}100%{opacity:0}}
+}
 .rsvp-sub{max-width:800px;color:var(--soft); font-size:.92rem; margin:.3rem auto 1.1rem}
 .game-bridge{
   margin:.9rem auto -.35rem;text-align:center;color:var(--soft);font-size:.92rem;
@@ -57839,6 +57870,40 @@ document.addEventListener("click", function (e) {
     target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 });
+(function () {
+  var title = document.querySelector(".rsvp-title");
+  var stamp = null;
+  function stampRsvp() {
+    if (!title) return;
+    title.classList.remove("stamping");
+    void title.offsetWidth;
+    title.classList.add("stamping");
+    if (stamp) stamp.remove();
+    var card = document.querySelector(".invite-card");
+    var cardRect = card && card.getBoundingClientRect();
+    stamp = document.createElement("span");
+    stamp.className = "rsvp-card-stamp";
+    stamp.textContent = "RSVP";
+    if (cardRect) {
+      stamp.style.left = ((Math.max(0, cardRect.left) + Math.min(innerWidth, cardRect.right)) / 2) + "px";
+      stamp.style.top = ((Math.max(0, cardRect.top) + Math.min(innerHeight, cardRect.bottom)) / 2 - 30) + "px";
+      stamp.style.maxWidth = Math.max(240, Math.min(innerWidth - 24, cardRect.width * .78)) + "px";
+    }
+    document.body.appendChild(stamp);
+    var effect = stamp;
+    setTimeout(function () {
+      effect.classList.remove("rsvp-card-stamp");
+      if (effect.parentNode) effect.remove();
+      if (stamp === effect) stamp = null;
+    }, 1600);
+  }
+  if (title) {
+    title.addEventListener("click", stampRsvp);
+    title.addEventListener("animationend", function (event) {
+      if (event.animationName === "rsvp-title-stamp") title.classList.remove("stamping");
+    });
+  }
+})();
 (function () {
   Array.prototype.forEach.call(document.querySelectorAll(".rsvp-mobile-horizon,.rsvp-horizon-cell"), function (skyline) {
     skyline.addEventListener("click", function () {

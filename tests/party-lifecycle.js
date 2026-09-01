@@ -66,6 +66,7 @@ var harness = String.raw`<script>
   check("the room-map coach queues an incoming call instead of letting it cover the coach",
     !document.querySelector(".call-ring.show") && window.__heldPartyCoachCalls &&
       window.__heldPartyCoachCalls().length === 1, window.__heldPartyCoachCalls && window.__heldPartyCoachCalls());
+  document.getElementById("hunt-fullscreen-area").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   roomCoachPopup.querySelector(".hunt-coach-x").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
   check("the room-map coach’s explicit dismiss control closes it without opening the map or releasing Road Trip early",
     !window.__partyLifecycleState().roomMapCoachActive &&

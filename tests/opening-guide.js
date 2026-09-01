@@ -118,6 +118,7 @@ var harness = String.raw`<script>
       }
     }
   }
+  if (!hit) hit = overlay;
   click(hit, hitX, hitY);
   check("background input is swallowed without advancing or operating Kitchen",
     hit && hit.closest("#opening-guide-coach") && window.__openingGuideStep() === "landmarks" &&

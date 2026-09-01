@@ -58,6 +58,8 @@ function hook(opts) {
     opts.forceStandalone ? "(function () { var mm = window.matchMedia; window.matchMedia = function (q) { var r = mm ? mm.call(window, q) : { matches: false, media: q, addListener: function () {}, removeListener: function () {}, addEventListener: function () {}, removeEventListener: function () {} }; if (q === '(display-mode: standalone)') { try { Object.defineProperty(r, 'matches', { configurable: true, get: function () { return true; } }); } catch (e) {} } return r; }; })();" : "",
     opts.patchRaf ? "window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 16); };" : "",
     opts.patchRaf ? "window.cancelAnimationFrame = function (id) { clearTimeout(id); };" : "",
+    opts.freezeRaf ? "window.requestAnimationFrame = function () { return 0; };" : "",
+    opts.freezeRaf ? "window.cancelAnimationFrame = function () {};" : "",
     "document.addEventListener('click', function (e) {",
     "  var t = e.target && e.target.closest && e.target.closest('a, .party-send');",
     "  if (t) { e.preventDefault(); e.stopImmediatePropagation(); }",
@@ -278,10 +280,23 @@ async function runPageCdp(file, harness, timeoutMs, opts) {
   }
 }
 
+function runPageCdpSync(file, harness, timeoutMs, opts) {
+  var script = "var fs=require('fs'),r=JSON.parse(fs.readFileSync(0,'utf8'))," +
+    "lib=require(" + JSON.stringify(__filename) + ");" +
+    "lib.runPageCdp(r.file,r.harness,r.timeoutMs,r.opts).then(function(x){process.stdout.write(JSON.stringify(x));}," +
+    "function(e){console.error(e&&e.stack||e);process.exit(1);});";
+  return JSON.parse(child.execFileSync(process.execPath, ["-e", script], {
+    input: JSON.stringify({ file: file, harness: harness, timeoutMs: timeoutMs, opts: opts || {} }),
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: timeoutMs + 5000
+  }).toString());
+}
+
 module.exports = {
   ROOT: ROOT,
   hook: hook,
   runPage: runPage,
   runPageCdp: runPageCdp,
+  runPageCdpSync: runPageCdpSync,
   runPageSync: runPageSync
 };

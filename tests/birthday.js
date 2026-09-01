@@ -89,6 +89,7 @@ var HARNESS = [
   "    window.__loftControllers.birthday('chinnell'); await sleep(250);",
   "    report.steps.chinnell = { room: window.__currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-chinnell.bd-cutter'), hatVis: vis('#garden-guests .g-chinnell .bd-hat-chinnell') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
+  "    await sleep(300);",
   "    // Navid has a full dance-floor figure, so his birthday starts the party and brings him to the cake.",
   "    window.__loftControllers.birthday('navid'); await sleep(250);",
   "    var navidFig=document.querySelector('#garden-guests .g-navid');",
@@ -117,7 +118,7 @@ function pass(m){console.log("  ✓ "+m);}
 function fail(m,d){failures++;console.log("  ✗ "+m); if(d) console.log("      "+String(d).split("\n").join("\n      "));}
 
 console.log("rsvp.html birthday axis:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 11000, { patchRaf: true, forceMotion: true });
+var r = lib.runPageCdpSync("rsvp.html", HARNESS, 30000, { forceMotion: true, freezeRaf: true });
 if (!r) { fail("harness reported (page error before load, or budget too small)"); }
 else {
   var s = r.steps || {};
@@ -166,8 +167,8 @@ var reducedHarness = [
   "},500);});",
   "</script>"
 ].join("\n");
-var reduced = lib.runPageSync("rsvp.html", reducedHarness, 4000, {
-  patchRaf: true,
+var reduced = lib.runPageCdpSync("rsvp.html", reducedHarness, 15000, {
+  freezeRaf: true,
   chromeFlags: "--force-prefers-reduced-motion=reduce"
 });
 if (reduced && reduced.hat === "hidden") pass("reduced-motion suppression cannot leave an active runner's birthday hat floating"); else fail("reduced-motion runner hat suppression", JSON.stringify(reduced));

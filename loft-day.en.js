@@ -1343,6 +1343,7 @@ window.__loftMessages["en"] = {
   "rsvp_exit_link": "You’ve seen the whole day — one thing left: tell us you’ll come ↓",
   "rsvp_gmail": "Open in Gmail",
   "rsvp_mail": "Email app",
+  "rsvp_standalone": "Play Loft Day on its own page →",
   "rsvp_sub": "Near or far, little or grown, bring your loved ones — come to one or both. Just let us know.",
   "rsvp_title": "RSVP",
   "rsvp_to_game": "In the meantime… explore the <em>Loftful of Secrets</em>:",

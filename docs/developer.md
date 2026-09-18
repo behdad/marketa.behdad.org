@@ -278,13 +278,12 @@ suppresses the physical UV class and snapshots its prior state; only the final o
 restores that snapshot. Keep new staged moments on this owner so interruption and party teardown
 cannot relight or strand the blacklight.
 
-Exact-day birthday messages, the `?date=` preview ribbon, cake, and postcard all route through the
-shared birthday ceremony owner. The persistent viewport ribbon is preview-only; a real current-date
-occasion keeps its decor and invitations without overlaying play. The registry's exact month/day also
-gates every hat, crown, call prop, and current-date postcard classification; there are no birthday
-buffer ranges. Keep delivery serialized and cancel its transient work on Party teardown; checkpoint
-restore may re-enter an interrupted ceremony. A shortcut must enqueue that owner rather than create
-a second cake or postcard lifecycle.
+Birthday dates and headwear use the registry's exact month/day. The Party lifecycle tick calls
+`__tickBirthdayCake`: after twenty quiet, attended seconds on the Garden floor, it starts the existing
+cake animation without navigation or announcements. The `birthday-cake` checkpoint adapter remembers
+dates already celebrated; date changes cancel the active cake. Calendar clicks only select birthday
+dates. `loft.calendar.birthday.list()` remains read-only; birthday preview actions and the B shortcut
+are removed. Phone restore drops legacy `bd_*` greetings and pending celebrations.
 
 The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
 exploration is complete only after Party/free exploration has begun and all ten rooms have been

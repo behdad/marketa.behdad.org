@@ -16,7 +16,7 @@ var LIVE_HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   ' document.hasFocus=function(){return true;};localStorage.clear();if(window.__removeClickMe)window.__removeClickMe();if(window.__finishOpeningGuide)window.__finishOpeningGuide();if(window.__endAttract)window.__endAttract();',
   ' window.__setSeenRooms(["kitchen","garden","cuddly"]);window.__setSecondRound(true,{releaseHeld:false});window.__goToStage("garden");window.__resetPhoneApps();window.__setPartyMode(true,true,true);window.__stopCueDrip();window.__retirePartyRoomMapCoach();',
-  ' window.__deliverPhoneMessage("cue_calendar",true);window.__deliverBirthdayText("behdad","Behdad");window.__deliverPhoneMessage("cue_mail",true);window.__deliverPhoneMessage("cue_calendar",true);report.steps.start=snap();',
+  ' window.__deliverPhoneMessage("cue_calendar",true);window.__deliverPhoneMessage("cue_mail",true);window.__deliverPhoneMessage("cue_calendar",true);report.steps.start=snap();',
   ' setTimeout(function(){report.steps.before=snap();},3850);',
   ' setTimeout(function(){report.steps.revealElapsed=snap();["firstDance","slowDance","toasts","groupPhoto","sparklers","cake","bdCake","bouquet","photoFreeze"].forEach(function(name){window.__setPartyMomentState(name,false);});},4100);',
   ' setTimeout(function(){window.__showPartyExplorationCoach();window.__retirePartyRoomMapCoach();},4300);',
@@ -44,9 +44,9 @@ var live = lib.runPageSync("loft-day.html", LIVE_HARNESS, 5900, {
 check(!!live && live.errors.length === 0, "live timing harness has no page errors", live && live.errors);
 if (live) {
   check(live.steps.start.gate.active && live.steps.start.gate.remaining > 3400 &&
-    live.steps.start.gate.queued.join(",") === "cue_calendar,bd_behdad,cue_mail" &&
+    live.steps.start.gate.queued.join(",") === "cue_calendar,cue_mail" &&
     live.steps.start.thread.length === 0 && !live.steps.start.preview && !live.steps.start.badge,
-  "every delivery, including a birthday greeting, queues once without notification chrome", live.steps.start);
+  "every delivery queues once without notification chrome", live.steps.start);
   check(live.steps.before.gate.active && live.steps.before.thread.length === 0 &&
     !live.steps.before.preview && !live.steps.before.badge,
   "no message, preview, or unread badge appears during the first 4,000ms", live.steps.before);
@@ -54,10 +54,10 @@ if (live) {
     live.steps.revealElapsed.thread.length === 0,
   "elapsed messages stay serialized behind the active authored Party moment", live.steps.revealElapsed);
   check(live.steps.after.gate.complete && !live.steps.after.gate.active &&
-    live.steps.after.thread.join(",") === "cue_calendar,bd_behdad,cue_mail" && live.steps.after.preview,
+    live.steps.after.thread.join(",") === "cue_calendar,cue_mail" && live.steps.after.preview,
   "the queue releases through Messages in original order after the reveal", live.steps.after);
   check(live.steps.toggle.gate.complete && live.steps.toggle.thread.join(",") ===
-    "cue_calendar,bd_behdad,cue_mail,cue_cocktails",
+    "cue_calendar,cue_mail,cue_cocktails",
   "later Party toggles do not replay the first-reveal gate", live.steps.toggle);
   check(live.steps.reset.gate.active && live.steps.reset.gate.remaining > 3400 &&
     live.steps.reset.gate.queued.join(",") === "cue_calendar" && live.steps.reset.thread.length === 0,

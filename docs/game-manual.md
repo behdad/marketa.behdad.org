@@ -86,9 +86,10 @@ The bottom caption carries the Morning clues, feedback, and progression help. Co
 easy-to-miss controls; select a card or its × to dismiss it.
 
 Opening a message never performs its suggested activity; use its activity arrow. Old messages remain
-readable after an invitation expires. Irene and Hannah may invite you to a game. Birthday greetings
-can start a ceremony and postcard; a shared `?date=` birthday preview also shows a ribbon shortcut to
-the same celebration.
+readable after an invitation expires. Irene and Hannah may invite you to a game. Birthdays remain in Calendar, and
+hats or crowns appear on the exact date. During an existing Party, a birthday cake appears once
+after twenty quiet seconds in the Garden. It brings no message, banner, or postcard and never moves
+you to another room.
 
 If you are unsure what comes next:
 

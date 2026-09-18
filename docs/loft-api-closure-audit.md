@@ -30,7 +30,7 @@ public document.
 - Exact main baseline: 207 typed capabilities.
 - Candidate: 231 typed capabilities.
 - Additions (24):
-  - `loft.calendar.birthday.cake/list/next/show`
+  - `loft.calendar.birthday.list`
   - `loft.calendar.date.reset/set/status`
   - `loft.calendar.moment`
   - `loft.calendar.time.reset/set/status`
@@ -138,7 +138,7 @@ uncaught exceptions. Screenshots and the JSON report live under `/dev/shm/loft-a
 Every newly registered capability is an intentional replacement for behavior that otherwise only
 had a retired bare helper or an incomplete boolean facade:
 
-- Birthday list/selection/cake operations share `calendar.birthday`; date and time ownership share
+- Birthday date discovery uses `calendar.birthday.list`; date and time ownership share
   `calendar.date` and `calendar.time`; `calendar.moment` is the combined pure query.
 - Authored season discovery, status, cycling, explicit selection, and automatic reset form one
   symmetrical `environment.season` owner.

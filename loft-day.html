@@ -39159,8 +39159,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>window.__loftMessages = {};</script>
-<script src="loft-day.en.js?v=dict-f98f2665a293"></script>
-<script src="loft-day.cs.js?v=dict-86a5ed186c6e"></script>
+<script src="loft-day.en.js?v=dict-a014d743d004"></script>
+<script src="loft-day.cs.js?v=dict-66b86c400336"></script>
 <script src="code-snippets/manifest.js?v=transport-8e2570670d9e"></script>
 <script>
 (function () {
@@ -77334,30 +77334,9 @@ setOfficeProgress("pc", false);
     register({ id: "calendar.moment", kind: "query", description: "Read the fully resolved Loft date and time.", run: function () {
       return typeof controllers.timestamp === "function" ? controllers.timestamp() : null;
     } });
-    register({ id: "calendar.birthday.list", kind: "query", description: "List the dated birthday ring in traversal order.",
+    register({ id: "calendar.birthday.list", kind: "query", description: "List birthday dates in calendar order.",
       available: function () { return typeof controllers.birthdayList === "function"; }, unavailable: staticBlocked("The birthday controller is not ready."),
       run: function () { return controllers.birthdayList(); } });
-    register({ id: "calendar.birthday.next", kind: "action", risk: "scene", description: "Advance to the next dated birthday and reveal its person.",
-      available: function () { return typeof controllers.birthday === "function" && typeof controllers.birthdayStatus === "function"; }, unavailable: staticBlocked("The birthday controller is not ready."), run: function () {
-        var before = controllers.birthdayStatus(), message = controllers.birthday(), after = controllers.birthdayStatus();
-        return { changed: before.id !== after.id || (!before.started && after.started), id: after.id, name: after.name, message: message };
-      } });
-    register({ id: "calendar.birthday.show", kind: "action", risk: "scene", description: "Reveal one dated birthday by stable person id or display name.",
-      args: { person: { type: "string", minLength: 1, maxLength: 80, required: true } }, available: function () { return typeof controllers.birthday === "function" && typeof controllers.birthdayList === "function" && typeof controllers.birthdayStatus === "function"; }, unavailable: staticBlocked("The birthday controller is not ready."), run: function (args) {
-        var key = String(args.person).toLowerCase().trim(), birthdays = controllers.birthdayList();
-        if (!birthdays.some(function (birthday) { return birthday.id === key || birthday.name.toLowerCase() === key; })) throw new Error("No birthday by that name.");
-        var before = controllers.birthdayStatus(), message = controllers.birthday(args.person), selected = controllers.birthdayStatus();
-        return { changed: before.id !== selected.id || (!before.started && selected.started), id: selected.id, name: selected.name, message: message };
-      } });
-    register({ id: "calendar.birthday.cake", kind: "action", risk: "scene", description: "Bring the appropriate cake scene to one birthday person.",
-      args: { person: { type: "string", minLength: 1, maxLength: 80, required: true } }, available: function () { return typeof controllers.cake === "function" && typeof controllers.birthday === "function"; }, unavailable: function () {
-        return blockedBy([typeof controllers.cake !== "function" && "The cake controller is not ready.", typeof controllers.birthday !== "function" && "The birthday controller is not ready."], null);
-      }, run: function (args) {
-        var message = controllers.cake(args.person);
-        if (typeof message !== "string" || !message.trim()) throw new Error("The birthday cake controller did not complete the request.");
-        if (/^(?:cake people|no birthday)/i.test(String(message))) throw new Error(String(message));
-        return { person: String(args.person).toLowerCase().trim(), message: message };
-      } });
     register({ id: "environment.season.list", kind: "query", description: "List authored season and occasion preview names.", run: function () { return (SEAS || []).slice(); } });
     register({ id: "environment.season.status", kind: "query", description: "Read the active authored season preview, or auto for the calendar-owned season.", run: function () {
       return window.__seasonPreviewName && window.__seasonPreviewName() || "auto";
@@ -77378,7 +77357,7 @@ setOfficeProgress("pc", false);
         var before = window.__seasonPreviewName && window.__seasonPreviewName() || "auto", message = controllers.season("auto");
         return { changed: before !== "auto", season: "auto", message: message };
       } });
-    register({ id: "share.card.open", kind: "action", risk: "ambient", completion: "finite", description: "Open the current occasion or birthday share-card preview.",
+    register({ id: "share.card.open", kind: "action", risk: "ambient", completion: "finite", description: "Open the current occasion share-card preview.",
       available: function () { return typeof window.__shareCard === "function"; }, unavailable: staticBlocked("The share-card renderer is not ready."), run: function () {
         return Promise.resolve(window.__shareCard()).then(function () { return { opened: true }; });
       } });
@@ -95687,7 +95666,6 @@ def colormode(mode=None):
     function authoredBodyForLang(m, lang) {
       var dict = T[lang] || T.en;
       var s = (dict && dict[m.bodyKey]) || (T.en && T.en[m.bodyKey]) || m.bodyKey || "";
-      if (m && m.bdName != null) s = s.replace("{name}", m.bdName);
       if (m && m.suffixKey) s += " " + ((dict && dict[m.suffixKey]) || (T.en && T.en[m.suffixKey]) || m.suffixKey);
       return s;
     }
@@ -97967,7 +97945,6 @@ def colormode(mode=None):
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
     var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null, msgActionCoachShown = false, msgActionCoachActive = false, msgActionCoachAcknowledged = false, msgActionCoachHeld = []; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
-    var birthdayCelebrations = [], birthdayCelebrationTimer = null, birthdayPostcardOpen = false;
     function messageActionCoachEverUsed() {
       return Object.keys(messageActionUsed).some(function (id) { return !!messageActionUsed[id]; });
     }
@@ -98000,7 +97977,7 @@ def colormode(mode=None):
     var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
     var pendingAuthoredRewrites = {}, messageRewriteGeneration = 0;
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
-    var phaseTwoHeldMessages = []; // one-shot birthday/occasion texts requested during the solve are held; recurring drips simply retry later
+    var phaseTwoHeldMessages = []; // one-shot occasion texts requested during the solve are held; recurring drips simply retry later
     var PARTY_MESSAGE_REVEAL_DELAY = 4000;
     var partyMessageRevealStarted = false, partyMessageRevealComplete = false;
     var partyMessageRevealRemaining = 0, partyMessageRevealDeadline = 0;
@@ -98163,7 +98140,6 @@ def colormode(mode=None):
         msgActionCoachAcknowledged: !!msgActionCoachAcknowledged || messageActionCoachEverUsed(),
         msgBadgeCoachShown: !!msgBadgeCoachShown,
         msgBadgeCoachAcknowledged: !!msgBadgeCoachAcknowledged,
-        birthdayCelebrations: birthdayCelebrations.slice(0, 8).map(function (item) { return { who: item.who }; }),
         phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
         mailRead: Object.assign({}, mailRead),
         heldCalls: (heldCallRings || []).map(function (row) {
@@ -98195,8 +98171,7 @@ def colormode(mode=None):
               body: m.body != null ? String(m.body).slice(0, 1200) : null,
               rewrittenBodyEn: m.rewrittenBodyEn ? String(m.rewrittenBodyEn).slice(0, 700) : null,
               outgoing: !!m.outgoing, replyTo: m.replyTo || autonomousReplyLinks[id] || null,
-              act: m.act || null, apiAction: m.apiAction || null, chatAction: m.chatAction || null,
-              bdName: m.bdName || null
+              act: m.act || null, apiAction: m.apiAction || null, chatAction: m.chatAction || null
             }
           };
         }).slice(-40)
@@ -98257,15 +98232,9 @@ def colormode(mode=None):
         if (!row || typeof row.id !== "string") return;
         var id = row.id.slice(0, 120), saved = row.message || {}, m = MESSAGES[id];
         if (!m && /^reply_(?:user|ai)_/.test(id)) m = MESSAGES[id] = {};
-        if (!m && /^bd_[a-z][a-z0-9-]*$/.test(id)) {
-          var birthdayWho = id.slice(3), birthdaySenders = ["msg_behdad_from", "msg_marketa_from"];
-          if (saved.act === "bd:" + birthdayWho && typeof saved.bdName === "string" && saved.bdName.length <= 80 &&
-              birthdaySenders.indexOf(saved.fromKey) !== -1 && BD_TEMPLATES.indexOf(saved.bodyKey) !== -1) {
-            m = MESSAGES[id] = {};
-          }
-        }
+        if (/^bd_/.test(id)) return; // Retire greetings from older checkpoints.
         if (!m) return;
-        ["fromKey", "bodyKey", "replyTo", "act", "bdName"].forEach(function (key) { if (saved[key] != null) m[key] = saved[key]; });
+        ["fromKey", "bodyKey", "replyTo", "act"].forEach(function (key) { if (saved[key] != null) m[key] = saved[key]; });
         if (saved.from != null) m.from = String(saved.from).slice(0, 120);
         if (saved.body != null) m.body = String(saved.body).slice(0, 1200);
         if (saved.rewrittenBodyEn) m.rewrittenBodyEn = String(saved.rewrittenBodyEn).slice(0, 700);
@@ -98282,13 +98251,6 @@ def colormode(mode=None):
       if (messageActionCoachEverUsed()) msgActionCoachAcknowledged = true;
       msgActionCoachShown = msgActionCoachAcknowledged;
       charlieIntroOffered = messagesThread.indexOf("charlie") !== -1;
-      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
-      birthdayPostcardOpen = false;
-      birthdayCelebrations = (Array.isArray(state.birthdayCelebrations) ? state.birthdayCelebrations : []).slice(0, 8).map(function (item) {
-        var who = item && typeof item.who === "string" ? item.who.toLowerCase().slice(0, 40) : "";
-        return /^[a-z][a-z0-9-]*$/.test(who) && MESSAGES["bd_" + who] ? { who: who, phase: "queued" } : null;
-      }).filter(Boolean);
-      if (birthdayCelebrations.length) scheduleBirthdayCelebrationRun(650);
       if (window.__updateMsgBadge) window.__updateMsgBadge();
       return true;
     };
@@ -99936,7 +99898,7 @@ def colormode(mode=None):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = []; phaseTwoHeldMessages = []; birthdayCelebrations = []; birthdayPostcardOpen = false; if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; } Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = []; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       releaseActionCoachMessages();
@@ -99989,7 +99951,7 @@ def colormode(mode=None):
               Math.max(0, Math.min(PARTY_MESSAGE_REVEAL_DELAY, Number(row.remaining) || 0));
             if (!partyMessageRevealComplete) {
               (Array.isArray(row.queue) ? row.queue : []).slice(0, 40).forEach(function (item) {
-                if (!item || typeof item.id !== "string" || item.id.length > 120 ||
+                if (!item || typeof item.id !== "string" || /^bd_/.test(item.id) || item.id.length > 120 ||
                     partyMessageRevealQueue.some(function (held) { return held.id === item.id; })) return;
                 partyMessageRevealQueue.push({ id: item.id, autonomous: item.autonomous === true });
               });
@@ -100180,88 +100142,6 @@ def colormode(mode=None):
       }
       return false;
     }
-    function checkpointBirthdayCelebrations() {
-      if (window.__checkpointChanged) window.__checkpointChanged();
-    }
-    function scheduleBirthdayCelebrationRun(delay) {
-      if (birthdayCelebrationTimer) return;
-      birthdayCelebrationTimer = setTimeout(function () {
-        birthdayCelebrationTimer = null;
-        runNextBirthdayCelebration();
-      }, delay == null ? 0 : delay);
-    }
-    function birthdayPostcard(who) {
-      if (!window.__shareCard) return false;
-      window.__shareCard(window.__shareBirthdayOcc ? window.__shareBirthdayOcc(who) : null);
-      birthdayPostcardOpen = true;
-      return true;
-    }
-    function finishBirthdayCelebration(who) {
-      var item = birthdayCelebrations[0];
-      if (!item || item.who !== who || item.phase !== "reveal") return false;
-      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
-      birthdayCelebrations.shift();
-      birthdayPostcard(who);
-      checkpointBirthdayCelebrations();
-      return true;
-    }
-    function runNextBirthdayCelebration() {
-      var item = birthdayCelebrations[0];
-      if (!item || birthdayPostcardOpen || item.phase !== "queued") return false;
-      if (window.__bdCakeOn) return false; // another birthday beat owns the floor; its end wakes this queue
-      item.phase = "reveal";
-      checkpointBirthdayCelebrations();
-      if (!window.__birthdayGoto || !window.__birthdayGoto(item.who)) {
-        birthdayCelebrations.shift();
-        checkpointBirthdayCelebrations();
-        return false;
-      }
-      // One player-facing beat owns every venue: the reveal/cake gets eight seconds to play, then
-      // its matching postcard opens. The cake remains independently interactive; its exact timer
-      // is not an API boundary for Messages and a manual candle tap must not open the card early.
-      birthdayCelebrationTimer = setTimeout(function () {
-        birthdayCelebrationTimer = null;
-        finishBirthdayCelebration(item.who);
-      }, 8000);
-      return true;
-    }
-    function queueBirthdayCelebration(who) {
-      who = String(who || "").toLowerCase();
-      if (!/^[a-z][a-z0-9-]{0,39}$/.test(who)) return false;
-      // One explicit birthday intent owns one in-flight ceremony. The Party transition also
-      // releases the greeting, but that informational delivery must never enqueue a duplicate.
-      for (var i = 0; i < birthdayCelebrations.length; i++) {
-        if (birthdayCelebrations[i].who === who) return true;
-      }
-      birthdayCelebrations.push({ who: who, phase: "queued" });
-      checkpointBirthdayCelebrations();
-      runNextBirthdayCelebration();
-      return true;
-    }
-    window.__queueBirthdayCelebration = queueBirthdayCelebration;
-    window.addEventListener("loft:birthdaycakeend", function (event) {
-      var detail = event.detail || {};
-      if (detail.completed || !birthdayCelebrations.length) return;
-      // Party-off, room-leave and explicit cake teardown are cancellation, never completion.
-      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
-      birthdayCelebrations = [];
-      checkpointBirthdayCelebrations();
-    });
-    window.addEventListener("loft:statechange", function (event) {
-      var detail = event.detail || {}, args = detail.args || {};
-      if (detail.id !== "party.change" || args.on !== false || !birthdayCelebrations.length) return;
-      if (birthdayCelebrationTimer) { clearTimeout(birthdayCelebrationTimer); birthdayCelebrationTimer = null; }
-      birthdayCelebrations = [];
-      checkpointBirthdayCelebrations();
-    });
-    window.addEventListener("loft:sharecardclose", function () {
-      if (!birthdayPostcardOpen) return;
-      birthdayPostcardOpen = false;
-      scheduleBirthdayCelebrationRun(160);
-    });
-    window.__birthdayCelebrationState = function () {
-      return { postcardOpen: birthdayPostcardOpen, queue: birthdayCelebrations.map(function (item) { return { who: item.who, phase: item.phase }; }) };
-    };
     function runTypedMsgAction(id, m, action) {
       if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") {
         renderMsgActionFailure(id, m);
@@ -100309,11 +100189,6 @@ def colormode(mode=None):
         return;
       }
       if (act.indexOf("pc:") === 0) { close(true); if (window.__openMonitorApp) window.__openMonitorApp(act.slice(3)); return; } // → an app on the office PC monitor (not the pocket phone) — e.g. the cue pointing at "the office speakers"
-      if (act.indexOf("bd:") === 0) { // repeatable opt-in: finish this person's cake/reveal before opening their postcard
-        close(true);
-        queueBirthdayCelebration(act.slice(3));
-        return;
-      }
       close(true); // the rest leave the phone for somewhere in the loft
       if (act.indexOf("lower:") === 0) {
         var lowerRoom = act.slice(6);
@@ -100813,14 +100688,12 @@ def colormode(mode=None):
     // over the untouched attract prompt reads as a bug, not an invitation. Every AUTONOMOUS channel
     // in this IIFE checks this at FIRE time (not schedule time), so dismissing the prompt takes
     // effect immediately. User-initiated sends (message(), the 'n' nudge, the test hooks) skip it.
-    // Strict about a MISSING hook: __gameStarted is installed near the end of this script, and the
-    // load-time birthday announcement reaches here before that — "not installed yet" means the
-    // player certainly hasn't started, so it must hold, not fire.
+    // The entry hook is installed later; missing means play has not started.
     function playerStarted() { return !!window.__gameStarted && window.__gameStarted(); }
     function holdForPhaseTwo(id) {
-      // Birthday/occasion producers latch after one attempt, so preserve those. Day, visitor and
+      // Occasion producers latch after one attempt, so preserve those. Day, visitor and
       // party drips are recurring and should retry in their proper phase-two context instead.
-      if (!/^(bd_|occ_|hol_)/.test(id) && id !== "bbq") return; // May 2's direct Behdad invitation is the one authored early-party exception
+      if (!/^(occ_|hol_)/.test(id) && id !== "bbq") return; // May 2's direct Behdad invitation is the one authored early-party exception
       if (phaseTwoHeldMessages.indexOf(id) === -1) phaseTwoHeldMessages.push(id);
     }
     function partyMessageRevealDelayLeft() {
@@ -101104,33 +100977,17 @@ def colormode(mode=None):
       var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
       var delivered = 0;
       held.forEach(function (id) {
-        // The exact-day birthday greeting IS the Party transition: land it synchronously rather
-        // than putting it behind the ordinary rewrite/deferred drip. The explicit action still owns every
-        // scene/card effect, so this immediate row is informational until the player taps it.
-        if (/^bd_/.test(id)) { if (window.__deliverPhoneMessage(id, true)) delivered++; }
-        else if (deliverAutonomousRewritten(id)) delivered++;
+        if (deliverAutonomousRewritten(id)) delivered++;
       });
       return delivered;
     };
-    // ── birthday-announcement texts ── on a guest's birthday (the 'b'/console axis
-    // or the real calendar, via applyBirthdays), the couple texts a "Happy Birthday" line. MARKÉTA
-    // announces for her own people (her friends Jay & Spencer + her family) and for Behdad; BEHDAD
-    // announces for everyone else + for Markéta. The <name> is dropped into a random template
-    // variation (frozen at delivery, re-substituted on language flips). Fired once per person per
-    // session — messagesThread dedups the "bd_<who>" id, so re-renders / the ~4s air-quality
-    // re-apply / repeated 'b' presses can't double-send. Unattended delivery is silent (the thumb
-    // + notify buzz self-gate on the crickets rule inside showMessageThumb).
-    // Occasion invites lazily rasterize their own share-card and hang it on the delivered message
-    // as a tappable inline postcard. Birthday greetings deliberately do not: their repeatable
-    // message action starts the ceremony and opens that person's postcard after its eight-second
-    // beat, so a casual player can leave the greeting alone without either effect getting in the way.
+    // Occasion invitations retain their share-card attachments.
     function occForMessageId(id) {
-      if (id.indexOf("bd_") === 0) return window.__shareBirthdayOcc ? window.__shareBirthdayOcc(id.slice(3)) : null;
       if (id.indexOf("occ_") === 0 || id.indexOf("hol_") === 0) return window.__shareOccForKey ? window.__shareOccForKey(id.replace(/^(occ_|hol_)/, "")) : null;
       return null;
     }
     function attachSharePostcard(id, tries) {
-      if (!window.__shareCardDataURL) { // the rasterizer is wired later in this file — a load-time birthday edge-trigger (applySeasonDate → applyBirthdays) can run before it exists; retry until it's ready
+      if (!window.__shareCardDataURL) { // the rasterizer is wired later in this file — an early occasion invite can run before it exists; retry until it's ready
         if ((tries || 0) < 40) setTimeout(function () { attachSharePostcard(id, (tries || 0) + 1); }, 100);
         return;
       }
@@ -101141,27 +100998,6 @@ def colormode(mode=None):
         if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
       }, function () {});
     }
-    var BD_TEMPLATES = ["bd_msg_a", "bd_msg_b", "bd_msg_c", "bd_msg_d"];
-    var BD_MB_PEOPLE = { jay: 1, spencer: 1, madla: 1, robert: 1, elisabeth: 1, felix: 1, daniel: 1, marie: 1, baka: 1 }; // Markéta's friends + Czech family
-    // A birthday announces ONCE per session (the applyBirthdays anchor-day latch), often at load.
-    // Define it before checking the attract prompt, then use the phone's ordinary phase-one hold:
-    // the first Party transition can release the real row synchronously instead of depending on a
-    // birthday-only game-start relay. If a phase-two checkpoint is resumed, Continue's game-start
-    // wakes that same held queue after the recovery surface is gone.
-    window.addEventListener("loft:gamestart", function () {
-      if (window.__secondRound) window.__flushHeldPhoneMessages();
-    });
-    window.__deliverBirthdayText = function (who, name) {
-      if (!who || !name) return;
-      var id = "bd_" + who;
-      if (messagesThread.indexOf(id) !== -1) return; // already sent this session — fire once
-      var mb = who === "marketa" ? false : (who === "behdad" || BD_MB_PEOPLE[who]); // a partner's own birthday is announced by the OTHER partner
-      if (!MESSAGES[id]) MESSAGES[id] = { fromKey: mb ? "msg_marketa_from" : "msg_behdad_from", bodyKey: BD_TEMPLATES[Math.floor(Math.random() * BD_TEMPLATES.length)], bdName: name, act: "bd:" + who };
-      // Fresh phase one lands in phaseTwoHeldMessages; an attended phase-two date change lands now.
-      // Both paths deliberately bypass rewrite/drip delay for this exact-day greeting.
-      if (!playerStarted() && window.__secondRound) { holdForPhaseTwo(id); return false; }
-      return window.__deliverPhoneMessage(id, true);
-    };
     // ── special-day INVITE text ── on a wedding/bbq/brunch occasion or a named holiday, the host texts
     // an invite a moment after load (the dateOccasions orchestrator picks sender + body + tap-action).
     // Tapping it runs the deliberate routing (apply(true) / typed season selection). Fires once per session
@@ -102638,7 +102474,7 @@ def colormode(mode=None):
     // flips + reschedules AT that crossing. A manual flip (the sun, the 'd' key,
     // loft.environment.daylight.set(), the garden switch) is a TEMPORARY look — the crossing scheduler stays armed,
     // so the next real crossing still flips the scene over the manual set. It steps aside for a
-    // season/birthday preview, a ?date= jump, a drug trip, and the garden
+    // season preview, a ?date= jump, a drug trip, and the garden
     // party's forced night (all read live). The crossing itself is crickets-gated (visible+focused,
     // so a backgrounded/blurred tab never flips on its own); on return, focus/visibility runs a
     // non-destructive catch-up that applies a crossing missed while away. That gate also keeps
@@ -102730,7 +102566,7 @@ def colormode(mode=None):
       };
     }
     // mirrors the weather feed's realWxOverridden(): the auto default stands aside while any
-    // deliberate time/scene override is held (season/birthday preview, ?date=, trip)
+    // deliberate time/scene override is held (season preview, ?date=, trip)
     function autoOverridden() {
       if (window.__tripActive) return true;
       if (window.__previewActive && window.__previewActive()) return true;
@@ -103902,10 +103738,10 @@ def colormode(mode=None):
   // Weather only ever supplies the DEFAULT look — any scene override wins outright. A URL
   // date/time preview initially steps aside too, then its historical approximation becomes the
   // effective Edmonton sky once the archive fetch lands. Read live (per consumer tick), so
-  // nothing re-applies over a trip or season/birthday preview.
+  // nothing re-applies over a trip or season preview.
   function realWxOverridden() {
     if (window.__tripActive) return true;
-    if (window.__previewActive && window.__previewActive()) return true; // an 's' season or 'b' birthday preview
+    if (window.__previewActive && window.__previewActive()) return true; // an 's' season preview
     if (pretendWeatherSelection()) return !pretendCur; // neutral while loading/failed; archive weather after it lands
     return false;
   }
@@ -104375,7 +104211,7 @@ def colormode(mode=None):
     return true;
   }
   // The loft's DEFAULT sky follows Edmonton's real weather (window.__realWxActive, which
-  // yields null the moment any override — a season/birthday preview, a ?date= jump, or a trip —
+  // yields null the moment any override — a season preview, a ?date= jump, or a trip —
   // takes over): real rain/thunderstorm shows the same .storming look the balcony
   // storm lifecycle's setStorming puts on the rooms, and real cloud/fog dims the sky under
   // .climate-overcast. ~1s poll (the same lighter-weight pattern as the rain/city-hum ambience
@@ -117402,10 +117238,7 @@ function spawnDustMote(container) {
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
   var openingGuideShowing = false, openingGuideStep = "", openingGuideTimer = null, openingGuideArmTimer = null;
   var openingGuideDuration = 0; // brief normally; longer only when the same entry gesture also triggered fullscreen browser chrome
-  // The prompt is armed at the very END of this script, but date-driven notifications (the birthday
-  // announcement, via applyBirthdays) fire EARLIER in the same parse — so the window before the
-  // prompt exists must read as "not started", or a load-time text slides in over it. introPending
-  // covers exactly that gap; showHuntIntro settles it either way (armed, or declined mid-cinematic).
+  // Entry becomes available after the page has installed its controllers.
   var introPending = true;
   function attractOver() { return !huntIntroShowing && !introPending; }
   function setGameOnlyEntered(on) {
@@ -121982,6 +121815,7 @@ function spawnDustMote(container) {
           (window.__partyForegroundActive && !window.__partyForegroundActive()) ||
           document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) return;
       advance(1);
+      if (window.__tickBirthdayCake) window.__tickBirthdayCake();
     }
     function roadtripExchangeEligible() {
       return !!(handoffShown && window.__secondRound && !roomMapCoachActive && window.__seenRooms &&
@@ -123319,7 +123153,6 @@ function spawnDustMote(container) {
   // on the garden floor". Keeping those concepts separate lets an adult rotate to another room
   // without making their children disappear from the shared party/Cuddly inventory.
   var attendedGuestNames = new Set();
-  var bdCrowdBefore = null, bdAttendedBefore = null;
   function guestsWanted() { // on the floor when: party lit + in the garden. NOT gated on tab visibility/focus:
     // The party keeps running unattended (owner: guests should keep arriving/leaving even when the
     // window is unfocused or hidden). Safe here because arrivals are silent CSS
@@ -123884,7 +123717,6 @@ function spawnDustMote(container) {
     recentArrivals.length = 0;
     clearGuestHandoff();
     attendedGuestNames.clear();
-    bdCrowdBefore = bdAttendedBefore = null;
     var walks = g.querySelectorAll(".guest-walk");
     for (var k = 0; k < walks.length; k++) walks[k].style.removeProperty("--walk-x");
     slotXBySel = {}; // forget all slots
@@ -123925,46 +123757,6 @@ function spawnDustMote(container) {
     if (!guestsWanted()) return false;
     guestsArrived = true; slideGuestsIn();
     return true;
-  };
-  window.__prepareBdCakeCrowd = function () {
-    if (bdCrowdBefore) return;
-    var g = document.getElementById("garden-guests");
-    bdCrowdBefore = new Set(g ? Array.from(g.querySelectorAll(".guest.arrived:not(.leaving)")) : []);
-    bdAttendedBefore = new Set(attendedGuestNames);
-  };
-  window.__releaseBdCakeCrowd = function () {
-    var g = document.getElementById("garden-guests");
-    if (!g || !bdCrowdBefore) return window.__trimFloorToCap ? window.__trimFloorToCap() : 0;
-    var held = new Set();
-    fullArrivals().forEach(function (u) {
-      if (!unitIsBirthdayHeld(g, u)) return;
-      u.sels.forEach(function (sel) { var el = g.querySelector(sel); if (el) held.add(el); });
-    });
-    var extras = g.querySelectorAll(".guest.arrived:not(.leaving)"), released = 0;
-    for (var i = 0; i < extras.length; i++) {
-      var el = extras[i];
-      if (bdCrowdBefore.has(el) || held.has(el) || el.classList.contains("bd-honoree")) continue;
-      var sel = null;
-      for (var c = 0; c < el.classList.length; c++) if (el.classList[c].indexOf("g-") === 0) { sel = "." + el.classList[c]; break; }
-      if (!sel) continue;
-      var home = homeXBySel[sel];
-      if (home == null) {
-        var match = /translate\(\s*([-\d.]+)/.exec(el.getAttribute("transform") || "");
-        home = match ? parseFloat(match[1]) || 0 : 0;
-      }
-      walkFigureOut(g, sel, home);
-      if (el.classList.contains("leaving") || !el.classList.contains("arrived")) released++;
-    }
-    attendedGuestNames.clear();
-    bdAttendedBefore.forEach(function (name) { attendedGuestNames.add(name); });
-    g.querySelectorAll(".guest.bd-honoree").forEach(function (el) {
-      for (var c = 0; c < el.classList.length; c++) if (el.classList[c].indexOf("g-") === 0) attendedGuestNames.add(el.classList[c].slice(2));
-    });
-    bdCrowdBefore = bdAttendedBefore = null;
-    rebalanceFloor(g);
-    syncCrowdClear();
-    if (released) { g.classList.add("trickle"); armTrickle(10000 + Math.random() * 6000); }
-    return released;
   };
   // Bring the normal revolving floor up to its cap immediately without summoning the whole
   // wedding. May 2 uses this before its invitation lands, so there are enough settled adults
@@ -124363,7 +124155,6 @@ function spawnDustMote(container) {
     groupPhoto: "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.",
     sparklers: "✨ the guests raise sparklers into a tunnel — the couple stand through it.",
     cake: "🍰 the cake wheels out — Behdad & Markéta cut the first slice together, the crowd cheers.",
-    bdCake: "🎂 happy birthday! the candles are lit — everyone gathers behind the cake.",
     bouquet: "💐 Bouquet toss! Aim it — the bouquet tracks your cursor; click or tap to send it sailing."
   };
   function partyMomentStateActive() {
@@ -124687,8 +124478,7 @@ function spawnDustMote(container) {
       var ck = document.getElementById("garden-bd-cake");
       if (ck && bdCakeAnchor && bdCakeAnchor.parentNode === group) group.insertBefore(ck, bdCakeAnchor);
       bdCakeAnchor = null;
-      if (window.__releaseBdCakeCrowd) window.__releaseBdCakeCrowd();
-      else if (window.__trimFloorToCap) window.__trimFloorToCap();
+      if (window.__trimFloorToCap) window.__trimFloorToCap();
       if (finishedWho.length) window.dispatchEvent(new CustomEvent("loft:birthdaycakeend", { detail: { who: finishedWho, completed: completed === true } }));
     }
     function startBdCakeCutting(who) {
@@ -124707,11 +124497,7 @@ function spawnDustMote(container) {
       bdCutters = []; bdSaved = [];
       list.forEach(function (w, i) {
         var g = group.querySelector(".g-" + w); if (!g) return;
-        // Guarantee the birthday figure is actually ON the floor. The crown is a visibility:visible
-        // CHILD of the figure, so if this person hasn't trickled in yet — the party was already
-        // populated, so __bdCakeCut's guests-in-gated summon was skipped — the body stays
-        // visibility:hidden while the crown floats over an empty spot. Force them arrived (the same
-        // idiom slideGuestsIn/arriveEntry use); endBdCakeCutting → __trimFloorToCap thins any excess.
+        // Arrive the whole figure before showing its independently visible headwear.
         g.classList.remove("leaving", "off-with-kids", "off-at-games", "off-asleep", "off-at-bbq");
         g.classList.add("arrived", "bd-cutter", "bd-honoree"); bdCutters.push(g);
         bdSaved.push({ el: g, bx: g.style.getPropertyValue("--balance-x") }); // remember their spot to restore on end
@@ -124744,7 +124530,7 @@ function spawnDustMote(container) {
           setTimeout(function () { spawnSteamWisps(pos, x, 286, 0.32, (i % 2) ? 1 : -1, -1, 2, 0.55); }, i * 60);
         });
       }
-      playSatisfiedExhaleSound("garden-bd-cake"); // a soft blow/"phew" (a click implies focus)
+      if (!document.hidden && document.hasFocus()) playSatisfiedExhaleSound("garden-bd-cake");
       if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
       bdCakeTimer = setTimeout(function () { endBdCakeCutting(true); }, reducedMotion() ? 500 : 1600); // linger a beat on the smoke, then rejoin the floor
       return true;
@@ -124769,6 +124555,47 @@ function spawnDustMote(container) {
     window.__startBdCakeCutting = startBdCakeCutting;
     window.__endBdCakeCutting = endBdCakeCutting;
     window.__completeBdCakeCutting = function () { return endBdCakeCutting(true); }; // deterministic lifecycle test hook
+
+    // A cake is a once-per-date detail of an attended party, after twenty quiet seconds.
+    var birthdayCakeSeen = [], birthdayCakeDate = null, birthdayCakeWait = 0;
+    function syncBirthdayCakeDate() {
+      var date = window.__seasonDate && window.__seasonDate();
+      var key = date ? [date.y, date.m + 1, date.d].join("-") : null;
+      if (key !== birthdayCakeDate) {
+        if (window.__bdCakeOn) endBdCakeCutting();
+        group.querySelectorAll(".bd-honoree").forEach(function (el) { el.classList.remove("bd-honoree"); });
+        birthdayCakeDate = key;
+        birthdayCakeWait = 0;
+      }
+      return key;
+    }
+    window.__syncBirthdayCakeDate = syncBirthdayCakeDate;
+    window.__tickBirthdayCake = function () {
+      var key = syncBirthdayCakeDate();
+      var people = (window.__exactBirthdayWhos ? window.__exactBirthdayWhos() : []).filter(function (who) { return !!bdGardenFigs()[who]; });
+      if (!key || birthdayCakeSeen.indexOf(key) !== -1 || !people.length ||
+          !window.__partyAutonomyAllowed("garden") || !onFloor() || !group.getBoundingClientRect().width || window.__cinematic ||
+          window.__tripActive || window.__musicPaused || partyMomentStateActive() ||
+          (window.__partyAttentionChannelQuiet && !window.__partyAttentionChannelQuiet()) ||
+          document.querySelector(".sharecard-modal, .hunt-coach-overlay.show")) return false;
+      if (++birthdayCakeWait < 20) return false;
+      if (!startBdCakeCutting(people)) return false;
+      birthdayCakeSeen.push(key);
+      birthdayCakeSeen = birthdayCakeSeen.slice(-40);
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      return true;
+    };
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("birthday-cake", {
+      capture: function () { return { seen: birthdayCakeSeen.slice() }; },
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        birthdayCakeSeen = (row && Array.isArray(row.seen) ? row.seen : []).filter(function (key) {
+          return typeof key === "string" && /^\d{4}-\d{1,2}-\d{1,2}$/.test(key);
+        }).slice(-40);
+        birthdayCakeWait = 0;
+      },
+      reset: function () { birthdayCakeSeen = []; birthdayCakeWait = 0; }
+    });
 
     // ── BOUQUET TOSS ──────────────────────────────────────────────────────────────
     // Markéta (garden-local x356, hand ~y196) winds up + tosses a bouquet; it arcs over the
@@ -130450,9 +130277,6 @@ function spawnDustMote(container) {
     if (window.__resetCoveredGrill) window.__resetCoveredGrill();
     if (window.__resetLaptop) window.__resetLaptop();
     if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
-    // calReapplyDateTime ran before the phone reset and latched today's birthday. Re-register the
-    // greeting now that the reset has cleared both the thread and the phase-two hold queue.
-    if (window.__queueExactBirthdayTexts) window.__queueExactBirthdayTexts();
     if (window.__resetBalconyDusk) window.__resetBalconyDusk();
     if (window.__syncGrowlightSchedule) window.__syncGrowlightSchedule(true);
     if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle(); // cancel any in-flight storm + drop its .storming on every stage (real-weather's own .storming re-applies within a tick if it's genuinely raining out)
@@ -130497,10 +130321,6 @@ function spawnDustMote(container) {
   // snow-vs-rain odds and the new-year fireworks all read that ONE date, so a preview
   // can never disagree with what the calendar would really do that day — and "holiday"
   // (December dressing) stays a separate axis from "winter" (a climate that snows).
-  // Birthdays are a wholly separate axis (bdPreview, the 'b' key / loft.calendar.birthday.*), so a season
-  // preview never carries a hat — but a birthday stop, being "pretend it's this date" too,
-  // still dresses the day's real decor around the hat (Dec 7 lands Irene's cone on the
-  // holiday tree, both at once, which is the honest answer).
   // ── Persian (Solar Hijri) occasion dates, computed LIVE and ASTRONOMICALLY from the Gregorian year ──
   // The official Iranian calendar is observational, not arithmetic: Farvardin 1 (Nowruz) is fixed by
   // the northward (March) equinox at Iran's reference meridian (52.5°E, i.e. Iran Standard Time = a
@@ -130660,11 +130480,6 @@ function spawnDustMote(container) {
   //   solstice         none (the sky IS it)  the computed local day (~Jun 20–21)
   //   svatojanska      Jun 23–24 (eve+day)   Jun 23 only
   //
-  // Jun 23 is the eve, which is the festival — and it has to be: Madla's birthday is Jun 24
-  // exact, and an exact-day birthday outranks a holiday in both calSummonFestivity and the
-  // invite router. Decor on the 24th is harmless because it's an overlay, not a routed occasion.
-  // NEITHER is a decor season: June belongs to Pride and decorForDate returns one key. Both ride
-  // as overlay classes alongside season-pride, the way Sizdah Bedar rides Nowruz.
   var _midsummerCache = {};
   function juneSolsticeOf(gYear) { // the Edmonton-local day the June solstice instant lands on
     if (_midsummerCache[gYear]) return _midsummerCache[gYear];
@@ -130711,7 +130526,6 @@ function spawnDustMote(container) {
     autumn:  [8, 25]   // late September: leaves turning + coming down, before Halloween takes October
   };
   var seasonPreview = null; // null = the real calendar
-  var bdPreview = null; // {m,d}: the birthday axis ('b' key / loft.calendar.birthday.*) time-travels here, its own axis
   function seasonPreviewDate(name, y) {
     // Drifting stops must use the same computed day for both rendering and choosing the
     // next/previous stop beside an effective date.
@@ -130726,7 +130540,6 @@ function spawnDustMote(container) {
   }
   function seasonDate() {
     var y = (window.__now ? window.__now() : new Date()).getFullYear(); // the year the previews resolve into (honours ?date=/#date=)
-    if (bdPreview) return { m: bdPreview.m, d: bdPreview.d, y: y }; // a birthday stop wins: the day's real decor dresses around the hat
     if (seasonPreview) {
       var previewDate = seasonPreviewDate(seasonPreview, y);
       if (previewDate) return previewDate;
@@ -130735,7 +130548,7 @@ function spawnDustMote(container) {
     return { m: n.getMonth(), d: n.getDate(), y: n.getFullYear() };
   }
   window.__seasonDate = seasonDate; // the snow + fireworks controllers read the same pretend-date
-  window.__previewActive = function () { return !!(seasonPreview || bdPreview); }; // real-weather default steps aside while a season/birthday preview is held
+  window.__previewActive = function () { return !!seasonPreview; }; // real-weather default steps aside while a season preview is held
   function decorForDate(m, d, y) {
     if (y == null) y = curCalYear();
     if (m === 3 && d === 30) return "carodejnice";         // Apr 30 only — the night itself
@@ -130772,15 +130585,7 @@ function spawnDustMote(container) {
     return (s.m === 8 && s.d >= 22) || (s.m === 9 && s.d <= 15);
   }
   window.__autumnPlaySeason = autumnPlaySeason;
-  // Birthdays are their OWN axis — not a season (the 'b' key walks them; see below) and not
-  // coupled to the 's' season ring. Each is still an OVERLAY on whatever the day's decor is:
-  // the strip's season-class is single-valued, so a hat rides its own bd-<who> class ALONGSIDE
-  // the tree, the flag, the snow. Every row is a whole person — a date, a display name, a
-  // `type` ("hat" cone, or "crown" for Markéta and her family), and a `venue` naming where
-  // they wear it (garden floor, the kitchen bar,
-  // the garden decks, or the Tehran video call). Every birthday prop and greeting uses the exact
-  // `m`/`d`; the keyboard/typed path lands on that same date. Same-day birthdays (Bahareh & Ashraf
-  // on Oct 7, Athena & Robin on Nov 7) both light up AND both announce — the rows are independent.
+  // Exact month/day gates the calendar portraits, headwear, and party cake.
   var BIRTHDAYS = [
     { who: "farhang",   m: 0,  d: 11, name: "Farhang",   type: "hat",   venue: "garden" },
     { who: "sina",      m: 0,  d: 15, name: "Sina",      type: "hat",   venue: "dj-sina" },
@@ -130816,22 +130621,12 @@ function spawnDustMote(container) {
     { who: "irene",     m: 11, d: 7,  name: "Irene",     type: "hat",   venue: "garden" },
     { who: "ayushi",    m: 11, d: 10, name: "Ayushi",    type: "hat",   venue: "garden" }
   ];
-  var bdActive = {}; // who-id → true while the loft is ON that person's birthday; latched so the day's repeated applies fire the one announcement text once
   window.__exactBirthdayWhos = function () {
     var s = seasonDate(), out = [];
     BIRTHDAYS.forEach(function (b) {
       if (!b.pending && b.m != null && b.m === s.m && b.d === s.d) out.push(b.who);
     });
     return out;
-  };
-  window.__queueExactBirthdayTexts = function () {
-    var s = seasonDate(), queued = 0;
-    BIRTHDAYS.forEach(function (b) {
-      if (b.pending || b.m == null || b.m !== s.m || b.d !== s.d) return;
-      bdActive[b.who] = true;
-      if (window.__deliverBirthdayText) { window.__deliverBirthdayText(b.who, b.name); queued++; }
-    });
-    return queued;
   };
   function applyBirthdays(s) {
     var strip = document.getElementById("loft-game-strip");
@@ -130851,11 +130646,9 @@ function spawnDustMote(container) {
         document.body.classList.toggle("bd-" + b.who, on);
         if (on && b.venue === "tehran") thrAny = true;
       }
-      if (on) {
-        if (!bdActive[b.who] && window.__deliverBirthdayText) { bdActive[b.who] = true; window.__deliverBirthdayText(b.who, b.name); } // latched against the day's repeated applies; the deliverer's own messagesThread dedup is the real once-per-session guard
-      } else if (bdActive[b.who]) { bdActive[b.who] = false; } // leaving the exact date re-arms it
     });
     document.body.classList.toggle("thr-bd", thrAny); // any of the Tehran family → the cake comes out
+    if (window.__syncBirthdayCakeDate) window.__syncBirthdayCakeDate();
   }
   // ── the annual meteor showers ────────────────────────────────────────────────────────────
   // Date-driven like everything else here: the pretend-date decides them, so time-travel,
@@ -131318,7 +131111,7 @@ function spawnDustMote(container) {
     if (window.__stampFernHour) window.__stampFernHour();      // ...and ?time= may have landed on midnight
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.__currentStageName); // new-year sky follows the preview
     if (window.__applyMoonPhases) window.__applyMoonPhases(); // the night-sky moons reshape to the date's real phase
-    if (window.__refreshOccasionBanner) window.__refreshOccasionBanner(); // a season/birthday preview renames or clears the permanent day label
+    if (window.__refreshOccasionBanner) window.__refreshOccasionBanner(); // a season preview renames or clears the permanent day label
     // a date that moves off (or between) shower nights drops the streaks still in the air, so
     // last night's shower can't trail into the new day
     var shk = (showerFor(s.m, s.d) || {}).key || null;
@@ -131383,8 +131176,7 @@ function spawnDustMote(container) {
   })();
   // 's' cycles the previews in calendar order. From the real/URL-selected day, the first step
   // lands on the next dated stop; Shift+S lands on the previous one. Once a preview is active,
-  // the fixed ring continues from that stop. Birthdays are NOT in this ring — they're the 'b'
-  // key's own axis, but stepping from one still begins beside that effective birthday.
+  // the fixed ring continues from that stop.
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
   var SEASON_CYCLE = [null, "wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "mehregan", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "sadeh", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice"];
   // Shared apply-path for the 's' key and loft.environment.season.*; shows the naming pill.
@@ -131420,14 +131212,13 @@ function spawnDustMote(container) {
     }
     if (!silent) seasonToast(name ? "season_" + name : "season_auto");
     // Only a user-driven change to a named season pans: silent callers (the cinema reel)
-    // drive their own view, the birthday axis never reaches here, and the
+    // drive their own view, and the
     // null/auto real-date reset stays put.
     if (!silent && name && SEASON_ROOM[name] && window.__goToStage) window.__goToStage(SEASON_ROOM[name]);
     if (window.__refreshDatePill) window.__refreshDatePill();
     if (window.__refreshTimePill) window.__refreshTimePill();
   }
   function applySeasonPreview(name, silent) {
-    bdPreview = null; // picking a season leaves the birthday axis (they're mutually exclusive pretend-dates)
     seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
     // A visitor-driven season step is real calendar travel: expose its resolved day in the URL
     // so the date HUD owns a visible Reset. Silent cinematic previews stay ephemeral.
@@ -131509,197 +131300,15 @@ function spawnDustMote(container) {
       if (window.__resetTempDisplayUnits) window.__resetTempDisplayUnits();
     }
   });
-  // ── the birthday axis: the .b. key + typed calendar birthday actions ────────────
-  // Its OWN ring, independent of the seasons: every datable person in calendar order, ROTATED to
-  // lead with Markéta (Jan 20). Each stop
-  // time-travels the loft to that person's date (bdPreview → the day's real decor dresses
-  // around the hat), reveals them wearing it at their venue, and toasts the name.
-  var BD_ORDER = BIRTHDAYS.filter(function (b) { return b.m != null; })
-    .slice().sort(function (a, b) { return (a.m - b.m) || (a.d - b.d); });
-  (function () { // rotate so Markéta (Jan 20) leads the ring
-    var mi = 0;
-    for (var i = 0; i < BD_ORDER.length; i++) if (BD_ORDER[i].who === "marketa") { mi = i; break; }
-    BD_ORDER = BD_ORDER.slice(mi).concat(BD_ORDER.slice(0, mi));
-  })();
-  var bdIndex = 0, bdStarted = false;
-  // Bring the person into view WEARING their hat: light + walk to their venue so the overlay
-  // isn't just a class on an off-screen figure. Best-effort — every hook is guarded.
-  // A birthday person is cake-eligible exactly when the party floor has a model for them.
-  // Derive this from the scene instead of maintaining a second roster that can drift.
   var BD_GARDEN_FIG = {};
   BIRTHDAYS.forEach(function (b) {
     if (document.querySelector("#garden-guests .g-" + b.who)) BD_GARDEN_FIG[b.who] = 1;
   });
-  window.__bdGardenFigures = BD_GARDEN_FIG; // shared with the garden cake IIFE + the date-occasion orchestrator
-  // the garden-figure birthday who-ids whose EXACT day is (m,d) — the date-occasion orchestrator
-  // (a separate closure, no BIRTHDAYS in scope) reads this to auto-throw the party + cake.
-  window.__bdGardenOnDay = function (m, d) {
-    var list = [];
-    for (var i = 0; i < BIRTHDAYS.length; i++) { var b = BIRTHDAYS[i]; if (!b.pending && b.m === m && b.d === d && BD_GARDEN_FIG[b.who]) list.push(b.who); }
-    return list;
-  };
-  // A birthday whose venue is an office DEVICE (the Tehran video call on the monitor, the
-  // Prague call on the laptop) has to place/connect that call and zoom the device. The
-  // zoom frames the device by reading its LIVE on-screen box, and the connect boots the PC
-  // — both want the office to be the SETTLED current room. When the reveal is fired from
-  // another room (the pocket-phone birthday-text TAP → close() the phone → goToStage) the
-  // room-slide is still in flight and, on the tap path, the phone modal is still tearing
-  // down, so a synchronous connect/zoom resolves against the departing room and strands.
-  // So: go to the office now, but run the device work only once the slide has settled (and
-  // any closing phone modal is gone). Already in the office (the typed birthday path,
-  // which lives on the monitor) → run it immediately, unchanged. A newer reveal cancels a
-  // still-pending one (bdReveal clears the timer up top), so rapid ring-stepping never piles.
-  var bdOfficeTimer = null;
-  function bdOfficeReveal(fn) {
-    var wasOffice = window.__currentStageName === "office";
-    if (window.__goToStage) window.__goToStage("office");
-    if (wasOffice) { fn(); return; }
-    bdOfficeTimer = setTimeout(fn, 720); // one room-slide (.7s) + margin
-  }
-  function bdReveal(b) {
-    var v = b.venue || "garden", who = b.who, party = !!window.__gardenPartyOn;
-    clearTimeout(bdOfficeTimer); bdOfficeTimer = null; // this reveal supersedes any pending office device-work
-    // A real dance-floor model always wins: light the party, bring that figure in and cut the cake.
-    // People represented only at the bar, DJ decks or in a call fall through to those venues.
-    if (BD_GARDEN_FIG[who] && window.__bdCakeCut) { window.__bdCakeCut(who); return; }
-    // People without a floor model retain their authored remote or station venue.
-    if (v === "tehran") { // Behdad's Tehran family (Ashraf/Mohsen/Baharak/Payman/Hannah) — the hat rides the Tehran video call
-      // Already mid-call on the monitor: openFamilyCall would bail (one call at a time), so just pull
-      // the view back up — the seat of honour is CSS-keyed on the bd-<who> class showBirthday already
-      // set, so this birthday person is behind the cake without re-dialing. Otherwise
-      // __openMonitorApp boots the PC if off, zooms the monitor, and deep-links straight to the
-      // connected Tehran call (the deep-link places+connects even from a cold start).
-      bdOfficeReveal(function () {
-        if (window.__familyCallLive && window.__familyCallLive()) {
-          if (window.__monitorZoomIn) window.__monitorZoomIn();
-        } else {
-          // a live laptop call (Prague/Lübeck) holds the one-at-a-time lock, so openFamilyCall would
-          // bail and strand the monitor on the caps desktop — drop it silently first so the birthday's
-          // Tehran call actually lands
-          if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) window.__endLaptopCall(true);
-          if (window.__openMonitorApp) window.__openMonitorApp("tehran");
-        }
-      });
-      return;
-    }
-    if (v === "prague") { // Markéta's parents + Báka — their headwear rides the Prague laptop call
-      // Place the Prague call unless it's already live (a live call is the app on-screen; re-dialing
-      // would hang it up). __laptopCall only auto-zooms when it has to OPEN the lid, so an already-open
-      // lid (call live, or ended-but-still-open) never re-zooms on its own — pull the view up to the
-      // laptop unconditionally afterwards, which also covers a lid open but backed out of zoom.
-      bdOfficeReveal(function () {
-        if (!(window.__pragueCallLive && window.__pragueCallLive())) {
-          // a live monitor Tehran call holds the one-at-a-time lock, so startCall would bail and leave
-          // the laptop stranded — drop it silently first so the birthday's Prague call actually lands
-          if (window.__familyCallLive && window.__familyCallLive() && window.__closeMonitorFamily) window.__closeMonitorFamily(true);
-          if (window.__laptopCall) window.__laptopCall("prague"); // opens the lid (zooming in) and dials Prague
-        }
-        if (window.__laptopZoomIn) window.__laptopZoomIn();
-      });
-      return;
-    }
-    // The DJ decks (Sina/Danesh) + the bar (Pouria) have no figure of their own until their station
-    // is up. Owner's rule — just go to their room and put the hat on them:
-    //   DJ  → the decks only exist once the party's lit, so START the party (if dark) + take the decks.
-    //   bar → the bartender's up during a party OR at night; if it's plain DAY, flip to night so he's
-    //         behind the bar; already party/night → just go to the bar. (Same "raise the bar" idiom as
-    //         the Flair-Catch path.)
-    function goStation() {
-      if (v === "bar") {
-        if (window.__goToStage) window.__goToStage("kitchen");
-        if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true);
-        return;
-      }
-      if (!party) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
-      if (window.__goToStage) window.__goToStage("garden");
-      if (v === "dj-sina" && controllers.dj) controllers.dj("sina");
-      else if (v === "dj-danesh" && controllers.dj) controllers.dj("danesh");
-    }
-    // A call-only person has no floor model, so their birthday rides the family call.
-    if (b.call === "california") { // Behdad's brother's family — the monitor's California video call
-      bdOfficeReveal(function () {
-        if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) window.__endLaptopCall(true);
-        if (window.__openMonitorApp) window.__openMonitorApp("california"); // deep-links + connects, switching the callee if a Tehran call was up
-        if (window.__monitorZoomIn) window.__monitorZoomIn();
-      });
-      return;
-    }
-    if (b.call === "lubeck") { // Markéta's sister's family in Lübeck — the laptop's second contact ("lueb")
-      bdOfficeReveal(function () {
-        if (window.__familyCallLive && window.__familyCallLive() && window.__closeMonitorFamily) window.__closeMonitorFamily(true);
-        if (window.__laptopCall) window.__laptopCall("lueb"); // opens the lid + dials Lübeck (switches from a live Prague call; no-op re-dial if already on Lübeck)
-        if (window.__laptopZoomIn) window.__laptopZoomIn();
-      });
-      return;
-    }
-    goStation();
-  }
-  function showBirthday(b) {
-    if (!b) return;
-    bdPreview = { m: b.m, d: b.d };
-    seasonPreview = null;
-    applySeasonDate();   // dresses the day's real decor + toggles this person's bd-<who> hat class
-    bdReveal(b);
-    bdToast(b);
-  }
-  function stepBirthday(dir) {
-    var n = BD_ORDER.length; if (!n) return;
-    if (bdStarted) bdIndex = (bdIndex + dir + n) % n; // first press shows the leader (Markéta) without advancing
-    bdStarted = true;
-    showBirthday(BD_ORDER[bdIndex]);
-  }
-  // a transient party-hat toast, reusing the season pill's slot/styling
-  function bdToast(b) {
-    var vp = document.querySelector(".hunt-viewport");
-    if (!vp) return;
-    if (!seasonToastEl) { seasonToastEl = document.createElement("div"); seasonToastEl.className = "season-toast"; vp.appendChild(seasonToastEl); }
-    var l = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-    seasonToastEl.textContent = (T[l].bd_toast_a || T.en.bd_toast_a) + b.name + (T[l].bd_toast_b || T.en.bd_toast_b);
-    seasonToastEl.classList.add("show");
-    clearTimeout(seasonToastTimer);
-    seasonToastTimer = setTimeout(function () { seasonToastEl.classList.remove("show"); }, 1800);
-  }
-  document.addEventListener("keydown", function (e) {
-    if ((e.key !== "b" && e.key !== "B") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
-    var t = e.target;
-    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-    e.preventDefault();
-    stepBirthday(e.shiftKey ? -1 : 1); // Shift+B walks the ring backwards
-  });
-  // The private birthday owner backs the typed list/show/next actions and the B-key shortcut.
-  controllers.birthday = function (name) {
-    if (arguments.length === 0 || name == null || name === "") { stepBirthday(1); return "🎂 " + BD_ORDER[bdIndex].name; }
-    var key = String(name).toLowerCase().trim();
-    if (key === "list" || key === "?" ) return "birthdays (in quotes): " + BD_ORDER.map(function (b) { return "\"" + b.who + "\""; }).join(" · ");
-    for (var i = 0; i < BD_ORDER.length; i++) {
-      if (BD_ORDER[i].who === key || BD_ORDER[i].name.toLowerCase() === key) {
-        bdIndex = i; bdStarted = true; showBirthday(BD_ORDER[i]);
-        return "🎂 " + BD_ORDER[i].name;
-      }
-    }
-    return "no birthday by that name. try loft.calendar.birthday.list().";
-  };
+  window.__bdGardenFigures = BD_GARDEN_FIG;
   controllers.birthdayList = function () {
-    return BD_ORDER.map(function (birthday) {
-      return { id: birthday.who, name: birthday.name, month: birthday.m, day: birthday.d, venue: birthday.venue || "garden" };
+    return BIRTHDAYS.filter(function (b) { return !b.pending && b.m != null; }).map(function (b) {
+      return { id: b.who, name: b.name, month: b.m, day: b.d, venue: b.venue || "garden" };
     });
-  };
-  controllers.birthdayStatus = function () {
-    var birthday = BD_ORDER[bdIndex];
-    return { id: birthday && birthday.who || null, name: birthday && birthday.name || null, started: bdStarted };
-  };
-  window.__stepBirthday = stepBirthday; // test hook
-  // Tapping a bd_<who> birthday-announcement text summons that person: the SAME navigation as
-  // loft.calendar.birthday.show("<who>") — time-travel to their date + reveal at their venue (calls included via the
-  // fixed bdReveal). Guards an unknown or still-pending (dateless) who — BD_ORDER already
-  // excludes those, so a miss just no-ops.
-  window.__birthdayGoto = function (who) {
-    if (who == null || who === "") return false;
-    var key = String(who).toLowerCase().trim();
-    for (var i = 0; i < BD_ORDER.length; i++) {
-      if (BD_ORDER[i].who === key) { bdIndex = i; bdStarted = true; showBirthday(BD_ORDER[i]); return true; }
-    }
-    return false;
   };
   // ── the navigable CALENDAR app (shared by the office monitor + the pocket phone) ──────
   // A real Gregorian month grid with month/year nav + a "today" reset. Each day is tinted
@@ -131746,7 +131355,7 @@ function spawnDustMote(container) {
   function calLang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
   function calStr(key) { var l = calLang(); return T[l][key] || T.en[key] || ""; }
   function calLoc() { return document.documentElement.lang === "cs" ? "cs-CZ" : "en-US"; }
-  function calBdLabel(name) { var l = calLang(), t = T[l] || T.en; var a = t.bd_toast_a != null ? t.bd_toast_a : T.en.bd_toast_a, b = t.bd_toast_b != null ? t.bd_toast_b : T.en.bd_toast_b; return a + name + b; } // != null (not ||) so CS's deliberately-empty bd_toast_b isn't overridden by the EN "'s birthday" suffix
+  function calBdLabel(name) { var t = T[calLang()] || T.en; return (t.cal_birthday || T.en.cal_birthday).replace("{name}", name); }
   function calSeasonKey(m, d, y) { // every day gets exactly one season, for the cell tint
     if (y == null) y = curCalYear();
     var decor = decorForDate(m, d, y);
@@ -131816,7 +131425,7 @@ function spawnDustMote(container) {
     return !!a && a[0] === m && a[1] === d;
   };
   // One localized description for the date-preview viewport ribbon. This lives beside the calendar
-  // tables so birthdays, drifting holidays and previews all resolve from their single source of truth.
+  // tables so drifting holidays and previews resolve from their single source of truth.
   window.__specialDayBannerInfo = function () {
     var s = seasonDate();
     var fixed = {
@@ -131831,13 +131440,6 @@ function spawnDustMote(container) {
       persianCalOcc(s.m, s.d, s.y) ||
       midsummerCalOcc(s.m, s.d, s.y);
     if (calendarOccasion) return { key: calendarOccasion.sk };
-    var birthdays = CAL_BD_BY_DAY[s.m + "-" + s.d] || [];
-    if (birthdays.length) {
-      return {
-        text: calBdLabel(birthdays.map(function (b) { return b.name; }).join(" & ")),
-        birthdays: birthdays.map(function (b) { return b.who; })
-      };
-    }
     var sk = calSeasonKey(s.m, s.d, s.y);
     var announce = sk === "wedding" ? null : occAnnounceDay(sk, s.y);
     if (announce && announce[0] === s.m && announce[1] === s.d) return { key: "season_" + sk };
@@ -131956,12 +131558,12 @@ function spawnDustMote(container) {
   }
   function jumpToDate(y, mo, d) {
     calSetDateParam(y + "-" + calZ(mo + 1) + "-" + calZ(d));
-    seasonPreview = null; bdPreview = null; // the real-date decor dresses the jumped day
+    seasonPreview = null; // the real-date decor dresses the jumped day
     calRefreshDeps();
   }
   function calResetToday() {
     calSetDateParam(null);
-    seasonPreview = null; bdPreview = null;
+    seasonPreview = null;
     calRefreshDeps();
   }
   window.__jumpToDate = jumpToDate;
@@ -131994,7 +131596,7 @@ function spawnDustMote(container) {
   // Re-dress a fresh game for the URL's existing pretend date/time without clearing either.
   // Restart uses this path; the chrome reset above is the deliberate "back to today" path.
   function calReapplyDateTime() {
-    seasonPreview = null; bdPreview = null;
+    seasonPreview = null;
     if (window.__reanchorTimeOverride) window.__reanchorTimeOverride();
     calRefreshDeps();
     if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
@@ -132039,38 +131641,16 @@ function spawnDustMote(container) {
   // into calResetToday — calStepSignificant sets calView and then jumps through it.
   window.__calResetView = function () { calView = null; calRerenderOpen(); };
   var CAL_AMBIENT = { summer: 1, winter: 1, spring: 1, smoky: 1, autumn: 1 }; // plain weather days: a day-click just jumps (no festivity to summon)
-  // time-travel the loft to a day, re-render the grid (selecting it), then summon that date's
-  // festivities: a birthday (most specific) reveals/calls that person; an occasion (wedding /
-  // bbq / prague-party) runs its happening via the latched __applyDateOccasion (a season preview
-  // preview would clobber the party with mere decor); otherwise a holiday season dresses the
-  // decor + pans to its room; a plain weather day is just the jump. Shared by the grid day-cells
-  // and search results. On the phone, a summoned festivity dismisses the modal so the room pan
-  // lands in full view; a plain jump keeps the calendar open for browsing.
-  // summon the festivities for an already-jumped day: a birthday (most specific) reveals/calls
-  // that person; else an occasion (wedding / bbq / prague-party) runs its latched happening; else
-  // a named-holiday season dresses the decor + pans to its room; a plain weather day summons
-  // nothing. Returns whether anything was summoned. Shared by the grid day-click and the pill's
-  // fast-forward / rewind step buttons.
+  // Named occasions can summon their scene; birthdays only change the calendar date.
   function calSummonFestivity(mo, d, y) {
     if (y == null) y = curCalYear();
-    var bds = CAL_BD_BY_DAY[mo + "-" + d];
-    if (bds && bds.length) {
-      // A birthday ribbon/calendar day is explicit intent: skip the solve, enter Party, and run
-      // the same serialized cake → eight-second postcard owner as the Messages action.
-      // Queue every honoree on a shared date; closing one postcard advances to the next.
-      var birthdayQueued = false;
-      bds.forEach(function (birthday) {
-        if (window.__queueBirthdayCelebration && window.__queueBirthdayCelebration(birthday.who)) birthdayQueued = true;
-      });
-      if (birthdayQueued) return true;
-      if (window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true;
-    }
+    if (CAL_BD_BY_DAY[mo + "-" + d]) return false;
     if (mo === 3 && d === 19 && window.__activateBicycleDay) return window.__activateBicycleDay();
     if (mo === 3 && d === 20 && window.__activateMarijuanaDay) return window.__activateMarijuanaDay();
     if (mo === 8 && d === 20 && window.__activateMushroomDay) return window.__activateMushroomDay();
     if (mo === 10 && d === 23 && window.__activatePolyamoryDay) return window.__activatePolyamoryDay();
     var oc = (window.__isOccasionDate && window.__isOccasionDate()) || (window.__dateOccasion && window.__dateOccasion()); // time-gate-agnostic: a deliberate May-2 click summons the BBQ even outside its 4–10pm window (force then jumps the clock in)
-    if (oc && oc.indexOf("bd:") !== 0) {
+    if (oc) {
       if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons
       return true;
     }
@@ -132568,12 +132148,7 @@ function spawnDustMote(container) {
   // ── shareable save-the-date card ─────────────────────────────────────────────────
   // Composes the loft's OWN art (the crossed-caps motif + the names + both wedding dates)
   // into a 1200×630 card, badged with the CURRENT occasion — the day's season, or a
-  // friend's birthday with their little portrait. The vector layer (paper panel, caps,
-  // birthday bust) is drawn as an SVG (no foreignObject → taints nothing, paints
-  // cross-browser), serialized to a data-URL and blitted onto an off-DOM canvas via an
-  // <img>; the text is laid over it with the canvas 2d API so it uses the loaded
-  // Fraunces / Source Serif 4 and falls back to a plain serif when the web font can't
-  // load (offline / headless). Same rasterize recipe as the photobooth + album cards.
+  // Vector art and canvas text share the same card geometry.
   var SHARE_W = 1200, SHARE_H = 630;
   var SHARE_CAPS =
     '<g transform="translate(62,52) rotate(-12)">' +
@@ -132587,34 +132162,13 @@ function spawnDustMote(container) {
     '</g>';
   function shareLang() { return T[document.documentElement.lang] ? document.documentElement.lang : "en"; }
   function shareT(key) { var l = shareLang(); return T[l][key] || T.en[key] || ""; }
-  // What's the loft dressed for right now? An exact birthday wins (most specific);
-  // otherwise the day's season. Reads the same pretend-date the decor does (seasonDate →
-  // honours ?date=, and any season/birthday preview), so the card matches what's on screen.
+  // Share cards follow the season or occasion; birthdays remain calendar details.
   function shareOccasion() {
-    if (window.__shareOccNeutral) return { kind: "none", id: "og", label: "" }; // occasion-neutral render for the static OG/social-preview PNG (no frozen season badge)
-    var s = seasonDate();
-    var bd = null;
-    BIRTHDAYS.some(function (b) {
-      if (b.pending || b.m == null || b.m !== s.m || b.d !== s.d) return false;
-      bd = b;
-      return true;
-    });
-    if (bd) return { kind: "birthday", row: bd, name: bd.name, id: bd.who };
-    var sk = calSeasonKey(s.m, s.d, s.y);
-    return { kind: "season", key: sk, id: sk, label: shareT("season_" + sk) };
+    var s = seasonDate(), sk = calSeasonKey(s.m, s.d, s.y);
+    if (sk) return { kind: "season", key: sk, id: sk, label: shareT("season_" + sk) };
+    return { kind: "default", id: "default" };
   }
-  window.__shareOccasion = shareOccasion; // private test hook: current-date classification used by the postcard renderer
-  // The same occasion object shareOccasion() returns, but built for a NAMED person/occasion so a
-  // per-text postcard can render for the person/holiday ITS message names — used by the birthday
-  // (bd_<who>) and occasion-invite (occ_/hol_) texts to override the loft's current-date occasion.
-  function shareBirthdayOcc(who) {
-    for (var i = 0; i < BIRTHDAYS.length; i++) {
-      var b = BIRTHDAYS[i];
-      if (b.who === who && !b.pending && b.m != null) return { kind: "birthday", row: b, name: b.name, id: b.who };
-    }
-    return null;
-  }
-  window.__shareBirthdayOcc = shareBirthdayOcc;
+  window.__shareOccasion = shareOccasion;
   // Map a raw occasion / holiday key to a share occasion. Both wedding days (and the May-2 BBQ /
   // Jul-11 brunch that sit inside a wedding window) render the wedding save-the-date, tagged with
   // the leg so the date line resolves to the right city regardless of the loft's current date.
@@ -132627,12 +132181,10 @@ function spawnDustMote(container) {
   window.__shareOccForKey = shareOccForKey;
   var SHARE_GREET_Y = 408; // baseline of the big occasion greeting (wine Fraunces)
   var SHARE_DATE_Y = 462;  // baseline of the exact-date line under the greeting (ink Source Serif)
-  // The greeting shown for the day's occasion: a birthday wraps the person's name, every named
-  // holiday / wedding window has its own dict line (share_greet_<key>). A plain climate season
+  // Every named holiday / wedding window has its own greeting (share_greet_<key>). A plain climate season
   // (winter/spring/summer/smoky/autumn) and the neutral OG render have none → the card stays a
   // clean, timeless caps + names + URL save-the-date.
   function shareGreeting(occ) {
-    if (occ.kind === "birthday") return "🎂 " + shareT("share_bd_a") + occ.name + shareT("share_bd_b");
     if (occ.kind === "season") return shareT("share_greet_" + occ.key) || "";
     return "";
   }
@@ -132648,14 +132200,12 @@ function spawnDustMote(container) {
     try { return dt.toLocaleDateString(loc, { year: "numeric", month: "long", day: "numeric" }); }
     catch (e) { return y + "-" + calZ(m0 + 1) + "-" + calZ(d); }
   }
-  // The exact date to print under the greeting, localized. A birthday → that person's day; a
-  // wedding window → the specific wedding date (May 1 Edmonton or Jul 10 Prague, by month); a
+  // The localized date under the greeting: a wedding window → the specific wedding date (May 1 Edmonton or Jul 10 Prague, by month); a
   // named point holiday → its fixed day; a span occasion → the loft's current day. Year comes
   // from the loft's pretend-now, so ?date= carries through.
   function shareOccDate(occ) {
     var s = seasonDate();
     var y = (window.__now ? window.__now() : new Date()).getFullYear();
-    if (occ.kind === "birthday") return shareFmtDate(y, occ.row.m, occ.row.d);
     if (occ.kind === "season") {
       if (occ.key === "wedding") {
         var legs = (window.loft && window.loft.weddings) || ["2027-05-01 · Edmonton", "2027-07-10 · Prague"];
@@ -132673,38 +132223,23 @@ function spawnDustMote(container) {
     }
     return "";
   }
-  // The birthday occasion draws a bust to the LEFT of its greeting; measure the greeting so the
-  // pair centres as one unit, and hand the same geometry to both the SVG (bust) and canvas (text).
   // The greeting font shrinks to fit the card if a long holiday name would overflow.
   function shareLayout(occ) {
-    var lay = { greet: shareGreeting(occ), gsize: 46, gy: SHARE_GREET_Y, occTextX: 600, bust: null, date: "" };
+    var lay = { greet: shareGreeting(occ), gsize: 46, gy: SHARE_GREET_Y, date: "" };
     if (!lay.greet) return lay; // plain season / neutral: no greeting or date, just caps + names + URL
     lay.date = shareOccDate(occ);
     var g = document.createElement("canvas").getContext("2d");
-    var maxW = (occ.kind === "birthday") ? 900 : 1000; // birthday leaves room for the bust beside it
+    var maxW = 1000;
     g.font = '700 ' + lay.gsize + 'px "Fraunces", Georgia, serif';
     while (g.measureText(lay.greet).width > maxW && lay.gsize > 26) { lay.gsize -= 2; g.font = '700 ' + lay.gsize + 'px "Fraunces", Georgia, serif'; }
-    if (occ.kind === "birthday") {
-      var tw = g.measureText(lay.greet).width;
-      var bustH = 78, bustW = Math.round(bustH * 20 / 24), gap = 16;
-      var leftX = 600 - (bustW + gap + tw) / 2;
-      lay.bust = { x: Math.round(leftX), y: Math.round(lay.gy - bustH * 0.80), w: bustW, h: bustH };
-      lay.occTextX = leftX + bustW + gap;
-    }
     return lay;
   }
   function shareCardSvg(occ, lay) {
-    var bust = "";
-    if (occ.kind === "birthday" && lay.bust && window.__bdPortrait) {
-      var b = window.__bdPortrait(occ.row); // '<svg class="calx-bust" viewBox="0 0 20 24" …>…</svg>'
-      if (b) bust = b.replace(/^<svg[^>]*>/, '<svg x="' + lay.bust.x + '" y="' + lay.bust.y + '" width="' + lay.bust.w + '" height="' + lay.bust.h + '" viewBox="0 0 20 24" preserveAspectRatio="xMidYMid meet">');
-    }
     return '<svg xmlns="http://www.w3.org/2000/svg" width="' + SHARE_W + '" height="' + SHARE_H + '" viewBox="0 0 ' + SHARE_W + ' ' + SHARE_H + '">' +
       '<rect width="' + SHARE_W + '" height="' + SHARE_H + '" fill="#f8f5ec"/>' +
       '<rect x="26" y="26" width="' + (SHARE_W - 52) + '" height="' + (SHARE_H - 52) + '" rx="26" fill="#fffdf8" stroke="#8e3a4a" stroke-width="3"/>' +
       '<rect x="40" y="40" width="' + (SHARE_W - 80) + '" height="' + (SHARE_H - 80) + '" rx="18" fill="none" stroke="#7f9ec0" stroke-width="1.5" opacity="0.55"/>' +
       '<g transform="translate(600,146) scale(2.6) translate(-80,-58)">' + SHARE_CAPS + '</g>' +
-      bust +
       '</svg>';
   }
   function shareDraw(ctx, occ, lay) {
@@ -132721,8 +132256,7 @@ function spawnDustMote(container) {
     // the occasion greeting + its exact date (skipped on a plain season / neutral render)
     if (lay.greet) {
       ctx.fillStyle = "#8e3a4a"; ctx.font = '700 ' + lay.gsize + 'px "Fraunces", Georgia, serif';
-      if (occ.kind === "birthday") { ctx.textAlign = "left"; ctx.fillText(lay.greet, lay.occTextX, lay.gy); }
-      else { ctx.textAlign = "center"; ctx.fillText(lay.greet, 600, lay.gy); }
+      ctx.textAlign = "center"; ctx.fillText(lay.greet, 600, lay.gy);
       if (lay.date) {
         ctx.textAlign = "center";
         ctx.fillStyle = "#453a31"; ctx.font = '400 30px "Source Serif 4", Georgia, serif';
@@ -132734,9 +132268,7 @@ function spawnDustMote(container) {
     ctx.fillText("marketa.behdad.org/loft-day", 600, 578);
   }
   // Build → serialize → rasterize → canvas → text. Resolves { canvas, dataURL, occ }.
-  // occOverride (same shape shareOccasion() returns) renders the card for a NAMED person/
-  // occasion instead of the loft's current date, so a per-text postcard reflects the person
-  // its message names rather than whatever birthday/holiday the loft is on at rasterize time.
+  // An explicit occasion renders its invite card independently of the current loft date.
   function shareRasterize(occOverride) {
     return new Promise(function (resolve, reject) {
       try {
@@ -132769,19 +132301,9 @@ function spawnDustMote(container) {
     var n = window.__now ? window.__now() : new Date();
     return n.getFullYear() + "-" + calZ(n.getMonth() + 1) + "-" + calZ(n.getDate());
   }
-  // Birthday mail. A mailto/Gmail-compose body is PLAIN TEXT — the postcard image cannot ride
-  // inside it, so the body carries the day's deep link and a note that the PNG is already on the
-  // clipboard (the auto-copy on open) for the sender to paste in as an attachment. Other occasion
-  // cards stay copy/download-only: they are not wedding-announcement email templates.
-  function shareMailContent(occ) {
-    var url = "https://marketa.behdad.org/loft-day?date=" + shareLoftISO();
-    var subject = shareT("share_mail_bd_subj").replace("{name}", occ.name);
-    var intro = shareT("share_mail_bd_body").replace("{name}", occ.name);
-    return { subject: subject, body: intro + "\n\n" + url + "\n\n" + shareT("share_mail_clip") };
-  }
   // Auto-copy the PNG to the clipboard and report the outcome in the modal's note line. Only
   // works on a secure context (and usually needs a user gesture / focus) — every failure path
-  // lands on the neutral "download or email it" line, never a broken state.
+  // lands on the download fallback, never a broken state.
   function shareCopyBlob(blob, note) {
     var say = function (key) { if (note && shareModalEl) note.textContent = shareT(key); };
     try {
@@ -132796,20 +132318,17 @@ function spawnDustMote(container) {
   function shareCloseModal() {
     if (!shareModalEl) return;
     var m = shareModalEl; shareModalEl = null;
-    var activateFestivity = !!m.__activateFestivityOnClose;
     if (m.__url) { try { URL.revokeObjectURL(m.__url); } catch (e) {} }
     window.removeEventListener("keydown", shareEsc, true);
     m.classList.remove("show");
     setTimeout(function () { if (m.parentNode) m.remove(); }, 260);
-    if (activateFestivity && window.__summonCurrentFestivity) window.__summonCurrentFestivity();
     window.dispatchEvent(new CustomEvent("loft:sharecardclose"));
   }
   window.__shareCloseModal = shareCloseModal; // test / cleanup hook
-  function shareOpenModal(options) {
+  function shareOpenModal() {
     shareCloseModal();
     var overlay = document.createElement("div");
     overlay.className = "sharecard-modal"; overlay.id = "sharecard-modal";
-    overlay.__activateFestivityOnClose = !!(options && options.activateFestivityOnClose);
     overlay.innerHTML =
       '<div class="sharecard-box">' +
         '<button type="button" class="sharecard-x">✕</button>' +
@@ -132829,10 +132348,10 @@ function spawnDustMote(container) {
     return overlay;
   }
   // shareCard() — open the preview + generate the PNG; resolves to the PNG data-URL. An optional
-  // occOverride renders the card for a specific person/occasion (a per-text postcard tap passes
+  // occOverride renders the card for a specific occasion (a per-text postcard tap passes
   // the message's own occasion so the modal matches the thumbnail); no arg → the current occasion.
-  window.__shareCard = function (occOverride, options) {
-    var overlay = shareOpenModal(options);
+  window.__shareCard = function (occOverride) {
+    var overlay = shareOpenModal();
     var img = overlay.querySelector(".sharecard-img");
     var dl = overlay.querySelector(".sharecard-dl");
     var note = overlay.querySelector(".sharecard-note");
@@ -132842,16 +132361,6 @@ function spawnDustMote(container) {
       var fname = shareFileName(out.occ);
       var setHref = function (href) { if (dl) { dl.setAttribute("href", href); dl.setAttribute("download", fname); } };
       setHref(out.dataURL); // a data: href downloads fine on its own; upgraded to a blob URL below when available
-      if (out.occ && out.occ.kind === "birthday") {
-        var mailBtn = document.createElement("button");
-        mailBtn.type = "button";
-        mailBtn.className = "sharecard-btn sharecard-mail";
-        mailBtn.textContent = shareT("share_mail");
-        var actions = overlay.querySelector(".sharecard-actions");
-        if (actions) actions.appendChild(mailBtn);
-        var mc = shareMailContent(out.occ);
-        mailBtn.addEventListener("click", function () { if (window.__mailCompose) window.__mailCompose(mc.subject, mc.body); });
-      }
       if (out.canvas.toBlob) {
         out.canvas.toBlob(function (blob) {
           if (!blob) { if (note && shareModalEl) note.textContent = shareT("share_copyfail"); return; } // the data: href already stands
@@ -132863,25 +132372,19 @@ function spawnDustMote(container) {
     });
   };
   // Rasterize the day's occasion card and resolve JUST the PNG data-URL (no modal) — used by the
-  // birthday / occasion invite texts to embed the postcard as a tappable inline image. Resolves
+  // occasion invite texts to embed the postcard as a tappable inline image. Resolves
   // null on any failure so a caller can deliver the text regardless.
   window.__shareCardDataURL = function (occOverride) {
     return shareRasterize(occOverride).then(function (out) { return out.dataURL; }, function () { return null; });
   };
   // On a wedding day or named turn of the year (Nowruz / Čaháršanbe-Sûrî), greet the visitor
-  // with the day's save-the-date card once. Birthdays stay out of this automatic path: their
-  // phase-two greeting offers an explicit action that opens the card and ceremony.
+  // with the day's save-the-date card once. Birthday dates stay quiet.
   var SHARE_PLAIN_SEASONS = { winter: 1, spring: 1, summer: 1, smoky: 1, autumn: 1 }; // ordinary seasons don't auto-pop the card; only named occasions do
   function shareAutoShow() {
     if (!/loft-day/.test(location.pathname)) return; // auto-pop only in Loft Day, never the RSVP-named entry
     if (window.__tripActive) return;
-    var s = seasonDate(), id = null, birthdayToday = !!(window.__exactBirthdayWhos && window.__exactBirthdayWhos().length);
-    for (var i = 0; i < BIRTHDAYS.length; i++) {
-      var b = BIRTHDAYS[i];
-      if (b.pending || b.m == null) continue;
-      if (b.m === s.m && b.d === s.d) { birthdayToday = true; break; }
-    }
-    if (birthdayToday) return;
+    var s = seasonDate(), id = null;
+    if (window.__exactBirthdayWhos && window.__exactBirthdayWhos().length) return;
     if (!id) {
       // any NAMED occasion the card can badge (canada day, nowruz, xmas, new year, spooky,
       // valentines, pride, chaharshanbe, both wedding windows, …) — but NOT an ordinary season.
@@ -133982,10 +133485,6 @@ function spawnDustMote(container) {
     if (window.__restoreRoadtripCompletionCoach) window.__restoreRoadtripCompletionCoach(p);
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
-    // The retained phone can predate this exact birthday. Re-register today's greeting after its
-    // rows have replaced the load-time phone state; phase one keeps it held, phase two releases it
-    // only after the recovery cover has gone.
-    if (window.__queueExactBirthdayTexts) window.__queueExactBirthdayTexts();
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
     if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "beforeStage");
@@ -134419,7 +133918,7 @@ function spawnDustMote(container) {
   // Has the player actually taken hold of the loft? False while the opening "CLICK ME!" invitation
   // still owns the scene — cleared by the first strip tap, any real key, or a room change. EVERY
   // autonomous notification channel reads this (phone texts + their toasts, the notify buzz, the
-  // incoming ring, the date-driven birthday/occasion invites) so nothing pings a player who hasn't
+  // incoming ring, the date-driven occasion invites) so nothing pings a player who hasn't
   // started; the channels that would otherwise lose a beat wait for the "loft:gamestart" event.
   window.__gameStarted = function () { return attractOver(); };
   function endAttract() {
@@ -136242,12 +135741,6 @@ function spawnDustMote(container) {
   // and never re-forces it, so a manual choice made afterwards stands (reapplying the same state is a no-op if
   // the party's already on; the BBQ setup isn't re-run for the same day).
   (function dateOccasions() {
-    // the garden-figure birthday people whose EXACT day (m/d) is today — they throw the party +
-    // cut a candled cake. DJ/bar birthdays (no floor figure) and the call families are excluded.
-    function bdGardenToday() {
-      var n = window.__now ? window.__now() : new Date();
-      return window.__bdGardenOnDay ? window.__bdGardenOnDay(n.getMonth(), n.getDate()) : [];
-    }
     // the BBQ is a DAYTIME cookout: it only runs while the loft's Edmonton clock reads 16:00–22:00.
     // Outside that window May 2 is an ordinary day. (A deliberate summon jumps the clock in — armTimeGate.)
     function bbqTimeOk() {
@@ -136266,8 +135759,6 @@ function spawnDustMote(container) {
       if (m === 6 && d === 10) return "wedding-prague";  // Jul 10 — the Prague wedding day
       if (m === 6 && d === 11) return "prague-party";    // Jul 11 — the Prague garden brunch
       if (m === 4 && d === 2) return "bbq";              // May 2 — the cookout (any hour; occKey adds the time window)
-      var bd = bdGardenToday();
-      if (bd.length) return "bd:" + bd.slice().sort().join("+"); // a garden birthday (or two, on a shared day)
       return null;
     }
     function occKey() {
@@ -136276,7 +135767,7 @@ function spawnDustMote(container) {
       return raw;
     }
     window.__isOccasionDate = rawOccKey; // the calendar/date-pill read this (time-gate-agnostic) to force-summon a happening
-    // a deliberate summon (calendar/day click, date-pill nav, birthday cake action) of a TIME-gated happening jumps
+    // a deliberate summon (calendar/day click or date-pill nav) of a TIME-gated happening jumps
     // the loft clock into its window so occKey() lights it — otherwise clicking the BBQ card at, say,
     // noon would jump to May 2 but the time-gate would suppress the scene and nothing would happen.
     function armTimeGate() {
@@ -136291,7 +135782,7 @@ function spawnDustMote(container) {
     // is active. Real-calendar visitors get the occasion itself without persistent chrome over play.
     // Clicking the preview ribbon opens Calendar for context, but deliberately does not activate the
     // occasion or navigate the scene.
-    // Fixed event days reuse the existing labels; birthdays and holiday anchor days share the
+    // Fixed event days reuse the existing labels; holiday anchor days share the
     // calendar's localized names. seasonDate() also makes the pro preview controls tell the truth.
     function occasionBannerInfo() {
       return window.__specialDayBannerInfo ? window.__specialDayBannerInfo() : null;
@@ -136315,8 +135806,6 @@ function spawnDustMote(container) {
         b = document.createElement("button"); b.type = "button"; b.id = "occasion-banner"; b.className = "occasion-banner";
         b.addEventListener("click", function (e) {
           e.stopPropagation();
-          var current = occasionBannerInfo();
-          if (current && current.birthdays && window.__endAttract) window.__endAttract();
           if (window.__summonCurrentFestivity) window.__summonCurrentFestivity();
         });
         vp.appendChild(b);
@@ -136363,10 +135852,6 @@ function spawnDustMote(container) {
         if (window.__laptopZoomIn) window.__laptopZoomIn();
       }, wasOffice ? 80 : 780);
     }
-    function setupBirthday(list) {
-      if (controllers.party && !controllers.party.status()) controllers.party.set(true); // a festive garden party for the birthday
-      if (window.__bdCakeCut) window.__bdCakeCut(list);        // the birthday person(s) behind a candled cake, cutting it
-    }
     function setupBBQ() {
       // The invitation itself starts the balcony scene. Until it is tapped, establish a normal-size
       // daylight garden party with no UV so the cookout has a clear before/after transition.
@@ -136389,7 +135874,7 @@ function spawnDustMote(container) {
     // lastKey = the occasion currently SET UP (null = none). It's latched only AFTER a setup
     // actually runs, so a gated attempt (a just-loaded, not-yet-focused tab; the intro not yet
     // past) never latches — a later focus / first-entry / date-tick RETRIES it. This is what makes
-    // a fresh ?date=<garden birthday> load reliably throw the party+cake once the loft's in play.
+    // an explicit occasion selection can retry once the loft is attended.
     var lastKey = null;
     function apply(force) {
       if (force) armTimeGate(); // a deliberate summon jumps a time-gated happening's clock into its window BEFORE occKey reads it
@@ -136428,7 +135913,6 @@ function spawnDustMote(container) {
         lastKey = key;                           // latch only once we actually set the scene up
         if (key === "bbq") setupBBQ();
         else if (key === "wedding-prague" || key === "prague-party") setupPrague();
-        else if (key.indexOf("bd:") === 0) setupBirthday(key.slice(3).split("+"));
         else setupWedding();
       }, force ? 80 : 900);
     }
@@ -136439,9 +135923,8 @@ function spawnDustMote(container) {
     // it up without re-forcing an already-set scene (apply is a cheap no-op once latched).
     // The occasion SCENE never auto-summons anymore (owner: load the loft playable). Instead, on a
     // special day, an invite TEXT drips into Messages a moment after load — tapping it runs the same
-    // deliberate routing (apply(true) for wedding/bbq/brunch; typed season selection for a holiday). A birthday
-    // exact-day is invited by the couple's own sender-routed bd_<who> text (applyBirthdays → the tap
-    // reveals them / throws the party+cake), so it's not re-issued here. Crickets-gated + once per
+    // deliberate routing (apply(true) for wedding/bbq/brunch; typed season selection for a holiday).
+    // Crickets-gated + once per
     // (occasion, day) via localStorage; re-tried on focus/visibility/first-entry so an unfocused or
     // still-in-intro load still delivers once attended.
     var PLAIN_SEASON = { winter: 1, spring: 1, summer: 1, smoky: 1, autumn: 1 }; // ordinary weather — no invite
@@ -136455,15 +135938,15 @@ function spawnDustMote(container) {
       if (gated() || (window.__gameStarted && !window.__gameStarted())) return;
       if (!window.__deliverOccasionText) return;
       var n = window.__now ? window.__now() : new Date();
-      var raw = rawOccKey(); // wedding-edmonton / wedding-prague / prague-party / bbq / bd:… / null
+      var raw = rawOccKey(); // wedding-edmonton / wedding-prague / prague-party / bbq / null
       var invite = null;
       if (window.__bbqDateNow && window.__bbqDateNow()) {
         // Open-BBQ days already have a permanent day banner. Queue the actionable Behdad message itself
         // during phase one; the shared phase-two flush releases it the instant the party starts.
         invite = { id: "bbq", direct: true };
-      } else if (raw && raw.indexOf("bd:") !== 0) {
+      } else if (raw) {
         invite = { id: "occ_" + raw, from: OCC_SENDER[raw], body: OCC_BODY[raw], act: "occ" };
-      } else if (!raw) { // no birthday/occasion → a NAMED holiday? (ordinary seasons + the wedding-week tint get none)
+      } else if (!raw) { // no occasion → a NAMED holiday? (ordinary seasons + the wedding-week tint get none)
         var sk = window.__calSeasonKey && window.__calSeasonKey(n.getMonth(), n.getDate(), n.getFullYear());
         // Only on the occasion's ANNOUNCEMENT DAY, which is not the same as its decor window: the
         // pumpkins are out all October, the text arrives on the 31st (see occAnnounceDay).
@@ -136472,7 +135955,7 @@ function spawnDustMote(container) {
           invite = { id: "hol_" + sk, from: HOLIDAY_SENDER[sk] || "msg_behdad_from", body: "share_greet_" + sk, act: "season:" + sk };
         }
       }
-      if (!invite || (!invite.direct && (!invite.from || !invite.body))) return; // a birthday exact-day is invited by its own bd_<who> text, not here
+      if (!invite || (!invite.direct && (!invite.from || !invite.body))) return;
       var latch = "dateInvite:" + invite.id + ":" + n.getMonth() + "-" + n.getDate();
       // Generic occasion greetings stay once-per-day. The direct BBQ prompt is gameplay-critical,
       // so every fresh page session queues it; the Messages thread itself deduplicates retries.
@@ -137592,47 +137075,12 @@ function spawnDustMote(container) {
     function () { return window.__endCakeCutting && window.__endCakeCutting(); },
     function () { return !!window.__cakeOn; }, "cake cutting",
     "the cake's cleared away — the party rolls on.");
-  // The boolean cake controller owns the WEDDING cake. A named birthday cake request throws a
-  // BIRTHDAY cake for that person by reusing the birthday router: a garden-floor guest gets the
-  // garden party + a candled cake danced to the centre between the hosts (+ their bd-<who> hat); a
-  // Tehran/Prague call-family person gets their video call brought up with its birthday cake (the
-  // call scene's seat-of-honour cake is bd-<who>-gated). The birthday list is exposed separately.
-  controllers.cake = function (arg) {
-    if (arg == null || arg === "" || arg === true || arg === false) return weddingCake(arg);
-    var key = String(arg).toLowerCase().trim();
-    if (key === "list" || key === "?") return controllers.birthday ? controllers.birthday("list") : "";
-    if (!controllers.birthday) return "";
-    var res = controllers.birthday(key); // routes to the right venue + lights bd-<who> for the cake/hat
-    if (typeof res === "string" && res.indexOf("🎂") === 0) return "🎂 a birthday cake for " + res.slice(2).trim() + "!";
-    return res; // "no birthday by that name…" passthrough
-  };
+  controllers.cake = weddingCake;
   controllers.bouquet = cbhMoment(
     function () { return window.__startBouquetToss && window.__startBouquetToss(); },
     function () { return window.__endBouquetToss && window.__endBouquetToss(); },
     function () { return !!window.__bouquetOn; }, "bouquet toss",
     "the bouquet toss winds down — the party rolls on.");
-  // __bdCakeCut(who) — a garden BIRTHDAY cake cutting: light the party + head to the garden +
-  // summon the crowd first (so the birthday person's floor figure is present), then cut a candled
-  // cake with them standing behind it. `who` is a who-id (or a list, for a shared-day birthday);
-  // omitted → whoever's bd-<who> is currently lit. __bdCakeCut(false) ends it early. This is the
-  // shared hook the B-key/typed birthday reveal (party-lit) and the date-occasion scene both drive.
-  window.__bdCakeCut = function (who) {
-    if (who === false) { if (window.__endBdCakeCutting) window.__endBdCakeCutting(); if (controllers.echo) controllers.echo("the birthday cake's cleared away — the party rolls on."); return true; }
-    if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
-    if (window.__goToStage) window.__goToStage("garden");
-    setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before cutting
-      if (!window.__gardenPartyOn) return;
-      if (window.__prepareBdCakeCrowd) window.__prepareBdCakeCrowd();
-      if (window.__summonGuests) window.__summonGuests();
-      setTimeout(function () {
-        if (!window.__gardenPartyOn) return;
-        var ok = window.__startBdCakeCutting && window.__startBdCakeCutting(who);
-        if (!ok && controllers.echo) controllers.echo("no garden birthday to celebrate right now.");
-      }, 140);
-    }, 60);
-    return true;
-  };
-
   // SLOW DANCE drops the party into a warm, dim slow-song lull: the WHOLE floor pairs
   // off (the cast couples sway together in a close hold, the generic dancers pair too) and sways
   // slowly, the UV blacklight softens to a golden wash, for ~24s, then the party rolls back on.

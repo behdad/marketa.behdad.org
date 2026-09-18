@@ -118,11 +118,11 @@ var harness = String.raw`<script>
           JSON.stringify({ now: officeNow, here: officeHere && officeHere.key }));
 
         if (window.__endBdCakeCutting) window.__endBdCakeCutting();
-        window.__loftControllers.birthday("ayushi");
+        window.__jumpToDate(2031,11,10);window.__goToStage("garden");window.__summonGuests();window.__startBdCakeCutting("ayushi");
         await sleep(550);
         var strip = document.getElementById("loft-game-strip");
         var portrait = window.__bdPortrait({ who: "ayushi", type: "hat" });
-        check("Dec 10 birthday routes Ayushi to her garden cake",
+        check("Dec 10 birthday dresses Ayushi for her garden cake",
           strip.classList.contains("bd-ayushi") && window.__currentStageName === "garden" &&
             !!window.__bdCakeOn && fig.classList.contains("arrived") && fig.classList.contains("bd-cutter") &&
             getComputedStyle(avatar.querySelector(".bd-hat-ayushi")).visibility === "visible",

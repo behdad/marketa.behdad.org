@@ -393,6 +393,8 @@ do not compete with traffic, tire, pursuit, or collision cues.
   backing score alone, survives room changes and Continue/reload, and rearms only after an
   explicit projector-channel change. Party start/stop does not release voices, because
   playing along is supported during the party.
+- **Birthday cake** starts only during an attended Garden party. Its delayed candle-blow SFX also
+  checks visibility and focus at playback time, so switching windows during the ceremony stays quiet.
 - **Office device signatures** are separate one-shots on the shared SFX bus: the PC uses
   two short low notes, rising on boot and descending on power-off; the laptop uses
   three glassy high-low-rise tones; video-call connection keeps its low swell and rising

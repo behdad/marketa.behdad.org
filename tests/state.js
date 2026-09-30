@@ -779,7 +779,7 @@ var PROBE_HARNESS = [
   "    if (window.__applySeasonDate) window.__applySeasonDate();",
   "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
   "    var dayBanner = el('occasion-banner');",
-  "    ok('special day: Garden Brunch preview gets the occasion ribbon', !!dayBanner && dayBanner.classList.contains('show') && /Garden Brunch/i.test(dayBanner.textContent));",
+  "    ok('special day: Afterparty Brunch preview gets the occasion ribbon', !!dayBanner && dayBanner.classList.contains('show') && /Afterparty Brunch/i.test(dayBanner.textContent));",
   "    var bannerSummoned=0,realSummon=window.__summonCurrentFestivity;window.__summonCurrentFestivity=function(){bannerSummoned++;return true;};dayBanner.click();window.__summonCurrentFestivity=realSummon;",
   "    ok('special day: clicking the preview ribbon activates the celebration', bannerSummoned===1, 'summoned='+bannerSummoned);",
   "    var fsArea = el('hunt-fullscreen-area'), guideCaption = el('hunt-caption');",

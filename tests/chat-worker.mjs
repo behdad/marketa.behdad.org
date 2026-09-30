@@ -231,7 +231,7 @@ check(/Verified knowledge/.test(captured.body.instructions) &&
   /"address":"9910 109 St NW, Edmonton, AB T5K 1H5","location_note":"Downstairs\."/.test(captured.body.instructions) &&
   /"event":"afterparty","venue":"Y Afterhours"/.test(captured.body.instructions) &&
   /"address":"10028 102 St NW, Edmonton, AB T5J 0V6"/.test(captured.body.instructions) &&
-  /"events":\["garden party","sleepover","next-day brunch"\]/.test(captured.body.instructions) &&
+  /"events":\["garden party","sleepover","afterparty brunch"\]/.test(captured.body.instructions) &&
   /"id":"washrooms","location":"by the entrance"/.test(captured.body.instructions) &&
   /canonical runtime calendar/.test(captured.body.instructions),
   "verified celebration venues and calendar-source knowledge reach Charlie");

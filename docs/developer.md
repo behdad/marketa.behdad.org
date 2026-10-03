@@ -702,6 +702,9 @@ syntax, and recursive parity. Write printable Unicode directly as UTF-8. `setLan
 translation HTML, so preserve intentional markup and use the established `brk-sm` / `brk-lg` breaks
 when the two viewport classes need different wrapping.
 
+At startup, `?lang=en`, `?lang=cs`, or `?lang=cz` takes precedence over the saved language
+and browser detection. `cz` selects `cs`; unsupported values leave the normal fallback intact.
+
 Each dictionary `<script>` URL carries a content token derived from that dictionary's bytes.
 `tests/check.js` reports the exact replacement when a token is stale; update only the changed
 dictionary's tag.

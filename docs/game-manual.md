@@ -17,6 +17,9 @@ required.
 
 ## Start here
 
+Use **EN / CZ** to choose a language, or open `/rsvp?lang=cz` for Czech or `/rsvp?lang=en`
+for English. Your choice is remembered.
+
 The opening promise is the shape of the day: **Explore → Party → Road Trip**. Select **CLICK ME**.
 On the RSVP page, click or tap the game before using `Enter` or `Space`; those keys stay inactive
 while you are reading the invitation. The game-only Loft Day page is keyboard-ready immediately.

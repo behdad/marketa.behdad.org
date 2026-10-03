@@ -3083,7 +3083,7 @@ html.mir-party .hunt-viewport.bedroom-room-open #bedroom-party-coats{pointer-eve
 }
 #hunt-fullscreen-area.monitor-content-fullscreen-host:fullscreen::backdrop,
 #hunt-fullscreen-area.monitor-content-fullscreen-host:-webkit-full-screen::backdrop{background:#000}
-#hunt-fullscreen-area.monitor-content-fullscreen-host > :not(.hunt-frame){display:none}
+#hunt-fullscreen-area.monitor-content-fullscreen-host > :not(.hunt-frame):not(.mon-ctx):not(.console-ctx){display:none}
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-frame{
   width:100vw !important;
   height:50vw !important;
@@ -39255,11 +39255,11 @@ function lazyScriptAttempt(name, src, options) {
 // Canonical season ids shared by the typed API, keyboard ring, and private scene owner.
 var SEAS = ["wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "mehregan", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "sadeh", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice", "auto"];
 
-// A popup outside the browser's fullscreen element exists in the DOM but cannot paint.
-// Every context-menu builder uses this host so its existing fixed viewport coordinates
-// remain visible in game fullscreen as well as ordinary page mode.
+// Context menus must stay inside the active fullscreen element or modal monitor dialog
+// to paint and receive input above the top-layer backdrop.
 function contextMenuHost() {
   return document.fullscreenElement || document.webkitFullscreenElement ||
+    document.querySelector("#monitor-focus-dialog[open]") ||
     document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
 }
 
@@ -57914,7 +57914,7 @@ document.addEventListener("keydown", function (e) {
     if (r.bottom > window.innerHeight) menu.style.top = Math.max(2, window.innerHeight - r.height - 4) + "px";
   });
   document.addEventListener("pointerdown", function (e) { if (menu && menu.classList.contains("show") && !menu.contains(e.target)) hide(); }, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && menu && menu.classList.contains("show")) { hide(); e.stopPropagation(); } }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && menu && menu.classList.contains("show")) { hide(); e.preventDefault(); e.stopPropagation(); } }, true);
   window.addEventListener("scroll", hide, true);
 })();
 document.addEventListener("click", function (e) {
@@ -93398,6 +93398,7 @@ def colormode(mode=None):
   };
   function exitMonitorFocusFromSurround(e) {
     if (!monitorContentFullscreen) return;
+    if (e.target && e.target.closest && e.target.closest(".mon-ctx, .console-ctx")) return;
     var activeShootHost = document.getElementById("monitor-shoot-host");
     var shootState = window.__shootState && window.__shootState();
     // Tablet shooters place their movement pad in the fullscreen side chrome. Keep the
@@ -93446,6 +93447,7 @@ def colormode(mode=None):
   }
   window.addEventListener("keydown", function (e) {
     if ((e.key !== "Escape" && e.key !== "Esc") || !monitorContentFullscreen) return;
+    if (document.querySelector(".mon-ctx, .console-ctx.show")) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     window.__toggleMonitorContentFullscreen();

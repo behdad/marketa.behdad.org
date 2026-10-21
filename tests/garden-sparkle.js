@@ -30,6 +30,14 @@ addEventListener("load", function () { setTimeout(async function () {
     window.__goToStage("garden");
     await sleep(1000);
     report.resumed = glints.every(function (el) { return getComputedStyle(el).animationPlayState === "running"; });
+    var panes = Array.from(stage.querySelectorAll(".garden-mirror-glass"));
+    function mirrorFills() { return panes.map(function (el) { return getComputedStyle(el).fill; }); }
+    window.__setUvMode(false);
+    report.mirrorNormal = mirrorFills();
+    window.__setUvMode(true);
+    report.mirrorUv = mirrorFills();
+    window.__setUvMode(false);
+    report.mirrorRestored = mirrorFills();
     var owners = new Set();
     polish.forEach(function (el) {
       for (var p = el.parentElement; p && p !== stage; p = p.parentElement) if (p.id) owners.add(p);
@@ -66,6 +74,11 @@ for (var reduced of [false, true]) {
   assert(result.animations.every(function (name) { return name === (reduced ? "none" : "garden-object-glint"); }));
   assert(result.parked && result.paused, "glints pause when navigation parks the garden");
   assert(result.resumed, "returning to the garden releases the room pause");
+  assert.deepEqual(result.mirrorNormal, ["rgb(220, 232, 238)", "rgb(220, 232, 238)", "rgb(230, 239, 244)"],
+    "normal light preserves the mirror's authored blue-grey glass");
+  assert.deepEqual(result.mirrorUv, ["rgb(245, 0, 245)", "rgb(245, 0, 245)", "rgb(245, 0, 245)"],
+    "the fluorescent source color is confined to blacklight");
+  assert.deepEqual(result.mirrorRestored, result.mirrorNormal, "ending blacklight restores the mirror's normal glass");
   assert.deepEqual(result.errors, []);
   console.log("Garden sparkle: input, bounds, pivots and room parking pass; reduced motion " + reduced + ".");
 }
